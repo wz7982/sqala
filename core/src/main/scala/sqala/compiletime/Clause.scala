@@ -115,7 +115,7 @@ class WithRecursiveToken:
     ): WithRecursive[T, T, QueryName, ColumnNames] =
         WithRecursive.apply(query, queryName)(f)
 
-def withRrecursive: WithRecursiveToken = new WithRecursiveToken
+def withRecursive: WithRecursiveToken = new WithRecursiveToken
 
 def namedQuery[P <: Product : Entity](table: Table[P, ?]): NamedQuery[P] = new NamedQuery(table)
 
