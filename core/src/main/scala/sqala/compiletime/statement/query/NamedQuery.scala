@@ -76,9 +76,9 @@ class NamedQuery[P <: Product : Entity](val table: Table[P, ?]) extends Dynamic:
                         case Some("notLike") =>
                             SqlExpr.Binary(column, SqlBinaryOperator.NotLike, SqlExpr.StringLiteral("%" + argIterator.next.asInstanceOf[SqlExpr.StringLiteral].string + "%"))
                         case Some("startingWith") =>
-                            SqlExpr.Binary(column, SqlBinaryOperator.NotLike, SqlExpr.StringLiteral(argIterator.next.asInstanceOf[SqlExpr.StringLiteral].string + "%"))
+                            SqlExpr.Binary(column, SqlBinaryOperator.Like, SqlExpr.StringLiteral(argIterator.next.asInstanceOf[SqlExpr.StringLiteral].string + "%"))
                         case Some("endingWith") =>
-                            SqlExpr.Binary(column, SqlBinaryOperator.NotLike, SqlExpr.StringLiteral("%" + argIterator.next.asInstanceOf[SqlExpr.StringLiteral].string))
+                            SqlExpr.Binary(column, SqlBinaryOperator.Like, SqlExpr.StringLiteral("%" + argIterator.next.asInstanceOf[SqlExpr.StringLiteral].string))
                         case Some("greaterThan") => SqlExpr.Binary(column, SqlBinaryOperator.GreaterThan, argIterator.next)
                         case Some("greaterThanEqual") => SqlExpr.Binary(column, SqlBinaryOperator.GreaterThanEqual, argIterator.next)
                         case Some("lessThan") => SqlExpr.Binary(column, SqlBinaryOperator.LessThan, argIterator.next)
