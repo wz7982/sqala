@@ -229,7 +229,7 @@ trait NumberOperator[T: ExprNumber : AsSqlExpr]:
 
         def desc: OrderBy = OrderBy(expr, Desc)
 
-        infix def as(name: String)(using NonEmpty[name.type] =:= true): SelectItem[Option[T], N, name.type] =
+        infix def as(name: String)(using NonEmpty[name.type] =:= true): SelectItem[T, N, name.type] =
             SelectItem(expr, name)
 
     extension (value: T)
