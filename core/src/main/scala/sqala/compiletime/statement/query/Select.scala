@@ -47,11 +47,13 @@ class Select[T <: Tuple, AliasNames <: Tuple, TableNames <: Tuple, Tables](
         f(tables).toArray.foreach:
             case expr: Expr[_, _] => selectItems.addOne(SqlSelectItem(expr.toSqlExpr, None))
             case selectItem: SelectItem[_, _, _] => selectItems.addOne(SqlSelectItem(selectItem.expr.toSqlExpr, Some(selectItem.alias)))
+            case table: Table[_, _] => selectItems.addAll(table.__cols.map(c => SqlSelectItem(c.toSqlExpr, None)))
         val cols = ListBuffer[Column[?, ?, ?]]()
         f(tables).toArray.foreach:
             case Column(_, columnName, identName) => cols.addOne(Column("", columnName, identName))
             case PrimaryKey(_, columnName, identName) => cols.addOne(Column("", columnName, identName))
             case SelectItem(expr, alias) => cols.addOne(Column("", alias, alias))
+            case table: Table[_, _] => cols.addAll(table.__cols)
             case _ => 
         new Select(ast.copy(select = selectItems.toList), cols.toList, tables)
 
@@ -63,14 +65,21 @@ class Select[T <: Tuple, AliasNames <: Tuple, TableNames <: Tuple, Tables](
             case Column(_, columnName, identName) => Column("", columnName, identName) :: Nil
             case PrimaryKey(_, columnName, identName) => Column("", columnName, identName) :: Nil
             case _ => Nil
-        new Select(ast.copy(select = selectItems.toList), cols.toList, tables)
+        new Select(ast.copy(select = selectItems.toList), cols, tables)
 
     @targetName("mapSelectItem")
-    infix def map[A <: String, I <: SelectItem[?, ?, A]](f: Tables => I): Select[SelectTupleType[T, TableNames, Tuple1[I]], Tuple1[I], TableNames, Tables] =
+    infix def map[A <: String, I <: SelectItem[?, ?, A]](f: Tables => I): Select[SelectTupleType[T, TableNames, Tuple1[I]], Tuple1[A], TableNames, Tables] =
         val item = f(tables)
         val selectItems = SqlSelectItem(item.expr.toSqlExpr, Some(item.alias)) :: Nil
         val cols = Column("", item.alias, item.alias) :: Nil  
         new Select(ast.copy(select = selectItems.toList), cols.toList, tables)
+
+    @targetName("mapTable")
+    infix def map[MT <: Table[?, ?]](f: Tables => MT): Select[SelectTupleType[T, TableNames, Tuple1[MT]], EmptyTuple, TableNames, Tables] =
+        val table = f(tables)
+        val selectItems = table.__cols.map(item => SqlSelectItem(item.toSqlExpr, None))
+        val cols = table.__cols.map(_.copy(tableName = ""))
+        new Select(ast.copy(select = selectItems.toList), cols, tables)
 
     infix def sortBy(f: Tables => OrderBy): Select[T, AliasNames, TableNames, Tables] =
         val sqlOrderBy = f(tables) match

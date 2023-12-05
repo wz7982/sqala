@@ -73,15 +73,20 @@ type SelectOption[Table <: Tuple, TableNames <: Tuple, ExprTableNames <: Tuple] 
         case _ => false || SelectOption[Table, TableNames, t]
     case EmptyTuple => false
 
-type SelectType[Table <: Tuple, TableNames <: Tuple, Item] = Item match
+type SelectType[Tables <: Tuple, TableNames <: Tuple, Item] = Item match
     case Expr[a, tableNames] => tableNames match
         case EmptyTuple => a
-        case _ => SelectOption[Table, TableNames, tableNames] match
+        case _ => SelectOption[Tables, TableNames, tableNames] match
             case false => a
             case true => a match
                 case Option[aa] => Option[aa]
                 case _ => Option[a]
-    case SelectItem[a, tableNames, _] => SelectType[Table, TableNames, Expr[a, tableNames]]
+    case SelectItem[a, tableNames, _] => SelectType[Tables, TableNames, Expr[a, tableNames]]
+    case Table[a, tableName] => SelectOption[Tables, TableNames, Tuple1[tableName]] match
+        case false => a
+        case true => a match
+            case Option[aa] => Option[aa]
+            case _ => Option[a]
 
 type GroupTupleType[Table <: Tuple, TableNames <: Tuple, GroupElems <: Tuple] <: Tuple = GroupElems match
     case h *: t => GroupType[Table, TableNames, h] *: GroupTupleType[Table, TableNames, t]
