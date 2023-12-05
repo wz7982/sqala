@@ -41,6 +41,8 @@ object Expr:
 
     given optionDateOperator: DateOperator[Option[Date]] with {}
 
+    given customFieldOperator[T: AsSqlExpr]: Operator[T] with {}
+
 case class Literal[T](value: T)(using d: AsSqlExpr[T]) extends Expr[T, EmptyTuple]:
     override def toSqlExpr: SqlExpr = d.asSqlExpr(value)
 
