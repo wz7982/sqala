@@ -4,6 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.compiletime.macros.tableMetaDataMacro
 
 import java.sql.ResultSet
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Date
 import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.*
@@ -38,6 +39,14 @@ object AsSqlExpr:
     
     given dateAsSqlExpr: AsSqlExpr[Date] with
         override def asSqlExpr(x: Date): SqlExpr = SqlExpr.DateLiteral(x)
+
+    given localDateAsSqlExpr : AsSqlExpr[LocalDate] with
+        override def asSqlExpr(x: LocalDate): SqlExpr =
+            SqlExpr.DateLiteral(Date.from(x.atStartOfDay(ZoneId.systemDefault()).nn.toInstant()).nn)
+
+    given localDateTimeAsSqlExpr : AsSqlExpr[LocalDateTime] with
+        override def asSqlExpr(x: LocalDateTime): SqlExpr =
+            SqlExpr.DateLiteral(Date.from(x.atZone(ZoneId.systemDefault()).nn.toInstant()).nn)
     
     given booleanAsSqlExpr: AsSqlExpr[Boolean] with
         override def asSqlExpr(x: Boolean): SqlExpr = SqlExpr.BooleanLiteral(x)
@@ -60,9 +69,6 @@ trait CustomField[T, R](using a: AsSqlExpr[R], d: Decoder[R]) extends AsSqlExpr[
     override def decode(data: ResultSet, cursor: Int): T = fromValue(d.decode(data, cursor))
 
     override def offset: Int = d.offset
-
-object CustomField:
-    given customFieldOperator[T: AsSqlExpr]: Operator[T] with {}
 
 trait Decoder[T]:
     def offset: Int
@@ -114,6 +120,16 @@ object Decoder:
         override def offset: Int = 1
 
         override def decode(data: ResultSet, cursor: Int): Date = data.getTimestamp(cursor).nn
+
+    given localDateDecoder: Decoder[LocalDate] with
+        override def offset: Int = 1
+
+        override def decode(data: ResultSet, cursor: Int): LocalDate = data.getTimestamp(cursor).nn.toInstant().nn.atZone(ZoneId.systemDefault()).nn.toLocalDate().nn
+
+    given localDateTimeDecoder: Decoder[LocalDateTime] with
+        override def offset: Int = 1
+
+        override def decode(data: ResultSet, cursor: Int): LocalDateTime = LocalDateTime.ofInstant(data.getTimestamp(cursor).nn.toInstant(), ZoneId.systemDefault()).nn
 
     given optionFieldDecoder[T](using d: Decoder[T]): Decoder[Option[T]] with
         override def offset: Int = d.offset
