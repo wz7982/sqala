@@ -81,8 +81,8 @@ trait DatabaseOperator[F[_]](using logger: Logger, monad: Monad[F]):
 
     private[sqala] def monadicSelectCount(query: Query[?, ?]): F[Long] =
         val outerQuery = query match
-            case s: Select[_, _, _, _] => s.count
-            case q => sqala.compiletime.query(q.unsafeAs("__q__")).count
+            case s: Select[_, _, _, _] => s.size
+            case q => sqala.compiletime.query(q.unsafeAs("__q__")).size
         val sql = outerQuery.sql(dialect)
         logger.apply(s"execute sql: \n${sql._1}")
         for data <- querySql[Long](sql._1, sql._2) yield data.head

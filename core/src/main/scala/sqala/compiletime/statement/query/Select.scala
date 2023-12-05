@@ -102,7 +102,7 @@ class Select[T <: Tuple, AliasNames <: Tuple, TableNames <: Tuple, Tables](
         val expr = f(tables)
         new Select(ast.addHaving(expr.toSqlExpr), cols, tables)
 
-    def count: Select[Tuple1[Long], EmptyTuple, TableNames, Tables] = ast match
+    def size: Select[Tuple1[Long], EmptyTuple, TableNames, Tables] = ast match
         case SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
             new Select(ast.copy(
                 select = SqlSelectItem(SqlExpr.Agg("COUNT", Nil, false, Map(), Nil), None) :: Nil,
