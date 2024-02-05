@@ -257,9 +257,10 @@ class SelectQuery[T](
     def distinct: SelectQuery[T] =
         new SelectQuery(depth, lastIndex, items, ast.copy(param = Some(SqlSelectParam.Distinct)))
 
-    def sortBy(sortByItems: OrderBy*): SelectQuery[T] =
-        val sqlOrderBy = sortByItems.toList.map(i => SqlOrderBy(i.expr.asSqlExpr, Some(i.order)))
-        new SelectQuery(depth, lastIndex, items, ast.copy(orderBy = sqlOrderBy))
+    def sortBy(f: T => OrderBy): SelectQuery[T] =
+        val orderBy = f(items)
+        val sqlOrderBy = SqlOrderBy(orderBy.expr.asSqlExpr, Some(orderBy.order))
+        new SelectQuery(depth, lastIndex, items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
     def groupBy[G](f: T => G)(using a: AsExpr[G]): GroupByQuery[(G, T)] =
         val groupByItems = f(items)
