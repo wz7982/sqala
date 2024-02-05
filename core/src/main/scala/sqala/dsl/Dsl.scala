@@ -12,11 +12,11 @@ import scala.deriving.Mirror
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Literal(value)
 
-inline def query[T](using depth: Depth = Depth(0))(using Mirror.ProductOf[T]): SelectQuery[Table[T]] =
+inline def query[T](using depth: Depth = Depth(0))(using p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
     val tableName = tableNameMacro[T]
     val aliasName = s"d${depth.asInt}_t0"
     val table = Table[T](tableName, aliasName, tableMetaDataMacro[T], depth.asInt)
-    val ast = SqlQuery.Select(select = Nil, from = SqlTable.IdentTable(tableName, Some(aliasName)) :: Nil)
+    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(aliasName)) :: Nil)
     SelectQuery(depth.asInt, 0, table, ast)
 
 enum CaseState:
