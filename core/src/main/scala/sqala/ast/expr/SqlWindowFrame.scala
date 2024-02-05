@@ -8,5 +8,5 @@ enum SqlWindowFrameOption(val showString: String):
     case Following(n: Int) extends SqlWindowFrameOption(s"$n FOLLOWING")
 
 enum SqlWindowFrame:
-    case Rows(val start: SqlWindowFrameOption, val end: SqlWindowFrameOption)
-    case Range(val start: SqlWindowFrameOption, val end: SqlWindowFrameOption)
+    case Rows(start: SqlWindowFrameOption, end: SqlWindowFrameOption)
+    case Range(start: SqlWindowFrameOption, end: SqlWindowFrameOption)
