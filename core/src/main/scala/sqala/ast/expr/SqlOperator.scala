@@ -21,8 +21,10 @@ enum SqlBinaryOperator(val operator: String):
     case Mod extends SqlBinaryOperator("%")
     case Json extends SqlBinaryOperator("->")
     case JsonText extends SqlBinaryOperator("->>")
+    case Custom(op: String) extends SqlBinaryOperator(op)
 
 enum SqlUnaryOperator(val operator: String):
     case Positive extends SqlUnaryOperator("+")
     case Negative extends SqlUnaryOperator("-")
     case Not extends SqlUnaryOperator("!")
+    case Custom(op: String) extends SqlUnaryOperator(op)

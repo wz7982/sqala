@@ -16,14 +16,14 @@ object SqlStatement:
     extension (delete: Delete)
         def addWhere(condition: SqlExpr): Delete =
             delete.copy(where = delete.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
-    
+
     extension (update: Update)
         def addWhere(condition: SqlExpr): Update =
             update.copy(where = update.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
 enum SqlQuery:
     case Select(
-        param: Option[String] = None,
+        param: Option[SqlSelectParam] = None,
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr] = None,

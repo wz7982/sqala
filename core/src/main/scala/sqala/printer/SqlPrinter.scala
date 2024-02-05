@@ -79,7 +79,7 @@ abstract class SqlPrinter(val prepare: Boolean):
     def printSelect(select: SqlQuery.Select): Unit =
         sqlBuilder.append("SELECT ")
 
-        select.param.foreach(p => sqlBuilder.append(p + " "))
+        select.param.foreach(p => sqlBuilder.append(p.param + " "))
 
         if select.select.isEmpty then sqlBuilder.append("*") else printList(select.select)(printSelectItem)
 
@@ -219,15 +219,15 @@ abstract class SqlPrinter(val prepare: Boolean):
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean = (parent.op, child) match
             case (And, SqlExpr.Binary(_, Or | Xor, _)) => true
             case (Xor, SqlExpr.Binary(_, Or, _)) => true
-            case (Times | Div | Mod, SqlExpr.Binary(_, Plus | Minus, _)) => true
+            case (Times, SqlExpr.Binary(_, Plus | Minus, _)) => true
+            case (Div | Mod | Minus, _) => true
             case _ => false
 
         def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean = (parent.op, child) match
             case (And, SqlExpr.Binary(_, Or | Xor, _)) => true
             case (Xor, SqlExpr.Binary(_, Or, _)) => true
             case (Times | Div | Mod, SqlExpr.Binary(_, Plus | Minus, _)) => true
-            case (Minus, SqlExpr.Binary(_, Plus | Minus, _)) => true
-            case (Div | Mod, SqlExpr.Binary(_, Times | Div | Mod, _)) => true
+            case (Div | Mod | Minus, _) => true
             case _ => false
 
         if hasBracketsLeft(expr, expr.left) then
@@ -345,7 +345,11 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append("(")
             printQuery(query)
             sqlBuilder.append(")")
-            sqlBuilder.append(s" AS $quote$alias$quote")
+            sqlBuilder.append(s" AS $quote${alias.tableAlias}$quote")
+            if alias.columnAlias.nonEmpty then
+                sqlBuilder.append("(")
+                printList(alias.columnAlias)(i => sqlBuilder.append(s"$quote$i$quote"))
+                sqlBuilder.append(")")
         case SqlTable.JoinTable(left, joinType, right, condition) =>
             printTable(left)
             sqlBuilder.append(s" ${joinType.joinType} ")
