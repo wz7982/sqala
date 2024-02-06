@@ -5,7 +5,7 @@ import sqala.ast.statement.SqlQuery
 import sqala.ast.table.SqlTable
 import sqala.dsl.`macro`.{tableMetaDataMacro, tableNameMacro}
 import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.query.{Depth, Query, SelectQuery}
+import sqala.dsl.statement.query.{Depth, Query, SelectItem, SelectQuery}
 
 import scala.deriving.Mirror
 

@@ -28,7 +28,7 @@ sealed trait Expr[T] derives CanEqual:
     def !=[R <: Operation[T]](that: Expr[R]): Expr[Boolean] = Binary(this, NotEqual, that)
 
     @targetName("ne")
-    def !=[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = Binary(this, NotEqual, SubQuery(query))
+    def !=[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = Binary(this, NotEqual, SubQuery(query))
 
     @targetName("gt")
     def >(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, GreaterThan, Literal(value))
@@ -37,7 +37,7 @@ sealed trait Expr[T] derives CanEqual:
     def >[R <: Operation[T]](that: Expr[R]): Expr[Boolean] = Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    def >[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = Binary(this, GreaterThan, SubQuery(query))
+    def >[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = Binary(this, GreaterThan, SubQuery(query))
 
     @targetName("ge")
     def >=(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, GreaterThanEqual, Literal(value))
@@ -46,7 +46,7 @@ sealed trait Expr[T] derives CanEqual:
     def >=[R <: Operation[T]](that: Expr[R]): Expr[Boolean] = Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    def >=[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = Binary(this, GreaterThanEqual, SubQuery(query))
+    def >=[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = Binary(this, GreaterThanEqual, SubQuery(query))
 
     @targetName("lt")
     def <(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, LessThan, Literal(value))
@@ -55,7 +55,7 @@ sealed trait Expr[T] derives CanEqual:
     def <[R <: Operation[T]](that: Expr[R]): Expr[Boolean] = Binary(this, LessThan, that)
 
     @targetName("lt")
-    def <[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = Binary(this, LessThan, SubQuery(query))
+    def <[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = Binary(this, LessThan, SubQuery(query))
 
     @targetName("le")
     def <=(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, LessThanEqual, Literal(value))
@@ -64,15 +64,15 @@ sealed trait Expr[T] derives CanEqual:
     def <=[R <: Operation[T]](that: Expr[R]): Expr[Boolean] = Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    def <=[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = Binary(this, LessThanEqual, SubQuery(query))
+    def <=[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = Binary(this, LessThanEqual, SubQuery(query))
 
     def in(list: List[T])(using AsSqlExpr[T]): Expr[Boolean] = In(this, Vector(list.map(Literal(_))), false)
 
-    def in[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = In(this, SubQuery(query), false)
+    def in[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = In(this, SubQuery(query), false)
 
     def notIn(list: List[T])(using AsSqlExpr[T]): Expr[Boolean] = In(this, Vector(list.map(Literal(_))), true)
 
-    def notIn[R <: Operation[T]](query: Query[Expr[R]]): Expr[Boolean] = In(this, SubQuery(query), true)
+    def notIn[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = In(this, SubQuery(query), true)
 
     def between(start: T, end: T)(using AsSqlExpr[T]): Expr[Boolean] = Between(this, Literal(start), Literal(end), false)
 

@@ -120,9 +120,9 @@ class SelectQuery[T](
             )
         JoinQuery(depth, lastIndex + 1, tables, sqlTable, ast.copy(select = selectItems, from = sqlTable.toList))
 
-    private inline def joinClause[JT, R](joinType: SqlJoinType, query: Depth ?=> Query[JT], alias: Option[String])(using s: SelectItem[R]): JoinQuery[R] =
+    private inline def joinClause[JT, R](joinType: SqlJoinType, query: Depth ?=> Query[JT])(using s: SelectItem[R]): JoinQuery[R] =
         given d: Depth = Depth(depth + 1)
-        val aliasName = alias.getOrElse(s"d${d.asInt - 1}_t${lastIndex + 1}")
+        val aliasName = s"d${d.asInt - 1}_t${lastIndex + 1}"
         val joinQuery = query
         val rightTable = NamedQuery(joinQuery, aliasName)
         val tables = (
@@ -201,8 +201,8 @@ class SelectQuery[T](
     inline def join[R](using SelectItem[InnerJoin[T, R]]): JoinQuery[InnerJoin[T, R]] =
         joinClause[R, InnerJoin[T, R]](SqlJoinType.InnerJoin)
 
-    inline def join[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[InnerJoinQuery[T, R]], alias: Option[String] = None): JoinQuery[InnerJoinQuery[T, R]] =
-        joinClause[R, InnerJoinQuery[T, R]](SqlJoinType.InnerJoin, query, alias)
+    inline def join[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[InnerJoinQuery[T, R]]): JoinQuery[InnerJoinQuery[T, R]] =
+        joinClause[R, InnerJoinQuery[T, R]](SqlJoinType.InnerJoin, query)
 
     inline def joinLateral[R: AsExpr](query: Depth ?=> T => Query[R])(using SelectItem[InnerJoinQuery[T, R]]): JoinQuery[InnerJoinQuery[T, R]] =
         joinLateralClause[R, InnerJoinQuery[T, R]](SqlJoinType.InnerJoin, query)
@@ -213,8 +213,8 @@ class SelectQuery[T](
     inline def leftJoin[R](using SelectItem[LeftJoin[T, R]]): JoinQuery[LeftJoin[T, R]] =
         joinClause[R, LeftJoin[T, R]](SqlJoinType.LeftJoin)
 
-    inline def leftJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[LeftJoinQuery[T, R]], alias: Option[String] = None): JoinQuery[LeftJoinQuery[T, R]] =
-        joinClause[R, LeftJoinQuery[T, R]](SqlJoinType.LeftJoin, query, alias)
+    inline def leftJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[LeftJoinQuery[T, R]]): JoinQuery[LeftJoinQuery[T, R]] =
+        joinClause[R, LeftJoinQuery[T, R]](SqlJoinType.LeftJoin, query)
 
     inline def leftJoinLateral[R: AsExpr](query: Depth ?=> T => Query[R])(using SelectItem[LeftJoinQuery[T, R]]): JoinQuery[LeftJoinQuery[T, R]] =
         joinLateralClause[R, LeftJoinQuery[T, R]](SqlJoinType.LeftJoin, query)
@@ -225,8 +225,8 @@ class SelectQuery[T](
     inline def rightJoin[R](using SelectItem[RightJoin[T, R]]): JoinQuery[RightJoin[T, R]] =
         joinClause[R, RightJoin[T, R]](SqlJoinType.RightJoin)
 
-    inline def rightJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[RightJoinQuery[T, R]], alias: Option[String] = None): JoinQuery[RightJoinQuery[T, R]] =
-        joinClause[R, RightJoinQuery[T, R]](SqlJoinType.RightJoin, query, alias)
+    inline def rightJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[RightJoinQuery[T, R]]): JoinQuery[RightJoinQuery[T, R]] =
+        joinClause[R, RightJoinQuery[T, R]](SqlJoinType.RightJoin, query)
 
     inline def rightJoinLateral[R: AsExpr](query: Depth ?=> T => Query[R])(using SelectItem[RightJoinQuery[T, R]]): JoinQuery[RightJoinQuery[T, R]] =
         joinLateralClause[R, RightJoinQuery[T, R]](SqlJoinType.RightJoin, query)
@@ -237,8 +237,8 @@ class SelectQuery[T](
     inline def fullJoin[R](using s: SelectItem[FullJoin[T, R]]): JoinQuery[FullJoin[T, R]] =
         joinClause[R, FullJoin[T, R]](SqlJoinType.FullJoin)
 
-    inline def fullJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[FullJoinQuery[T, R]], alias: Option[String] = None): JoinQuery[FullJoinQuery[T, R]] =
-        joinClause[R, FullJoinQuery[T, R]](SqlJoinType.FullJoin, query, alias)
+    inline def fullJoin[R: AsExpr](query: Depth ?=> Query[R])(using s: SelectItem[FullJoinQuery[T, R]]): JoinQuery[FullJoinQuery[T, R]] =
+        joinClause[R, FullJoinQuery[T, R]](SqlJoinType.FullJoin, query)
 
     inline def fullJoinLateral[R: AsExpr](query: Depth ?=> T => Query[R])(using SelectItem[FullJoinQuery[T, R]]): JoinQuery[FullJoinQuery[T, R]] =
         joinLateralClause[R, FullJoinQuery[T, R]](SqlJoinType.FullJoin, query)
