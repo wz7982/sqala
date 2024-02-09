@@ -5,6 +5,7 @@ import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Positive}
 import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
+import sqala.dsl.statement.dml.UpdatePair
 import sqala.dsl.statement.query.Query
 
 import scala.annotation.targetName
@@ -171,6 +172,10 @@ case class Literal[T](value: T)(using a: AsSqlExpr[T]) extends Expr[T]:
 
 case class Column[T](tableName: String, columnName: String) extends Expr[T]:
     override def asSqlExpr: SqlExpr = SqlExpr.Column(Some(tableName), columnName)
+
+    def :=(value: T)(using AsSqlExpr[T]): UpdatePair = UpdatePair(this, Literal(value))
+
+    def :=[R <: Operation[T]](updateExpr: Expr[R]): UpdatePair = UpdatePair(this, updateExpr)
 
 case object Null extends Expr[Nothing]:
     override def asSqlExpr: SqlExpr = SqlExpr.Null
