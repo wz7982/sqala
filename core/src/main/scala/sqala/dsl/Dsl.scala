@@ -24,7 +24,7 @@ inline def subQuery[T](query: Depth ?=> Query[T])(using depth: Depth = Depth(0))
     val aliasName = s"d${depth.asInt}_t0"
     val innerQuery = NamedQuery(query, aliasName)
     val ast = SqlQuery.Select(
-        select = s.selectItems(innerQuery, 0), 
+        select = s.selectItems(innerQuery, 0),
         from = SqlTable.SubQueryTable(query.ast, false, SqlSubQueryAlias(aliasName, Nil)) :: Nil
     )
     SelectQuery(d.asInt, 0, innerQuery, ast)
@@ -97,7 +97,7 @@ def lag[T: AsSqlExpr](expr: Expr[T], offset: Int = 1, default: Wrap[T, Option] =
         case Some(v) => Literal(v.asInstanceOf[T])
         case _ => Null
     Agg("LAG", expr :: Literal(offset) :: defaultExpr :: Nil, false, Nil)
-    
+
 def lead[T: AsSqlExpr](expr: Expr[T], offset: Int = 1, default: Wrap[T, Option] = None): Agg[Wrap[T, Option]] =
     val defaultExpr = default match
         case Some(v) => Literal(v.asInstanceOf[T])
@@ -106,10 +106,10 @@ def lead[T: AsSqlExpr](expr: Expr[T], offset: Int = 1, default: Wrap[T, Option] 
 
 inline def insert[T]: Insert[Table[T], InsertState.New.type] = Insert[T]
 
-inline def insert[T <: Product](entity: T)(using Mirror.ProductOf[T]): Insert[Table[T], InsertState.Entity.type] = 
+inline def insert[T <: Product](entity: T)(using Mirror.ProductOf[T]): Insert[Table[T], InsertState.Entity.type] =
     Insert[T](entity :: Nil)
 
-inline def insert[T <: Product](entities: List[T])(using Mirror.ProductOf[T]): Insert[Table[T], InsertState.Entity.type] = 
+inline def insert[T <: Product](entities: List[T])(using Mirror.ProductOf[T]): Insert[Table[T], InsertState.Entity.type] =
     Insert[T](entities)
 
 inline def update[T]: Update[Table[T], UpdateState.Table.type] = Update[T]
@@ -120,8 +120,3 @@ inline def update[T <: Product](entity: T, skipNone: Boolean = false)(using Mirr
 inline def delete[T]: Delete[Table[T]] = Delete[T]
 
 inline def save[T <: Product](entity: T): Save = Save[T](entity)
-
-extension [T: AsSqlExpr] (column: Column[T])
-   def :=(value: T): UpdatePair = UpdatePair(column, Literal(value))
-
-   def :=[R <: Operation[T]](updateExpr: Expr[R]): UpdatePair = UpdatePair(column, updateExpr)
