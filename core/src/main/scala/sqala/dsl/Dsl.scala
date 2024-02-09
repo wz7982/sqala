@@ -124,4 +124,4 @@ inline def save[T <: Product](entity: T): Save = Save[T](entity)
 extension [T: AsSqlExpr] (column: Column[T])
    def :=(value: T): UpdatePair = UpdatePair(column, Literal(value))
 
-   def :=(updateExpr: Expr[T]): UpdatePair = UpdatePair(column, updateExpr)
+   def :=[R <: Operation[T]](updateExpr: Expr[R]): UpdatePair = UpdatePair(column, updateExpr)
