@@ -2,14 +2,12 @@ package sqala.dsl
 
 import sqala.ast.expr.SqlSubQueryPredicate
 import sqala.ast.statement.SqlQuery
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlSubQueryAlias, SqlTable}
 import sqala.dsl.`macro`.{tableMetaDataMacro, tableNameMacro}
 import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.query.{Depth, Query, SelectItem, SelectQuery}
+import sqala.dsl.statement.query.*
 
 import scala.deriving.Mirror
-import sqala.dsl.statement.query.NamedQuery
-import sqala.ast.table.SqlSubQueryAlias
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Literal(value)
@@ -30,6 +28,9 @@ inline def subQuery[T](query: Depth ?=> Query[T])(using depth: Depth = Depth(0))
         from = SqlTable.SubQueryTable(query.ast, false, SqlSubQueryAlias(aliasName, Nil)) :: Nil
     )
     SelectQuery(d.asInt, 0, innerQuery, ast)
+
+def withRecursive[T](query: Query[T])(f: Option[WithRecursiveContext] ?=> Query[T] => Query[T])(using s: SelectItem[NamedQuery[T]]): WithRecursive[T] =
+    WithRecursive(query)(f)
 
 enum CaseState:
     case Case
