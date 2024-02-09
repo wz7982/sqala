@@ -95,3 +95,8 @@ type UnionTo[A, B] = A match
     case B => B
     case Option[B] => A
     case Unwrap[B, Option] => B
+
+type QueryMap[T] = T match
+    case Expr[t] => Expr[t]
+    case x *: xs => QueryMap[x] *: QueryMap[xs]
+    case EmptyTuple => EmptyTuple

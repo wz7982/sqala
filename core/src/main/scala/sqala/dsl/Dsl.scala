@@ -2,14 +2,12 @@ package sqala.dsl
 
 import sqala.ast.expr.SqlSubQueryPredicate
 import sqala.ast.statement.SqlQuery
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlSubQueryAlias, SqlTable}
 import sqala.dsl.`macro`.{tableMetaDataMacro, tableNameMacro}
 import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.query.{Depth, Query, SelectItem, SelectQuery}
+import sqala.dsl.statement.query.*
 
 import scala.deriving.Mirror
-import sqala.dsl.statement.query.NamedQuery
-import sqala.ast.table.SqlSubQueryAlias
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Literal(value)
