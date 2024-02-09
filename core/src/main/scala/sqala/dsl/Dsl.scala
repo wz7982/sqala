@@ -8,6 +8,8 @@ import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.{Depth, Query, SelectItem, SelectQuery}
 
 import scala.deriving.Mirror
+import sqala.dsl.statement.query.NamedQuery
+import sqala.ast.table.SqlSubQueryAlias
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Literal(value)
@@ -18,6 +20,16 @@ inline def query[T](using depth: Depth = Depth(0))(using p: Mirror.ProductOf[T],
     val table = Table[T](tableName, aliasName, tableMetaDataMacro[T], depth.asInt)
     val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(aliasName)) :: Nil)
     SelectQuery(depth.asInt, 0, table, ast)
+
+inline def subQuery[T](query: Depth ?=> Query[T])(using depth: Depth = Depth(0))(using s: SelectItem[NamedQuery[T]]): SelectQuery[NamedQuery[T]] =
+    given d: Depth = Depth(depth.asInt + 1)
+    val aliasName = s"d${depth.asInt}_t0"
+    val innerQuery = NamedQuery(query, aliasName)
+    val ast = SqlQuery.Select(
+        select = s.selectItems(innerQuery, 0), 
+        from = SqlTable.SubQueryTable(query.ast, false, SqlSubQueryAlias(aliasName, Nil)) :: Nil
+    )
+    SelectQuery(d.asInt, 0, innerQuery, ast)
 
 enum CaseState:
     case Case
