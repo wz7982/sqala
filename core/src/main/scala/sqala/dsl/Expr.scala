@@ -131,31 +131,31 @@ object Expr:
 
     extension [T: Number : AsSqlExpr](expr: Expr[T])
         @targetName("plus")
-        def +[R: Number : AsSqlExpr](value: R): Expr[Option[BigDecimal]] = Binary(expr, Plus, Literal(value))
+        def +[R: Number : AsSqlExpr](value: R): Expr[Option[T]] = Binary(expr, Plus, Literal(value))
 
         @targetName("plus")
         def +[R: Number](that: Expr[R]): Expr[Option[BigDecimal]] = Binary(expr, Plus, that)
 
         @targetName("minus")
-        def -[R: Number : AsSqlExpr](value: R): Expr[Option[BigDecimal]] = Binary(expr, Minus, Literal(value))
+        def -[R: Number : AsSqlExpr](value: R): Expr[Option[T]] = Binary(expr, Minus, Literal(value))
 
         @targetName("minus")
         def -[R: Number](that: Expr[R]): Expr[Option[BigDecimal]] = Binary(expr, Minus, that)
 
         @targetName("times")
-        def *[R: Number : AsSqlExpr](value: R): Expr[Option[BigDecimal]] = Binary(expr, Times, Literal(value))
+        def *[R: Number : AsSqlExpr](value: R): Expr[Option[T]] = Binary(expr, Times, Literal(value))
 
         @targetName("times")
         def *[R: Number](that: Expr[R]): Expr[Option[BigDecimal]] = Binary(expr, Times, that)
 
         @targetName("div")
-        def /[R: Number : AsSqlExpr](value: R): Expr[Option[BigDecimal]] = Binary(expr, Div, Literal(value))
+        def /[R: Number : AsSqlExpr](value: R): Expr[Option[T]] = Binary(expr, Div, Literal(value))
 
         @targetName("div")
         def /[R: Number](that: Expr[R]): Expr[Option[BigDecimal]] = Binary(expr, Div, that)
 
         @targetName("mod")
-        def %[R: Number : AsSqlExpr](value: R): Expr[Option[BigDecimal]] = Binary(expr, Mod, Literal(value))
+        def %[R: Number : AsSqlExpr](value: R): Expr[Option[T]] = Binary(expr, Mod, Literal(value))
 
         @targetName("mod")
         def %[R: Number](that: Expr[R]): Expr[Option[BigDecimal]] = Binary(expr, Mod, that)
