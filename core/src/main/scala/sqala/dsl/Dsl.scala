@@ -29,6 +29,9 @@ inline def subQuery[T](query: Depth ?=> Query[T])(using depth: Depth = Depth(0))
     )
     SelectQuery(d.asInt, 0, innerQuery, ast)
 
+def withRecursive[T](query: Query[T])(f: Option[WithRecursiveContext] ?=> Query[T] => Query[T])(using s: SelectItem[NamedQuery[T]]): WithRecursive[T] =
+    WithRecursive(query)(f)
+
 enum CaseState:
     case Case
     case When
