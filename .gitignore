@@ -49,3 +49,5 @@ project/plugins/project/
 .metals/
 .bloop/
 project/**/metals.sbt
+
+**/test/
