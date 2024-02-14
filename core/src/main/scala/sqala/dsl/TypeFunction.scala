@@ -98,5 +98,7 @@ type UnionTo[A, B] = A match
 
 type QueryMap[T] = T match
     case Expr[t] => Expr[t]
+    case Table[t] => Table[t]
+    case NamedQuery[t] => t
     case x *: xs => QueryMap[x] *: QueryMap[xs]
     case EmptyTuple => EmptyTuple
