@@ -88,9 +88,6 @@ class SelectQuery[T](
     def filterIf(test: Boolean)(f: T => Expr[Boolean]): SelectQuery[T] =
         if test then filter(f) else this
 
-    def filterNot(test: Boolean)(f: T => Expr[Boolean]): SelectQuery[T] =
-        if !test then filter(f) else this
-
     def withFilter(f: T => Expr[Boolean]): SelectQuery[T] = filter(f)
 
     @targetName("withFilterBoolean")
