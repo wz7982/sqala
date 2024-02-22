@@ -24,11 +24,9 @@ type InverseMap[T, F[_]] = T match
     case EmptyTuple => EmptyTuple
     case F[x] => x
 
-type Element[Names <: Tuple, Types <: Tuple, Name <: String, Table] = (Names, Types) match
-    case (Name *: _, x *: _) => Table match
-        case Option[_] => Wrap[x, Option]
-        case _ => x
-    case (_ *: ns, _ *: xs) => Element[ns, xs, Name, Table]
+type Element[Names <: Tuple, Types <: Tuple, Name <: String] = (Names, Types) match
+    case (Name *: _, x *: _) => x
+    case (_ *: ns, _ *: xs) => Element[ns, xs, Name]
 
 type Result[R] = R match
     case Expr[t] => t
