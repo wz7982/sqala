@@ -13,7 +13,7 @@ case class Table[T](
 
 object Table:
     extension [T](table: Table[T])
-        inline def selectDynamic(name: String)(using p: Mirror.ProductOf[T]): Column[Element[p.MirroredElemLabels, p.MirroredElemTypes, name.type, T]] =
+        inline def selectDynamic(name: String)(using p: Mirror.ProductOf[T]): Column[Element[p.MirroredElemLabels, p.MirroredElemTypes, name.type]] =
             val columnMap = table.__metaData__.fieldNames.zip(table.__metaData__.columnNames).toMap
             Column(table.__aliasName__, columnMap(name))
 
@@ -23,7 +23,7 @@ object Table:
 
     extension [T](table: Table[Option[T]])
         @targetName("selectDynamicOption")
-        inline def selectDynamic(name: String)(using p: Mirror.ProductOf[T]): Column[Element[p.MirroredElemLabels, p.MirroredElemTypes, name.type, Option[T]]] =
+        inline def selectDynamic(name: String)(using p: Mirror.ProductOf[T]): Column[Wrap[Element[p.MirroredElemLabels, p.MirroredElemTypes, name.type], Option]] =
             val columnMap = table.__metaData__.fieldNames.zip(table.__metaData__.columnNames).toMap
             Column(table.__aliasName__, columnMap(name))
 
