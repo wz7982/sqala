@@ -92,13 +92,13 @@ def denseRank(): Agg[Option[Long]] = Agg("DENSE_RANK", Nil, false, Nil)
 
 def rowNumber(): Agg[Option[Long]] = Agg("ROW_NUMBER", Nil, false, Nil)
 
-def lag[T: AsSqlExpr](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
+def lag[T](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
     val defaultExpr = default match
         case Some(v) => Literal(v)
         case _ => Null
     Agg("LAG", expr :: Literal(offset) :: defaultExpr :: Nil, false, Nil)
 
-def lead[T: AsSqlExpr](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
+def lead[T](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
     val defaultExpr = default match
         case Some(v) => Literal(v)
         case _ => Null
