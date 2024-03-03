@@ -213,7 +213,9 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
         sqlBuilder.append(expr.op)
+        sqlBuilder.append("(")
         printExpr(expr.expr)
+        sqlBuilder.append(")")
 
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean = (parent.op, child) match
