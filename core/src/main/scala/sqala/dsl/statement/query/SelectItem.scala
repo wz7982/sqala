@@ -12,7 +12,13 @@ trait SelectItem[T]:
     def selectItems(item: T, cursor: Int): List[SqlSelectItem]
 
 object SelectItem:
-    given exprSelectItem[T, E <: Expr[T]]: SelectItem[E] with
+    given exprSelectItem[T]: SelectItem[Expr[T]] with
+        override def offset(item: Expr[T]): Int = 1
+
+        override def selectItems(item: Expr[T], cursor: Int): List[SqlSelectItem] = 
+            SqlSelectItem(item.asSqlExpr, Some(s"c${cursor}")) :: Nil
+
+    given exprSubtypingSelectItem[T, E <: Expr[T]]: SelectItem[E] with
         override def offset(item: E): Int = 1
 
         override def selectItems(item: E, cursor: Int): List[SqlSelectItem] = 
