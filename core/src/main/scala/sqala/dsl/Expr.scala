@@ -173,8 +173,10 @@ case class Literal[T](value: T)(using a: AsSqlExpr[T]) extends Expr[T]:
 case class Column[T](tableName: String, columnName: String) extends Expr[T]:
     override def asSqlExpr: SqlExpr = SqlExpr.Column(Some(tableName), columnName)
 
+    @targetName("to")
     def :=(value: T)(using AsSqlExpr[T]): UpdatePair = UpdatePair(this, Literal(value))
 
+    @targetName("to")
     def :=[R <: Operation[T]](updateExpr: Expr[R]): UpdatePair = UpdatePair(this, updateExpr)
 
 case object Null extends Expr[Nothing]:
