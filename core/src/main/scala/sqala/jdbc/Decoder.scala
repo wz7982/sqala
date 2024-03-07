@@ -86,3 +86,18 @@ object Decoder:
         override def offset: Int = 0
 
         override def decode(data: ResultSet, cursor: Int): EmptyTuple = EmptyTuple
+
+    inline given derived[T <: Product](using m: Mirror.ProductOf[T]): Decoder[T] =
+        val decodeInstances = Decoder.summonInstances[m.MirroredElemTypes]
+        
+        new Decoder:
+            override def offset: Int = decodeInstances.size
+
+            override def decode(data: ResultSet, cursor: Int): T =
+                var tempCursor = cursor
+                val dataArray = ArrayBuffer[Any]()
+                decodeInstances.foreach: instance =>
+                    dataArray.addOne(instance.asInstanceOf[Decoder[Any]].decode(data, tempCursor))
+                    tempCursor = tempCursor + instance.offset
+                val dataTup = Tuple.fromArray(dataArray.toArray)
+                m.fromProduct(dataTup)
