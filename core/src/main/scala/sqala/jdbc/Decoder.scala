@@ -68,7 +68,7 @@ object Decoder:
         override def decode(data: ResultSet, cursor: Int): LocalDateTime =
             LocalDateTime.ofInstant(data.getTimestamp(cursor).nn.toInstant(), ZoneId.systemDefault()).nn
 
-    given optionFieldDecoder[T](using d: Decoder[T]): Decoder[Option[T]] with
+    given optionDecoder[T](using d: Decoder[T]): Decoder[Option[T]] with
         override def offset: Int = d.offset
 
         override def decode(data: ResultSet, cursor: Int): Option[T] =
