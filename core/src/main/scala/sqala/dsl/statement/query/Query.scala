@@ -81,19 +81,21 @@ class SelectQuery[T](
     private[sqala] val items: T,
     val ast: SqlQuery.Select
 ) extends Query[T](items):
-    def filter(f: T => Expr[Boolean]): SelectQuery[T] =
+    given d: Depth = Depth(depth + 1)
+
+    def filter(f: Depth ?=> T => Expr[Boolean]): SelectQuery[T] =
         val condition = f(items).asSqlExpr
         SelectQuery(depth, lastIndex, items, ast.addWhere(condition))
 
-    def filterIf(test: Boolean)(f: T => Expr[Boolean]): SelectQuery[T] =
+    def filterIf(test: Boolean)(f: Depth ?=> T => Expr[Boolean]): SelectQuery[T] =
         if test then filter(f) else this
 
-    def withFilter(f: T => Expr[Boolean]): SelectQuery[T] = filter(f)
+    def withFilter(f: Depth ?=> T => Expr[Boolean]): SelectQuery[T] = filter(f)
 
     @targetName("withFilterBoolean")
     def withFilter(f: T => Boolean): SelectQuery[T] = this
 
-    def map[R](f: T => R)(using s: SelectItem[R]): SelectQuery[QueryMap[R]] =
+    def map[R](f: Depth ?=> T => R)(using s: SelectItem[R]): SelectQuery[QueryMap[R]] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
         SelectQuery(depth, lastIndex, mappedItems.asInstanceOf[QueryMap[R]], ast.copy(select = selectItems))
@@ -118,7 +120,6 @@ class SelectQuery[T](
         JoinQuery(depth, lastIndex + 1, tables, sqlTable, ast.copy(select = selectItems, from = sqlTable.toList))
 
     private inline def joinClause[JT, R](joinType: SqlJoinType, query: Depth ?=> Query[JT])(using s: SelectItem[R], c: Option[WithRecursiveContext]): JoinQuery[R] =
-        given d: Depth = Depth(depth + 1)
         val aliasName = c.map(_.alias).getOrElse(s"d${d.asInt - 1}_t${lastIndex + 1}")
         val joinQuery = query
         val rightTable = NamedQuery(joinQuery, aliasName)
@@ -142,7 +143,6 @@ class SelectQuery[T](
         JoinQuery(depth, lastIndex + 1, tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
 
     private inline def joinLateralClause[JT, R](joinType: SqlJoinType, query: Depth ?=> T => Query[JT])(using s: SelectItem[R]): JoinQuery[R] =
-        given d: Depth = Depth(depth + 1)
         val aliasName = s"d${d.asInt - 1}_t${lastIndex + 1}"
         val joinQuery = query(items)
         val rightTable = NamedQuery(joinQuery, aliasName)
@@ -161,7 +161,6 @@ class SelectQuery[T](
         JoinQuery(depth, lastIndex + 1, tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
 
     private inline def joinListClause[LT, JT, R](joinType: SqlJoinType, list: Depth ?=> List[LT])(using s: SelectItem[R]): JoinQuery[R] =
-        given d: Depth = Depth(depth + 1)
         val aliasName = s"d${d.asInt - 1}_t${lastIndex + 1}"
         val instances = AsSqlExpr.summonInstances[LT]
         val head = list.head
@@ -296,7 +295,9 @@ class JoinQuery[T](
     private[sqala] val table: Option[SqlTable.JoinTable],
     private[sqala] val ast: SqlQuery.Select
 ):
-    def on(f: T => Expr[Boolean]): SelectQuery[T] =
+    given d: Depth = Depth(depth + 1)
+
+    def on(f: Depth ?=> T => Expr[Boolean]): SelectQuery[T] =
         val sqlCondition = f(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(depth, lastIndex, tables, ast.copy(from = sqlTable.toList))
@@ -307,12 +308,14 @@ class GroupByQuery[T](
     private[sqala] val tables: T,
     private[sqala] val ast: SqlQuery.Select
 ):
-    def map[R](f: T => R)(using s: SelectItem[R]): SelectQuery[R] =
+    given d: Depth = Depth(depth + 1)
+
+    def map[R](f: Depth ?=> T => R)(using s: SelectItem[R]): SelectQuery[R] =
         val mappedItems = f(tables)
         val selectItems = s.selectItems(mappedItems, 0)
         SelectQuery(depth, lastIndex, mappedItems, ast.copy(select = selectItems))
 
-    def having(f: T => Expr[Boolean]): GroupByQuery[T] =
+    def having(f: Depth ?=> T => Expr[Boolean]): GroupByQuery[T] =
         val sqlCondition = f(tables).asSqlExpr
         GroupByQuery(depth, lastIndex, tables, ast.addHaving(sqlCondition))
 
