@@ -3,7 +3,9 @@ package sqala.jdbc
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Date
+import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.{erasedValue, summonInline}
+import scala.deriving.Mirror
 
 trait Decoder[T]:
     def offset: Int
@@ -88,9 +90,9 @@ object Decoder:
         override def decode(data: ResultSet, cursor: Int): EmptyTuple = EmptyTuple
 
     inline given derived[T <: Product](using m: Mirror.ProductOf[T]): Decoder[T] =
-        val decodeInstances = Decoder.summonInstances[m.MirroredElemTypes]
+        val decodeInstances = summonInstances[m.MirroredElemTypes]
         
-        new Decoder:
+        new Decoder[T]:
             override def offset: Int = decodeInstances.size
 
             override def decode(data: ResultSet, cursor: Int): T =
