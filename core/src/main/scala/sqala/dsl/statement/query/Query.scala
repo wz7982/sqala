@@ -295,7 +295,9 @@ class JoinQuery[T](
     private[sqala] val table: Option[SqlTable.JoinTable],
     private[sqala] val ast: SqlQuery.Select
 ):
-    def on(f: T => Expr[Boolean]): SelectQuery[T] =
+    given d: Depth = Depth(depth + 1)
+
+    def on(f: Depth ?=> T => Expr[Boolean]): SelectQuery[T] =
         val sqlCondition = f(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(depth, lastIndex, tables, ast.copy(from = sqlTable.toList))
