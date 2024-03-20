@@ -381,12 +381,10 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =
-        if prepare then
-            sqlBuilder.append(" LIMIT ? OFFSET ?") 
-            args.append(limit.limit)
-            args.append(limit.offset)
-        else
-            sqlBuilder.append(s" LIMIT ${limit.limit} OFFSET ${limit.offset}")
+        sqlBuilder.append(" LIMIT ")
+        printExpr(limit.limit)
+        sqlBuilder.append(" OFFSET ")
+        printExpr(limit.offset)
 
     def printForUpdate(): Unit = sqlBuilder.append(" FOR UPDATE")
 

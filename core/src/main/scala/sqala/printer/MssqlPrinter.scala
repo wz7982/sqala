@@ -6,12 +6,11 @@ import sqala.ast.statement.{SqlQuery, SqlStatement}
 
 class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
     override def printLimit(limit: SqlLimit): Unit =
-        if prepare then
-            sqlBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY")
-            args.append(limit.offset)
-            args.append(limit.limit)
-        else
-            sqlBuilder.append(s" OFFSET ${limit.offset} ROWS FETCH NEXT ${limit.limit} ROWS ONLY")
+        sqlBuilder.append(" OFFSET ")
+        printExpr(limit.offset)
+        sqlBuilder.append(" ROWS FETCH NEXT ")
+        printExpr(limit.limit)
+        sqlBuilder.append(" ROWS ONLY")
 
     override def printForUpdate(): Unit = sqlBuilder.append(" WITH (UPDLOCK)")
 

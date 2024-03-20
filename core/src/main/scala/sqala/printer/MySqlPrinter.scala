@@ -8,12 +8,10 @@ class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
     override val quote: String = "`"
 
     override def printLimit(limit: SqlLimit): Unit =
-        if prepare then
-            sqlBuilder.append(" LIMIT ?, ?")
-            args.append(limit.offset)
-            args.append(limit.limit)
-        else
-            sqlBuilder.append(s" LIMIT ${limit.offset}, ${limit.limit}")
+        sqlBuilder.append(" LIMIT ")
+        printExpr(limit.offset)
+        sqlBuilder.append(", ")
+        printExpr(limit.limit)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")

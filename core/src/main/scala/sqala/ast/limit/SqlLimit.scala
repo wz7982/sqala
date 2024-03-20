@@ -1,3 +1,5 @@
 package sqala.ast.limit
 
-case class SqlLimit(limit: Int, offset: Int)
+import sqala.ast.expr.SqlExpr
+
+case class SqlLimit(limit: SqlExpr, offset: SqlExpr)
