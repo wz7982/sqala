@@ -278,7 +278,7 @@ class SqlParser extends StandardTokenParsers:
 
     def limit: Parser[SqlLimit] =
         "LIMIT" ~ numericLit ~ opt("OFFSET" ~> numericLit) ^^ {
-            case _ ~ limit ~ offset => SqlLimit(limit.toInt, offset.map(_.toInt).getOrElse(0))
+            case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
     def parse(text: String): SqlExpr = phrase(expr)(new lexical.Scanner(text)) match

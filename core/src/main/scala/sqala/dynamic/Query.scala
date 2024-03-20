@@ -55,11 +55,11 @@ class Select(val ast: SqlQuery.Select) extends Query:
     infix def having(expr: Expr): Select = new Select(ast.addHaving(expr.sqlExpr))
 
     infix def limit(n: Int): Select =
-        val sqlLimit = ast.limit.map(l => SqlLimit(n, l.offset)).orElse(Some(SqlLimit(n, 0)))
+        val sqlLimit = ast.limit.map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset)).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
         new Select(ast.copy(limit = sqlLimit))
 
     infix def offset(n: Int): Select =
-        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, n)).orElse(Some(SqlLimit(1, n)))
+        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
         new Select(ast.copy(limit = sqlLimit))
 
     def distinct: Select = new Select(ast.copy(param = Some(SqlSelectParam.Distinct)))

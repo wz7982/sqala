@@ -1,5 +1,6 @@
 package sqala.dsl.statement.query
 
+import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
@@ -248,11 +249,11 @@ class SelectQuery[T](
         joinListClause[R, Map[R, Expr], FullJoinQuery[T, Map[R, Expr]]](SqlJoinType.FullJoin, list)
 
     def drop(n: Int): SelectQuery[T] =
-        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, n)).orElse(Some(SqlLimit(1, n)))
+        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
         new SelectQuery(depth, lastIndex, items, ast.copy(limit = sqlLimit))
 
     def take(n: Int): SelectQuery[T] =
-        val sqlLimit = ast.limit.map(l => SqlLimit(n, l.offset)).orElse(Some(SqlLimit(n, 0)))
+        val sqlLimit = ast.limit.map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset)).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
         new SelectQuery(depth, lastIndex, items, ast.copy(limit = sqlLimit))
 
     def distinct: SelectQuery[T] =

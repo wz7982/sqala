@@ -6,12 +6,11 @@ import sqala.ast.statement.SqlStatement
 
 class OraclePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
     override def printLimit(limit: SqlLimit): Unit =
-        if prepare then
-            sqlBuilder.append(" OFFSET ? ROWS FETCH FIRST ? ROWS ONLY")
-            args.append(limit.offset)
-            args.append(limit.limit)
-        else
-            sqlBuilder.append(s" OFFSET ${limit.offset} ROWS FETCH FIRST ${limit.limit} ROWS ONLY")
+        sqlBuilder.append(" OFFSET ")
+        printExpr(limit.offset)
+        sqlBuilder.append(" ROWS FETCH FIRST ")
+        printExpr(limit.limit)
+        sqlBuilder.append(" ROWS ONLY")
 
     override def printCteRecursive(): Unit = {}
 
