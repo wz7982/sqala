@@ -1,9 +1,11 @@
 package sqala.dynamic
 
 import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubQueryPredicate}
-import sqala.parser.SqlParser
+import sqala.parser.{ParseException, SqlParser}
 
-def col(snippet: String): Expr = Expr(SqlParser().parse(snippet))
+import scala.language.experimental.saferExceptions
+
+def col(snippet: String): Expr throws ParseException = Expr(SqlParser().parse(snippet))
 
 extension [T](value: T)(using a: AsSqlExpr[T])
     def asExpr: Expr = Expr(a.asSqlExpr(value))

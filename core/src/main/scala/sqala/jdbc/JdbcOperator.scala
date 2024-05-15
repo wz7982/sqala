@@ -1,12 +1,13 @@
 package sqala.jdbc
 
-import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
+import java.sql.{Connection, PreparedStatement, ResultSet, SQLException, Statement}
 import java.util.Date
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.language.experimental.saferExceptions
 import scala.language.unsafeNulls
 
-private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: Decoder[T]): List[T] =
+private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T]): List[T] throws SQLException =
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
@@ -29,12 +30,12 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
             result.addOne(decoder.decode(rs, 1))
         result.toList
     catch
-        case e: Exception => throw e
+        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
-private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int =
+private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int throws SQLException =
     var stmt: PreparedStatement = null
     try
         stmt = conn.prepareStatement(sql)
@@ -52,11 +53,11 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): In
                 case _ => stmt.setObject(i, arg)
         stmt.executeUpdate()
     catch
-        case e: Exception => throw e
+        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()
 
-private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] =
+private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] throws SQLException =
     var stmt: PreparedStatement = null
     val result = ListBuffer[Long]()
     try
@@ -79,6 +80,6 @@ private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[
             result += resultSet.getLong(1)
         result.toList
     catch
-        case e: Exception => throw e
+        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()

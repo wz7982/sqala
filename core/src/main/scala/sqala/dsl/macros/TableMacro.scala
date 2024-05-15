@@ -1,4 +1,4 @@
-package sqala.dsl.`macro`
+package sqala.dsl.macros
 
 import sqala.dsl.TableMetaData
 

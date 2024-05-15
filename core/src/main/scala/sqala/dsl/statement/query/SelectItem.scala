@@ -4,6 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
 import sqala.dsl.{Expr, Table}
 
+import scala.NamedTuple.NamedTuple
 import scala.collection.mutable.ListBuffer
 
 trait SelectItem[T]:
@@ -35,15 +36,15 @@ object SelectItem:
                 tmpCursor += 1
             items.toList
 
-    given namedQuerySelectItem[T](using s: SelectItem[T]): SelectItem[NamedQuery[T]] with
-        override def offset(item: NamedQuery[T]): Int = s.offset(item.query.queryItems)
+    given namedQuerySelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[NamedTupleWrapper[N, V]]): SelectItem[NamedQuery[N, V]] with
+        override def offset(item: NamedQuery[N, V]): Int = s.offset(item.__query__.queryItems)
 
-        override def selectItems(item: NamedQuery[T], cursor: Int): List[SqlSelectItem] =
-            val queryItems = s.selectItems(item.query.queryItems, 0)
+        override def selectItems(item: NamedQuery[N, V], cursor: Int): List[SqlSelectItem] =
+            val queryItems = s.selectItems(item.__query__.queryItems, 0)
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem]()
             for field <- queryItems.map(_.alias.get) do
-                items.addOne(SqlSelectItem(SqlExpr.Column(Some(item.alias), field), Some(s"c${tmpCursor}")))
+                items.addOne(SqlSelectItem(SqlExpr.Column(Some(item.__alias__), field), Some(s"c${tmpCursor}")))
                 tmpCursor += 1
             items.toList
 
@@ -57,3 +58,15 @@ object SelectItem:
         override def offset(item: EmptyTuple): Int = 0
 
         override def selectItems(item: EmptyTuple, cursor: Int): List[SqlSelectItem] = Nil
+
+    given namedTupleSelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[V]): SelectItem[NamedTuple[N, V]] with
+        override def offset(item: NamedTuple[N, V]): Int = s.offset(item.toTuple)
+
+        override def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem] =
+            s.selectItems(item, cursor)
+
+    given namedTupleWrapperSelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[V]): SelectItem[NamedTupleWrapper[N, V]] with
+        override def offset(item: NamedTupleWrapper[N, V]): Int = s.offset(item.values)
+
+        override def selectItems(item: NamedTupleWrapper[N, V], cursor: Int): List[SqlSelectItem] =
+            s.selectItems(item.values, cursor)

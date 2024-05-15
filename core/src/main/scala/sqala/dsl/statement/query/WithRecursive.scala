@@ -6,9 +6,9 @@ import sqala.ast.table.SqlTable
 class WithRecursive[T](val ast: SqlQuery.Cte)
 
 object WithRecursive:
-    def apply[T](query: Query[T])(f: Option[WithRecursiveContext] ?=> Query[T] => Query[T])(using s: SelectItem[NamedQuery[T]]): WithRecursive[T] =
+    def apply[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTupleWrapper[N, V]])(f: Option[WithContext] ?=> Query[NamedTupleWrapper[N, V]] => Query[NamedTupleWrapper[WN, V]])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTupleWrapper[N, V]] =
         val aliasName = "cte"
-        given Option[WithRecursiveContext] = Some(WithRecursiveContext(aliasName))
+        given Option[WithContext] = Some(WithContext(aliasName))
         val namedQuery = NamedQuery(query, aliasName)
         val cteQuery = f(query)
         val ast: SqlQuery.Cte = SqlQuery.Cte(
@@ -20,5 +20,3 @@ object WithRecursive:
             )
         )
         new WithRecursive(ast)
-
-case class WithRecursiveContext(alias: String)
