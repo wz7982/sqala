@@ -9,12 +9,18 @@ import sqala.dsl.*
 import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
 
 import scala.NamedTuple.*
+import scala.annotation.targetName
 import scala.compiletime.erasedValue
 
 sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery)
 
 object Query:
     extension [T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]])
+        @targetName("namedTupleQueryAsExpr")
+        def asExpr: Expr[T] = SubQuery(query)
+
+    extension [T, E <: Expr[T]](query: Query[E])
+        @targetName("exprQueryAsExpr")
         def asExpr: Expr[T] = SubQuery(query)
 
     extension [N <: Tuple, V <: Tuple, UN <: Tuple, UV <: Tuple](query: Query[NamedTupleWrapper[N, V]])
@@ -86,6 +92,12 @@ class SelectQuery[T](
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
         SelectQuery(NamedTupleWrapper(mappedItems.toTuple), ast.copy(select = selectItems))
+
+    @targetName("mapAny")
+    def map[R](f: T => R)(using s: SelectItem[R]): SelectQuery[R] =
+        val mappedItems = f(items)
+        val selectItems = s.selectItems(mappedItems, 0)
+        SelectQuery(mappedItems, ast.copy(select = selectItems))
 
     private inline def joinClause[JT, R](joinType: SqlJoinType)(using s: SelectItem[R]): JoinQuery[R] =
         val joinTableName = tableNameMacro[JT]
