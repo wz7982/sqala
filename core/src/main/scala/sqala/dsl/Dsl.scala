@@ -7,6 +7,7 @@ import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
+import scala.annotation.targetName
 import scala.deriving.Mirror
 
 extension [T: AsSqlExpr](value: T)
@@ -48,15 +49,27 @@ class CaseToken[T, S <: CaseState](val exprs: List[Expr[?]]):
             val caseBranches = exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
             Case(caseBranches, lastExpr)
 
-def exists(query: Query[?]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
+def exists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
 
-def notExists(query: Query[?]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
+def notExists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
 
-def all[T](query: Query[Expr[T]]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.All)
+def all[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
+    SubQueryPredicate(query, SqlSubQueryPredicate.All)
 
-def any[T](query: Query[Expr[T]]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+@targetName("allExprQuery")
+def all[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.All)
 
-def some[T](query: Query[Expr[T]]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+def any[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
+    SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+
+@targetName("anyExprQuery")
+def any[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+
+def some[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
+    SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+
+@targetName("someExprQuery")
+def some[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Some)
 
 def count(): Agg[Long] = Agg("COUNT", Nil, false, Nil)
 
