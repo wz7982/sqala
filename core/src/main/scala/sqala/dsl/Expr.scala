@@ -22,6 +22,9 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("eq")
     def ==[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, Equal, SubQuery(query))
 
+    @targetName("eqExprQuery")
+    def ==[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, Equal, SubQuery(query))
+
     @targetName("ne")
     def !=[R <: Operation[T]](value: R)(using AsSqlExpr[R]): Expr[Boolean] = Binary(this, NotEqual, Literal(value))
 
@@ -31,6 +34,9 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("ne")
     def !=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, NotEqual, SubQuery(query))
 
+    @targetName("neExprQuery")
+    def !=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, NotEqual, SubQuery(query))
+    
     @targetName("gt")
     def >(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, GreaterThan, Literal(value))
 
@@ -40,6 +46,9 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("gt")
     def >[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, GreaterThan, SubQuery(query))
 
+    @targetName("gtExprQuery")
+    def >[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, GreaterThan, SubQuery(query))
+    
     @targetName("ge")
     def >=(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, GreaterThanEqual, Literal(value))
 
@@ -49,6 +58,9 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("ge")
     def >=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, GreaterThanEqual, SubQuery(query))
 
+    @targetName("geExprQuery")
+    def >=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, GreaterThanEqual, SubQuery(query))
+    
     @targetName("lt")
     def <(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, LessThan, Literal(value))
 
@@ -58,6 +70,9 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("lt")
     def <[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, LessThan, SubQuery(query))
 
+    @targetName("ltExprQuery")
+    def <[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, LessThan, SubQuery(query))
+    
     @targetName("le")
     def <=(value: Unwrap[T, Option])(using AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean] = Binary(this, LessThanEqual, Literal(value))
 
@@ -67,13 +82,22 @@ sealed trait Expr[T] derives CanEqual:
     @targetName("le")
     def <=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = Binary(this, LessThanEqual, SubQuery(query))
 
+    @targetName("leExprQuery")
+    def <=[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[E]): Expr[Boolean] = Binary(this, LessThanEqual, SubQuery(query))
+    
     def in(list: List[T])(using AsSqlExpr[T]): Expr[Boolean] = In(this, Vector(list.map(Literal(_))), false)
 
     def in[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = In(this, SubQuery(query), false)
 
+    @targetName("inExprQuery")
+    def in[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = In(this, SubQuery(query), false)
+
     def notIn(list: List[T])(using AsSqlExpr[T]): Expr[Boolean] = In(this, Vector(list.map(Literal(_))), true)
 
     def notIn[R <: Operation[T], E <: Expr[R], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Boolean] = In(this, SubQuery(query), true)
+
+    @targetName("notInExprQuery")
+    def notIn[R <: Operation[T], E <: Expr[R]](query: Query[E]): Expr[Boolean] = In(this, SubQuery(query), true)
 
     def between(start: T, end: T)(using AsSqlExpr[T]): Expr[Boolean] = Between(this, Literal(start), Literal(end), false)
 
