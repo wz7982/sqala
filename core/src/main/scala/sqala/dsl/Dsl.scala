@@ -49,6 +49,8 @@ class CaseToken[T, S <: CaseState](val exprs: List[Expr[?]]):
             val caseBranches = exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
             Case(caseBranches, lastExpr)
 
+def `case`: CaseToken[Any, CaseInit] = new CaseToken(Nil)
+
 def exists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
 
 def notExists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
