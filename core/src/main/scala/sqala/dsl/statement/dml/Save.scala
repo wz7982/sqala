@@ -1,10 +1,10 @@
 package sqala.dsl.statement.dml
 
+import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.dsl.`macro`.{tableMetaDataMacro, tableNameMacro}
-import sqala.ast.expr.SqlExpr
 import sqala.dsl.AsSqlExpr
+import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
 
 class Save(val ast: SqlStatement.Upsert)
 

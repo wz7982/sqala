@@ -3,14 +3,14 @@ package sqala.dsl
 trait Number[T]
 
 object Number:
-    given intNumber: Number[Int] with {}
+    given intNumber: Number[Int]()
 
-    given longNumber: Number[Long] with {}
+    given longNumber: Number[Long]()
 
-    given floatNumber: Number[Float] with {}
+    given floatNumber: Number[Float]()
 
-    given doubleNumber: Number[Double] with {}
+    given doubleNumber: Number[Double]()
 
-    given decimalNumber: Number[BigDecimal] with {}
+    given decimalNumber: Number[BigDecimal]()
 
-    given optionNumber[T: Number]: Number[Option[T]] with {}
+    given optionNumber[T: Number]: Number[Option[T]]()

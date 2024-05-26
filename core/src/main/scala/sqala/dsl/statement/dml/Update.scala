@@ -3,8 +3,8 @@ package sqala.dsl.statement.dml
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.dsl.`macro`.{tableMetaDataMacro, tableNameMacro}
-import sqala.dsl.{AsSqlExpr, Column, Expr, Table}
+import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
+import sqala.dsl.{AsSqlExpr, Expr, Table}
 
 import scala.deriving.Mirror
 
@@ -12,28 +12,28 @@ class Update[T, S <: UpdateState](
     private[sqala] val items: T,
     val ast: SqlStatement.Update
 ):
-    inline def set(f: T => UpdatePair)(using S =:= UpdateState.Table.type): Update[T, UpdateState.Table.type] =
+    inline def set(f: T => UpdatePair)(using S =:= UpdateTable): Update[T, UpdateTable] =
         val pair = f(items)
         val expr = SqlExpr.Column(None, pair.expr.columnName)
         val updateExpr = pair.updateExpr.asSqlExpr
         new Update(items, ast.copy(setList = ast.setList :+ (expr, updateExpr)))
 
-    inline def where(f: T => Expr[Boolean])(using S =:= UpdateState.Table.type): Update[T, UpdateState.Table.type] =
+    inline def where(f: T => Expr[Boolean])(using S =:= UpdateTable): Update[T, UpdateTable] =
         val condition = f(items)
         new Update(items, ast.addWhere(condition.asSqlExpr))
 
 object Update:
-    inline def apply[T]: Update[Table[T], UpdateState.Table.type] =
+    inline def apply[T <: Product]: Update[Table[T], UpdateTable] =
         val tableName = tableNameMacro[T]
         val metaData = tableMetaDataMacro[T]
-        val table = Table[T](tableName, tableName, metaData, 0)
+        val table = Table[T](tableName, tableName, metaData)
         val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.IdentTable(tableName, None), Nil, None)
         new Update(table, ast)
 
-    inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using p: Mirror.ProductOf[T]): Update[Table[T], UpdateState.Entity.type] =
+    inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using p: Mirror.ProductOf[T]): Update[Table[T], UpdateEntity] =
         val tableName = tableNameMacro[T]
         val metaData = tableMetaDataMacro[T]
-        val table = Table[T](tableName, tableName, metaData, 0)
+        val table = Table[T](tableName, tableName, metaData)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)
@@ -53,9 +53,3 @@ object Update:
         val condition = if conditions.isEmpty then None else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
         val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.IdentTable(tableName, None), updateColumns, condition)
         new Update(table, ast)
-
-enum UpdateState:
-    case Table
-    case Entity
-
-case class UpdatePair(expr: Column[?], updateExpr: Expr[?])
