@@ -10,6 +10,7 @@ import sqala.dsl.statement.query.*
 
 import scala.annotation.targetName
 import scala.deriving.Mirror
+import scala.language.experimental.erasedDefinitions
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Literal(value)
@@ -26,22 +27,22 @@ type CaseWhen = CaseState.When.type
 type CaseElse = CaseState.Else.type
 
 class CaseToken[T, S <: CaseState](val exprs: List[Expr[?]]):
-    infix def when(expr: Expr[Boolean])(using S =:= CaseInit): CaseToken[T, CaseWhen] =
+    infix def when(expr: Expr[Boolean])(using erased S =:= CaseInit): CaseToken[T, CaseWhen] =
         new CaseToken(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T]](value: E)(using S =:= CaseWhen, AsSqlExpr[E]): CaseToken[E, CaseInit] =
+    infix def `then`[E <: Operation[T]](value: E)(using erased S =:= CaseWhen, AsSqlExpr[E]): CaseToken[E, CaseInit] =
         new CaseToken(exprs :+ Literal(value))
 
-    infix def `then`[E <: Operation[T]](expr: Expr[E])(using S =:= CaseWhen): CaseToken[E, CaseInit] =
+    infix def `then`[E <: Operation[T]](expr: Expr[E])(using erased S =:= CaseWhen): CaseToken[E, CaseInit] =
         new CaseToken(exprs :+ expr)
 
-    infix def `else`[E <: Operation[T]](value: E)(using S =:= CaseInit, AsSqlExpr[E]): CaseToken[E, CaseElse] =
+    infix def `else`[E <: Operation[T]](value: E)(using erased S =:= CaseInit, AsSqlExpr[E]): CaseToken[E, CaseElse] =
         new CaseToken(exprs :+ Literal(value))
 
-    infix def `else`[E <: Operation[T]](expr: Expr[E])(using S =:= CaseInit): CaseToken[E, CaseElse] =
+    infix def `else`[E <: Operation[T]](expr: Expr[E])(using erased S =:= CaseInit): CaseToken[E, CaseElse] =
         new CaseToken(exprs :+ expr)
 
-    def end(using S <:< (CaseInit | CaseElse)): Case[Wrap[T, Option]] =
+    def end(using erased S <:< (CaseInit | CaseElse)): Case[Wrap[T, Option]] =
         if exprs.size % 2 == 0 then
             val caseBranches = exprs.grouped(2).toList.map(i => (i.head, i(1)))
             Case(caseBranches, Null)
