@@ -11,32 +11,32 @@ import scala.language.experimental.saferExceptions
 class JdbcTransactionContext(val connection: Connection, val dialect: Dialect)
 
 def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
-    val (sql, args) = statementToString(insert.ast, t.dialect, true)
+    val (sql, args) = statementToString(insert.ast, t.dialect.printer(true))
     l(sql)
     jdbcExec(t.connection, sql, args)
 
 def executeReturnKey(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): List[Long] throws SQLException =
-    val (sql, args) = statementToString(insert.ast, t.dialect, true)
+    val (sql, args) = statementToString(insert.ast, t.dialect.printer(true))
     l(sql)
     jdbcExecReturnKey(t.connection, sql, args)
 
 def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
-    val (sql, args) = statementToString(update.ast, t.dialect, true)
+    val (sql, args) = statementToString(update.ast, t.dialect.printer(true))
     l(sql)
     jdbcExec(t.connection, sql, args)
     
 def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
-    val (sql, args) = statementToString(delete.ast, t.dialect, true)
+    val (sql, args) = statementToString(delete.ast, t.dialect.printer(true))
     l(sql)
     jdbcExec(t.connection, sql, args)
 
 def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
-    val (sql, args) = statementToString(save.ast, t.dialect, true)
+    val (sql, args) = statementToString(save.ast, t.dialect.printer(true))
     l(sql)
     jdbcExec(t.connection, sql, args)
     
 def execute[T](query: Query[T])(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
-    val (sql, args) = queryToString(query.ast, t.dialect, true)
+    val (sql, args) = queryToString(query.ast, t.dialect.printer(true))
     l(sql)
     jdbcQuery(t.connection, sql, args)
 
@@ -63,4 +63,4 @@ def page[T](
     Page(total, count, pageNo, pageSize, data)
 
 def showSql[T](query: Query[T])(using t: JdbcTransactionContext): String =
-    queryToString(query.ast, t.dialect, true)._1
+    queryToString(query.ast, t.dialect.printer(true))._1

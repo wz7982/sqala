@@ -4,7 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.*
-import sqala.jdbc.Dialect
+import sqala.printer.SqlPrinter
 
 sealed trait Query:
     def ast: SqlQuery
@@ -13,8 +13,7 @@ sealed trait Query:
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(ast))
 
-    def sql(dialect: Dialect): (String, Array[Any]) =
-        val printer = dialect.printer(true)
+    def sql(printer: SqlPrinter): (String, Array[Any]) =
         printer.printQuery(ast)
         printer.sql -> printer.args.toArray
 
