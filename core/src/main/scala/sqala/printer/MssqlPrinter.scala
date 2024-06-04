@@ -5,6 +5,10 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 
 class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
+    override val leftQuote: String = "["
+
+    override val rightQuote: String = "]"
+
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append(" OFFSET ")
         printExpr(limit.offset)
@@ -51,7 +55,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
-        sqlBuilder.append(s" ${quote}t1$quote")
+        sqlBuilder.append(s" ${leftQuote}t1$rightQuote")
 
         sqlBuilder.append(" USING (")
         sqlBuilder.append("SELECT ")
@@ -62,14 +66,14 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s") ${quote}t2$quote")
+        sqlBuilder.append(s") ${leftQuote}t2$rightQuote")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
-            sqlBuilder.append(s"${quote}t1$quote.")
+            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(upsert.pkList(index))
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${quote}t2$quote.")
+            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
             printExpr(upsert.pkList(index))
             if index < upsert.pkList.size - 1 then
                 sqlBuilder.append(" AND ")
@@ -77,15 +81,15 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
 
         sqlBuilder.append(" WHEN MATCHED THEN UPDATE SET ")
         printList(upsert.updateList): u =>
-            sqlBuilder.append(s"${quote}t1$quote.")
+            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(u)
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${quote}t2$quote.")
+            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
             printExpr(u)
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
         printList(upsert.columns): c =>
-            sqlBuilder.append(s"${quote}t1$quote.")
+            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(c)
         sqlBuilder.append(")")
 
