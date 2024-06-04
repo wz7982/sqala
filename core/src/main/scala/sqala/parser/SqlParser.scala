@@ -117,6 +117,12 @@ class SqlParser extends StandardTokenParsers:
                 "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b)) |
                 "%" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Mod, b))
             )
+
+    def column: Parser[SqlExpr] =
+        ident ~ opt("." ~> ident) ^^ {
+            case id ~ None => SqlExpr.Column(None, id)
+            case table ~ Some(column) => SqlExpr.Column(Some(table), column)
+        }
   
     def primary: Parser[SqlExpr] =
         literal |
@@ -126,10 +132,7 @@ class SqlParser extends StandardTokenParsers:
         function |
         aggFunction |
         union |
-        ident ~ opt("." ~> ident) ^^ {
-            case id ~ None => SqlExpr.Column(None, id)
-            case table ~ Some(column) => SqlExpr.Column(Some(table), column)
-        } |
+        column |
         "(" ~> expr <~ ")"
 
     def function: Parser[SqlExpr] =
@@ -283,6 +286,10 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def parse(text: String): SqlExpr throws ParseException = phrase(expr)(new lexical.Scanner(text)) match
+        case Success(result, _) => result
+        case e => throw ParseException(e.toString)
+
+    def parseColumn(text: String): SqlExpr throws ParseException = phrase(column)(new lexical.Scanner(text)) match
         case Success(result, _) => result
         case e => throw ParseException(e.toString)
 
