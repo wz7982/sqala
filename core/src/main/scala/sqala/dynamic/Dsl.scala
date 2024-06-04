@@ -5,7 +5,9 @@ import sqala.parser.{ParseException, SqlParser}
 
 import scala.language.experimental.saferExceptions
 
-def col(snippet: String): Expr throws ParseException = Expr(SqlParser().parse(snippet))
+def column(name: String): Expr throws ParseException = Expr(SqlParser().parseColumn(name))
+
+def unsafeExpr(snippet: String): Expr throws ParseException = Expr(SqlParser().parse(snippet))
 
 extension [T](value: T)(using a: AsSqlExpr[T])
     def asExpr: Expr = Expr(a.asSqlExpr(value))
