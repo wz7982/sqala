@@ -290,7 +290,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append("CASE")
         for branch <- expr.branches do
             sqlBuilder.append(" WHEN ")
-            printExpr(branch.expr)
+            printExpr(branch.whenExpr)
             sqlBuilder.append(" THEN ")
             printExpr(branch.thenExpr)
         sqlBuilder.append(" ELSE ")
