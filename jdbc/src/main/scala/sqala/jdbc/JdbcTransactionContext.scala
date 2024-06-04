@@ -2,6 +2,7 @@ package sqala.jdbc
 
 import sqala.dsl.Result
 import sqala.dsl.statement.dml.*
+import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.{Query, SelectQuery}
 import sqala.util.{queryToString, statementToString}
 
@@ -34,9 +35,19 @@ def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int throws 
     val (sql, args) = statementToString(save.ast, t.dialect.printer(true))
     l(sql)
     jdbcExec(t.connection, sql, args)
+
+def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+    val NativeSql(sql, args) = nativeSql
+    l(sql)
+    jdbcExec(t.connection, sql, args)
     
 def execute[T](query: Query[T])(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
     val (sql, args) = queryToString(query.ast, t.dialect.printer(true))
+    l(sql)
+    jdbcQuery(t.connection, sql, args)
+
+def executeQuery[T](nativeSql: NativeSql)(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
+    val NativeSql(sql, args) = nativeSql
     l(sql)
     jdbcQuery(t.connection, sql, args)
 

@@ -5,6 +5,7 @@ import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
 import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
 import sqala.dsl.statement.dml.*
+import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
 
 import scala.annotation.targetName
@@ -146,3 +147,13 @@ inline def update[T <: Product](entity: T, skipNone: Boolean = false)(using Mirr
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]
 
 inline def save[T <: Product](entity: T): Save = Save[T](entity)
+
+extension (s: StringContext)
+    def sql(args: Any*): NativeSql =
+        val strings = s.parts.iterator
+        val argArray = args.toArray
+        val builder = new StringBuilder(strings.next())
+        while strings.hasNext do
+            builder.append("?")
+            builder.append(strings.next())
+        NativeSql(builder.toString, argArray)
