@@ -29,8 +29,6 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
         while rs.next() do
             result.addOne(decoder.decode(rs, 1))
         result.toList
-    catch
-        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()
         if rs != null then rs.close()
@@ -52,8 +50,6 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): In
                 case d: Date => stmt.setDate(i, java.sql.Date(d.getTime))
                 case _ => stmt.setObject(i, arg)
         stmt.executeUpdate()
-    catch
-        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()
 
@@ -79,7 +75,5 @@ private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[
         while resultSet.next() do
             result += resultSet.getLong(1)
         result.toList
-    catch
-        case e: SQLException => throw e
     finally
         if stmt != null then stmt.close()
