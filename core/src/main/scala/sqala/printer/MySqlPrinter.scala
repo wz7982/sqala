@@ -5,7 +5,9 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 
 class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
-    override val quote: String = "`"
+    override val leftQuote: String = "`"
+
+    override val rightQuote: String = "`"
 
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append(" LIMIT ")

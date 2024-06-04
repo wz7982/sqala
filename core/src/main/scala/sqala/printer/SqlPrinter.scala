@@ -13,7 +13,9 @@ import scala.collection.mutable.ArrayBuffer
 abstract class SqlPrinter(val prepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
 
-    val quote: String = "\""
+    val leftQuote: String = "\""
+
+    val rightQuote: String = "\""
 
     val args: ArrayBuffer[Any] = ArrayBuffer()
 
@@ -128,10 +130,10 @@ abstract class SqlPrinter(val prepare: Boolean):
 
         def printWithItem(item: SqlWithItem): Unit =
             sqlBuilder.append(" ")
-            sqlBuilder.append(s"$quote${item.name}$quote")
+            sqlBuilder.append(s"$leftQuote${item.name}$rightQuote")
             if item.columns.nonEmpty then
                 sqlBuilder.append("(")
-                printList(item.columns)(c => sqlBuilder.append(s"$quote${c}$quote"))
+                printList(item.columns)(c => sqlBuilder.append(s"$leftQuote${c}$rightQuote"))
                 sqlBuilder.append(")")
             sqlBuilder.append(" AS ")
             sqlBuilder.append("(")
@@ -165,12 +167,12 @@ abstract class SqlPrinter(val prepare: Boolean):
         case i: SqlExpr.Interval => printIntervalExpr(i)
 
     def printAllColumnExpr(expr: SqlExpr.AllColumn): Unit =
-        expr.tableName.foreach(n => sqlBuilder.append(s"$quote$n$quote."))
+        expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
         sqlBuilder.append("*")
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
-        expr.tableName.foreach(n => sqlBuilder.append(s"$quote$n$quote."))
-        sqlBuilder.append(s"$quote${expr.columnName}$quote")
+        expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
+        sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
 
     def printNullExpr(): Unit = sqlBuilder.append("NULL")
 
@@ -340,17 +342,17 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printTable(table: SqlTable): Unit = table match
         case SqlTable.IdentTable(tableName, alias) =>
-            sqlBuilder.append(s"$quote$tableName$quote")
-            for a <- alias do sqlBuilder.append(s" AS $quote$a$quote")
+            sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
+            for a <- alias do sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
         case SqlTable.SubQueryTable(query, lateral, alias) =>
             if lateral then sqlBuilder.append("LATERAL ")
             sqlBuilder.append("(")
             printQuery(query)
             sqlBuilder.append(")")
-            sqlBuilder.append(s" AS $quote${alias.tableAlias}$quote")
+            sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
             if alias.columnAlias.nonEmpty then
                 sqlBuilder.append("(")
-                printList(alias.columnAlias)(i => sqlBuilder.append(s"$quote$i$quote"))
+                printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
                 sqlBuilder.append(")")
         case SqlTable.JoinTable(left, joinType, right, condition) =>
             printTable(left)
@@ -373,7 +375,7 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printSelectItem(item: SqlSelectItem): Unit =
         printExpr(item.expr)
-        item.alias.foreach(a => sqlBuilder.append(s" AS $quote$a$quote"))
+        item.alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 
     def printOrderBy(orderBy: SqlOrderBy): Unit =
         printExpr(orderBy.expr)
