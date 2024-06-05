@@ -46,7 +46,7 @@ def fetch[T](query: Query[T])(using d: JdbcDecoder[Result[T]], t: JdbcTransactio
     l(sql)
     jdbcQuery(t.connection, sql, args)
 
-def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
+def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] throws SQLException =
     val NativeSql(sql, args) = nativeSql
     l(sql)
     jdbcQuery(t.connection, sql, args)
