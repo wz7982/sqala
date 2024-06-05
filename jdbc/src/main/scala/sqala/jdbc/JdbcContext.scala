@@ -51,7 +51,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         logger(sql)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[Result[T]]): List[Result[T]] throws SQLException =
+    def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[T]): List[T] throws SQLException =
         val NativeSql(sql, args) = nativeSql
         logger(sql)
         execute(c => jdbcQuery(c, sql, args))
