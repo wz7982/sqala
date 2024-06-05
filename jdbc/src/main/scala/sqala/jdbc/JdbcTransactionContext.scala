@@ -41,33 +41,33 @@ def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): I
     l(sql)
     jdbcExec(t.connection, sql, args)
     
-def execute[T](query: Query[T])(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
+def fetch[T](query: Query[T])(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
     val (sql, args) = queryToString(query.ast, t.dialect.printer(true))
     l(sql)
     jdbcQuery(t.connection, sql, args)
 
-def executeQuery[T](nativeSql: NativeSql)(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
+def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[Result[T]], t: JdbcTransactionContext, l: Logger): List[Result[T]] throws SQLException =
     val NativeSql(sql, args) = nativeSql
     l(sql)
     jdbcQuery(t.connection, sql, args)
 
 def find[T](query: Query[T])(using JdbcDecoder[Result[T]], JdbcTransactionContext, Logger): Option[Result[T]] throws SQLException =
-    execute(query).headOption
+    fetch(query).headOption
 
-def size[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): Long throws SQLException =
+def fetchSize[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): Long throws SQLException =
     val sizeQuery = query.size
-    execute(sizeQuery).head
+    fetch(sizeQuery).head
 
 def exists[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): Boolean throws SQLException =
     val existsQuery = query.exists
-    execute(existsQuery).head
+    fetch(existsQuery).head
 
 def page[T](
     query: SelectQuery[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using JdbcDecoder[Result[T]], JdbcTransactionContext, Logger): Page[Result[T]] throws SQLException =
     val data = if pageSize == 0 then Nil
-        else execute(query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
-    val count = if returnCount then execute(query.size).head else 0L
+        else fetch(query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
+    val count = if returnCount then fetch(query.size).head else 0L
     val total = if count == 0 || pageSize == 0 then 0
         else if count % pageSize == 0 then count / pageSize
         else count / pageSize + 1
