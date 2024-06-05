@@ -25,7 +25,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
 
         if select.select.isEmpty then sqlBuilder.append("*") else printList(select.select)(printSelectItem)
 
-        for _ <- select.from do
+        if select.from.nonEmpty then
             sqlBuilder.append(" FROM ")
             printList(select.from)(printTable)
 
