@@ -108,15 +108,15 @@ class SqlParser extends StandardTokenParsers:
     def add: Parser[SqlExpr] =
         mul * (
             "+" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Plus, b)) |
-                "-" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Minus, b))
-            )
+            "-" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Minus, b))
+        )
 
     def mul: Parser[SqlExpr] =
         primary * (
             "*" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Times, b)) |
-                "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b)) |
-                "%" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Mod, b))
-            )
+            "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b)) |
+            "%" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Mod, b))
+        )
 
     def column: Parser[SqlExpr] =
         ident ~ opt("." ~> ident) ^^ {
@@ -145,12 +145,12 @@ class SqlParser extends StandardTokenParsers:
 
     def aggFunction: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Agg("COUNT", SqlExpr.AllColumn(None) :: Nil, false, Map(), Nil)) |
-            (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
-                case funcName ~ args => SqlExpr.Agg(funcName.toUpperCase.nn, args, false, Map(), Nil)
-            } |
-            ident ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
-                case funcName ~ arg => SqlExpr.Agg(funcName.toUpperCase.nn, arg :: Nil, true, Map(), Nil)
-            }
+        (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
+            case funcName ~ args => SqlExpr.Agg(funcName.toUpperCase.nn, args, false, Map(), Nil)
+        } |
+        ident ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
+            case funcName ~ arg => SqlExpr.Agg(funcName.toUpperCase.nn, arg :: Nil, true, Map(), Nil)
+        }
 
     def over: Parser[(List[SqlExpr], List[SqlOrderBy])] =
         "(" ~> "PARTITION" ~> "BY" ~> rep1sep(expr, ",") ~ opt("ORDER" ~> "BY" ~> rep1sep(order, ",")) <~ ")" ^^ {
@@ -180,8 +180,8 @@ class SqlParser extends StandardTokenParsers:
         "CASE" ~>
             rep1("WHEN" ~> expr ~ "THEN" ~ expr ^^ { case e ~ _ ~ te => SqlCase(e, te) }) ~
             opt("ELSE" ~> expr) <~ "END" ^^ {
-            case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.Null))
-        }
+                case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.Null))
+            }
 
     def literal: Parser[SqlExpr] =
         numericLit ^^ (i => SqlExpr.NumberLiteral(BigDecimal(i))) |
@@ -195,14 +195,14 @@ class SqlParser extends StandardTokenParsers:
             case None => SqlUnionType.Union
             case _ => SqlUnionType.UnionAll
         } |
-            "EXCEPT" ~> opt("ALL") ^^ {
-                case None => SqlUnionType.Except
-                case _ => SqlUnionType.ExceptAll
-            } |
-            "INTERSECT" ~> opt("ALL") ^^ {
-                case None => SqlUnionType.Intersect
-                case _ => SqlUnionType.IntersectAll
-            }
+        "EXCEPT" ~> opt("ALL") ^^ {
+            case None => SqlUnionType.Except
+            case _ => SqlUnionType.ExceptAll
+        } |
+        "INTERSECT" ~> opt("ALL") ^^ {
+            case None => SqlUnionType.Intersect
+            case _ => SqlUnionType.IntersectAll
+        }
 
     def union: Parser[SqlExpr.SubQuery] =
         select ~ rep(
@@ -285,13 +285,15 @@ class SqlParser extends StandardTokenParsers:
             case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
-    def parse(text: String): SqlExpr throws ParseException = phrase(expr)(new lexical.Scanner(text)) match
-        case Success(result, _) => result
-        case e => throw ParseException(e.toString)
+    def parse(text: String): SqlExpr throws ParseException = 
+        phrase(expr)(new lexical.Scanner(text)) match
+            case Success(result, _) => result
+            case e => throw ParseException(e.toString)
 
-    def parseColumn(text: String): SqlExpr throws ParseException = phrase(column)(new lexical.Scanner(text)) match
-        case Success(result, _) => result
-        case e => throw ParseException(e.toString)
+    def parseColumn(text: String): SqlExpr throws ParseException = 
+        phrase(column)(new lexical.Scanner(text)) match
+            case Success(result, _) => result
+            case e => throw ParseException(e.toString)
 
 class ParseException(msg: String) extends Exception:
     override def toString: String =

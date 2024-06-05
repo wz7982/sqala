@@ -15,7 +15,7 @@ class JoinQuery[T](
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))
 
-    def `using`[E](f: T => Column[E]): SelectQuery[T] =
+    def using[E](f: T => Column[E]): SelectQuery[T] =
         val sqlCondition = f(tables).asSqlExpr.asInstanceOf[SqlExpr.Column].copy(tableName = None)
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.Using(sqlCondition))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))
