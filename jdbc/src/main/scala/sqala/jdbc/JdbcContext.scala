@@ -46,27 +46,36 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val NativeSql(sql, args) = nativeSql
         executeDml(sql, args)
 
-    def fetch[T](query: Query[T])(using d: JdbcDecoder[Result[T]]): List[Result[T]] throws SQLException =
+    def fetchTo[T](query: Query[?])(using JdbcDecoder[Result[T]]): List[Result[T]] throws SQLException =
         val (sql, args) = queryToString(query.ast, dialect.printer(true))
         logger(sql)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetch[T](nativeSql: NativeSql)(using d: JdbcDecoder[T]): List[T] throws SQLException =
+    def fetch[T](query: Query[T])(using JdbcDecoder[Result[T]]): List[Result[T]] throws SQLException =
+        fetchTo[T](query)
+
+    def fetchTo[T](nativeSql: NativeSql)(using JdbcDecoder[T]): List[T] throws SQLException =
         val NativeSql(sql, args) = nativeSql
         logger(sql)
         execute(c => jdbcQuery(c, sql, args))
 
-    def page[T](query: SelectQuery[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using d: JdbcDecoder[Result[T]]): Page[Result[T]] throws SQLException =
+    def pageTo[T](query: SelectQuery[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using JdbcDecoder[Result[T]]): Page[Result[T]] throws SQLException =
         val data = if pageSize == 0 then Nil
-            else fetch(query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
+            else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
         val count = if returnCount then fetch(query.size).head else 0L
         val total = if count == 0 || pageSize == 0 then 0
             else if count % pageSize == 0 then count / pageSize
             else count / pageSize + 1
         Page(total, count, pageNo, pageSize, data)
 
+    def page[T](query: SelectQuery[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using JdbcDecoder[Result[T]]): Page[Result[T]] throws SQLException =
+        pageTo[T](query, pageSize, pageNo, returnCount)
+
+    def findTo[T](query: Query[?])(using JdbcDecoder[Result[T]]): Option[Result[T]] throws SQLException =
+        fetchTo[T](query).headOption
+
     def find[T](query: Query[T])(using JdbcDecoder[Result[T]]): Option[Result[T]] throws SQLException =
-        fetch(query).headOption
+        findTo[T](query)
 
     def fetchSize[T](query: SelectQuery[T]): Long throws SQLException =
         val sizeQuery = query.size
