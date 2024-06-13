@@ -7,6 +7,3 @@ class jsonIgnore() extends StaticAnnotation
 
 @scala.annotation.meta.field
 case class jsonAlias(alias: String) extends StaticAnnotation
-
-@scala.annotation.meta.field
-case class jsonDateFormat(format: String) extends StaticAnnotation

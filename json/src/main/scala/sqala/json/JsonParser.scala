@@ -65,6 +65,6 @@ class JsonParser extends StandardTokenParsers:
         "[" ~> repsep(literal, ",") <~ "]" ^^ (items => JsonNode.Vector(items))
 
     def parse(text: String): JsonNode throws JsonDecodeException = 
-        phrase(literal)(new lexical.Scanner(text)) match
+        phrase(objectLiteral | arrayLiteral)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw JsonDecodeException(e.toString)
