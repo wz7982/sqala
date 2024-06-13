@@ -20,7 +20,14 @@ object JsonObject:
         val value = JsonDefaultValue.derived[T]
         newInstance[T](encoder, decoder, value)
 
-trait JsonStateEnum[T] extends JsonEncoder[T] with JsonDecoder[T] with JsonDefaultValue[T]
+trait JsonStateEnum[T] extends JsonEncoder[T] with JsonDecoder[T] with JsonDefaultValue[T]:
+    def toJson(x: T): JsonNode
+
+    def fromJson(node: JsonNode): T
+
+    override def encode(x: T)(using JsonDateFormat): JsonNode = toJson(x)
+
+    override def decode(node: JsonNode)(using JsonDateFormat): T throws JsonDecodeException = fromJson(node)
 
 case class JsonDateFormat(format: String)
 
