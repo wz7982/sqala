@@ -1,9 +1,14 @@
 package sqala.json
 
+import scala.compiletime.erasedValue
 import scala.collection.mutable.ListBuffer
 import scala.quoted.{Expr, Quotes, Type}
 
 inline def jsonMetaDataMacro[T]: JsonMetaData = ${ jsonMetaDataMacroImpl[T] }
+
+inline def fetchMetaData[T <: Tuple]: List[JsonMetaData] = inline erasedValue[T] match
+    case _: EmptyTuple => Nil
+    case _: (t *: ts) => jsonMetaDataMacro[t] :: fetchMetaData[ts]
 
 def jsonMetaDataMacroImpl[T: Type](using q: Quotes): Expr[JsonMetaData] =
     import q.reflect.*

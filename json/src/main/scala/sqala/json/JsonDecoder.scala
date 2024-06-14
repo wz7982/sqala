@@ -133,10 +133,17 @@ object JsonDecoder:
                         m.fromProduct(Tuple.fromArray(data.toArray))
                     case _ => throw new JsonDecodeException
 
-    private def newDecoderSum[T](names: List[String], instances: List[JsonDecoder[?]]): JsonDecoder[T] =
+    private def newDecoderSum[T](names: List[String], instances: List[JsonDecoder[?]], metaData: List[JsonMetaData]): JsonDecoder[T] =
         new JsonDecoder[T]:
             override def decode(node: JsonNode)(using JsonDateFormat): T throws JsonDecodeException =
                 node match
+                    case JsonNode.StringLiteral(string) =>
+                        if !names.contains(string) then
+                            throw new JsonDecodeException
+                        val index = names.indexOf(string)
+                        if metaData(index).fieldNames.isEmpty then
+                            instances(index).asInstanceOf[JsonDecoder[T]].decode(JsonNode.Object(Map()))
+                        else throw new JsonDecodeException
                     case JsonNode.Object(items) =>
                         val (name, node) = items.head
                         if !names.contains(name) then 
@@ -148,10 +155,13 @@ object JsonDecoder:
     inline given derived[T](using m: Mirror.Of[T]): JsonDecoder[T] =
         val names = fetchNames[m.MirroredElemLabels]
         val instances = summonInstances[m.MirroredElemTypes]
+        val metaData = fetchMetaData[m.MirroredElemTypes]
 
         inline m match
             case p: Mirror.ProductOf[T] => 
-                val defaultValues = names.zip(JsonDefaultValue.defaultValues[m.MirroredElemTypes]).toMap
+                val defaultValues = names
+                    .zip(JsonDefaultValue.defaultValues[m.MirroredElemTypes])
+                    .toMap
                 val metaData = jsonMetaDataMacro[T]
                 newDecoderProduct[T](names, instances, defaultValues, metaData)(using p)
-            case _: Mirror.SumOf[T] => newDecoderSum[T](names, instances)
+            case _: Mirror.SumOf[T] => newDecoderSum[T](names, instances, metaData)

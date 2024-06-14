@@ -101,9 +101,12 @@ object JsonEncoder:
         new JsonEncoder[T]:
             override def encode(x: T)(using JsonDateFormat): JsonNode =
                 val ord = s.ordinal(x)
-                val instance = instances(ord)
-                val node = instance.asInstanceOf[JsonEncoder[Any]].encode(x)
-                JsonNode.Object(Map(names(ord) -> node))
+                x match
+                    case p: Product if p.productArity == 0 => JsonNode.StringLiteral(names(ord))
+                    case _ => 
+                        val instance = instances(ord)
+                        val node = instance.asInstanceOf[JsonEncoder[Any]].encode(x)
+                        JsonNode.Object(Map(names(ord) -> node))
     
     inline given derived[T](using m: Mirror.Of[T]): JsonEncoder[T] =
         val names = fetchNames[m.MirroredElemLabels]
