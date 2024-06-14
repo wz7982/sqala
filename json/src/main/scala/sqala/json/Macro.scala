@@ -9,10 +9,8 @@ def jsonMetaDataMacroImpl[T: Type](using q: Quotes): Expr[JsonMetaData] =
     import q.reflect.*
     
     val tpe = TypeTree.of[T]
-    val symbol = tpe.symbol
-
-    if !symbol.isClassDef then 
-        return '{ JsonMetaData(Nil, Nil, Nil, Nil) }
+    
+    val symbol = tpe.tpe.typeSymbol
 
     val comp = symbol.companionClass
     val mod = Ref(symbol.companionModule)
