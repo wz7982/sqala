@@ -41,28 +41,28 @@ class JsonParser extends StandardTokenParsers:
         arrayLiteral
 
     def numberLiteral: Parser[JsonNode] =
-        numericLit ^^ (i => JsonNode.NumberLiteral(BigDecimal(i)))
+        numericLit ^^ (i => JsonNode.Num(BigDecimal(i)))
 
     def stringLiteral: Parser[JsonNode] =
-        stringLit ^^ (i => JsonNode.StringLiteral(i))
+        stringLit ^^ (i => JsonNode.Str(i))
 
     def booleanLiteral: Parser[JsonNode] =
-        "TRUE" ^^ (_ => JsonNode.BooleanLiteral(true)) |
-        "FALSE" ^^ (_ => JsonNode.BooleanLiteral(false))
+        "TRUE" ^^ (_ => JsonNode.Bool(true)) |
+        "FALSE" ^^ (_ => JsonNode.Bool(false))
 
     def nullLiteral: Parser[JsonNode] =
-        "NULL" ^^ (_ => JsonNode.NullLiteral)
+        "NULL" ^^ (_ => JsonNode.Null)
 
     def attr: Parser[(String, JsonNode)] =
         stringLiteral ~ ":" ~ literal ^^ {
-            case k ~ _ ~ v => k.asInstanceOf[JsonNode.StringLiteral].string -> v
+            case k ~ _ ~ v => k.asInstanceOf[JsonNode.Str].string -> v
         }
 
     def objectLiteral: Parser[JsonNode] =
         "{" ~> repsep(attr, ",") <~ "}" ^^ (items => JsonNode.Object(items.toMap))
 
     def arrayLiteral: Parser[JsonNode] =
-        "[" ~> repsep(literal, ",") <~ "]" ^^ (items => JsonNode.Vector(items))
+        "[" ~> repsep(literal, ",") <~ "]" ^^ (items => JsonNode.Array(items))
 
     def parse(text: String): JsonNode throws JsonDecodeException = 
         phrase(objectLiteral | arrayLiteral)(new lexical.Scanner(text)) match

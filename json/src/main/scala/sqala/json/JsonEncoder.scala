@@ -19,48 +19,48 @@ object JsonEncoder:
             case _: (t *: ts) => summonInline[JsonEncoder[t]] :: summonInstances[ts]
 
     given intEncoder: JsonEncoder[Int] with
-        override def encode(x: Int)(using JsonDateFormat): JsonNode = JsonNode.NumberLiteral(x)
+        override def encode(x: Int)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
 
     given longEncoder: JsonEncoder[Long] with
-        override def encode(x: Long)(using JsonDateFormat): JsonNode = JsonNode.NumberLiteral(x)
+        override def encode(x: Long)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
 
     given floatEncoder: JsonEncoder[Float] with
-        override def encode(x: Float)(using JsonDateFormat): JsonNode = JsonNode.NumberLiteral(x)
+        override def encode(x: Float)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
 
     given doubleEncoder: JsonEncoder[Double] with
-        override def encode(x: Double)(using JsonDateFormat): JsonNode = JsonNode.NumberLiteral(x)
+        override def encode(x: Double)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
 
     given decimalEncoder: JsonEncoder[BigDecimal] with
-        override def encode(x: BigDecimal)(using JsonDateFormat): JsonNode = JsonNode.NumberLiteral(x)
+        override def encode(x: BigDecimal)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
 
     given stringEncoder: JsonEncoder[String] with
-        override def encode(x: String)(using JsonDateFormat): JsonNode = JsonNode.StringLiteral(x)
+        override def encode(x: String)(using JsonDateFormat): JsonNode = JsonNode.Str(x)
 
     given booleanEncoder: JsonEncoder[Boolean] with
-        override def encode(x: Boolean)(using JsonDateFormat): JsonNode = JsonNode.BooleanLiteral(x)
+        override def encode(x: Boolean)(using JsonDateFormat): JsonNode = JsonNode.Bool(x)
 
     given dateEncoder: JsonEncoder[Date] with
         override def encode(x: Date)(using dataFormat: JsonDateFormat): JsonNode =
             val formatter = new SimpleDateFormat(dataFormat.format)
-            JsonNode.StringLiteral(formatter.format(x))
+            JsonNode.Str(formatter.format(x))
 
     given localDateEncoder: JsonEncoder[LocalDate] with
         override def encode(x: LocalDate)(using dateFormat: JsonDateFormat): JsonNode =
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-            JsonNode.StringLiteral(x.format(formatter))
+            JsonNode.Str(x.format(formatter))
 
     given localDateTimeEncoder: JsonEncoder[LocalDateTime] with
         override def encode(x: LocalDateTime)(using dateFormat: JsonDateFormat): JsonNode =
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-            JsonNode.StringLiteral(x.format(formatter))
+            JsonNode.Str(x.format(formatter))
 
     given optionEncoder[T](using e: JsonEncoder[T]): JsonEncoder[Option[T]] with
         override def encode(x: Option[T])(using JsonDateFormat): JsonNode = x match
-            case None => JsonNode.NullLiteral
+            case None => JsonNode.Null
             case Some(value) => e.encode(value)
 
     given listEncoder[T](using e: JsonEncoder[T]): JsonEncoder[List[T]] with
-        override def encode(x: List[T])(using JsonDateFormat): JsonNode = JsonNode.Vector(x.map(e.encode))
+        override def encode(x: List[T])(using JsonDateFormat): JsonNode = JsonNode.Array(x.map(e.encode))
 
     private def newEncoderNamedTuple[N <: Tuple, V <: Tuple](names: List[String], instances: List[JsonEncoder[?]]): JsonEncoder[NamedTuple.NamedTuple[N, V]] =
         new JsonEncoder[NamedTuple.NamedTuple[N, V]]:
@@ -102,7 +102,7 @@ object JsonEncoder:
             override def encode(x: T)(using JsonDateFormat): JsonNode =
                 val ord = s.ordinal(x)
                 x match
-                    case p: Product if p.productArity == 0 => JsonNode.StringLiteral(names(ord))
+                    case p: Product if p.productArity == 0 => JsonNode.Str(names(ord))
                     case _ => 
                         val instance = instances(ord)
                         val node = instance.asInstanceOf[JsonEncoder[Any]].encode(x)
