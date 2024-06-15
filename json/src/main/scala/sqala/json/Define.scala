@@ -11,3 +11,7 @@ def fromJson[T: JsonDecoder](jsonString: String)(using dateFormat: JsonDateForma
     val parser = new JsonParser
     val jsonNode = parser.parse(jsonString)
     summon[JsonDecoder[T]].decode(jsonNode)
+
+def parseJson(jsonString: String): JsonNode throws JsonDecodeException =
+    val parser = new JsonParser
+    parser.parse(jsonString)
