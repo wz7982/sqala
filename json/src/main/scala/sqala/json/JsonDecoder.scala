@@ -22,49 +22,49 @@ object JsonDecoder:
     given intDecoder: JsonDecoder[Int] with
         override def decode(node: JsonNode)(using JsonDateFormat): Int throws JsonDecodeException =
             node match
-                case JsonNode.NumberLiteral(number) => number.intValue
+                case JsonNode.Num(number) => number.intValue
                 case _ => throw new JsonDecodeException
 
     given longDecoder: JsonDecoder[Long] with
         override def decode(node: JsonNode)(using JsonDateFormat): Long throws JsonDecodeException =
             node match
-                case JsonNode.NumberLiteral(number) => number.longValue
+                case JsonNode.Num(number) => number.longValue
                 case _ => throw new JsonDecodeException
 
     given floatDecoder: JsonDecoder[Float] with
         override def decode(node: JsonNode)(using JsonDateFormat): Float throws JsonDecodeException = 
             node match
-                case JsonNode.NumberLiteral(number) => number.floatValue
+                case JsonNode.Num(number) => number.floatValue
                 case _ => throw new JsonDecodeException
 
     given doubleDecoder: JsonDecoder[Double] with
         override def decode(node: JsonNode)(using JsonDateFormat): Double throws JsonDecodeException =
             node match
-                case JsonNode.NumberLiteral(number) => number.doubleValue
+                case JsonNode.Num(number) => number.doubleValue
                 case _ => throw new JsonDecodeException
 
     given decimalDecoder: JsonDecoder[BigDecimal] with
         override def decode(node: JsonNode)(using JsonDateFormat): BigDecimal throws JsonDecodeException =
             node match
-                case JsonNode.NumberLiteral(number) => BigDecimal(number.toString)
+                case JsonNode.Num(number) => BigDecimal(number.toString)
                 case _ => throw new JsonDecodeException
 
     given stringDecoder: JsonDecoder[String] with
         override def decode(node: JsonNode)(using JsonDateFormat): String throws JsonDecodeException =
             node match
-                case JsonNode.StringLiteral(string) => string
+                case JsonNode.Str(string) => string
                 case _ => throw new JsonDecodeException
 
     given booleanDecoder: JsonDecoder[Boolean] with
         override def decode(node: JsonNode)(using JsonDateFormat): Boolean throws JsonDecodeException =
             node match
-                case JsonNode.BooleanLiteral(boolean) => boolean
+                case JsonNode.Bool(boolean) => boolean
                 case _ => throw new JsonDecodeException
 
     given dateDecoder: JsonDecoder[Date] with
         override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): Date throws JsonDecodeException = 
             node match
-                case JsonNode.StringLiteral(string) =>
+                case JsonNode.Str(string) =>
                     val formatter = new SimpleDateFormat(dateFormat.format)
                     formatter.parse(string)
                 case _ => throw new JsonDecodeException
@@ -72,7 +72,7 @@ object JsonDecoder:
     given localDateDecoder: JsonDecoder[LocalDate] with
         override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDate throws JsonDecodeException = 
             node match
-                case JsonNode.StringLiteral(string) =>
+                case JsonNode.Str(string) =>
                     val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
                     LocalDate.parse(string, formatter)
                 case _ => throw new JsonDecodeException
@@ -80,7 +80,7 @@ object JsonDecoder:
     given localDateTimeDecoder: JsonDecoder[LocalDateTime] with
         override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDateTime throws JsonDecodeException = 
             node match
-                case JsonNode.StringLiteral(string) =>
+                case JsonNode.Str(string) =>
                     val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
                     LocalDateTime.parse(string, formatter)
                 case _ => throw new JsonDecodeException
@@ -88,13 +88,13 @@ object JsonDecoder:
     given optionDecoder[T](using d: JsonDecoder[T]): JsonDecoder[Option[T]] with
         override def decode(node: JsonNode)(using JsonDateFormat): Option[T] throws JsonDecodeException =
             node match
-                case JsonNode.NullLiteral => None
+                case JsonNode.Null => None
                 case n => Some(d.decode(n))
 
     given listDecoder[T](using d: JsonDecoder[T]): JsonDecoder[List[T]] with
         override def decode(node: JsonNode)(using JsonDateFormat): List[T] throws JsonDecodeException = 
             node match
-                case JsonNode.Vector(items) => items.map(i => d.decode(i))
+                case JsonNode.Array(items) => items.map(i => d.decode(i))
                 case _ => throw new JsonDecodeException
 
     private def newDecoderProduct[T](names: List[String], instances: List[JsonDecoder[?]], typedDefaultValues: Map[String, Any], metaData: JsonMetaData)(using m: Mirror.ProductOf[T]): JsonDecoder[T] =
@@ -137,7 +137,7 @@ object JsonDecoder:
         new JsonDecoder[T]:
             override def decode(node: JsonNode)(using JsonDateFormat): T throws JsonDecodeException =
                 node match
-                    case JsonNode.StringLiteral(string) =>
+                    case JsonNode.Str(string) =>
                         if !names.contains(string) then
                             throw new JsonDecodeException
                         val index = names.indexOf(string)

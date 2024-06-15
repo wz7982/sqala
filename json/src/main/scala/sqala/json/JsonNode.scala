@@ -1,18 +1,18 @@
 package sqala.json
 
 enum JsonNode:
-    case NumberLiteral(number: Number)
-    case StringLiteral(string: String)
-    case BooleanLiteral(boolean: Boolean)
-    case NullLiteral
+    case Num(number: Number)
+    case Str(string: String)
+    case Bool(boolean: Boolean)
+    case Null
     case Object(items: Map[String, JsonNode])
-    case Vector(items: List[JsonNode])
+    case Array(items: List[JsonNode])
 
     override def toString: String =
         this match
-            case NumberLiteral(number) => number.toString
-            case StringLiteral(string) => "\"" + string + "\""
-            case BooleanLiteral(boolean) => boolean.toString
-            case NullLiteral => "null"
+            case Num(number) => number.toString
+            case Str(string) => "\"" + string + "\""
+            case Bool(boolean) => boolean.toString
+            case Null => "null"
             case Object(items) => items.map((k, v) => s"\"$k\": $v").mkString("{", ", ", "}")
-            case Vector(items) => items.mkString("[",", ", "]")
+            case Array(items) => items.mkString("[",", ", "]")
