@@ -153,8 +153,12 @@ extension (s: StringContext)
     def sql(args: Any*): NativeSql =
         val strings = s.parts.iterator
         val argArray = args.toArray
+        val argIterator = args.iterator
         val builder = new StringBuilder(strings.next())
         while strings.hasNext do
-            builder.append("?")
+            val arg = argIterator.next()
+            arg match
+                case l: List[_] => builder.append(l.map(_ => "?").mkString("(", ", ", ")"))
+                case _ => builder.append("?")
             builder.append(strings.next())
         NativeSql(builder.toString, argArray)
