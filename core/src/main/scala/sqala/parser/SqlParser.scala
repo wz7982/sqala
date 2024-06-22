@@ -53,7 +53,7 @@ class SqlParser extends StandardTokenParsers:
 
     lexical.delimiters.addAll(
        List(
-           "+", "-", "*", "/", "%", "=", "<>", "!=", ">", ">=", "<", "<=", "(", ")", ",", ".", "`", "\""
+           "+", "-", "*", "/", "%", "=", "<>", "!=", ">", ">=", "<", "<=", "(", ")", ",", ".", "`", "\"", "?"
        )
     )
 
@@ -188,7 +188,8 @@ class SqlParser extends StandardTokenParsers:
         stringLit ^^ (xs => SqlExpr.StringLiteral(xs)) |
         "TRUE" ^^ (_ => SqlExpr.BooleanLiteral(true)) |
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
-        "NULL" ^^ (_ => SqlExpr.Null)
+        "NULL" ^^ (_ => SqlExpr.Null) |
+        "?" ^^ (_ => SqlExpr.UnknowValue)
 
     def unionType: Parser[SqlUnionType] =
         "UNION" ~> opt("ALL") ^^ {
