@@ -9,6 +9,7 @@ enum SqlExpr:
     case AllColumn(tableName: Option[String])
     case Column(tableName: Option[String], columnName: String)
     case Null
+    case UnknowValue
     case StringLiteral(string: String)
     case NumberLiteral(number: Number)
     case BooleanLiteral(boolean: Boolean)
