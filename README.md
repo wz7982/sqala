@@ -10,6 +10,8 @@ sqala支持将数据对象转换为UPDATE、INSERT、DELETE等操作，而无需
 
 sqala支持多种数据库方言的生成，包括：MySQL、PostgreSQL、Oracle、MSSQL、Sqlite、DB2等，只需要传入不同的数据库类型，即可将同一个查询进行方言转换（其中MySQL和PostgreSQL为第一优先级支持）。
 
+sqala的json模块支持任意ADT（代数数据类型）对象生成JSON；以及JSON反序列化到任意ADT对象功能。映射过程使用Scala3的类型类推导能力生成代码，无反射开销且类型安全。
+
 文档地址：
 
 https://wz7982.github.io/sqala-doc/
