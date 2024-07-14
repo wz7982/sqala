@@ -53,8 +53,6 @@ class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
             sqlBuilder.append(")")
 
     override def printOrderBy(orderBy: SqlOrderBy): Unit =
-
-
         val order = orderBy.order match
             case None | Some(Asc) => Asc
             case _ => Desc
