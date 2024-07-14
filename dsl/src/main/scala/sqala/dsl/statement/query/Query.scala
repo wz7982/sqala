@@ -258,7 +258,7 @@ class SelectQuery[T](
 
     def sortBy(f: T => OrderBy): SelectQuery[T] =
         val orderBy = f(items)
-        val sqlOrderBy = SqlOrderBy(orderBy.expr.asSqlExpr, Some(orderBy.order))
+        val sqlOrderBy = orderBy.asSqlOrderBy
         new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
     def groupBy[G](f: T => G)(using a: AsExpr[G]): GroupByQuery[(G, T)] =
