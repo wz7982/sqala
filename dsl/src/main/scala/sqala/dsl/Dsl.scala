@@ -147,7 +147,7 @@ inline def update[T <: Product](entity: T, skipNone: Boolean = false)(using Mirr
 
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]
 
-inline def save[T <: Product](entity: T): Save = Save[T](entity)
+inline def save[T <: Product](entity: T)(using Mirror.ProductOf[T]): Save = Save[T](entity)
 
 extension (s: StringContext)
     def sql(args: Any*): NativeSql =
