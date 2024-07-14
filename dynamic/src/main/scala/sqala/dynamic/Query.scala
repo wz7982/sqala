@@ -44,7 +44,7 @@ class Select(val ast: SqlQuery.Select) extends Query:
 
     infix def orderBy(items: List[OrderBy]): Select =
         val orderByItems = items.map: o =>
-            SqlOrderBy(o.expr.sqlExpr, Some(o.order))
+            o.asSqlOrderBy
         new Select(ast.copy(orderBy = ast.orderBy ++ orderByItems))
 
     infix def groupBy(items: List[Expr]): Select =

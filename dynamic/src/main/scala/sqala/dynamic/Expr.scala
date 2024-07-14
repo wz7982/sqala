@@ -3,7 +3,7 @@ package sqala.dynamic
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.SqlExpr
 import sqala.ast.expr.SqlUnaryOperator.*
-import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
+import sqala.ast.order.{SqlOrderBy, SqlOrderByNullsOption, SqlOrderByOption}
 import sqala.ast.statement.SqlSelectItem
 
 import scala.annotation.targetName
@@ -96,12 +96,20 @@ case class Expr(sqlExpr: SqlExpr):
 
     def orderBy(items: OrderBy*): Expr = sqlExpr match
         case SqlExpr.Window(expr, partitionBy, _, frame) => 
-            Expr(SqlExpr.Window(expr, partitionBy, items.toList.map(i => SqlOrderBy(i.expr.sqlExpr, Some(i.order))), frame))
+            Expr(SqlExpr.Window(expr, partitionBy, items.toList.map(i => i.asSqlOrderBy), frame))
         case _ => this
 
-    def asc: OrderBy = OrderBy(this, SqlOrderByOption.Asc)
+    def asc: OrderBy = OrderBy(this, SqlOrderByOption.Asc, None)
 
-    def desc: OrderBy = OrderBy(this, SqlOrderByOption.Desc)
+    def ascNullsFirst: OrderBy = OrderBy(this, SqlOrderByOption.Asc, Some(SqlOrderByNullsOption.First))
+
+    def ascNullsLast: OrderBy = OrderBy(this, SqlOrderByOption.Asc, Some(SqlOrderByNullsOption.Last))
+
+    def desc: OrderBy = OrderBy(this, SqlOrderByOption.Desc, None)
+
+    def descNullsFirst: OrderBy = OrderBy(this, SqlOrderByOption.Desc, Some(SqlOrderByNullsOption.First))
+
+    def descNullsLast: OrderBy = OrderBy(this, SqlOrderByOption.Desc, Some(SqlOrderByNullsOption.Last))
 
     infix def as(name: String): SelectItem = SelectItem(this, Some(name))
 
@@ -117,8 +125,8 @@ object Expr:
 
     given exprToSelectItem: Conversion[Expr, SelectItem] = SelectItem(_, None)
 
-case class OrderBy(expr: Expr, order: SqlOrderByOption):
-    def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.sqlExpr, Some(order))
+case class OrderBy(expr: Expr, order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
+    def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.sqlExpr, Some(order), nullsOrder)
 
 case class SelectItem(expr: Expr, alias: Option[String]):
     def toSqlSelectItem: SqlSelectItem = SqlSelectItem(expr.sqlExpr, alias)
