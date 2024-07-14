@@ -3,7 +3,7 @@ package sqala.printer
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.{SqlExpr, SqlWindowFrame}
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.SqlOrderBy
+import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
 
@@ -382,7 +382,11 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printOrderBy(orderBy: SqlOrderBy): Unit =
         printExpr(orderBy.expr)
-        for o <- orderBy.order do
+        val order = orderBy.order match
+            case None | Some(SqlOrderByOption.Asc) => SqlOrderByOption.Asc
+            case _ => SqlOrderByOption.Desc
+        sqlBuilder.append(s" ${order.order}")
+        for o <- orderBy.nullsOrder do
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =

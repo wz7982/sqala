@@ -3,8 +3,9 @@ package sqala.dsl
 import sqala.ast.expr.*
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Positive}
+import sqala.ast.order.SqlOrderByNullsOption.{First, Last}
 import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
-import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
+import sqala.ast.order.{SqlOrderBy, SqlOrderByNullsOption, SqlOrderByOption}
 import sqala.dsl.statement.dml.UpdatePair
 import sqala.dsl.statement.query.*
 
@@ -109,11 +110,20 @@ sealed trait Expr[T] derives CanEqual:
     def notBetween[S <: Operation[T], E <: Operation[T]](start: Expr[S], end: Expr[E]): Expr[Boolean] =
         Between(this, start, end, true)
 
-    def asc: OrderBy = OrderBy(this, Asc)
+    def asc: OrderBy = OrderBy(this, Asc, None)
 
-    def desc: OrderBy = OrderBy(this, Desc)
+    def desc: OrderBy = OrderBy(this, Desc, None)
 
 object Expr:
+    extension [T](expr: Expr[Option[T]])
+        def ascNullsFirst: OrderBy = OrderBy(expr, Asc, Some(First))
+
+        def ascNullsLast: OrderBy = OrderBy(expr, Asc, Some(Last))
+
+        def descNullsFirst: OrderBy = OrderBy(expr, Desc, Some(First))
+
+        def descNullsLast: OrderBy = OrderBy(expr, Desc, Some(Last))
+
     extension [T <: String | Option[String]](expr: Expr[T])
         def like(value: String): Expr[Boolean] = Binary(expr, Like, Literal(value))
 
@@ -258,5 +268,5 @@ case class Window[T](expr: Agg[?], partitionBy: List[Expr[?]], orderBy: List[Ord
 case class SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T]:
     override def asSqlExpr: SqlExpr = SqlExpr.SubQueryPredicate(query.ast, predicate)
 
-case class OrderBy(expr: Expr[?], order: SqlOrderByOption):
-    def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order))
+case class OrderBy(expr: Expr[?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
+    def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)

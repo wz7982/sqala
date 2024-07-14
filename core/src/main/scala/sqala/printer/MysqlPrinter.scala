@@ -1,8 +1,13 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.SqlBinaryOperator.Is
+import sqala.ast.expr.{SqlCase, SqlExpr}
+import sqala.ast.expr.SqlExpr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.order.SqlOrderBy
+import sqala.ast.order.SqlOrderByNullsOption.*
+import sqala.ast.order.SqlOrderByOption.*
 
 class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
     override val leftQuote: String = "`"
@@ -46,3 +51,20 @@ class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
             sqlBuilder.append(" = VALUES (")
             printExpr(u)
             sqlBuilder.append(")")
+
+    override def printOrderBy(orderBy: SqlOrderBy): Unit =
+
+
+        val order = orderBy.order match
+            case None | Some(Asc) => Asc
+            case _ => Desc
+        val orderExpr = Case(SqlCase(Binary(orderBy.expr, Is, Null), NumberLiteral(1)) :: Nil, NumberLiteral(0))
+        (order, orderBy.nullsOrder) match
+            case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
+                printExpr(orderBy.expr)
+                sqlBuilder.append(s" ${order.order}")
+            case (Asc, Some(Last)) | (Desc, Some(First)) =>
+                printExpr(orderExpr)
+                sqlBuilder.append(s" ${order.order}, ")
+                printExpr(orderBy.expr)
+                sqlBuilder.append(s" ${order.order}")

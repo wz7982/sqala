@@ -167,8 +167,8 @@ class SqlParser extends StandardTokenParsers:
 
     def order: Parser[SqlOrderBy] =
         expr ~ opt("ASC" | "DESC") ^^ {
-            case e ~ Some("DESC") => SqlOrderBy(e, Some(SqlOrderByOption.Desc))
-            case e ~ _ => SqlOrderBy(e, Some(SqlOrderByOption.Asc))
+            case e ~ Some("DESC") => SqlOrderBy(e, Some(SqlOrderByOption.Desc), None)
+            case e ~ _ => SqlOrderBy(e, Some(SqlOrderByOption.Asc), None)
         }
 
     def cast: Parser[SqlExpr] =
