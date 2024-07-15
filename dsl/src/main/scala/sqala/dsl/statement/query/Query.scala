@@ -261,9 +261,15 @@ class SelectQuery[T](
         val sqlOrderBy = orderBy.asSqlOrderBy
         new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
+    @targetName("groupByAny")    
     def groupBy[G](f: T => G)(using a: AsExpr[G]): GroupByQuery[(G, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = a.asExprs(groupByItems).map(_.asSqlExpr)
+        GroupByQuery((groupByItems, items), ast.copy(groupBy = sqlGroupBy))
+
+    def groupBy[N <: Tuple, V <: Tuple](f: T => NamedTuple[N, V])(using a: AsExpr[V]): GroupByQuery[(NamedTuple[N, V], T)] =
+        val groupByItems = f(items)
+        val sqlGroupBy = a.asExprs(groupByItems.toTuple).map(_.asSqlExpr)
         GroupByQuery((groupByItems, items), ast.copy(groupBy = sqlGroupBy))
 
     def size: SelectQuery[Expr[Long]] = 
