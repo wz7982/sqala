@@ -23,24 +23,24 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         execute(c => jdbcExec(c, sql, args))
 
     def execute(insert: Insert[?, ?]): Int throws SQLException =
-        val (sql, args) = statementToString(insert.ast, dialect.printer(true))
+        val (sql, args) = statementToString(insert.ast, dialect, true)
         executeDml(sql, args)
 
     def executeReturnKey(insert: Insert[?, ?]): List[Long] throws SQLException =
-        val (sql, args) = statementToString(insert.ast, dialect.printer(true))
+        val (sql, args) = statementToString(insert.ast, dialect, true)
         logger(sql)
         execute(c => jdbcExecReturnKey(c, sql, args))
 
     def execute(update: Update[?, ?]): Int throws SQLException =
-        val (sql, args) = statementToString(update.ast, dialect.printer(true))
+        val (sql, args) = statementToString(update.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(delete: Delete[?]): Int throws SQLException =
-        val (sql, args) = statementToString(delete.ast, dialect.printer(true))
+        val (sql, args) = statementToString(delete.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(save: Save): Int throws SQLException =
-        val (sql, args) = statementToString(save.ast, dialect.printer(true))
+        val (sql, args) = statementToString(save.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(nativeSql: NativeSql): Int throws SQLException =
@@ -48,7 +48,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         executeDml(sql, args)
 
     def fetchTo[T](query: Query[?])(using JdbcDecoder[Result[T]]): List[Result[T]] throws SQLException =
-        val (sql, args) = queryToString(query.ast, dialect.printer(true))
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql)
         execute(c => jdbcQuery(c, sql, args))
 
@@ -87,7 +87,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         fetch(existsQuery).head
 
     def showSql[T](query: Query[T]): String =
-        queryToString(query.ast, dialect.printer(true))._1
+        queryToString(query.ast, dialect, true)._1
 
     def transaction[T](block: JdbcTransactionContext ?=> T): T throws Exception =
         val conn = dataSource.getConnection()
