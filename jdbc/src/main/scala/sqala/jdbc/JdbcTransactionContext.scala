@@ -4,6 +4,7 @@ import sqala.dsl.Result
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.{Query, SelectQuery}
+import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.{Connection, SQLException}
