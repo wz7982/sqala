@@ -3,8 +3,6 @@ package sqala.ast.expr
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.SqlQuery
 
-import java.util.Date
-
 enum SqlExpr:
     case AllColumn(tableName: Option[String])
     case Column(tableName: Option[String], columnName: String)
@@ -13,7 +11,6 @@ enum SqlExpr:
     case StringLiteral(string: String)
     case NumberLiteral(number: Number)
     case BooleanLiteral(boolean: Boolean)
-    case DateLiteral(date: Date)
     case Vector(items: List[SqlExpr])
     case Unary(expr: SqlExpr, op: SqlUnaryOperator)
     case Binary(left: SqlExpr, op: SqlBinaryOperator, right: SqlExpr)
