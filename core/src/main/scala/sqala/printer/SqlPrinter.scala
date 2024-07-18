@@ -7,7 +7,6 @@ import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
 
-import java.text.SimpleDateFormat
 import scala.collection.mutable.ArrayBuffer
 
 abstract class SqlPrinter(val prepare: Boolean):
@@ -152,7 +151,6 @@ abstract class SqlPrinter(val prepare: Boolean):
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
-        case d: SqlExpr.DateLiteral => printDateLiteralExpr(d)
         case v: SqlExpr.Vector => printVectorExpr(v)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
@@ -202,14 +200,6 @@ abstract class SqlPrinter(val prepare: Boolean):
                 sqlBuilder.append("TRUE")
             else
                 sqlBuilder.append("FALSE")
-
-    def printDateLiteralExpr(expr: SqlExpr.DateLiteral): Unit =
-        if prepare then
-            sqlBuilder.append("?")
-            args.append(expr.date)
-        else
-            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-            sqlBuilder.append(s"'${format.format(expr.date)}'")
 
     def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("(")

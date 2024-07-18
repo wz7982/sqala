@@ -2,7 +2,9 @@ package sqala.dsl
 
 import sqala.ast.expr.SqlExpr
 
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.text.SimpleDateFormat
+import java.time.{LocalDate, LocalDateTime}
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import scala.compiletime.{erasedValue, summonInline}
 
@@ -38,15 +40,19 @@ object AsSqlExpr:
         override def asSqlExpr(x: Boolean): SqlExpr = SqlExpr.BooleanLiteral(x)
 
     given dateAsSqlExpr: AsSqlExpr[Date] with
-        override def asSqlExpr(x: Date): SqlExpr = SqlExpr.DateLiteral(x)
+        override def asSqlExpr(x: Date): SqlExpr = 
+            val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            SqlExpr.StringLiteral(formatter.format(x))
 
     given localDateAsSqlExpr: AsSqlExpr[LocalDate] with
         override def asSqlExpr(x: LocalDate): SqlExpr =
-            SqlExpr.DateLiteral(Date.from(x.atStartOfDay(ZoneId.systemDefault()).nn.toInstant()).nn)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            SqlExpr.StringLiteral(formatter.format(x))
 
     given localDateTimeAsSqlExpr: AsSqlExpr[LocalDateTime] with
         override def asSqlExpr(x: LocalDateTime): SqlExpr =
-            SqlExpr.DateLiteral(Date.from(x.atZone(ZoneId.systemDefault()).nn.toInstant()).nn)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            SqlExpr.StringLiteral(formatter.format(x))
 
     given optionAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Option[T]] with
         override def asSqlExpr(x: Option[T]): SqlExpr = x match
