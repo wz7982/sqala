@@ -1,6 +1,4 @@
-package sqala.jdbc
-
-import sqala.printer.*
+package sqala.printer
 
 trait Dialect:
     def printer(prepare: Boolean): SqlPrinter
