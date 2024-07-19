@@ -43,5 +43,8 @@ object Copy:
     given listCopy[T](using c: Copy[T]): Copy[List[T]] with
         override def copy(x: List[T]): List[T] = x.map(i => c.copy(i))
 
+given shallowCopy[T]: Copy[T] with
+    override def copy(x: T): T = x
+
 extension [A](x: A)
     def copy(using c: Copy[A]): A = c.copy(x)
