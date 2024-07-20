@@ -96,7 +96,7 @@ class SelectQuery[T](
         SelectQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))
 
     private inline def joinClause[JT, R](joinType: SqlJoinType)(using s: SelectItem[R], m: Mirror.ProductOf[JT]): JoinQuery[R] =
-        AsSqlExpr.summonInstances[m.MirroredElemLabels]
+        AsSqlExpr.summonInstances[m.MirroredElemTypes]
         val joinTableName = TableMacro.tableName[JT]
         q.tableIndex += 1
         val joinAliasName = s"t${q.tableIndex}"
