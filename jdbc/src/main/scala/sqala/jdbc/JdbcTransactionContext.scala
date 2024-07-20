@@ -65,10 +65,6 @@ def fetchSize[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): L
     val sizeQuery = query.size
     fetch(sizeQuery).head
 
-def exists[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): Boolean throws SQLException =
-    val existsQuery = query.exists
-    fetch(existsQuery).head
-
 def pageTo[T](
     query: SelectQuery[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using JdbcDecoder[T], JdbcTransactionContext, Logger): Page[T] throws SQLException =

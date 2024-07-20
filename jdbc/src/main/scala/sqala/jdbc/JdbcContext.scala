@@ -82,10 +82,6 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    def exists[T](query: SelectQuery[T]): Boolean throws SQLException =
-        val existsQuery = query.exists
-        fetch(existsQuery).head
-
     def showSql[T](query: Query[T]): String =
         queryToString(query.ast, dialect, true)._1
 
