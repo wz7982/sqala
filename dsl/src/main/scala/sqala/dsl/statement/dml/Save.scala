@@ -4,7 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 import sqala.dsl.AsSqlExpr
-import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
+import sqala.dsl.macros.TableMacro
 
 import scala.deriving.Mirror
 
@@ -12,8 +12,8 @@ class Save(val ast: SqlStatement.Upsert)
 
 object Save:
     inline def apply[T <: Product](entity: T)(using m: Mirror.ProductOf[T]): Save =
-        val tableName = tableNameMacro[T]
-        val metaData = tableMetaDataMacro[T]
+        val tableName = TableMacro.tableName[T]
+        val metaData = TableMacro.tableMetaData[T]
         val columns = metaData.columnNames.map(c => SqlExpr.Column(None, c))
         val instances = AsSqlExpr.summonInstances[m.MirroredElemTypes].map(_.asInstanceOf[AsSqlExpr[Any]])
         val values = entity.productIterator.toList.zip(instances).map((f, i) => i.asSqlExpr(f))

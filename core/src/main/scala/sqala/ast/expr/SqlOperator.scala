@@ -26,5 +26,5 @@ enum SqlBinaryOperator(val operator: String):
 enum SqlUnaryOperator(val operator: String):
     case Positive extends SqlUnaryOperator("+")
     case Negative extends SqlUnaryOperator("-")
-    case Not extends SqlUnaryOperator("!")
+    case Not extends SqlUnaryOperator("NOT")
     case Custom(op: String) extends SqlUnaryOperator(op)

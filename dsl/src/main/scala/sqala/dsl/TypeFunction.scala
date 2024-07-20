@@ -1,8 +1,7 @@
 package sqala.dsl
 
-import sqala.dsl.statement.query.{NamedQuery, NamedTupleWrapper}
+import sqala.dsl.statement.query.NamedQuery
 
-import scala.NamedTuple.NamedTuple
 import scala.Tuple.Append
 import scala.compiletime.ops.int.S
 
@@ -16,24 +15,32 @@ type Unwrap[T, F[_]] = T match
 
 type Operation[T] = T | Wrap[T, Option] | Unwrap[T, Option]
 
-type MapField[X, T] = T match
-    case Option[_] => Column[Wrap[X, Option]]
-    case _ => Column[X]
+type ToTuple[T] <: Tuple = T match
+    case h *: t => h *: t
+    case EmptyTuple => EmptyTuple
+    case _ => Tuple1[T]
+
+type SimpleKind = ColumnKind | CommonKind | ValueKind
+
+type OperationKind[T <: ExprKind] <: ExprKind = T match
+    case CommonKind | ColumnKind | WindowKind | ValueKind => 
+        CommonKind | ColumnKind | WindowKind | ValueKind
+    case AggKind => AggKind | ValueKind
+
+type ResultKind[L <: ExprKind, R <: ExprKind] <: ExprKind = (L, R) match
+    case (WindowKind, r) => WindowKind
+    case (l, WindowKind) => WindowKind
+    case (AggKind, r) => AggKind
+    case (l, AggKind) => AggKind
+    case (l, r) => CommonKind
 
 type InverseMap[T, F[_]] = T match
     case x *: xs => Tuple.InverseMap[x *: xs, F]
     case F[x] => x
 
-type Result[T] = T match
-    case Expr[t] => t
-    case Table[t] => t
-    case h *: t => TupleResult[h *: t]
-    case NamedQuery[n, v] => NamedTuple[n, Result[v]]
-    case NamedTupleWrapper[n, v] => NamedTuple[n, Result[v]]
-    
-type TupleResult[T <: Tuple] = T match
-    case EmptyTuple => EmptyTuple
-    case x *: xs => Result[x] *: TupleResult[xs]
+type MapField[X, T] = T match
+    case Option[_] => Expr[Wrap[X, Option], ColumnKind]
+    case _ => Expr[X, ColumnKind]
 
 type Index[T <: Tuple, X, N <: Int] <: Int = T match
     case X *: xs => N
@@ -41,16 +48,13 @@ type Index[T <: Tuple, X, N <: Int] <: Int = T match
 
 type MapOption[T] = T match
     case Table[t] => Table[Wrap[t, Option]]
-    case Expr[t] => Expr[Wrap[t, Option]]
+    case Expr[t, k] => Expr[Wrap[t, Option], k]
     case NamedQuery[n, v] => NamedQuery[n, MapOption[v]]
     case x *: xs => TupleMapOption[x *: xs]
 
 type TupleMapOption[T <: Tuple] <: Tuple = T match
     case x *: xs => MapOption[x] *: TupleMapOption[xs]
     case EmptyTuple => EmptyTuple
-
-type NamedTupleMapOption[T <: NamedTupleWrapper[?, ?]] = T match
-    case NamedTupleWrapper[n, v] => NamedTupleWrapper[n, TupleMapOption[v]]
 
 type InnerJoin[L, R] <: Tuple = L match
     case x *: xs => Append[x *: xs, Table[R]]
@@ -85,7 +89,7 @@ type FullJoinQuery[L, R, N] <: Tuple = L match
     case _ => (MapOption[L], NamedQuery[N, MapOption[R]])
 
 type Union[A <: Tuple, B <: Tuple] <: Tuple = (A, B) match
-    case (Expr[a] *: at, Expr[b] *: bt) => Expr[UnionTo[a, b]] *: Union[at, bt]
+    case (Expr[a, k] *: at, Expr[b, _] *: bt) => Expr[UnionTo[a, b], k] *: Union[at, bt]
     case (EmptyTuple, EmptyTuple) => EmptyTuple
 
 type UnionTo[A, B] = A match

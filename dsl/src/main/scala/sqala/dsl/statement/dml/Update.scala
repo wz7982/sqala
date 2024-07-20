@@ -3,8 +3,8 @@ package sqala.dsl.statement.dml
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
-import sqala.dsl.{AsSqlExpr, Expr, Table}
+import sqala.dsl.macros.TableMacro
+import sqala.dsl.{AsSqlExpr, Expr, SimpleKind, Table}
 
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
@@ -15,25 +15,25 @@ class Update[T, S <: UpdateState](
 ):
     inline def set(f: T => UpdatePair)(using erased S =:= UpdateTable): Update[T, UpdateTable] =
         val pair = f(items)
-        val expr = SqlExpr.Column(None, pair.expr.columnName)
+        val expr = SqlExpr.Column(None, pair.columnName)
         val updateExpr = pair.updateExpr.asSqlExpr
         new Update(items, ast.copy(setList = ast.setList :+ (expr, updateExpr)))
 
-    inline def where(f: T => Expr[Boolean])(using erased S =:= UpdateTable): Update[T, UpdateTable] =
+    inline def where[K <: SimpleKind](f: T => Expr[Boolean, K])(using erased S =:= UpdateTable): Update[T, UpdateTable] =
         val condition = f(items)
         new Update(items, ast.addWhere(condition.asSqlExpr))
 
 object Update:
     inline def apply[T <: Product]: Update[Table[T], UpdateTable] =
-        val tableName = tableNameMacro[T]
-        val metaData = tableMetaDataMacro[T]
+        val tableName = TableMacro.tableName[T]
+        val metaData = TableMacro.tableMetaData[T]
         val table = Table[T](tableName, tableName, metaData)
         val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.IdentTable(tableName, None), Nil, None)
         new Update(table, ast)
 
     inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using p: Mirror.ProductOf[T]): Update[Table[T], UpdateEntity] =
-        val tableName = tableNameMacro[T]
-        val metaData = tableMetaDataMacro[T]
+        val tableName = TableMacro.tableName[T]
+        val metaData = TableMacro.tableMetaData[T]
         val table = Table[T](tableName, tableName, metaData)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
