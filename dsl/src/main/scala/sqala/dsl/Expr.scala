@@ -322,7 +322,6 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
             case _ => throw new IllegalArgumentException("only column can be assigned to")
 
-    // TODO 可能有问题 count(*) + 1 over
     extension [T](expr: Expr[T, AggKind])
         def over(partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]): Window[T] = 
             Window(expr, partitionBy, orderBy)
