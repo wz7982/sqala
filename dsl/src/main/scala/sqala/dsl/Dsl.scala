@@ -34,7 +34,7 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
     infix def `then`[E <: Operation[T]](value: E)(using erased p: S =:= CaseWhen, a: AsSqlExpr[E]): Case[T, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseWhen, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
+    infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
         val newCase = new Case(exprs :+ Expr.Literal(value, a))
         if newCase.exprs.size % 2 == 0 then
             val caseBranches = 
