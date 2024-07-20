@@ -3,123 +3,130 @@ package sqala.dsl
 import sqala.ast.expr.SqlSubQueryPredicate
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
-import sqala.dsl.macros.{tableMetaDataMacro, tableNameMacro}
+import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
 
+import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
 
 extension [T: AsSqlExpr](value: T)
-    def asExpr: Expr[T] = Literal(value)
+    def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
 
 enum CaseState:
     case Init
     case When
-    case Else
 
 type CaseInit = CaseState.Init.type
 
 type CaseWhen = CaseState.When.type
 
-type CaseElse = CaseState.Else.type
+class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
+    infix def when[T, WK <: OperationKind[K]](expr: Expr[Boolean, WK])(using erased S =:= CaseInit): Case[T, ResultKind[K, WK], CaseWhen] =
+        new Case(exprs :+ expr)
 
-class CaseToken[T, S <: CaseState](val exprs: List[Expr[?]]):
-    infix def when(expr: Expr[Boolean])(using erased S =:= CaseInit): CaseToken[T, CaseWhen] =
-        new CaseToken(exprs :+ expr)
+    infix def `then`[E <: Operation[T], WK <: OperationKind[K]](expr: Expr[E, WK])(using erased S =:= CaseWhen): Case[T, ResultKind[K, WK], CaseInit] =
+        new Case(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T]](value: E)(using erased S =:= CaseWhen, AsSqlExpr[E]): CaseToken[E, CaseInit] =
-        new CaseToken(exprs :+ Literal(value))
+    infix def `then`[E <: Operation[T]](value: E)(using erased p: S =:= CaseWhen, a: AsSqlExpr[E]): Case[T, ResultKind[K, ValueKind], CaseInit] =
+        new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `then`[E <: Operation[T]](expr: Expr[E])(using erased S =:= CaseWhen): CaseToken[E, CaseInit] =
-        new CaseToken(exprs :+ expr)
-
-    infix def `else`[E <: Operation[T]](value: E)(using erased S =:= CaseInit, AsSqlExpr[E]): CaseToken[E, CaseElse] =
-        new CaseToken(exprs :+ Literal(value))
-
-    infix def `else`[E <: Operation[T]](expr: Expr[E])(using erased S =:= CaseInit): CaseToken[E, CaseElse] =
-        new CaseToken(exprs :+ expr)
-
-    def end(using erased S <:< (CaseInit | CaseElse)): Case[Wrap[T, Option]] =
-        if exprs.size % 2 == 0 then
-            val caseBranches = exprs.grouped(2).toList.map(i => (i.head, i(1)))
-            Case(caseBranches, Null)
+    infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
+        val newCase = new Case(exprs :+ Expr.Literal(value, a))
+        if newCase.exprs.size % 2 == 0 then
+            val caseBranches = 
+                newCase.exprs.grouped(2).toList.map(i => (i.head, i(1)))
+            Expr.Case(caseBranches, Expr.Null)
         else
-            val lastExpr = exprs.last
-            val caseBranches = exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
-            Case(caseBranches, lastExpr)
+            val lastExpr = newCase.exprs.last
+            val caseBranches = 
+                newCase.exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
+            Expr.Case(caseBranches, lastExpr)
 
-def `case`: CaseToken[Any, CaseInit] = new CaseToken(Nil)
+def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
-def exists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
+def exists[T](query: Query[T]): Expr[Boolean, CommonKind] = 
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
 
-def notExists[T](query: Query[T]): Expr[Boolean] = SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
+def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] = 
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
 
-def all[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
-    SubQueryPredicate(query, SqlSubQueryPredicate.All)
+def all[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.All)
 
 @targetName("allExprQuery")
-def all[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.All)
+def all[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.All)
 
-def any[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
-    SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+def any[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Any)
 
 @targetName("anyExprQuery")
-def any[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Any)
 
-def some[T, E <: Expr[T], N <: Tuple](query: Query[NamedTupleWrapper[N, Tuple1[E]]]): Expr[Wrap[T, Option]] =
-    SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+def some[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Some)
 
 @targetName("someExprQuery")
-def some[T, E <: Expr[T]](query: Query[E]): Expr[Wrap[T, Option]] = SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Some)
 
-def count(): Agg[Long] = Agg("COUNT", Nil, false, Nil)
+def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
 
-def count(expr: Expr[?]): Agg[Long] = Agg("COUNT", expr :: Nil, false, Nil)
+def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] = 
+    Expr.Agg("COUNT", expr :: Nil, false, Nil)
 
-def countDistinct(expr: Expr[?]): Agg[Long] = Agg("COUNT", expr :: Nil, true, Nil)
+def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] = 
+    Expr.Agg("COUNT", expr :: Nil, true, Nil)
 
-def sum[T: Number](expr: Expr[T]): Agg[Option[BigDecimal]] = Agg("SUM", expr :: Nil, false, Nil)
+def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+    Expr.Agg("SUM", expr :: Nil, false, Nil)
 
-def avg[T: Number](expr: Expr[T]): Agg[Option[BigDecimal]] = Agg("AVG", expr :: Nil, false, Nil)
+def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+    Expr.Agg("AVG", expr :: Nil, false, Nil)
 
-def max[T](expr: Expr[T]): Agg[Wrap[T, Option]] = Agg("MAX", expr :: Nil, false, Nil)
+def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+    Expr.Agg("MAX", expr :: Nil, false, Nil)
 
-def min[T](expr: Expr[T]): Agg[Wrap[T, Option]] = Agg("MIN", expr :: Nil, false, Nil)
+def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+    Expr.Agg("MIN", expr :: Nil, false, Nil)
 
-def rank(): Agg[Option[Long]] = Agg("RANK", Nil, false, Nil)
+def rank(): Expr[Option[Long], AggKind] = Expr.Agg("RANK", Nil, false, Nil)
 
-def denseRank(): Agg[Option[Long]] = Agg("DENSE_RANK", Nil, false, Nil)
+def denseRank(): Expr[Option[Long], AggKind] = Expr.Agg("DENSE_RANK", Nil, false, Nil)
 
-def rowNumber(): Agg[Option[Long]] = Agg("ROW_NUMBER", Nil, false, Nil)
+def rowNumber(): Expr[Option[Long], AggKind] = Expr.Agg("ROW_NUMBER", Nil, false, Nil)
 
-def lag[T](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
+def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
-        case Some(v) => Literal(v)
-        case _ => Null
-    Agg("LAG", expr :: Literal(offset) :: defaultExpr :: Nil, false, Nil)
+        case Some(v) => Expr.Literal(v, a)
+        case _ => Expr.Null
+    Expr.Agg("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
 
-def lead[T](expr: Expr[T], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using AsSqlExpr[Unwrap[T, Option]]): Agg[Wrap[T, Option]] =
+def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
-        case Some(v) => Literal(v)
-        case _ => Null
-    Agg("LEAD", expr :: Literal(offset) :: defaultExpr :: Nil, false, Nil)
+        case Some(v) => Expr.Literal(v, a)
+        case _ => Expr.Null
+    Expr.Agg("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil) 
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
     
-inline def query[T](using qc: QueryContext, p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
-    val tableName = tableNameMacro[T]
+inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
+    AsSqlExpr.summonInstances[p.MirroredElemTypes]
+    val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val table = Table[T](tableName, aliasName, tableMetaDataMacro[T])
+    val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
     val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(aliasName)) :: Nil)
     SelectQuery(table, ast)
 
-inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTupleWrapper[N, V]])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
+inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTuple[N, V]])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val innerQuery = NamedQuery(q, aliasName)
@@ -129,7 +136,7 @@ inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTupleWrapper[N, V]])(usin
     )
     SelectQuery(innerQuery, ast)
 
-def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTupleWrapper[N, V]])(f: Option[WithContext] ?=> Query[NamedTupleWrapper[N, V]] => Query[NamedTupleWrapper[WN, V]])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTupleWrapper[N, V]] =
+def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V]])(f: Option[WithContext] ?=> Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTuple[N, V]] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]

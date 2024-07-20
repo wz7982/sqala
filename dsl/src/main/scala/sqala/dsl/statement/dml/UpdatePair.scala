@@ -1,5 +1,5 @@
 package sqala.dsl.statement.dml
 
-import sqala.dsl.{Column, Expr}
+import sqala.dsl.Expr
 
-case class UpdatePair(expr: Column[?], updateExpr: Expr[?])
+case class UpdatePair(columnName: String, updateExpr: Expr[?, ?])
