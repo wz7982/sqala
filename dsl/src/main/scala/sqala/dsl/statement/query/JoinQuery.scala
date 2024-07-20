@@ -10,7 +10,7 @@ class JoinQuery[T](
     private[sqala] val table: Option[SqlTable.JoinTable],
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    def on[K <: SimpleKind](f: T => Expr[Boolean, SimpleKind]): SelectQuery[T] =
+    def on[K <: SimpleKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         val sqlCondition = f(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))
