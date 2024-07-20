@@ -7,7 +7,6 @@ class GroupByQuery[T](
     private[sqala] val tables: T,
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    // 返回类型全部为ColumnKind
     def map[R](f: T => R)(using s: SelectItem[R], a: IsAggKind[R], t: a.R =:= true): SelectQuery[R] =
         val mappedItems = f(tables)
         val selectItems = s.selectItems(mappedItems, 0)
