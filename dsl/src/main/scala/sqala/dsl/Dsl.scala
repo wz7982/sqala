@@ -111,7 +111,13 @@ def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Agg("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil) 
+    Expr.Agg("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
+
+def coalesce[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, CommonKind] =
+    Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
+
+def ifnull[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using AsSqlExpr[T]): Expr[T, CommonKind] =
+    coalesce(expr, value)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
