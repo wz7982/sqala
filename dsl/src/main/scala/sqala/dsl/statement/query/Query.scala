@@ -7,6 +7,8 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionTyp
 import sqala.ast.table.{SqlJoinType, SqlTableAlias, SqlTable}
 import sqala.dsl.*
 import sqala.dsl.macros.TableMacro
+import sqala.printer.Dialect
+import sqala.util.queryToString
 
 import scala.NamedTuple.*
 import scala.annotation.targetName
@@ -14,7 +16,9 @@ import scala.compiletime.erasedValue
 import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 
-sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery)
+sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery):
+    def sql(dialect: Dialect): (String, Array[Any]) =
+        queryToString(ast, dialect)
 
 object Query:
     extension [T, N <: Tuple, K <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[T, K]]]])
