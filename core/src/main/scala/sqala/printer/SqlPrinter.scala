@@ -5,7 +5,7 @@ import sqala.ast.expr.{SqlExpr, SqlWindowFrame}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
-import sqala.ast.table.{SqlJoinCondition, SqlTable}
+import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -335,20 +335,24 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printIntervalExpr(expr: SqlExpr.Interval): Unit
 
+    def printTableAlias(alias: SqlTableAlias): Unit =
+        sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
+        if alias.columnAlias.nonEmpty then
+            sqlBuilder.append("(")
+            printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            sqlBuilder.append(")")
+
     def printTable(table: SqlTable): Unit = table match
         case SqlTable.IdentTable(tableName, alias) =>
             sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
-            for a <- alias do sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
+            for a <- alias do 
+                printTableAlias(a)
         case SqlTable.SubQueryTable(query, lateral, alias) =>
             if lateral then sqlBuilder.append("LATERAL ")
             sqlBuilder.append("(")
             printQuery(query)
             sqlBuilder.append(")")
-            sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
-            if alias.columnAlias.nonEmpty then
-                sqlBuilder.append("(")
-                printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
-                sqlBuilder.append(")")
+            printTableAlias(alias)
         case SqlTable.JoinTable(left, joinType, right, condition) =>
             printTable(left)
             sqlBuilder.append(s" ${joinType.joinType} ")
