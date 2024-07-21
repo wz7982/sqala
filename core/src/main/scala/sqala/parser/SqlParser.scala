@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
-import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlSubQueryAlias, SqlTable}
+import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 
 import scala.language.experimental.saferExceptions
 import scala.util.parsing.combinator.lexical.StdLexical
@@ -238,10 +238,10 @@ class SqlParser extends StandardTokenParsers:
 
     def simpleTable: Parser[SqlTable] =
         ident ~ opt(opt("AS") ~> ident) ^^ {
-            case table ~ alias => SqlTable.IdentTable(table, alias)
+            case table ~ alias => SqlTable.IdentTable(table, alias.map(a => SqlTableAlias(a, Nil)))
         } |
         opt("LATERAL") ~ ("(" ~> select <~ ")") ~ (opt("AS") ~> ident) ^^ {
-            case lateral ~ s ~ alias => SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlSubQueryAlias(alias))
+            case lateral ~ s ~ alias => SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(alias))
         }
 
     def joinType: Parser[SqlJoinType] =
