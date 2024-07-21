@@ -34,6 +34,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Column[T](tableName: String, columnName: String) extends Expr[T, ColumnKind]
     case Null extends Expr[Null, CommonKind]
     case Binary[T, K <: ExprKind](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, K]
+    case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, ColumnKind]
     case Unary[T, K <: ExprKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
     case SubQuery[T](query: Query[?]) extends Expr[T, CommonKind]
     case Func[T](name: String, args: List[Expr[?, ?]]) extends Expr[T, CommonKind]
@@ -59,6 +60,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         case Binary(_, _, Literal(None, _)) =>
             SqlExpr.BooleanLiteral(false)
         case Binary(left, op, right) =>
+            SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
+        case CustomBinary(left, op, right) =>
             SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
         case Unary(expr, op) => 
             SqlExpr.Unary(expr.asSqlExpr, op)
