@@ -4,7 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
-import sqala.ast.table.{SqlJoinType, SqlSubQueryAlias, SqlTable}
+import sqala.ast.table.{SqlJoinType, SqlTableAlias, SqlTable}
 import sqala.dsl.*
 import sqala.dsl.macros.TableMacro
 
@@ -111,7 +111,7 @@ class SelectQuery[T](
             SqlTable.JoinTable(
                 i,
                 joinType, 
-                SqlTable.IdentTable(joinTableName, Some(joinAliasName)),
+                SqlTable.IdentTable(joinTableName, Some(SqlTableAlias(joinAliasName))),
                 None
             )
         JoinQuery(tables, sqlTable, ast.copy(select = selectItems, from = sqlTable.toList))
@@ -134,7 +134,7 @@ class SelectQuery[T](
                     case Some(WithContext(alias)) =>
                         SqlTable.IdentTable(alias, None)
                     case None =>
-                        SqlTable.SubQueryTable(joinQuery.ast, false, SqlSubQueryAlias(aliasName))
+                        SqlTable.SubQueryTable(joinQuery.ast, false, SqlTableAlias(aliasName))
                 ,
                 None
             )
@@ -154,7 +154,7 @@ class SelectQuery[T](
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(joinQuery.ast, true, SqlSubQueryAlias(aliasName)),
+                SqlTable.SubQueryTable(joinQuery.ast, true, SqlTableAlias(aliasName)),
                 None
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
@@ -189,7 +189,7 @@ class SelectQuery[T](
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(valuesAst, false, SqlSubQueryAlias(aliasName, selectItems.map(i => i.alias.get))),
+                SqlTable.SubQueryTable(valuesAst, false, SqlTableAlias(aliasName, selectItems.map(i => i.alias.get))),
                 None
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
@@ -271,7 +271,7 @@ class SelectQuery[T](
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
                     select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
-                    from = SqlTable.SubQueryTable(ast, false, SqlSubQueryAlias("t0")) :: Nil
+                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias("t0")) :: Nil
                 )
                 SelectQuery(expr, outerQuery)
 

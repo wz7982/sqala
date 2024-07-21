@@ -129,7 +129,7 @@ inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.Product
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
-    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(aliasName)) :: Nil)
+    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
     SelectQuery(table, ast)
 
 inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTuple[N, V]])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
@@ -138,7 +138,7 @@ inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTuple[N, V]])(using qc: Q
     val innerQuery = NamedQuery(q, aliasName)
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, 0),
-        from = SqlTable.SubQueryTable(q.ast, false, SqlSubQueryAlias(aliasName, Nil)) :: Nil
+        from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
     SelectQuery(innerQuery, ast)
 
