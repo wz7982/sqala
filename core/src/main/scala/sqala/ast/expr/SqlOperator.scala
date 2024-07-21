@@ -12,7 +12,6 @@ enum SqlBinaryOperator(val operator: String):
     case Like extends SqlBinaryOperator("LIKE")
     case NotLike extends SqlBinaryOperator("NOT LIKE")
     case And extends SqlBinaryOperator("AND")
-    case Xor extends SqlBinaryOperator("XOR")
     case Or extends SqlBinaryOperator("OR")
     case Plus extends SqlBinaryOperator("+")
     case Minus extends SqlBinaryOperator("-")

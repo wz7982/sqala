@@ -267,10 +267,6 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def ||[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] = 
         Binary(this, Or, that)
 
-    @targetName("xor")
-    def ^[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] = 
-        Binary(this, Xor, that)
-
     @targetName("not")
     def unary_!(using T =:= Boolean): Expr[Boolean, ResultKind[K, ValueKind]] = Unary(this, Not)
 
