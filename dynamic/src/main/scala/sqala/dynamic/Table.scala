@@ -1,6 +1,6 @@
 package sqala.dynamic
 
-import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlSubQueryAlias, SqlTable}
+import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 
 sealed trait AnyTable:
     infix def join(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.InnerJoin, table, None)
@@ -12,8 +12,8 @@ sealed trait AnyTable:
     infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.FullJoin, table, None)
 
     def toSqlTable: SqlTable = this match
-        case Table(name, alias) => SqlTable.IdentTable(name, alias)
-        case SubQueryTable(query, alias, lateral) => SqlTable.SubQueryTable(query.ast, lateral, SqlSubQueryAlias(alias, Nil))
+        case Table(name, alias) => SqlTable.IdentTable(name, alias.map(a => SqlTableAlias(a)))
+        case SubQueryTable(query, alias, lateral) => SqlTable.SubQueryTable(query.ast, lateral, SqlTableAlias(alias, Nil))
         case JoinTable(left, joinType, right, condition) => 
             SqlTable.JoinTable(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)))
 
