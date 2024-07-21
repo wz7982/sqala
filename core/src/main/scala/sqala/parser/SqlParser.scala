@@ -59,9 +59,7 @@ class SqlParser extends StandardTokenParsers:
 
     def expr: Parser[SqlExpr] = or
 
-    def or: Parser[SqlExpr] = xor * ("OR" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.Or, r) })
-
-    def xor: Parser[SqlExpr] = and * ("XOR" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.Xor, r) })
+    def or: Parser[SqlExpr] = and * ("OR" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.Or, r) })
 
     def and: Parser[SqlExpr] = relation * ("AND" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.And, r) })
 

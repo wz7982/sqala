@@ -78,9 +78,6 @@ case class Expr(sqlExpr: SqlExpr):
     @targetName("or")
     def ||(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Or, expr.sqlExpr))
 
-    @targetName("xor")
-    def ^(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Xor, expr.sqlExpr))
-
     @targetName("not")
     def unary_! : Expr = Expr(SqlExpr.Unary(sqlExpr, Not))
 
