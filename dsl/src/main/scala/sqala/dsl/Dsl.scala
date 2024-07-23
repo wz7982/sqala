@@ -150,16 +150,16 @@ def replace[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], old
 def length[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
     Expr.Func("LENGTH", expr :: Nil)
 
-def repeat[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[Option[String], CommonKind] =
+def repeat[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[T, CommonKind] =
     Expr.Func("REPEAT", expr :: n.asExpr :: Nil)
 
-def trim[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def trim[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
     Expr.Func("TRIM", expr :: Nil)
 
-def upper[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def upper[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
     Expr.Func("UPPER", expr :: Nil)
 
-def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
     Expr.Func("LOWER", expr :: Nil)
 
 def now(): Expr[Option[Date], CommonKind] =
