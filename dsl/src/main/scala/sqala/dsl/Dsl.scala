@@ -12,6 +12,7 @@ import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
+import java.util.Date
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
@@ -118,6 +119,51 @@ def coalesce[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using a: As
 
 def ifnull[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using AsSqlExpr[T]): Expr[T, CommonKind] =
     coalesce(expr, value)
+
+def abs[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
+    Expr.Func("ABS", expr :: Nil)
+
+def ceil[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("CEIL", expr :: Nil)
+
+def floor[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("FLOOR", expr :: Nil)
+
+def round[T: Number, K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[Option[BigDecimal], CommonKind] =
+    Expr.Func("ROUND", expr :: n.asExpr :: Nil)
+
+def power[T: Number, K <: SimpleKind](expr: Expr[T, K], n: Double): Expr[Option[BigDecimal], CommonKind] =
+    Expr.Func("POWER", expr :: n.asExpr :: Nil)
+
+def concat(expr: (Expr[String, ?] | Expr[Option[String], ?] | String)*): Expr[Option[String], CommonKind] =
+    val args = expr.toList.map:
+        case s: String => s.asExpr
+        case e: Expr[?, ?] => e
+    Expr.Func("CONCAT", args)
+
+def substring[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], start: Int, end: Int): Expr[Option[String], CommonKind] =
+    Expr.Func("CONCAT", expr :: start.asExpr :: end.asExpr :: Nil)
+
+def replace[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], oldString: String, newString: String): Expr[T, CommonKind] =
+    Expr.Func("REPLACE", expr :: oldString.asExpr :: newString.asExpr :: Nil)
+
+def length[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("LENGTH", expr :: Nil)
+
+def repeat[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[Option[String], CommonKind] =
+    Expr.Func("REPEAT", expr :: n.asExpr :: Nil)
+
+def trim[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("TRIM", expr :: Nil)
+
+def upper[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("UPPER", expr :: Nil)
+
+def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+    Expr.Func("LOWER", expr :: Nil)
+
+def now(): Expr[Option[Date], CommonKind] =
+    Expr.Func("NOW", Nil)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
