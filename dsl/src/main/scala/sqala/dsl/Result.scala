@@ -1,5 +1,7 @@
 package sqala.dsl
 
+import sqala.dsl.statement.query.NamedQuery
+
 import scala.NamedTuple.NamedTuple
 
 trait Result[T]:
