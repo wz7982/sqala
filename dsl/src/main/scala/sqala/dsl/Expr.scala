@@ -46,7 +46,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]) extends Expr[T, WindowKind]
     case SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T, CommonKind]
 
-    def asSqlExpr: SqlExpr = this match
+    private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
         case Column(tableName, columnName) => 
             SqlExpr.Column(Some(tableName), columnName)
@@ -338,4 +338,4 @@ object Expr:
         def descNullsLast: OrderBy = OrderBy(expr, Desc, Some(Last))
 
 case class OrderBy(expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
-    def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
+    private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
