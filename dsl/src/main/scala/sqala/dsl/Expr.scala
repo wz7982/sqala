@@ -33,16 +33,16 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T, ValueKind]
     case Column[T](tableName: String, columnName: String) extends Expr[T, ColumnKind]
     case Null extends Expr[Null, CommonKind]
-    case Binary[T, K <: ExprKind](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, K]
-    case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, ColumnKind]
-    case Unary[T, K <: ExprKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
+    case Binary[T, K <: CompositeKind](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, K]
+    case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, CommonKind]
+    case Unary[T, K <: CompositeKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
     case SubQuery[T](query: Query[?]) extends Expr[T, CommonKind]
     case Func[T](name: String, args: List[Expr[?, ?]]) extends Expr[T, CommonKind]
     case Agg[T](name: String, args: List[Expr[?, ?]], distinct: Boolean, orderBy: List[OrderBy]) extends Expr[T, AggKind]
-    case Case[T, K <: ExprKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
+    case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
     case Vector[T](items: List[Expr[?, ?]]) extends Expr[T, CommonKind]
-    case In[K <: ExprKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
-    case Between[K <: ExprKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
+    case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
+    case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]) extends Expr[T, WindowKind]
     case SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T, CommonKind]
 
@@ -94,11 +94,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Equal, that)
 
     @targetName("eq")
-    def ==[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def ==[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, Equal, SubQuery(query))
 
     @targetName("eqExprQuery")
-    def ==[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def ==[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, Equal, SubQuery(query))
 
     @targetName("ne")
@@ -110,11 +110,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, that)
 
     @targetName("ne")
-    def !=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def !=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, SubQuery(query))
 
     @targetName("neExprQuery")
-    def !=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def !=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, SubQuery(query))
 
     @targetName("gt")
@@ -126,11 +126,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    def >[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def >[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, SubQuery(query))
 
     @targetName("gtExprQuery")
-    def >[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def >[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, SubQuery(query))
     
     @targetName("ge")
@@ -142,11 +142,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    def >=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def >=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, SubQuery(query))
 
     @targetName("geExprQuery")
-    def >=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def >=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, SubQuery(query))
     
     @targetName("lt")
@@ -158,11 +158,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThan, that)
 
     @targetName("lt")
-    def <[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def <[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, SubQuery(query))
 
     @targetName("ltExprQuery")
-    def <[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def <[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, SubQuery(query))
     
     @targetName("le")
@@ -174,11 +174,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    def <=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, K] =
+    def <=[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, SubQuery(query))
 
     @targetName("leExprQuery")
-    def <=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, K] =
+    def <=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, SubQuery(query))
 
     def in(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] = 
@@ -313,13 +313,11 @@ object Expr:
         def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match 
             case Column(_, columnName) => 
                 UpdatePair(columnName, Literal(value, a))
-            case _ => throw new IllegalArgumentException("only column can be assigned to")
         
         @targetName("to")
         def :=[R <: Operation[T], K <: SimpleKind](updateExpr: Expr[R, K]): UpdatePair = expr match 
             case Column(_, columnName) => 
                 UpdatePair(columnName, updateExpr)
-            case _ => throw new IllegalArgumentException("only column can be assigned to")
 
     extension [T](expr: Expr[T, AggKind])
         def over(partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]): Window[T] = 

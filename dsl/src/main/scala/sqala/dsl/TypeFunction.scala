@@ -22,12 +22,15 @@ type ToTuple[T] <: Tuple = T match
 
 type SimpleKind = ColumnKind | CommonKind | ValueKind
 
+type CompositeKind = CommonKind | AggKind | WindowKind
+
 type OperationKind[T <: ExprKind] <: ExprKind = T match
-    case CommonKind | ColumnKind | WindowKind | ValueKind => 
+    case ValueKind => ExprKind
+    case CommonKind | ColumnKind | WindowKind => 
         CommonKind | ColumnKind | WindowKind | ValueKind
     case AggKind => AggKind | ValueKind
 
-type ResultKind[L <: ExprKind, R <: ExprKind] <: ExprKind = (L, R) match
+type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (WindowKind, r) => WindowKind
     case (l, WindowKind) => WindowKind
     case (AggKind, r) => AggKind
