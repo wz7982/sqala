@@ -24,3 +24,7 @@ object Result:
     given namedTupleResult[N <: Tuple, V <: Tuple](using r: Result[V]): Aux[NamedTuple[N, V], NamedTuple[N, ToTuple[r.R]]] =
         new Result[NamedTuple[N, V]]:
             type R = NamedTuple[N, ToTuple[r.R]]
+
+    given namedQueryResult[N <: Tuple, V <: Tuple](using r: Result[NamedTuple[N, V]]): Aux[NamedQuery[N, V], r.R] =
+        new Result[NamedQuery[N, V]]:
+            type R = r.R
