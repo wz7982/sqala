@@ -30,6 +30,18 @@ object SelectItem:
                 tmpCursor += 1
             items.toList
 
+    given namedQuerySelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[NamedTuple[N, V]]): SelectItem[NamedQuery[N, V]] with
+        override def offset(item: NamedQuery[N, V]): Int = s.offset(item.__query__.queryItems)
+
+        override def selectItems(item: NamedQuery[N, V], cursor: Int): List[SqlSelectItem] =
+            val queryItems = s.selectItems(item.__query__.queryItems, 0)
+            var tmpCursor = cursor
+            val items = ListBuffer[SqlSelectItem]()
+            for field <- queryItems.map(_.alias.get) do
+                items.addOne(SqlSelectItem(SqlExpr.Column(Some(item.__alias__), field), Some(s"c${tmpCursor}")))
+                tmpCursor += 1
+            items.toList
+
     given tupleSelectItem[H, T <: Tuple](using sh: SelectItem[H], st: SelectItem[T]): SelectItem[H *: T] with
         override def offset(item: H *: T): Int = sh.offset(item.head)
 
