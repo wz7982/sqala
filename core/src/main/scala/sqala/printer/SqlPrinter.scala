@@ -147,7 +147,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         case a: SqlExpr.AllColumn => printAllColumnExpr(a)
         case c: SqlExpr.Column => printColumnExpr(c)
         case SqlExpr.Null => printNullExpr()
-        case SqlExpr.UnknowValue => printUnknowValueExpr()
+        case SqlExpr.UnknownValue => printUnknownValueExpr()
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
@@ -175,7 +175,7 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printNullExpr(): Unit = sqlBuilder.append("NULL")
 
-    def printUnknowValueExpr(): Unit = sqlBuilder.append("?")
+    def printUnknownValueExpr(): Unit = sqlBuilder.append("?")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         if prepare then

@@ -187,7 +187,7 @@ class SqlParser extends StandardTokenParsers:
         "TRUE" ^^ (_ => SqlExpr.BooleanLiteral(true)) |
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
         "NULL" ^^ (_ => SqlExpr.Null) |
-        "?" ^^ (_ => SqlExpr.UnknowValue)
+        "?" ^^ (_ => SqlExpr.UnknownValue)
 
     def unionType: Parser[SqlUnionType] =
         "UNION" ~> opt("ALL") ^^ {
