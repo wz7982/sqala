@@ -1,5 +1,6 @@
 package sqala.json
 
+import sqala.data.DefaultValue
 import sqala.util.fetchNames
 
 import scala.compiletime.{constValue, erasedValue, summonInline}
@@ -32,7 +33,7 @@ object JsonDecoder:
                 case _ => throw new JsonDecodeException
 
     given floatDecoder: JsonDecoder[Float] with
-        override def decode(node: JsonNode)(using JsonDateFormat): Float throws JsonDecodeException = 
+        override def decode(node: JsonNode)(using JsonDateFormat): Float throws JsonDecodeException =
             node match
                 case JsonNode.Num(number) => number.floatValue
                 case _ => throw new JsonDecodeException
@@ -62,7 +63,7 @@ object JsonDecoder:
                 case _ => throw new JsonDecodeException
 
     given dateDecoder: JsonDecoder[Date] with
-        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): Date throws JsonDecodeException = 
+        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): Date throws JsonDecodeException =
             node match
                 case JsonNode.Str(string) =>
                     val formatter = new SimpleDateFormat(dateFormat.format)
@@ -70,7 +71,7 @@ object JsonDecoder:
                 case _ => throw new JsonDecodeException
 
     given localDateDecoder: JsonDecoder[LocalDate] with
-        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDate throws JsonDecodeException = 
+        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDate throws JsonDecodeException =
             node match
                 case JsonNode.Str(string) =>
                     val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
@@ -78,7 +79,7 @@ object JsonDecoder:
                 case _ => throw new JsonDecodeException
 
     given localDateTimeDecoder: JsonDecoder[LocalDateTime] with
-        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDateTime throws JsonDecodeException = 
+        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): LocalDateTime throws JsonDecodeException =
             node match
                 case JsonNode.Str(string) =>
                     val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
@@ -92,7 +93,7 @@ object JsonDecoder:
                 case n => Some(d.decode(n))
 
     given listDecoder[T](using d: JsonDecoder[T]): JsonDecoder[List[T]] with
-        override def decode(node: JsonNode)(using JsonDateFormat): List[T] throws JsonDecodeException = 
+        override def decode(node: JsonNode)(using JsonDateFormat): List[T] throws JsonDecodeException =
             node match
                 case JsonNode.Array(items) => items.map(i => d.decode(i))
                 case _ => throw new JsonDecodeException
@@ -116,19 +117,19 @@ object JsonDecoder:
         new JsonDecoder[T]:
             override def decode(node: JsonNode)(using JsonDateFormat): T throws JsonDecodeException =
                 node match
-                    case JsonNode.Object(items) => 
+                    case JsonNode.Object(items) =>
                         val data = info.map: (name, instance) =>
                             val alias = aliasNameMap(name)
                             (items.contains(alias), ignoreMap(name)) match
-                                case (true, _) => 
+                                case (true, _) =>
                                     try
                                         instance.decode(items(alias))
-                                    catch 
+                                    catch
                                         case e: JsonDecodeException =>
                                             throw new JsonDecodeException(s"The JSON cannot be mapped to field '$name'.")
                                 case (false, true) if defaultValueMap(name) ne None => defaultValueMap(name).get
                                 case (false, true) => typedDefaultValues(name)
-                                case (false, false) => 
+                                case (false, false) =>
                                     throw new JsonDecodeException(s"The JSON does not contain a value for field '$name', consider adding an annotation @jsonIgnore or checking the JSON.")
                         m.fromProduct(Tuple.fromArray(data.toArray))
                     case _ => throw new JsonDecodeException
@@ -146,7 +147,7 @@ object JsonDecoder:
                         else throw new JsonDecodeException
                     case JsonNode.Object(items) =>
                         val (name, node) = items.head
-                        if !names.contains(name) then 
+                        if !names.contains(name) then
                             throw new JsonDecodeException
                         val index = names.indexOf(name)
                         instances(index).asInstanceOf[JsonDecoder[T]].decode(node)
@@ -158,9 +159,9 @@ object JsonDecoder:
         val metaData = fetchMetaData[m.MirroredElemTypes]
 
         inline m match
-            case p: Mirror.ProductOf[T] => 
+            case p: Mirror.ProductOf[T] =>
                 val defaultValues = names
-                    .zip(JsonDefaultValue.defaultValues[m.MirroredElemTypes])
+                    .zip(DefaultValue.defaultValues[m.MirroredElemTypes])
                     .toMap
                 val metaData = jsonMetaDataMacro[T]
                 newDecoderProduct[T](names, instances, defaultValues, metaData)(using p)
