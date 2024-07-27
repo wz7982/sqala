@@ -1,4 +1,4 @@
-package sqala.mapping
+package sqala.data
 
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
@@ -8,7 +8,7 @@ import java.util.Date
 trait DefaultValue[T]:
     def defaultValue: T
 
-object DefaultValue: 
+object DefaultValue:
     inline def defaultValues[T <: Tuple]: List[Any] =
         inline erasedValue[T] match
             case _: EmptyTuple => Nil
@@ -52,12 +52,12 @@ object DefaultValue:
 
     private def newDefaultValueProduct[T](values: List[Any], m: Mirror.ProductOf[T]): DefaultValue[T] =
         new DefaultValue[T]:
-            override def defaultValue: T = 
+            override def defaultValue: T =
                 m.fromProduct(Tuple.fromArray(values.toArray))
-    
+
     private def newDefaultValueSum[T](values: List[Any]): DefaultValue[T] =
         new DefaultValue[T]:
-            override def defaultValue: T = 
+            override def defaultValue: T =
                 values.head.asInstanceOf[T]
 
     inline given derived[T](using m: Mirror.Of[T]): DefaultValue[T] =
