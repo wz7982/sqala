@@ -11,7 +11,7 @@ trait DataMapping[A, B]:
 
 object DataMapping:
     given dataMapping[T](using c: Copy[T]): DataMapping[T, T] with
-        override def map(x: T): T = c.copy(x)
+        override inline def map(x: T): T = c.copy(x)
 
     inline given productMapping[A <: Product, B <: Product](using Mirror.ProductOf[A], Mirror.ProductOf[B]): DataMapping[A, B] =
         ${ productMappingMacro[A, B] }
@@ -25,7 +25,11 @@ object DataMapping:
         import q.reflect.*
 
         val tpr = TypeRepr.of[B]
+        val types = tpr match
+            case AppliedType(_, ts) => ts
+            case _ => Nil
         val symbol = tpr.typeSymbol
+        val ctor = symbol.primaryConstructor
         val comp = symbol.companionClass
         val mod = Ref(symbol.companionModule)
         val body = comp.tree.asInstanceOf[ClassDef].body
@@ -52,7 +56,8 @@ object DataMapping:
                     aEles(name) -> typ match
                         case ('[a], '[b]) =>
                             val fieldExpr = Select.unique(x.asTerm, name).asExprOf[a]
-                            '{ summonInline[DataMapping[a, b]].map($fieldExpr) }
+                            val mappingExpr = Expr.summon[DataMapping[a, b]].get
+                            '{ $mappingExpr.map($fieldExpr) }
                 else
                     val p = symbol.caseFields(index)
                     if p.flags.is(Flags.HasDefault) then
@@ -63,17 +68,20 @@ object DataMapping:
                         defaultList.head
                     else
                         typ match
-                            case '[t] => '{ summonInline[DefaultValue[t]].defaultValue }
+                            case '[t] =>
+                                val defaultValueExpr = Expr.summon[DefaultValue[t]].get
+                                '{ $defaultValueExpr.defaultValue }
 
         '{
             new DataMapping[A, B]:
                 override def map(x: A): B =
-                    val m = summonInline[Mirror.ProductOf[B]]
-                    val values = ${
-                        Expr.ofList(mappingList('x))
-                    }.toArray
-                    m.fromProduct(Tuple.fromArray(values))
+                    ${
+                        if types.isEmpty then
+                            New(Inferred(tpr)).select(ctor).appliedToArgs(mappingList('x).map(_.asTerm)).asExprOf[B]
+                        else
+                            New(Inferred(tpr)).select(ctor).appliedToTypes(types).appliedToArgs(mappingList('x).map(_.asTerm)).asExprOf[B]
+                    }
         }
 
 extension [A](x: A)
-    def mapTo[B](using d: DataMapping[A, B]): B = d.map(x)
+    inline def mapTo[B](using d: DataMapping[A, B]): B = d.map(x)
