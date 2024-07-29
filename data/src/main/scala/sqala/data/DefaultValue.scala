@@ -1,7 +1,10 @@
 package sqala.data
 
+import sqala.util.fetchTypes
+
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
+import scala.quoted.*
 import java.time.{LocalDate, LocalDateTime}
 import java.util.Date
 
@@ -50,19 +53,50 @@ object DefaultValue:
     given listDefaultValue[T: DefaultValue]: DefaultValue[List[T]] with
         override def defaultValue: List[T] = Nil
 
-    private def newDefaultValueProduct[T](values: List[Any], m: Mirror.ProductOf[T]): DefaultValue[T] =
-        new DefaultValue[T]:
-            override def defaultValue: T =
-                m.fromProduct(Tuple.fromArray(values.toArray))
-
-    private def newDefaultValueSum[T](values: List[Any]): DefaultValue[T] =
-        new DefaultValue[T]:
-            override def defaultValue: T =
-                values.head.asInstanceOf[T]
-
     inline given derived[T](using m: Mirror.Of[T]): DefaultValue[T] =
-        val values = defaultValues[m.MirroredElemTypes]
+        ${ defaultValueMacro[T] }
 
-        inline m match
-            case p: Mirror.ProductOf[T] => newDefaultValueProduct[T](values, p)
-            case s: Mirror.SumOf[T] => newDefaultValueSum[T](values)
+    private def defaultValueMacro[T: Type](using q: Quotes): Expr[DefaultValue[T]] =
+        import q.reflect.*
+
+        val mirror: Expr[Mirror.Of[T]] = Expr.summon[Mirror.Of[T]].get
+
+        mirror match
+            case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = EmptyTuple } } =>
+                '{
+                    new DefaultValue[T]:
+                        override def defaultValue: T = 
+                            $m.fromProduct(EmptyTuple)
+                }
+            case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = elementTypes } } =>
+                val elemTypes = fetchTypes[elementTypes]
+                val tpr = TypeRepr.of[T]
+                val types = tpr match
+                    case AppliedType(_, ts) => ts
+                    case _ => Nil
+                val symbol = tpr.typeSymbol
+                val ctor = symbol.primaryConstructor
+                val exprs = elemTypes.map:
+                    case '[t] =>
+                        val summonExpr = Expr.summon[DefaultValue[t]].get
+                        '{ $summonExpr.defaultValue }
+                '{
+                    new DefaultValue[T]:
+                        override def defaultValue: T = 
+                            ${
+                                if types.isEmpty then
+                                    New(Inferred(tpr)).select(ctor).appliedToArgs(exprs.map(_.asTerm)).asExprOf[T]
+                                else
+                                    New(Inferred(tpr)).select(ctor).appliedToTypes(types).appliedToArgs(exprs.map(_.asTerm)).asExprOf[T]
+                            }
+                }
+            case '{ $m: Mirror.SumOf[T] { type MirroredElemTypes = elementTypes } } =>
+                val typ = fetchTypes[elementTypes].head
+                val expr = typ match
+                    case '[t] => 
+                        val summonExpr = Expr.summon[DefaultValue[t]].get
+                        '{ $summonExpr.defaultValue }.asExprOf[T]
+                '{
+                    new DefaultValue[T]:
+                        override def defaultValue: T = $expr
+                }
