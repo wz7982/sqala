@@ -82,25 +82,25 @@ object JdbcDecoder:
             if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
 
     given customFieldDecoder[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
-        override def offset: Int = d.offset
+        override inline def offset: Int = d.offset
 
-        override def decode(data: ResultSet, cursor: Int): T throws SQLException = c.fromValue(d.decode(data, cursor))
+        override inline def decode(data: ResultSet, cursor: Int): T throws SQLException = c.fromValue(d.decode(data, cursor))
 
     given tupleDecoder[H, T <: Tuple](using headDecoder: JdbcDecoder[H], tailDecoder: JdbcDecoder[T]): JdbcDecoder[H *: T] with
-        override def offset: Int = headDecoder.offset
+        override inline def offset: Int = headDecoder.offset
 
-        override def decode(data: ResultSet, cursor: Int): H *: T throws SQLException =
+        override inline def decode(data: ResultSet, cursor: Int): H *: T throws SQLException =
             headDecoder.decode(data, cursor) *: tailDecoder.decode(data, cursor + offset)
 
     given emptyTupleDecoder: JdbcDecoder[EmptyTuple] with
-        override def offset: Int = 0
+        override inline def offset: Int = 0
 
-        override def decode(data: ResultSet, cursor: Int): EmptyTuple throws SQLException = EmptyTuple
+        override inline def decode(data: ResultSet, cursor: Int): EmptyTuple throws SQLException = EmptyTuple
 
     given namedTupleDecoder[N <: Tuple, V <: Tuple](using d: JdbcDecoder[V]): JdbcDecoder[NamedTuple.NamedTuple[N, V]] with
-        override def offset: Int = d.offset
+        override inline def offset: Int = d.offset
 
-        override def decode(data: ResultSet, cursor: Int): NamedTuple.NamedTuple[N, V] throws SQLException =
+        override inline def decode(data: ResultSet, cursor: Int): NamedTuple.NamedTuple[N, V] throws SQLException =
             NamedTuple(d.decode(data, cursor))
 
     inline given productDecoder[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
