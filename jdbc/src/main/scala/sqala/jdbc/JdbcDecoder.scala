@@ -5,10 +5,10 @@ import sqala.dsl.CustomField
 import java.sql.{ResultSet, SQLException}
 import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Date
-import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.language.experimental.saferExceptions
+import scala.quoted.*
 
 trait JdbcDecoder[T]:
     def offset: Int
@@ -22,61 +22,61 @@ object JdbcDecoder:
             case _: (t *: ts) => summonInline[JdbcDecoder[t]] :: summonInstances[ts]
 
     given intDecoder: JdbcDecoder[Int] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Int throws SQLException = data.getInt(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Int throws SQLException = data.getInt(cursor)
 
     given longDecoder: JdbcDecoder[Long] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Long throws SQLException = data.getLong(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Long throws SQLException = data.getLong(cursor)
 
     given floatDecoder: JdbcDecoder[Float] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Float throws SQLException = data.getFloat(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Float throws SQLException = data.getFloat(cursor)
 
     given doubleDecoder: JdbcDecoder[Double] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Double throws SQLException = data.getDouble(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Double throws SQLException = data.getDouble(cursor)
 
     given decimalDecoder: JdbcDecoder[BigDecimal] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): BigDecimal throws SQLException = data.getBigDecimal(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): BigDecimal throws SQLException = data.getBigDecimal(cursor)
 
     given booleanDecoder: JdbcDecoder[Boolean] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Boolean throws SQLException = data.getBoolean(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Boolean throws SQLException = data.getBoolean(cursor)
 
     given stringDecoder: JdbcDecoder[String] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): String throws SQLException = data.getString(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): String throws SQLException = data.getString(cursor)
 
     given dateDecoder: JdbcDecoder[Date] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): Date throws SQLException = data.getTimestamp(cursor)
+        override inline def decode(data: ResultSet, cursor: Int): Date throws SQLException = data.getTimestamp(cursor)
 
     given localDateDecoder: JdbcDecoder[LocalDate] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): LocalDate throws SQLException =
+        override inline def decode(data: ResultSet, cursor: Int): LocalDate throws SQLException =
             data.getTimestamp(cursor).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
 
     given localDateTimeDecoder: JdbcDecoder[LocalDateTime] with
-        override def offset: Int = 1
+        override inline def offset: Int = 1
 
-        override def decode(data: ResultSet, cursor: Int): LocalDateTime throws SQLException =
+        override inline def decode(data: ResultSet, cursor: Int): LocalDateTime throws SQLException =
             LocalDateTime.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
 
     given optionDecoder[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
-        override def offset: Int = d.offset
+        override inline def offset: Int = d.offset
 
-        override def decode(data: ResultSet, cursor: Int): Option[T] throws SQLException =
+        override inline def decode(data: ResultSet, cursor: Int): Option[T] throws SQLException =
             val slice = for i <- (cursor until cursor + offset) yield
                 data.getObject(i)
             if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
@@ -103,19 +103,37 @@ object JdbcDecoder:
         override def decode(data: ResultSet, cursor: Int): NamedTuple.NamedTuple[N, V] throws SQLException =
             NamedTuple(d.decode(data, cursor))
 
-    private def newDecoder[T](instances: List[JdbcDecoder[?]])(using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
-        new JdbcDecoder[T]:
-            override def offset: Int = instances.size
+    inline given productDecoder[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
+        ${ productDecoderMacro[T] }
 
-            override def decode(data: ResultSet, cursor: Int): T throws SQLException =
-                var tempCursor = cursor
-                val dataArray = ArrayBuffer[Any]()
-                instances.foreach: instance =>
-                    dataArray.addOne(instance.asInstanceOf[JdbcDecoder[Any]].decode(data, tempCursor))
-                    tempCursor = tempCursor + instance.offset
-                val dataTup = Tuple.fromArray(dataArray.toArray)
-                m.fromProduct(dataTup)
+    private def productDecoderMacro[T <: Product : Type](using q: Quotes): Expr[JdbcDecoder[T]] =
+        import q.reflect.*
+        import scala.unsafeExceptions.canThrowAny
 
-    inline given derived[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
-        val instances = summonInstances[m.MirroredElemTypes]
-        newDecoder[T](instances)
+        val tpr = TypeRepr.of[T]
+        val symbol = tpr.typeSymbol
+        val ctor = symbol.primaryConstructor
+        val types = symbol.declaredFields.map: i =>
+            i.tree match
+                case ValDef(_, typeTree, _) => typeTree.tpe.asType
+        val sizeExpr = Expr(types.size)
+
+        def fetchExprs(data: Expr[ResultSet], cursor: Expr[Int]): List[Expr[Any]] =
+            var tmpCursor = cursor
+            types.map:
+                case '[t] =>
+                    val decoderExpr = Expr.summon[JdbcDecoder[t]].get
+                    val resultExpr = '{ $decoderExpr.decode($data, $tmpCursor) }
+                    tmpCursor = '{ $tmpCursor + $decoderExpr.offset }
+                    resultExpr
+            
+        '{
+            new JdbcDecoder[T]:
+                override def decode(data: ResultSet, cursor: Int): T throws SQLException =
+                    ${
+                        val exprs = fetchExprs('data, 'cursor)
+                        New(Inferred(tpr)).select(ctor).appliedToArgs(exprs.map(_.asTerm)).asExprOf[T]
+                    }
+
+                override def offset: Int = $sizeExpr
+        }
