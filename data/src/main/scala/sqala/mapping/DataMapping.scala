@@ -1,6 +1,7 @@
 package sqala.mapping
 
 import sqala.data.DefaultValue
+import sqala.util.fetchTypes
 
 import scala.compiletime.summonInline
 import scala.deriving.Mirror
@@ -50,11 +51,6 @@ object DataMapping:
 
     inline given productMapping[A <: Product, B <: Product](using Mirror.ProductOf[A], Mirror.ProductOf[B]): DataMapping[A, B] =
         ${ productMappingMacro[A, B] }
-
-    private def fetchTypes[T: Type](using q: Quotes): List[Type[?]] =
-        Type.of[T] match
-            case '[x *: xs] => Type.of[x] :: fetchTypes[xs]
-            case '[EmptyTuple] => Nil
 
     private def productMappingMacro[A <: Product: Type, B <: Product: Type](using q: Quotes): Expr[DataMapping[A, B]] =
         import q.reflect.*
