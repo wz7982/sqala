@@ -115,7 +115,10 @@ object JsonEncoder:
                             val n = Expr(alias.getOrElse(f.name))
                             val addExpr = typ match
                                 case '[t] =>
-                                    val summonExpr = Expr.summon[JsonEncoder[t]].get
+                                    val showType = TypeRepr.of[t].show
+                                    val summonExpr = Expr.summon[JsonEncoder[t]] match
+                                        case None => report.errorAndAbort(s"Couble not create a json encoder for field (${f.name}: $showType). It's possible to fix this by adding: given JsonEncoder[$showType].")
+                                        case Some(s) => s
                                     val expr = Select.unique(x.asTerm, f.name).asExprOf[t]
                                     '{ $n -> $summonExpr.encode($expr)(using $format) }
                             fieldList.addOne(addExpr)

@@ -69,6 +69,7 @@ object DefaultValue:
                             $m.fromProduct(EmptyTuple)
                 }
             case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = elementTypes } } =>
+                val names = TypeRepr.of[T].typeSymbol.declaredFields.map(_.name)
                 val elemTypes = fetchTypes[elementTypes]
                 val tpr = TypeRepr.of[T]
                 val types = tpr match
@@ -76,10 +77,15 @@ object DefaultValue:
                     case _ => Nil
                 val symbol = tpr.typeSymbol
                 val ctor = symbol.primaryConstructor
-                val exprs = elemTypes.map:
-                    case '[t] =>
-                        val summonExpr = Expr.summon[DefaultValue[t]].get
-                        '{ $summonExpr.defaultValue }
+                val exprs = elemTypes.zip(names).map: (typ, n) =>
+                    typ match
+                        case '[t] =>
+                            val summonExpr = Expr.summon[DefaultValue[t]] match
+                                case None => 
+                                    val showType = TypeRepr.of[t].show
+                                    report.errorAndAbort(s"Couble not create a default value for field ($n: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
+                                case Some(s) => s
+                            '{ $summonExpr.defaultValue }
                 '{
                     new DefaultValue[T]:
                         override def defaultValue: T = 
