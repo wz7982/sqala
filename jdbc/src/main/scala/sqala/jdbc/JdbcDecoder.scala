@@ -103,7 +103,7 @@ object JdbcDecoder:
         override inline def decode(data: ResultSet, cursor: Int): NamedTuple.NamedTuple[N, V] throws SQLException =
             NamedTuple(d.decode(data, cursor))
 
-    inline given productDecoder[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
+    inline given derived[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
         ${ productDecoderMacro[T] }
 
     private def productDecoderMacro[T <: Product : Type](using q: Quotes): Expr[JdbcDecoder[T]] =
