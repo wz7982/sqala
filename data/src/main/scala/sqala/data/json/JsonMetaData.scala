@@ -1,4 +1,4 @@
-package sqala.json
+package sqala.data.json
 
 case class JsonMetaData(
     fieldNames: List[String], 

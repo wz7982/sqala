@@ -1,4 +1,4 @@
-package sqala.json
+package sqala.data.json
 
 enum JsonNode:
     case Num(number: Number)

@@ -1,4 +1,4 @@
-package sqala.mapping
+package sqala.data.mapping
 
 import sqala.data.DefaultValue
 import sqala.util.fetchTypes
