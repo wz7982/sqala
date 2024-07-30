@@ -1,4 +1,4 @@
-package sqala.json
+package sqala.data.json
 
 import scala.compiletime.erasedValue
 import scala.collection.mutable.ListBuffer

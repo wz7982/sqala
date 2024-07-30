@@ -1,4 +1,4 @@
-package sqala.json.annotation
+package sqala.data.json.annotation
 
 import scala.annotation.StaticAnnotation
 
