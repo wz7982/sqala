@@ -86,8 +86,12 @@ object DataMapping:
                 if aEles.contains(name) then
                     aEles(name) -> typ match
                         case ('[a], '[b]) =>
+                            val showTypeA = TypeRepr.of[a].show
+                            val showTypeB = TypeRepr.of[b].show
                             val fieldExpr = Select.unique(x.asTerm, name).asExprOf[a]
-                            val mappingExpr = Expr.summon[DataMapping[a, b]].get
+                            val mappingExpr = Expr.summon[DataMapping[a, b]] match
+                                case None => report.errorAndAbort(s"Field '$name' cannot be mapped. It's possible to fix this by adding: given DataMapping[$showTypeA, $showTypeB].")
+                                case Some(s) => s
                             '{ $mappingExpr.map($fieldExpr) }
                 else
                     val p = symbol.caseFields(index)
@@ -100,7 +104,10 @@ object DataMapping:
                     else
                         typ match
                             case '[t] =>
-                                val defaultValueExpr = Expr.summon[DefaultValue[t]].get
+                                val showType = TypeRepr.of[t].show
+                                val defaultValueExpr = Expr.summon[DefaultValue[t]] match
+                                    case None => report.errorAndAbort(s"Couble not create a default value for field ($name: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
+                                    case Some(s) => s
                                 '{ $defaultValueExpr.defaultValue }
 
         '{
