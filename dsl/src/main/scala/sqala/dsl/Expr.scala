@@ -46,6 +46,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]) extends Expr[T, WindowKind]
     case SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T, CommonKind]
     case Interval[T](value: Double, unit: SqlIntervalUnit) extends Expr[T, ValueKind]
+    case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
 
     private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
@@ -87,6 +88,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.SubQueryPredicate(query.ast, predicate)
         case Interval(value, unit) =>
             SqlExpr.Interval(value, unit)
+        case Cast(expr, castType) =>
+            SqlExpr.Cast(expr.asSqlExpr, castType)
 
     @targetName("eq")
     def ==(value: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =

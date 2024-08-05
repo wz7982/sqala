@@ -177,6 +177,9 @@ case object Second extends IntervalUnit(SqlIntervalUnit.Second)
 def interval(value: Double, unit: IntervalUnit): TimeInterval =
     TimeInterval(value, unit.unit)
 
+def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
+    Expr.Cast(expr, castType)
+
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
