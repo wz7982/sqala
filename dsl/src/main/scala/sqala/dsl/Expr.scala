@@ -45,6 +45,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]) extends Expr[T, WindowKind]
     case SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T, CommonKind]
+    case Interval[T](value: Double, unit: SqlIntervalUnit) extends Expr[T, ValueKind]
 
     private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
@@ -84,6 +85,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), orderBy.map(_.asSqlOrderBy), None)
         case SubQueryPredicate(query, predicate) =>
             SqlExpr.SubQueryPredicate(query.ast, predicate)
+        case Interval(value, unit) =>
+            SqlExpr.Interval(value, unit)
 
     @targetName("eq")
     def ==(value: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -307,6 +310,14 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def ->>(n: String)(using T <:< (String | Option[String])): Expr[Option[String], ResultKind[K, ValueKind]] =
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
 
+    @targetName("plus")
+    def +(interval: TimeInterval)(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
+        Binary(this, Plus, Interval(interval.value, interval.unit))
+
+    @targetName("minus")
+    def -(interval: TimeInterval)(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
+        Binary(this, Minus, Interval(interval.value, interval.unit))
+
 object Expr:
     extension [T](expr: Expr[T, ColumnKind])
         @targetName("to")
@@ -339,3 +350,5 @@ object Expr:
 
 case class OrderBy(expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
+
+case class TimeInterval(value: Double, unit: SqlIntervalUnit)

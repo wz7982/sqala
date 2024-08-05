@@ -24,7 +24,7 @@ class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
         sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.get.unit)
+        sqlBuilder.append(expr.unit.unit)
 
     override def printValues(values: SqlQuery.Values): Unit =
         sqlBuilder.append("VALUES ")

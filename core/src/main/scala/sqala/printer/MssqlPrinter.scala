@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 
@@ -51,7 +51,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         for l <- select.limit do printLimit(l)
 
     override def printCteRecursive(): Unit = {}
-
+    
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
@@ -96,5 +96,19 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         sqlBuilder.append(" VALUES (")
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
+
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit = expr match
+        case SqlExpr.Binary(left, op, SqlExpr.Interval(value, unit)) =>
+            val printValue = op match
+                case SqlBinaryOperator.Minus => value * -1
+                case _ => value  
+            sqlBuilder.append("DATEADD(")
+            sqlBuilder.append(unit.unit)
+            sqlBuilder.append(", ")
+            sqlBuilder.append(printValue)
+            sqlBuilder.append(", ")
+            printExpr(left)
+            sqlBuilder.append(")")
+        case _ => super.printBinaryExpr(expr)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}

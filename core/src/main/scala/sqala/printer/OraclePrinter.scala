@@ -59,4 +59,8 @@ class OraclePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
+    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
+        sqlBuilder.append("INTERVAL '")
+        sqlBuilder.append(expr.value)
+        sqlBuilder.append("' ")
+        sqlBuilder.append(expr.unit.unit)

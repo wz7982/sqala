@@ -52,4 +52,8 @@ class DB2Printer(override val prepare: Boolean) extends SqlPrinter(prepare):
 
     override def printCteRecursive(): Unit = {}
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
+    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
+        sqlBuilder.append("INTERVAL '")
+        sqlBuilder.append(expr.value)
+        sqlBuilder.append("' ")
+        sqlBuilder.append(expr.unit.unit)

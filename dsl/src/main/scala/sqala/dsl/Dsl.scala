@@ -1,6 +1,6 @@
 package sqala.dsl
 
-import sqala.ast.expr.SqlSubQueryPredicate
+import sqala.ast.expr.*
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
 import sqala.dsl.macros.TableMacro
@@ -164,6 +164,18 @@ def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr
 
 def now(): Expr[Option[Date], CommonKind] =
     Expr.Func("NOW", Nil)
+
+sealed trait IntervalUnit(val unit: SqlIntervalUnit)
+case object Year extends IntervalUnit(SqlIntervalUnit.Year)
+case object Month extends IntervalUnit(SqlIntervalUnit.Month)
+case object Week extends IntervalUnit(SqlIntervalUnit.Week)
+case object Day extends IntervalUnit(SqlIntervalUnit.Day)
+case object Hour extends IntervalUnit(SqlIntervalUnit.Hour)
+case object Minute extends IntervalUnit(SqlIntervalUnit.Minute)
+case object Second extends IntervalUnit(SqlIntervalUnit.Second)
+
+def interval(value: Double, unit: IntervalUnit): TimeInterval =
+    TimeInterval(value, unit.unit)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
