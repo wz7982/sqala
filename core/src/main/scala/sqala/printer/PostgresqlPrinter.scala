@@ -25,7 +25,8 @@ class PostgresqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepar
             printExpr(u)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL")
-        sqlBuilder.append(" '")
+        sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
+        sqlBuilder.append(" ")
+        sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append("'")

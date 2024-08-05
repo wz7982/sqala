@@ -1,7 +1,7 @@
 package sqala.printer
 
 import sqala.ast.expr.SqlBinaryOperator.Is
-import sqala.ast.expr.{SqlCase, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
 import sqala.ast.expr.SqlExpr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
@@ -28,8 +28,6 @@ class SqlitePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
-
     override def printOrderBy(orderBy: SqlOrderBy): Unit =
         val order = orderBy.order match
             case None | Some(Asc) => Asc
@@ -44,3 +42,20 @@ class SqlitePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
                 sqlBuilder.append(s" ${order.order}, ")
                 printExpr(orderBy.expr)
                 sqlBuilder.append(s" ${order.order}")
+
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit = expr match
+        case SqlExpr.Binary(left, op, SqlExpr.Interval(value, unit)) =>
+            val intervalValue = op match
+                case SqlBinaryOperator.Minus => value * -1
+                case _ => value
+            val printValue = 
+                if intervalValue >= 0 then
+                    "+" + intervalValue
+                else intervalValue.toString
+            sqlBuilder.append("DATETIME(")
+            printExpr(left)
+            sqlBuilder.append(", ")
+            sqlBuilder.append(s"'$printValue ${unit.unit.toLowerCase + "s"}')")
+        case _ => super.printBinaryExpr(expr)
+
+    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}

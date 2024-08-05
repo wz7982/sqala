@@ -23,4 +23,4 @@ enum SqlExpr:
     case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderBy], frame: Option[SqlWindowFrame])
     case SubQuery(query: SqlQuery)
     case SubQueryPredicate(query: SqlQuery, predicate: SqlSubQueryPredicate)
-    case Interval(value: String, unit: Option[SqlIntervalUnit])
+    case Interval(value: Double, unit: SqlIntervalUnit)

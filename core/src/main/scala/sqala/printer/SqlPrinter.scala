@@ -213,35 +213,11 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append(")")
 
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
-        def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean = (parent.op, child) match
-            case (And, SqlExpr.Binary(_, Or, _)) => true
-            case (Times, SqlExpr.Binary(_, Plus | Minus, _)) => true
-            case (Div | Mod | Minus, _) => true
-            case (Custom(_), _) => true
-            case _ => false
-
-        def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean = (parent.op, child) match
-            case (And, SqlExpr.Binary(_, Or, _)) => true
-            case (Times | Div | Mod, SqlExpr.Binary(_, Plus | Minus, _)) => true
-            case (Div | Mod | Minus, _) => true
-            case (Custom(_), _) => true
-            case _ => false
-
-        if hasBracketsLeft(expr, expr.left) then
-            sqlBuilder.append("(")
-            printExpr(expr.left)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.left)
-
+        sqlBuilder.append("(")
+        printExpr(expr.left)
         sqlBuilder.append(s" ${expr.op.operator} ")
-
-        if hasBracketsRight(expr, expr.right) then
-            sqlBuilder.append("(")
-            printExpr(expr.right)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.right)
+        printExpr(expr.right)
+        sqlBuilder.append(")")
 
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
