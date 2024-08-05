@@ -137,3 +137,49 @@ object ChangeKind:
             type R = Table[T]
 
             def changeKind(x: Table[T]): Table[T] = x
+
+trait ChangeOption[T]:
+    type R
+
+    def changeOption(x: T): R
+
+object ChangeOption:
+    type Aux[T, O] = ChangeOption[T] { type R = O }
+
+    given exprChangeOption[T, K <: ExprKind](using a: AsSqlExpr[Wrap[T, Option]]): Aux[Expr[T, K], Expr[Wrap[T, Option], K]] =
+        new ChangeOption[Expr[T, K]]:
+            type R = Expr[Wrap[T, Option], K]
+
+            def changeOption(x: Expr[T, K]): Expr[Wrap[T, Option], K] = 
+                x match
+                    case Expr.Literal(v, _) =>
+                        val value = v match
+                            case o: Option[_] => o
+                            case x => Option(x)
+                        Expr.Literal(value.asInstanceOf[Wrap[T, Option]], a)
+                    case _ => x.asInstanceOf[Expr[Wrap[T, Option], K]]
+
+    given tupleChangeOption[H, T <: Tuple](using ch: ChangeOption[H], ct: ChangeOption[T]): Aux[H *: T, ch.R *: ToTuple[ct.R]] =
+        new ChangeOption[H *: T]:
+            type R = ch.R *: ToTuple[ct.R]
+
+            def changeOption(x: H *: T): R =
+                val h = ch.changeOption(x.head)
+                val t = ct.changeOption(x.tail) match
+                    case t: Tuple => t
+                    case x => Tuple1(x)
+                (h *: t).asInstanceOf[ch.R *: ToTuple[ct.R]]
+
+    given emptyTupleChangeOption: Aux[EmptyTuple, EmptyTuple] =
+        new ChangeOption[EmptyTuple]:
+            type R = EmptyTuple
+
+            def changeOption(x: EmptyTuple): EmptyTuple = x
+
+    given namedTupleChangeOption[N <: Tuple, V <: Tuple](using c: ChangeOption[V]): Aux[NamedTuple[N, V], NamedTuple[N, ToTuple[c.R]]] =
+        new ChangeOption[NamedTuple[N, V]]:
+            type R = NamedTuple[N, ToTuple[c.R]]
+
+            def changeOption(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] = 
+                val t = c.changeOption(x.toTuple).asInstanceOf[ToTuple[c.R]]
+                NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
