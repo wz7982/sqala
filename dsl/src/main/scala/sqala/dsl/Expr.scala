@@ -50,7 +50,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
-        case Column(tableName, columnName) => 
+        case Column(tableName, columnName) =>
             SqlExpr.Column(Some(tableName), columnName)
         case Null => SqlExpr.Null
         case Binary(left, Equal, Literal(None, _)) =>
@@ -65,20 +65,20 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
         case CustomBinary(left, op, right) =>
             SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
-        case Unary(expr, op) => 
+        case Unary(expr, op) =>
             SqlExpr.Unary(expr.asSqlExpr, op)
         case SubQuery(query) => SqlExpr.SubQuery(query.ast)
-        case Func(name, args) => 
+        case Func(name, args) =>
             SqlExpr.Func(name, args.map(_.asSqlExpr))
-        case Agg(name, args, distinct, orderBy) => 
+        case Agg(name, args, distinct, orderBy) =>
             SqlExpr.Agg(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy))
-        case Case(branches, default) => 
+        case Case(branches, default) =>
             SqlExpr.Case(branches.map((x, y) => SqlCase(x.asSqlExpr, y.asSqlExpr)), default.asSqlExpr)
-        case Vector(items) => 
+        case Vector(items) =>
             SqlExpr.Vector(items.map(_.asSqlExpr))
         case In(_, Vector(Nil), false) => SqlExpr.BooleanLiteral(false)
         case In(_, Vector(Nil), true) => SqlExpr.BooleanLiteral(true)
-        case In(expr, inExpr, not) => 
+        case In(expr, inExpr, not) =>
             SqlExpr.In(expr.asSqlExpr, inExpr.asSqlExpr, not)
         case Between(expr, start, end, not) =>
             SqlExpr.Between(expr.asSqlExpr, start.asSqlExpr, end.asSqlExpr, not)
@@ -96,7 +96,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Equal, Literal(value, a))
 
     @targetName("eq")
-    def ==[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def ==[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, Equal, that)
 
     @targetName("eq")
@@ -112,7 +112,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, Literal(value, a))
 
     @targetName("ne")
-    def !=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def !=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, NotEqual, that)
 
     @targetName("ne")
@@ -124,11 +124,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, SubQuery(query))
 
     @targetName("gt")
-    def >(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def >(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, Literal(value, a))
 
     @targetName("gt")
-    def >[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def >[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
@@ -138,13 +138,13 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("gtExprQuery")
     def >[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, SubQuery(query))
-    
+
     @targetName("ge")
-    def >=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def >=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, Literal(value, a))
 
     @targetName("ge")
-    def >=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def >=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
@@ -154,13 +154,13 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("geExprQuery")
     def >=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, SubQuery(query))
-    
+
     @targetName("lt")
-    def <(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def <(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, Literal(value, a))
 
     @targetName("lt")
-    def <[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def <[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, LessThan, that)
 
     @targetName("lt")
@@ -170,13 +170,13 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ltExprQuery")
     def <[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, SubQuery(query))
-    
+
     @targetName("le")
-    def <=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def <=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, Literal(value, a))
 
     @targetName("le")
-    def <=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] = 
+    def <=[R <: Operation[T], RK <: OperationKind[K]](that: Expr[R, RK]): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
@@ -187,76 +187,76 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def <=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, SubQuery(query))
 
-    def in(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def in(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), false)
 
-    def in[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def in[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, SubQuery(query), false)
 
     @targetName("inExprQuery")
-    def in[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] = 
+    def in[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
         In(this, SubQuery(query), false)
 
-    def notIn(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def notIn(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), true)
 
-    def notIn[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def notIn[R <: Operation[T], N <: Tuple, RK <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[R, RK]]]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, SubQuery(query), true)
 
     @targetName("notInExprQuery")
-    def notIn[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] = 
+    def notIn[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
         In(this, SubQuery(query), true)
 
-    def between(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def between(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Between(this, Literal(start, a), Literal(end, a), false)
 
-    def between[S <: Operation[T], SK <: OperationKind[K], E <: Operation[T], EK <: OperationKind[K]](start: Expr[S, SK], end: Expr[E, EK]): Expr[Boolean, ResultKind[K, SK]] = 
+    def between[S <: Operation[T], SK <: OperationKind[K], E <: Operation[T], EK <: OperationKind[K]](start: Expr[S, SK], end: Expr[E, EK]): Expr[Boolean, ResultKind[K, SK]] =
         Between(this, start, end, false)
 
-    def notBetween(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] = 
+    def notBetween(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Between(this, Literal(start, a), Literal(end, a), true)
 
-    def notBetween[S <: Operation[T], SK <: OperationKind[K], E <: Operation[T], EK <: OperationKind[K]](start: Expr[S, SK], end: Expr[E, EK]): Expr[Boolean, ResultKind[K, SK]] = 
+    def notBetween[S <: Operation[T], SK <: OperationKind[K], E <: Operation[T], EK <: OperationKind[K]](start: Expr[S, SK], end: Expr[E, EK]): Expr[Boolean, ResultKind[K, SK]] =
         Between(this, start, end, true)
 
     @targetName("plus")
-    def +(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] = 
+    def +(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] =
         Binary(this, Plus, Literal(value, a))
 
     @targetName("plus")
-    def +[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] = 
+    def +[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Plus, that)
 
     @targetName("minus")
-    def -(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] = 
+    def -(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
-    def -[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] = 
+    def -[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Minus, that)
 
     @targetName("times")
-    def *(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] = 
+    def *(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] =
         Binary(this, Times, Literal(value, a))
 
     @targetName("times")
-    def *[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] = 
+    def *[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Times, that)
 
     @targetName("div")
-    def /(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] = 
+    def /(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] =
         Binary(this, Div, Literal(value, a))
 
     @targetName("div")
-    def /[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] = 
+    def /[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Div, that)
-    
+
     @targetName("mod")
-    def %(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] = 
+    def %(value: Unwrap[T, Option])(using n: Number[T], a: AsSqlExpr[Unwrap[T, Option]]): Expr[T, ResultKind[K, ValueKind]] =
         Binary(this, Mod, Literal(value, a))
 
     @targetName("mod")
-    def %[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] = 
+    def %[R: Number, RK <: OperationKind[K]](that: Expr[R, RK])(using Number[T]): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Mod, that)
 
     @targetName("positive")
@@ -266,11 +266,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def unary_-(using Number[T]): Expr[T, ResultKind[K, ValueKind]] = Unary(this, Negative)
 
     @targetName("and")
-    def &&[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] = 
+    def &&[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, And, that)
 
     @targetName("or")
-    def ||[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] = 
+    def ||[RK <: OperationKind[K]](that: Expr[Boolean, RK])(using T =:= Boolean): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, Or, that)
 
     @targetName("not")
@@ -324,17 +324,17 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 object Expr:
     extension [T](expr: Expr[T, ColumnKind])
         @targetName("to")
-        def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match 
-            case Column(_, columnName) => 
+        def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match
+            case Column(_, columnName) =>
                 UpdatePair(columnName, Literal(value, a))
-        
+
         @targetName("to")
-        def :=[R <: Operation[T], K <: SimpleKind](updateExpr: Expr[R, K]): UpdatePair = expr match 
-            case Column(_, columnName) => 
+        def :=[R <: Operation[T], K <: SimpleKind](updateExpr: Expr[R, K]): UpdatePair = expr match
+            case Column(_, columnName) =>
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        def over(partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]): Window[T] = 
+        def over(partitionBy: List[Expr[?, ?]] = Nil, orderBy: List[OrderBy] = Nil): Expr[T, WindowKind] =
             Window(expr, partitionBy, orderBy)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])

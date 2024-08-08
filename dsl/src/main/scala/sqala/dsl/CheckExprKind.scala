@@ -24,7 +24,7 @@ object IsAggKind:
     given tupleCheck[H, T <: Tuple](using ch: IsAggKind[H], ct: IsAggKind[T]): Aux[H *: T, ch.R && ct.R] =
         new IsAggKind[H *: T]:
             type R = ch.R && ct.R
-    
+
     given emptyTupleCheck: Aux[EmptyTuple, true] =
         new IsAggKind[EmptyTuple]:
             type R = true
@@ -54,7 +54,7 @@ object NotAggKind:
     given tupleCheck[H, T <: Tuple](using ch: NotAggKind[H], ct: NotAggKind[T]): Aux[H *: T, ch.R && ct.R] =
         new NotAggKind[H *: T]:
             type R = ch.R && ct.R
-    
+
     given emptyTupleCheck: Aux[EmptyTuple, true] =
         new NotAggKind[EmptyTuple]:
             type R = true
@@ -93,6 +93,36 @@ object NotWindowKind:
         new NotWindowKind[NamedTuple[N, V]]:
             type R = c.R
 
+trait IsAggOrWindowKind[T]:
+    type R <: Boolean
+
+object IsAggOrWindowKind:
+    type Aux[T, O <: Boolean] = IsAggOrWindowKind[T] { type R = O }
+
+    given norAggAndWindowKindCheck[T, K <: CommonKind | ColumnKind]: Aux[Expr[T, K], false] =
+        new IsAggOrWindowKind[Expr[T, K]]:
+            type R = false
+
+    given aggOrWindowKindCheck[T, K <: AggKind | ValueKind | WindowKind]: Aux[Expr[T, K], true] =
+        new IsAggOrWindowKind[Expr[T, K]]:
+            type R = true
+
+    given tableCheck[T]: Aux[Table[T], false] =
+        new IsAggOrWindowKind[Table[T]]:
+            type R = false
+
+    given tupleCheck[H, T <: Tuple](using ch: IsAggOrWindowKind[H], ct: IsAggOrWindowKind[T]): Aux[H *: T, ch.R && ct.R] =
+        new IsAggOrWindowKind[H *: T]:
+            type R = ch.R && ct.R
+
+    given emptyTupleCheck: Aux[EmptyTuple, true] =
+        new IsAggOrWindowKind[EmptyTuple]:
+            type R = true
+
+    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggOrWindowKind[V]): Aux[NamedTuple[N, V], c.R] =
+        new IsAggOrWindowKind[NamedTuple[N, V]]:
+            type R = c.R
+
 trait ChangeKind[T, K <: ExprKind]:
     type R
 
@@ -128,7 +158,7 @@ object ChangeKind:
         new ChangeKind[NamedTuple[N, V], K]:
             type R = NamedTuple[N, ToTuple[c.R]]
 
-            def changeKind(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] = 
+            def changeKind(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] =
                 val t = c.changeKind(x.toTuple).asInstanceOf[ToTuple[c.R]]
                 NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
 
@@ -150,7 +180,7 @@ object ChangeOption:
         new ChangeOption[Expr[T, K]]:
             type R = Expr[Wrap[T, Option], K]
 
-            def changeOption(x: Expr[T, K]): Expr[Wrap[T, Option], K] = 
+            def changeOption(x: Expr[T, K]): Expr[Wrap[T, Option], K] =
                 x match
                     case Expr.Literal(v, _) =>
                         val value = v match
@@ -180,6 +210,6 @@ object ChangeOption:
         new ChangeOption[NamedTuple[N, V]]:
             type R = NamedTuple[N, ToTuple[c.R]]
 
-            def changeOption(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] = 
+            def changeOption(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] =
                 val t = c.changeOption(x.toTuple).asInstanceOf[ToTuple[c.R]]
                 NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
