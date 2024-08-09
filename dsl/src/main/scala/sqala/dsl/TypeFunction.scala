@@ -37,7 +37,7 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (l, AggKind) => AggKind
     case (l, r) => CommonKind
 
-type CastKind[E <: Expr[?, ?]] = E match
+type CastKind[E <: Expr[?, ?]] <: CompositeKind = E match
     case Expr[_, k] => ResultKind[k, ValueKind]
 
 type InverseMap[T, F[_]] = T match
