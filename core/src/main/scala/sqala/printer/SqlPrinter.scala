@@ -196,7 +196,7 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append("?")
             args.append(expr.boolean)
         else
-            if expr.boolean then 
+            if expr.boolean then
                 sqlBuilder.append("TRUE")
             else
                 sqlBuilder.append("FALSE")
@@ -319,7 +319,7 @@ abstract class SqlPrinter(val prepare: Boolean):
     def printTable(table: SqlTable): Unit = table match
         case SqlTable.IdentTable(tableName, alias) =>
             sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
-            for a <- alias do 
+            for a <- alias do
                 printTableAlias(a)
         case SqlTable.SubQueryTable(query, lateral, alias) =>
             if lateral then sqlBuilder.append("LATERAL ")
@@ -331,7 +331,7 @@ abstract class SqlPrinter(val prepare: Boolean):
             printTable(left)
             sqlBuilder.append(s" ${joinType.joinType} ")
             right match
-                case _: SqlTable.JoinTable => 
+                case _: SqlTable.JoinTable =>
                     sqlBuilder.append("(")
                     printTable(right)
                     sqlBuilder.append(")")
@@ -343,8 +343,9 @@ abstract class SqlPrinter(val prepare: Boolean):
                         sqlBuilder.append(" ON ")
                         printExpr(onCondition)
                     case SqlJoinCondition.Using(usingCondition) =>
-                        sqlBuilder.append(" USING ")
+                        sqlBuilder.append(" USING (")
                         printExpr(usingCondition)
+                        sqlBuilder.append(")")
 
     def printSelectItem(item: SqlSelectItem): Unit =
         printExpr(item.expr)
