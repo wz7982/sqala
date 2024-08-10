@@ -14,3 +14,5 @@ class JoinQuery[T](
         val sqlCondition = f(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))
+
+    def apply[K <: SimpleKind](f: T => Expr[Boolean, K]): SelectQuery[T] = on(f)
