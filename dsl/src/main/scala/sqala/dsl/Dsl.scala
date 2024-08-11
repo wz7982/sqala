@@ -38,21 +38,21 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
     infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
         val newCase = new Case(exprs :+ Expr.Literal(value, a))
         if newCase.exprs.size % 2 == 0 then
-            val caseBranches = 
+            val caseBranches =
                 newCase.exprs.grouped(2).toList.map(i => (i.head, i(1)))
             Expr.Case(caseBranches, Expr.Null)
         else
             val lastExpr = newCase.exprs.last
-            val caseBranches = 
+            val caseBranches =
                 newCase.exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
             Expr.Case(caseBranches, lastExpr)
 
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
-def exists[T](query: Query[T]): Expr[Boolean, CommonKind] = 
+def exists[T](query: Query[T]): Expr[Boolean, CommonKind] =
     Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
 
-def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] = 
+def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] =
     Expr.SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
 
 def all[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
@@ -78,22 +78,22 @@ def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], Comm
 
 def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
 
-def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] = 
+def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
     Expr.Agg("COUNT", expr :: Nil, false, Nil)
 
-def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] = 
+def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
     Expr.Agg("COUNT", expr :: Nil, true, Nil)
 
-def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     Expr.Agg("SUM", expr :: Nil, false, Nil)
 
-def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     Expr.Agg("AVG", expr :: Nil, false, Nil)
 
-def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     Expr.Agg("MAX", expr :: Nil, false, Nil)
 
-def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] = 
+def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     Expr.Agg("MIN", expr :: Nil, false, Nil)
 
 def rank(): Expr[Option[Long], AggKind] = Expr.Agg("RANK", Nil, false, Nil)
@@ -165,17 +165,20 @@ def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr
 def now(): Expr[Option[Date], CommonKind] =
     Expr.Func("NOW", Nil)
 
-sealed trait IntervalUnit(val unit: SqlIntervalUnit)
-case object Year extends IntervalUnit(SqlIntervalUnit.Year)
-case object Month extends IntervalUnit(SqlIntervalUnit.Month)
-case object Week extends IntervalUnit(SqlIntervalUnit.Week)
-case object Day extends IntervalUnit(SqlIntervalUnit.Day)
-case object Hour extends IntervalUnit(SqlIntervalUnit.Hour)
-case object Minute extends IntervalUnit(SqlIntervalUnit.Minute)
-case object Second extends IntervalUnit(SqlIntervalUnit.Second)
+sealed trait TimeUnit(val unit: SqlTimeUnit)
+case object Year extends TimeUnit(SqlTimeUnit.Year)
+case object Month extends TimeUnit(SqlTimeUnit.Month)
+case object Week extends TimeUnit(SqlTimeUnit.Week)
+case object Day extends TimeUnit(SqlTimeUnit.Day)
+case object Hour extends TimeUnit(SqlTimeUnit.Hour)
+case object Minute extends TimeUnit(SqlTimeUnit.Minute)
+case object Second extends TimeUnit(SqlTimeUnit.Second)
 
-def interval(value: Double, unit: IntervalUnit): TimeInterval =
+def interval(value: Double, unit: TimeUnit): TimeInterval =
     TimeInterval(value, unit.unit)
+
+def extract[T: DateTime, K <: ExprKind](unit: TimeUnit, expr: Expr[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+    Expr.Extract(unit.unit, expr)
 
 def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
     Expr.Cast(expr, castType)
@@ -183,7 +186,7 @@ def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
-    
+
 inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]

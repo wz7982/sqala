@@ -164,6 +164,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
         case q: SqlExpr.SubQueryPredicate => printSubQueryPredicateExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
+        case e: SqlExpr.Extract => printExtractExpr(e)
 
     def printAllColumnExpr(expr: SqlExpr.AllColumn): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -308,6 +309,13 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append(")")
 
     def printIntervalExpr(expr: SqlExpr.Interval): Unit
+
+    def printExtractExpr(expr: SqlExpr.Extract): Unit =
+        sqlBuilder.append("EXTRACT(")
+        sqlBuilder.append(expr.unit.unit)
+        sqlBuilder.append(" FROM ")
+        printExpr(expr.expr)
+        sqlBuilder.append(")")
 
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
