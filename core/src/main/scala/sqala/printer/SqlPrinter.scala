@@ -269,8 +269,8 @@ abstract class SqlPrinter(val prepare: Boolean):
 
     def printCastExpr(expr: SqlExpr.Cast): Unit =
         sqlBuilder.append("CAST(")
-        printExpr(expr)
-        sqlBuilder.append(s" AS ${expr.castType}")
+        printExpr(expr.expr)
+        sqlBuilder.append(s" AS ${expr.castType})")
 
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)
