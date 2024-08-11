@@ -45,8 +45,9 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy]) extends Expr[T, WindowKind]
     case SubQueryPredicate[T](query: Query[?], predicate: SqlSubQueryPredicate) extends Expr[T, CommonKind]
-    case Interval[T](value: Double, unit: SqlIntervalUnit) extends Expr[T, ValueKind]
+    case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
     case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
+    case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
 
     private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
@@ -90,6 +91,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.Interval(value, unit)
         case Cast(expr, castType) =>
             SqlExpr.Cast(expr.asSqlExpr, castType)
+        case Extract(unit, expr) =>
+            SqlExpr.Extract(unit, expr.asSqlExpr)
 
     @targetName("eq")
     def ==(value: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -354,4 +357,4 @@ object Expr:
 case class OrderBy(expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
 
-case class TimeInterval(value: Double, unit: SqlIntervalUnit)
+case class TimeInterval(value: Double, unit: SqlTimeUnit)

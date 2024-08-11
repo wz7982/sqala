@@ -51,7 +51,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         for l <- select.limit do printLimit(l)
 
     override def printCteRecursive(): Unit = {}
-    
+
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
@@ -101,7 +101,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         case SqlExpr.Binary(left, op, SqlExpr.Interval(value, unit)) =>
             val printValue = op match
                 case SqlBinaryOperator.Minus => value * -1
-                case _ => value  
+                case _ => value
             sqlBuilder.append("DATEADD(")
             sqlBuilder.append(unit.unit)
             sqlBuilder.append(", ")
@@ -112,3 +112,10 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
         case _ => super.printBinaryExpr(expr)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
+
+    override def printExtractExpr(expr: SqlExpr.Extract): Unit =
+        sqlBuilder.append("DATEPART(")
+        sqlBuilder.append(expr.unit.unit)
+        sqlBuilder.append(", ")
+        printExpr(expr.expr)
+        sqlBuilder.append(")")
