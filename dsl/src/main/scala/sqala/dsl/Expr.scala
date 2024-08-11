@@ -324,6 +324,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def -(interval: TimeInterval)(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
+    @targetName("timeDiff")
+    def --[RT: DateTime, RK <: OperationKind[K]](that: Expr[RT, RK])(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, RK]] =
+        Binary(this, Minus, that)
+
 object Expr:
     extension [T](expr: Expr[T, ColumnKind])
         @targetName("to")
