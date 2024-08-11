@@ -5,5 +5,5 @@ enum SqlOrderByOption(val order: String):
     case Desc extends SqlOrderByOption("DESC")
 
 enum SqlOrderByNullsOption(val order: String):
-    case First extends SqlOrderByNullsOption("NULLS FRIST")
+    case First extends SqlOrderByNullsOption("NULLS FIRST")
     case Last extends SqlOrderByNullsOption("NULLS LAST")
