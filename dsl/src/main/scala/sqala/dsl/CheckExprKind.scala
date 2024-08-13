@@ -1,8 +1,9 @@
 package sqala.dsl
 
+import sqala.dsl.statement.query.NamedQuery
+
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.&&
-import sqala.dsl.statement.query.NamedQuery
 
 trait IsAggKind[T]:
     type R <: Boolean
