@@ -142,7 +142,7 @@ def concat(expr: (Expr[String, ?] | Expr[Option[String], ?] | String)*): Expr[Op
     Expr.Func("CONCAT", args)
 
 def substring[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], start: Int, end: Int): Expr[Option[String], CommonKind] =
-    Expr.Func("CONCAT", expr :: start.asExpr :: end.asExpr :: Nil)
+    Expr.Func("SUBSTRING", expr :: start.asExpr :: end.asExpr :: Nil)
 
 def replace[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], oldString: String, newString: String): Expr[T, CommonKind] =
     Expr.Func("REPLACE", expr :: oldString.asExpr :: newString.asExpr :: Nil)
