@@ -86,14 +86,6 @@ type RightJoinQuery[L, R, N] <: Tuple = L match
     case x *: xs => Append[TupleMapOption[x *: xs], NamedQuery[N, R]]
     case _ => (MapOption[L], NamedQuery[N, R])
 
-type FullJoin[L, R] <: Tuple = L match
-    case x *: xs => Append[TupleMapOption[x *: xs], Table[Option[R]]]
-    case _ => (MapOption[L], Table[Option[R]])
-
-type FullJoinQuery[L, R, N] <: Tuple = L match
-    case x *: xs => Append[TupleMapOption[x *: xs], NamedQuery[N, MapOption[R]]]
-    case _ => (MapOption[L], NamedQuery[N, MapOption[R]])
-
 type Union[A <: Tuple, B <: Tuple] <: Tuple = (A, B) match
     case (Expr[a, k] *: at, Expr[b, _] *: bt) => Expr[UnionTo[a, b], k] *: Union[at, bt]
     case (EmptyTuple, EmptyTuple) => EmptyTuple
