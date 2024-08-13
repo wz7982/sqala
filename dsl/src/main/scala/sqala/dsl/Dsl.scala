@@ -90,10 +90,10 @@ def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], 
 def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     Expr.Agg("AVG", expr :: Nil, false, Nil)
 
-def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[T], AggKind] =
     Expr.Agg("MAX", expr :: Nil, false, Nil)
 
-def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[T], AggKind] =
     Expr.Agg("MIN", expr :: Nil, false, Nil)
 
 def rank(): Expr[Option[Long], AggKind] = Expr.Agg("RANK", Nil, false, Nil)
