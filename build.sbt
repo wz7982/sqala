@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
     organization := "sqala",
     version := "0.0.1",
-    scalaVersion := "3.5.0-RC1",
+    scalaVersion := "3.5.0",
     scalacOptions += "-Yexplicit-nulls",
     scalacOptions += "-Wunused:all",
     scalacOptions += "-Wsafe-init",
