@@ -87,10 +87,10 @@ object JdbcDecoder:
         override inline def decode(data: ResultSet, cursor: Int): T throws SQLException = c.fromValue(d.decode(data, cursor))
 
     given tupleDecoder[H, T <: Tuple](using headDecoder: JdbcDecoder[H], tailDecoder: JdbcDecoder[T]): JdbcDecoder[H *: T] with
-        override inline def offset: Int = headDecoder.offset
+        override inline def offset: Int = headDecoder.offset + tailDecoder.offset
 
         override inline def decode(data: ResultSet, cursor: Int): H *: T throws SQLException =
-            headDecoder.decode(data, cursor) *: tailDecoder.decode(data, cursor + offset)
+            headDecoder.decode(data, cursor) *: tailDecoder.decode(data, cursor + headDecoder.offset)
 
     given emptyTupleDecoder: JdbcDecoder[EmptyTuple] with
         override inline def offset: Int = 0
