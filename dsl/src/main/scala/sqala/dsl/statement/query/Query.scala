@@ -234,18 +234,6 @@ class SelectQuery[T](
     inline def rightJoin[L <: Product](list: List[L])(using SelectItem[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
         joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.RightJoin, list)
 
-    inline def fullJoin[R](using SelectItem[FullJoin[T, R]], Mirror.ProductOf[R]): JoinQuery[FullJoin[T, R]] =
-        joinClause[R, FullJoin[T, R]](SqlJoinType.FullJoin)
-
-    inline def fullJoin[N <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V]])(using s: SelectItem[FullJoinQuery[T, V, N]], a: AsExpr[V], c: Option[WithContext] = None): JoinQuery[FullJoinQuery[T, V, N]] =
-        joinQueryClause[N, V, FullJoinQuery[T, V, N]](SqlJoinType.FullJoin, query)
-
-    inline def fullJoin[N <: Tuple, V <: Tuple](query: T => Query[NamedTuple[N, V]])(using SelectItem[FullJoinQuery[T, V, N]], AsExpr[V]): JoinQuery[FullJoinQuery[T, V, N]] =
-        joinLateralClause[N, V, FullJoinQuery[T, V, N]](SqlJoinType.FullJoin, query)
-
-    inline def fullJoin[L <: Product](list: List[L])(using SelectItem[FullJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[FullJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
-        joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], FullJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.FullJoin, list)
-
     def drop(n: Int): SelectQuery[T] =
         val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
         new SelectQuery(items, ast.copy(limit = sqlLimit))
