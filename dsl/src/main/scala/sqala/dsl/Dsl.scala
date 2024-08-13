@@ -36,16 +36,9 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
         new Case(exprs :+ Expr.Literal(value, a))
 
     infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
-        val newCase = new Case(exprs :+ Expr.Literal(value, a))
-        if newCase.exprs.size % 2 == 0 then
-            val caseBranches =
-                newCase.exprs.grouped(2).toList.map(i => (i.head, i(1)))
-            Expr.Case(caseBranches, Expr.Null)
-        else
-            val lastExpr = newCase.exprs.last
-            val caseBranches =
-                newCase.exprs.dropRight(1).grouped(2).toList.map(i => (i.head, i(1)))
-            Expr.Case(caseBranches, lastExpr)
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+        Expr.Case(caseBranches, Expr.Literal(value, a))
 
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
