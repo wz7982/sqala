@@ -43,10 +43,10 @@ object SelectItem:
             items.toList
 
     given tupleSelectItem[H, T <: Tuple](using sh: SelectItem[H], st: SelectItem[T]): SelectItem[H *: T] with
-        override def offset(item: H *: T): Int = sh.offset(item.head)
+        override def offset(item: H *: T): Int = sh.offset(item.head) + st.offset(item.tail)
 
         override def selectItems(item: H *: T, cursor: Int): List[SqlSelectItem] =
-            sh.selectItems(item.head, cursor) ++ st.selectItems(item.tail, cursor + offset(item))
+            sh.selectItems(item.head, cursor) ++ st.selectItems(item.tail, cursor + sh.offset(item.head))
 
     given emptyTupleSelectItem: SelectItem[EmptyTuple] with
         override def offset(item: EmptyTuple): Int = 0

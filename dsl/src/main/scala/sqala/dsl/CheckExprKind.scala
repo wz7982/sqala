@@ -1,5 +1,7 @@
 package sqala.dsl
 
+import sqala.dsl.statement.query.NamedQuery
+
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.&&
 
@@ -33,6 +35,10 @@ object IsAggKind:
         new IsAggKind[NamedTuple[N, V]]:
             type R = c.R
 
+    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], false] =
+        new IsAggKind[NamedQuery[N, V]]:
+            type R = false
+
 trait NotAggKind[T]:
     type R <: Boolean
 
@@ -62,6 +68,10 @@ object NotAggKind:
     given namedTupleCheck[N <: Tuple, V <: Tuple](using c: NotAggKind[V]): Aux[NamedTuple[N, V], c.R] =
         new NotAggKind[NamedTuple[N, V]]:
             type R = c.R
+
+    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
+        new NotAggKind[NamedQuery[N, V]]:
+            type R = true
 
 trait NotWindowKind[T]:
     type R <: Boolean
@@ -93,6 +103,10 @@ object NotWindowKind:
         new NotWindowKind[NamedTuple[N, V]]:
             type R = c.R
 
+    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
+        new NotWindowKind[NamedQuery[N, V]]:
+            type R = true
+
 trait IsAggOrWindowKind[T]:
     type R <: Boolean
 
@@ -122,6 +136,10 @@ object IsAggOrWindowKind:
     given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggOrWindowKind[V]): Aux[NamedTuple[N, V], c.R] =
         new IsAggOrWindowKind[NamedTuple[N, V]]:
             type R = c.R
+
+    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], false] =
+        new IsAggOrWindowKind[NamedQuery[N, V]]:
+            type R = false
 
 trait ChangeKind[T, K <: ExprKind]:
     type R
@@ -162,11 +180,17 @@ object ChangeKind:
                 val t = c.changeKind(x.toTuple).asInstanceOf[ToTuple[c.R]]
                 NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
 
-    given tableChangeKind[T]: Aux[Table[T], ColumnKind, Table[T]] =
-        new ChangeKind[Table[T], ColumnKind]:
+    given tableChangeKind[T, K <: ExprKind]: Aux[Table[T], K, Table[T]] =
+        new ChangeKind[Table[T], K]:
             type R = Table[T]
 
             def changeKind(x: Table[T]): Table[T] = x
+
+    given namedQueryChangeKind[N <: Tuple, V <: Tuple, K <: ExprKind]: Aux[NamedQuery[N, V], K, NamedQuery[N, V]] =
+        new ChangeKind[NamedQuery[N, V], K]:
+            type R = NamedQuery[N, V]
+
+            def changeKind(x: NamedQuery[N, V]): NamedQuery[N, V] = x
 
 trait ChangeOption[T]:
     type R
