@@ -43,31 +43,31 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
 def exists[T](query: Query[T]): Expr[Boolean, CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Exists)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Exists)
 
 def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.NotExists)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.NotExists)
 
 def all[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.All)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
 
 @targetName("allExprQuery")
 def all[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.All)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
 
 def any[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
 
 @targetName("anyExprQuery")
 def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Any)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
 
 def some[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
 
 @targetName("someExprQuery")
 def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query, SqlSubQueryPredicate.Some)
+    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
 
 def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
 

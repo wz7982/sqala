@@ -23,11 +23,11 @@ sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery):
 object Query:
     extension [T, N <: Tuple, K <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[T, K]]]])
         @targetName("namedTupleQueryAsExpr")
-        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query)
+        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
     
     extension [T, K <: ExprKind](query: Query[Expr[T, K]])
         @targetName("exprQueryAsExpr")
-        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query)
+        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
 
     extension [N <: Tuple, V <: Tuple, UN <: Tuple, UV <: Tuple](query: Query[NamedTuple[N, V]])
         infix def union(unionQuery: Query[NamedTuple[UN, UV]]): Query[NamedTuple[N, Union[V, UV]]] =
