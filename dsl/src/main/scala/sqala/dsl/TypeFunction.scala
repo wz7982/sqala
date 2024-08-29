@@ -24,6 +24,8 @@ type SimpleKind = ColumnKind | CommonKind | ValueKind
 
 type CompositeKind = CommonKind | AggKind | WindowKind
 
+type SortKind = ColumnKind | CommonKind | WindowKind
+
 type OperationKind[T <: ExprKind] <: ExprKind = T match
     case ValueKind => ExprKind
     case CommonKind | ColumnKind | WindowKind => 
