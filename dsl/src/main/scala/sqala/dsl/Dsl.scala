@@ -9,7 +9,6 @@ import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
 
 import scala.NamedTuple.NamedTuple
-import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
 import java.util.Date
@@ -48,24 +47,12 @@ def exists[T](query: Query[T]): Expr[Boolean, CommonKind] =
 def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.NotExists)
 
-def all[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
-
-@targetName("allExprQuery")
 def all[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
 
-def any[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
-
-@targetName("anyExprQuery")
 def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
 
-def some[T, N <: Tuple](query: Query[NamedTuple[N, Tuple1[T]]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
-
-@targetName("someExprQuery")
 def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
 
