@@ -3,6 +3,7 @@ package sqala.dsl
 import sqala.dsl.statement.query.NamedQuery
 
 import scala.Tuple.Append
+import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.int.S
 
 type Wrap[T, F[_]] = T match
@@ -41,6 +42,20 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
 
 type CastKind[E <: Expr[?, ?]] <: CompositeKind = E match
     case Expr[_, k] => ResultKind[k, ValueKind]
+
+type CheckOverPartition[T] <: Boolean = T match
+    case x *: xs => CheckOverPartition[x] && CheckOverPartition[xs]
+    case EmptyTuple => true
+    case Expr[_, k] => k match
+        case SimpleKind => true
+        case _ => false
+
+type CheckOverOrder[T] <: Boolean = T match
+    case x *: xs => CheckOverOrder[x] && CheckOverOrder[xs]
+    case EmptyTuple => true
+    case OrderBy[k] => k match
+        case SimpleKind => true
+        case _ => false
 
 type InverseMap[T, F[_]] = T match
     case x *: xs => Tuple.InverseMap[x *: xs, F]
