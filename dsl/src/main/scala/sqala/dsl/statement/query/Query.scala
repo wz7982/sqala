@@ -11,7 +11,6 @@ import sqala.printer.Dialect
 import sqala.util.queryToString
 
 import scala.NamedTuple.*
-import scala.annotation.targetName
 import scala.compiletime.erasedValue
 import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
@@ -21,12 +20,7 @@ sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery):
         queryToString(ast, dialect)
 
 object Query:
-    extension [T, N <: Tuple, K <: ExprKind](query: Query[NamedTuple[N, Tuple1[Expr[T, K]]]])
-        @targetName("namedTupleQueryAsExpr")
-        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
-    
     extension [T, K <: ExprKind](query: Query[Expr[T, K]])
-        @targetName("exprQueryAsExpr")
         def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
 
     extension [N <: Tuple, V <: Tuple, UN <: Tuple, UV <: Tuple](query: Query[NamedTuple[N, V]])
