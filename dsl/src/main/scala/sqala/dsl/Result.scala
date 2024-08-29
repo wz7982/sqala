@@ -13,6 +13,9 @@ object Result:
     given tableResult[T]: Aux[Table[T], T] = new Result[Table[T]]:
         type R = T
 
+    given selectTableResult[T <: Tuple, N <: Tuple]: Aux[SelectTable[T, N], UnwarpTuple1[SelectTableResult[T]]] = new Result[SelectTable[T, N]]:
+        type R = UnwarpTuple1[SelectTableResult[T]]
+
     given exprResult[T, K <: ExprKind]: Aux[Expr[T, K], T] = new Result[Expr[T, K]]:
         type R = T
 

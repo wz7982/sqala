@@ -8,7 +8,6 @@ import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
 import sqala.ast.order.{SqlOrderBy, SqlOrderByNullsOption, SqlOrderByOption}
 import sqala.ast.statement.SqlQuery
 import sqala.dsl.statement.dml.UpdatePair
-import sqala.dsl.statement.query.Query
 
 import scala.annotation.targetName
 
@@ -103,7 +102,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Equal, that)
 
     @targetName("eq")
-    def ==[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def ==[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, Equal, SubQuery(query.ast))
 
     @targetName("ne")
@@ -115,7 +114,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, that)
 
     @targetName("ne")
-    def !=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def !=[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("gt")
@@ -127,7 +126,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    def >[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def >[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, SubQuery(query.ast))
 
     @targetName("ge")
@@ -139,7 +138,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    def >=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def >=[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
     @targetName("lt")
@@ -151,7 +150,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThan, that)
 
     @targetName("lt")
-    def <[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def <[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, SubQuery(query.ast))
 
     @targetName("le")
@@ -163,19 +162,19 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    def <=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def <=[R <: Operation[T], RK <: ExprKind](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, SubQuery(query.ast))
 
     def in(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), false)
 
-    def in[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
+    def in[R <: Operation[T], RK <: OperationKind[K]](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
         In(this, SubQuery(query.ast), false)
 
     def notIn(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), true)
 
-    def notIn[R <: Operation[T], RK <: OperationKind[K]](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
+    def notIn[R <: Operation[T], RK <: OperationKind[K]](query: Queryable[Expr[R, RK]]): Expr[Boolean, ResultKind[K, RK]] =
         In(this, SubQuery(query.ast), true)
 
     def between(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -309,8 +308,14 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        def over(partitionBy: List[Expr[?, ?]] = Nil, orderBy: List[OrderBy[?]] = Nil): Expr[T, WindowKind] =
-            Window(expr, partitionBy, orderBy)
+        def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
+            val partition = partitionBy match
+                case e: Expr[?, ?] => e :: Nil
+                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+            val order = orderBy match
+                case o: OrderBy[?] => o :: Nil
+                case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?]])
+            Window(expr, partition, order)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])
         def asc: OrderBy[K] = OrderBy(expr, Asc, None)
