@@ -136,7 +136,7 @@ class SelectQuery[T](
     def withFilter[K <: SimpleKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         filter(f)
 
-    def map[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], t: (i.R || n.R) =:= true, c: ChangeKind[R, ColumnKind]): SelectQuery[c.R] =
+    def map[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], t: (i.R || n.R) =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
         SelectQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))
