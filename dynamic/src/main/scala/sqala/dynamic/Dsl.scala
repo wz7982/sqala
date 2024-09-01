@@ -1,6 +1,6 @@
 package sqala.dynamic
 
-import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubQueryPredicate}
+import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubLinkType}
 import sqala.parser.{ParseException, SqlParser}
 
 import scala.language.experimental.saferExceptions
@@ -41,12 +41,12 @@ def denseRank(): Expr = Expr(SqlExpr.Agg("DENSE_RANK", Nil, false, Map(), Nil))
 
 def rowNumber(): Expr = Expr(SqlExpr.Agg("ROW_NUMBER", Nil, false, Map(), Nil))
 
-def any(query: Query): Expr = Expr(SqlExpr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any))
+def any(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Any))
 
-def all(query: Query): Expr = Expr(SqlExpr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All))
+def all(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.All))
 
-def some(query: Query): Expr = Expr(SqlExpr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some))
+def some(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Some))
 
-def exists(query: Query): Expr = Expr(SqlExpr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Exists))
+def exists(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Exists))
 
-def notExists(query: Query): Expr = Expr(SqlExpr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.NotExists))
+def notExists(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.NotExists))
