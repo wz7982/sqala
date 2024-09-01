@@ -309,8 +309,14 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        def over(partitionBy: List[Expr[?, ?]] = Nil, orderBy: List[OrderBy[?]] = Nil): Expr[T, WindowKind] =
-            Window(expr, partitionBy, orderBy)
+        def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
+            val partition = partitionBy match
+                case e: Expr[?, ?] => e :: Nil
+                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+            val order = orderBy match
+                case o: OrderBy[?] => o :: Nil
+                case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?]])
+            Window(expr, partition, order)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])
         def asc: OrderBy[K] = OrderBy(expr, Asc, None)
