@@ -22,6 +22,6 @@ enum SqlExpr:
     case Cast(expr: SqlExpr, castType: String)
     case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderBy], frame: Option[SqlWindowFrame])
     case SubQuery(query: SqlQuery)
-    case SubQueryPredicate(query: SqlQuery, predicate: SqlSubQueryPredicate)
+    case SubLink(query: SqlQuery, linkType: SqlSubLinkType)
     case Interval(value: Double, unit: SqlTimeUnit)
     case Extract(unit: SqlTimeUnit, expr: SqlExpr)

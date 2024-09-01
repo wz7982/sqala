@@ -42,19 +42,19 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
 def exists[T](query: Query[T]): Expr[Boolean, CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Exists)
+    Expr.SubLink(query.ast, SqlSubLinkType.Exists)
 
 def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.NotExists)
+    Expr.SubLink(query.ast, SqlSubLinkType.NotExists)
 
 def all[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
+    Expr.SubLink(query.ast, SqlSubLinkType.All)
 
 def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
+    Expr.SubLink(query.ast, SqlSubLinkType.Any)
 
 def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
-    Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
+    Expr.SubLink(query.ast, SqlSubLinkType.Some)
 
 def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
 
