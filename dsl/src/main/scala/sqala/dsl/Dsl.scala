@@ -7,11 +7,19 @@ import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
+import sqala.dsl.statement.select.TableQuery
 
 import scala.NamedTuple.NamedTuple
+import scala.compiletime.constValue
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
 import java.util.Date
+
+inline def asTable[T <: Product](using m: Mirror.ProductOf[T]): EntityTable[T, m.MirroredLabel] =
+    AsSqlExpr.summonInstances[m.MirroredElemTypes]
+    val aliasName = constValue[m.MirroredLabel]
+    val metaData = TableMacro.tableMetaData[T]
+    EntityTable(metaData.tableName, aliasName, metaData)
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
@@ -41,19 +49,19 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
 
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
-def exists[T](query: Query[T]): Expr[Boolean, CommonKind] =
+def exists[T](query: Queryable[T]): Expr[Boolean, CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Exists)
 
-def notExists[T](query: Query[T]): Expr[Boolean, CommonKind] =
+def notExists[T](query: Queryable[T]): Expr[Boolean, CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.NotExists)
 
-def all[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+def all[T, K <: ExprKind](query: Queryable[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.All)
 
-def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+def any[T, K <: ExprKind](query: Queryable[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Any)
 
-def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
+def some[T, K <: ExprKind](query: Queryable[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubQueryPredicate(query.ast, SqlSubQueryPredicate.Some)
 
 def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
@@ -162,6 +170,16 @@ def extract[T: DateTime, K <: ExprKind](unit: TimeUnit, expr: Expr[T, K]): Expr[
 
 def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
     Expr.Cast(expr, castType)
+
+def lateral[N <: Tuple, V <: Tuple](query: sqala.dsl.statement.select.Query[NamedTuple[N, V]]): LateralSubQuery[N, V] =
+    LateralSubQuery(query.ast)
+
+object QueryToken:
+    infix def from[T <: Tuple, N <: Tuple](table: SelectTable[T, N]): TableQuery[T, N] =
+        val selectItems = table.selectItems(0)
+        new TableQuery(SqlQuery.Select(select = selectItems, from = table.asSqlTable :: Nil))
+
+def query = QueryToken
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
