@@ -166,7 +166,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         case c: SqlExpr.Cast => printCastExpr(c)
         case w: SqlExpr.Window => printWindowExpr(w)
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
-        case q: SqlExpr.SubLink => printSubLink(q)
+        case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
 
@@ -306,7 +306,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         printQuery(expr.query)
         sqlBuilder.append(")")
 
-    def printSubLink(expr: SqlExpr.SubLink): Unit =
+    def printSubLinkExpr(expr: SqlExpr.SubLink): Unit =
         sqlBuilder.append(expr.linkType.linkType)
         sqlBuilder.append("(")
         printQuery(expr.query)
