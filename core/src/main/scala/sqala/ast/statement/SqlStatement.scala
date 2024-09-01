@@ -33,7 +33,13 @@ enum SqlQuery:
         limit: Option[SqlLimit] = None,
         forUpdate: Boolean = false
     )
-    case Union(left: SqlQuery, unionType: SqlUnionType, right: SqlQuery)
+    case Union(
+        left: SqlQuery, 
+        unionType: SqlUnionType, 
+        right: SqlQuery, 
+        orderBy: List[SqlOrderBy] = Nil, 
+        limit: Option[SqlLimit] = None
+    )
     case Values(values: List[List[SqlExpr]])
     case Cte(queryItems: List[SqlWithItem], recursive: Boolean, query: SqlQuery)
 

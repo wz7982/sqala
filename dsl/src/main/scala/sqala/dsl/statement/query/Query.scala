@@ -18,6 +18,54 @@ import scala.deriving.Mirror
 sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery):
     def sql(dialect: Dialect): (String, Array[Any]) =
         queryToString(ast, dialect)
+    
+    def drop(n: Int): Query[T] =
+        val limit = ast match
+            case s: SqlQuery.Select => s.limit
+            case u: SqlQuery.Union => u.limit
+            case _ => None
+        val sqlLimit = limit
+            .map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n)))
+            .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
+        val newAst = ast match
+            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
+            case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+            case _ => ast
+        Query(queryItems, newAst)
+
+    def take(n: Int): Query[T] =
+        val limit = ast match
+            case s: SqlQuery.Select => s.limit
+            case u: SqlQuery.Union => u.limit
+            case _ => None
+        val sqlLimit = limit
+            .map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset))
+            .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
+        val newAst = ast match
+            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
+            case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+            case _ => ast
+        Query(queryItems, newAst)
+
+    def size: Query[Expr[Long, ColumnKind]] = 
+        val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
+        ast match
+            case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
+                Query(expr, s.copy(select = SqlSelectItem(expr.asSqlExpr, None) :: Nil, limit = None))
+            case _ =>
+                val outerQuery: SqlQuery.Select = SqlQuery.Select(
+                    select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
+                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias("t")) :: Nil
+                )
+                Query(expr, outerQuery)
+
+    def exists: Query[Expr[Boolean, ColumnKind]] =
+        val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
+        val outerQuery: SqlQuery.Select = SqlQuery.Select(
+            select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
+            from = Nil
+        )
+        Query(expr, outerQuery)
 
 object Query:
     extension [T, K <: ExprKind](query: Query[Expr[T, K]])
@@ -228,19 +276,11 @@ class SelectQuery[T](
     inline def rightJoin[L <: Product](list: List[L])(using SelectItem[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
         joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.RightJoin, list)
 
-    def drop(n: Int): SelectQuery[T] =
-        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
-        new SelectQuery(items, ast.copy(limit = sqlLimit))
-
-    def take(n: Int): SelectQuery[T] =
-        val sqlLimit = ast.limit.map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset)).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
-        new SelectQuery(items, ast.copy(limit = sqlLimit))
-
     def distinct: SelectQuery[T] =
         new SelectQuery(items, ast.copy(param = Some(SqlSelectParam.Distinct)))
 
     def sortBy[K <: SortKind](f: T => OrderBy[K]): SelectQuery[T] =
-        val orderBy = f(items)
+        val orderBy = f(queryItems)
         val sqlOrderBy = orderBy.asSqlOrderBy
         new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
@@ -258,26 +298,6 @@ class SelectQuery[T](
         val groupByItems = f(items)
         val sqlGroupBy = SqlExpr.Func("ROLLUP", a.asExprs(groupByItems).map(_.asSqlExpr))
         GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
-
-    def size: SelectQuery[Expr[Long, ColumnKind]] = 
-        val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
-        ast match
-            case SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
-                SelectQuery(expr, ast.copy(select = SqlSelectItem(expr.asSqlExpr, None) :: Nil, limit = None))
-            case _ =>
-                val outerQuery: SqlQuery.Select = SqlQuery.Select(
-                    select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
-                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias("t0")) :: Nil
-                )
-                SelectQuery(expr, outerQuery)
-
-    def exists: SelectQuery[Expr[Boolean, ColumnKind]] =
-        val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
-        val outerQuery: SqlQuery.Select = SqlQuery.Select(
-            select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
-            from = Nil
-        )
-        SelectQuery(expr, outerQuery)
 
 class UnionQuery[T](
     private[sqala] val left: Query[?],
