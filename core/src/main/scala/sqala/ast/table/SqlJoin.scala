@@ -8,11 +8,8 @@ enum SqlJoinType(val joinType: String):
     case RightJoin extends SqlJoinType("RIGHT OUTER JOIN")
     case FullJoin extends SqlJoinType("FULL OUTER JOIN")
     case CrossJoin extends SqlJoinType("CROSS JOIN")
-    case LeftSemiJoin extends SqlJoinType("LEFT SEMI JOIN")
-    case LeftAntiJoin extends SqlJoinType("LEFT ANTI JOIN")
-    case RightSemiJoin extends SqlJoinType("RIGHT SEMI JOIN")
-    case RightAntiJoin extends SqlJoinType("RIGHT ANTI JOIN")
+    case CustomJoin(override val joinType: String) extends SqlJoinType(joinType)
 
 enum SqlJoinCondition:
     case On(condition: SqlExpr)
-    case Using(condition: SqlExpr)
+    case Using(exprs: List[SqlExpr])

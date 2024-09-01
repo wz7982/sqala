@@ -20,5 +20,5 @@ class JoinQuery[T](
     def using[E](f: T => Expr[E, ColumnKind]): SelectQuery[T] =
         val sqlCondition = f(tables) match
             case Expr.Column(_, columnName) => SqlExpr.Column(None, columnName)
-        val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.Using(sqlCondition))))
+        val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.Using(sqlCondition :: Nil))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))

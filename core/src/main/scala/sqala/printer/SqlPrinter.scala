@@ -356,7 +356,7 @@ abstract class SqlPrinter(val prepare: Boolean):
                         printExpr(onCondition)
                     case SqlJoinCondition.Using(usingCondition) =>
                         sqlBuilder.append(" USING (")
-                        printExpr(usingCondition)
+                        printList(usingCondition)(printExpr)
                         sqlBuilder.append(")")
 
     def printSelectItem(item: SqlSelectItem): Unit =
