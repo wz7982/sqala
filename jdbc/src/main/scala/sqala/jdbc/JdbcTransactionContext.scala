@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.dsl.Result
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.native.NativeSql
-import sqala.dsl.statement.query.{Query, SelectQuery}
+import sqala.dsl.statement.query.Query
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
@@ -61,12 +61,8 @@ def findTo[T](query: Query[?])(using JdbcDecoder[T], JdbcTransactionContext, Log
 def find[T](query: Query[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] throws SQLException =
     findTo[r.R](query)
 
-def fetchSize[T](query: SelectQuery[T])(using JdbcTransactionContext, Logger): Long throws SQLException =
-    val sizeQuery = query.size
-    fetch(sizeQuery).head
-
 def pageTo[T](
-    query: SelectQuery[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using JdbcDecoder[T], JdbcTransactionContext, Logger): Page[T] throws SQLException =
     val data = if pageSize == 0 then Nil
         else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
@@ -77,9 +73,17 @@ def pageTo[T](
     Page(total, count, pageNo, pageSize, data)
 
 def page[T](
-    query: SelectQuery[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Page[r.R] throws SQLException =
     pageTo[r.R](query, pageSize, pageNo, returnCount)
+
+def fetchSize[T](query: Query[T])(using JdbcTransactionContext, Logger): Long throws SQLException =
+    val sizeQuery = query.size
+    fetch(sizeQuery).head
+
+def fetchExists[T](query: Query[T])(using JdbcTransactionContext, Logger): Boolean throws SQLException =
+    val existsQuery = query.exists
+    fetch(existsQuery).head
 
 def showSql[T](query: Query[T])(using t: JdbcTransactionContext): String =
     queryToString(query.ast, t.dialect, true)._1

@@ -118,6 +118,10 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append("(")
         printQuery(union.right)
         sqlBuilder.append(")")
+        if union.orderBy.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(union.orderBy)(printOrderBy)
+        for l <- union.limit do printLimit(l)
 
     def printValues(values: SqlQuery.Values): Unit =
         sqlBuilder.append("VALUES ")
