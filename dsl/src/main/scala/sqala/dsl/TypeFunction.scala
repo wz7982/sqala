@@ -3,6 +3,7 @@ package sqala.dsl
 import sqala.dsl.statement.query.NamedQuery
 
 import scala.Tuple.Append
+import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.int.S
 
 type Wrap[T, F[_]] = T match
@@ -87,6 +88,20 @@ type RightJoin[L, R] <: Tuple = L match
 type RightJoinQuery[L, R, N] <: Tuple = L match
     case x *: xs => Append[TupleMapOption[x *: xs], NamedQuery[N, R]]
     case _ => (MapOption[L], NamedQuery[N, R])
+
+type CheckOverPartition[T] <: Boolean = T match
+    case x *: xs => CheckOverPartition[x] && CheckOverPartition[xs]
+    case EmptyTuple => true
+    case Expr[_, k] => k match
+        case SimpleKind => true
+        case _ => false
+
+type CheckOverOrder[T] <: Boolean = T match
+    case x *: xs => CheckOverOrder[x] && CheckOverOrder[xs]
+    case EmptyTuple => true
+    case OrderBy[k] => k match
+        case SimpleKind => true
+        case _ => false
 
 type Union[A <: Tuple, B <: Tuple] <: Tuple = (A, B) match
     case (Expr[a, k] *: at, Expr[b, _] *: bt) => Expr[UnionTo[a, b], k] *: Union[at, bt]
