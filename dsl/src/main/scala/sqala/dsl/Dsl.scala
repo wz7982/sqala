@@ -9,6 +9,7 @@ import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
 import java.util.Date
@@ -56,64 +57,71 @@ def any[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], Commo
 def some[T, K <: ExprKind](query: Query[Expr[T, K]]): Expr[Wrap[T, Option], CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.Some)
 
-def count(): Expr[Long, AggKind] = Expr.Agg("COUNT", Nil, false, Nil)
+def count(): Expr[Long, AggKind] = Expr.Func("COUNT", Nil, false, Nil)
 
 def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Agg("COUNT", expr :: Nil, false, Nil)
+    Expr.Func("COUNT", expr :: Nil, false, Nil)
 
 def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Agg("COUNT", expr :: Nil, true, Nil)
+    Expr.Func("COUNT", expr :: Nil, true, Nil)
 
 def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Agg("SUM", expr :: Nil, false, Nil)
+    Expr.Func("SUM", expr :: Nil, false, Nil)
 
 def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Agg("AVG", expr :: Nil, false, Nil)
+    Expr.Func("AVG", expr :: Nil, false, Nil)
 
 def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Agg("MAX", expr :: Nil, false, Nil)
+    Expr.Func("MAX", expr :: Nil, false, Nil)
 
 def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Agg("MIN", expr :: Nil, false, Nil)
+    Expr.Func("MIN", expr :: Nil, false, Nil)
 
-def rank(): Expr[Option[Long], AggKind] = Expr.Agg("RANK", Nil, false, Nil)
+def rank(): Expr[Option[Long], AggKind] = Expr.Func("RANK", Nil, false, Nil)
 
-def denseRank(): Expr[Option[Long], AggKind] = Expr.Agg("DENSE_RANK", Nil, false, Nil)
+def denseRank(): Expr[Option[Long], AggKind] = Expr.Func("DENSE_RANK", Nil, false, Nil)
 
-def rowNumber(): Expr[Option[Long], AggKind] = Expr.Agg("ROW_NUMBER", Nil, false, Nil)
+def rowNumber(): Expr[Option[Long], AggKind] = Expr.Func("ROW_NUMBER", Nil, false, Nil)
 
 def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Agg("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
+    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
 
 def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Agg("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
+    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
 
-def coalesce[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, CommonKind] =
+def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
 
-def ifnull[T, K <: SimpleKind](expr: Expr[Option[T], K], value: T)(using AsSqlExpr[T]): Expr[T, CommonKind] =
+def ifnull[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     coalesce(expr, value)
 
-def abs[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
+def abs[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("ABS", expr :: Nil)
 
-def ceil[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def ceil[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[Long], ResultKind[K, ValueKind]] =
     Expr.Func("CEIL", expr :: Nil)
 
-def floor[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def floor[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[Long], ResultKind[K, ValueKind]] =
     Expr.Func("FLOOR", expr :: Nil)
 
-def round[T: Number, K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[Option[BigDecimal], CommonKind] =
+def round[T: Number, K <: ExprKind](expr: Expr[T, K], n: Int): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
     Expr.Func("ROUND", expr :: n.asExpr :: Nil)
 
-def power[T: Number, K <: SimpleKind](expr: Expr[T, K], n: Double): Expr[Option[BigDecimal], CommonKind] =
+def power[T: Number, K <: ExprKind](expr: Expr[T, K], n: Double): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
     Expr.Func("POWER", expr :: n.asExpr :: Nil)
+
+@targetName("concatAgg")
+def concat(expr: (Expr[String, AggKind] | Expr[Option[String], AggKind] | String)*): Expr[Option[String], AggKind] =
+    val args = expr.toList.map:
+        case s: String => s.asExpr
+        case e: Expr[?, ?] => e
+    Expr.Func("CONCAT", args)
 
 def concat(expr: (Expr[String, ?] | Expr[Option[String], ?] | String)*): Expr[Option[String], CommonKind] =
     val args = expr.toList.map:
@@ -121,28 +129,28 @@ def concat(expr: (Expr[String, ?] | Expr[Option[String], ?] | String)*): Expr[Op
         case e: Expr[?, ?] => e
     Expr.Func("CONCAT", args)
 
-def substring[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], start: Int, end: Int): Expr[Option[String], CommonKind] =
+def substring[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K], start: Int, end: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
     Expr.Func("SUBSTRING", expr :: start.asExpr :: end.asExpr :: Nil)
 
-def replace[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], oldString: String, newString: String): Expr[T, CommonKind] =
+def replace[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K], oldString: String, newString: String): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("REPLACE", expr :: oldString.asExpr :: newString.asExpr :: Nil)
 
-def length[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[Option[Long], CommonKind] =
+def length[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[Option[Long], ResultKind[K, ValueKind]] =
     Expr.Func("LENGTH", expr :: Nil)
 
-def repeat[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K], n: Int): Expr[T, CommonKind] =
+def repeat[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K], n: Int): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("REPEAT", expr :: n.asExpr :: Nil)
 
-def trim[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
+def trim[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("TRIM", expr :: Nil)
 
-def upper[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
+def upper[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("UPPER", expr :: Nil)
 
-def lower[T <: String | Option[String], K <: SimpleKind](expr: Expr[T, K]): Expr[T, CommonKind] =
+def lower[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("LOWER", expr :: Nil)
 
-def now(): Expr[Option[Date], CommonKind] =
+def now(): Expr[Option[Date], ValueKind] =
     Expr.Func("NOW", Nil)
 
 sealed trait TimeUnit(val unit: SqlTimeUnit)

@@ -159,7 +159,6 @@ abstract class SqlPrinter(val prepare: Boolean):
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case f: SqlExpr.Func => printFuncExpr(f)
-        case a: SqlExpr.Agg => printAggExpr(a)
         case i: SqlExpr.In => printInExpr(i)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
@@ -225,12 +224,6 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append(")")
 
     def printFuncExpr(expr: SqlExpr.Func): Unit =
-        sqlBuilder.append(expr.name)
-        sqlBuilder.append("(")
-        printList(expr.args)(printExpr)
-        sqlBuilder.append(")")
-
-    def printAggExpr(expr: SqlExpr.Agg): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
         if expr.distinct then sqlBuilder.append("DISTINCT ")
