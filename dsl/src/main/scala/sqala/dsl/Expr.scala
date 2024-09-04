@@ -42,7 +42,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Vector[T](items: List[Expr[?, ?]]) extends Expr[T, CommonKind]
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
-    case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?]]) extends Expr[T, WindowKind]
+    case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]
     case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T, CommonKind]
     case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
     case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
@@ -80,8 +80,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.In(expr.asSqlExpr, inExpr.asSqlExpr, not)
         case Between(expr, start, end, not) =>
             SqlExpr.Between(expr.asSqlExpr, start.asSqlExpr, end.asSqlExpr, not)
-        case Window(expr, partitionBy, orderBy) =>
-            SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), orderBy.map(_.asSqlOrderBy), None)
+        case Window(expr, partitionBy, orderBy, frame) =>
+            SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), orderBy.map(_.asSqlOrderBy), frame)
         case SubLink(query, linkType) =>
             SqlExpr.SubLink(query, linkType)
         case Interval(value, unit) =>
@@ -318,14 +318,17 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
+        def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
             val partition = partitionBy match
                 case e: Expr[?, ?] => e :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
             val order = orderBy match
                 case o: OrderBy[?] => o :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?]])
-            Window(expr, partition, order)
+            val frameClause = frame match
+                case o: Option[?] => o
+                case o: SqlWindowFrame => Some(o)
+            Window(expr, partition, order, frameClause)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])
         def asc: OrderBy[K] = OrderBy(expr, Asc, None)

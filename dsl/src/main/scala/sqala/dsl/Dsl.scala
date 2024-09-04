@@ -183,6 +183,25 @@ def extract[T: DateTime, K <: ExprKind](unit: TimeUnit, expr: Expr[T, K]): Expr[
 def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
     Expr.Cast(expr, castType)
 
+def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
+
+def unboundedPreceding: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedPreceding
+
+def unboundedFollowing: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedFollowing
+
+def preceding(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
+
+def following(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
+
+def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
+    SqlWindowFrame.Rows(start, end)
+
+def rangeBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
+    SqlWindowFrame.Range(start, end)
+
+def groupsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
+    SqlWindowFrame.Groups(start, end)
+
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
