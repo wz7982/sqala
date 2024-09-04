@@ -95,6 +95,18 @@ def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[
         case _ => Expr.Null
     Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
 
+def ntile(n: Int): Expr[Int, AggKind] =
+    Expr.Func("NTILE", n.asExpr :: Nil, false, Nil)
+
+def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
+    Expr.Func("FIRST_VALUE", expr :: Nil, false, Nil)
+
+def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
+    Expr.Func("LAST_VALUE", expr :: Nil, false, Nil)
+
+def grouping[T](expr: Expr[T, AggKind]): Expr[Int, AggKind] =
+    Expr.Func("GROUPING", expr :: Nil, false, Nil)
+
 def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
 
