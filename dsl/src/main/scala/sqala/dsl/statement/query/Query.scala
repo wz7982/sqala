@@ -16,8 +16,8 @@ import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 
 sealed class Query[T](private[sqala] val queryItems: T, val ast: SqlQuery):
-    def sql(dialect: Dialect): (String, Array[Any]) =
-        queryToString(ast, dialect)
+    def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
+        queryToString(ast, dialect, prepare)
     
     def drop(n: Int): Query[T] =
         val limit = ast match
