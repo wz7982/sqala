@@ -10,3 +10,4 @@ enum SqlWindowFrameOption(val showString: String):
 enum SqlWindowFrame:
     case Rows(start: SqlWindowFrameOption, end: SqlWindowFrameOption)
     case Range(start: SqlWindowFrameOption, end: SqlWindowFrameOption)
+    case Groups(start: SqlWindowFrameOption, end: SqlWindowFrameOption)

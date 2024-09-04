@@ -284,12 +284,17 @@ abstract class SqlPrinter(val prepare: Boolean):
             case Some(SqlWindowFrame.Rows(start, end)) =>
                 sqlBuilder.append(" ROWS BETWEEN ")
                 sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND")
+                sqlBuilder.append(" AND ")
                 sqlBuilder.append(end.showString)
             case Some(SqlWindowFrame.Range(start, end)) =>
                 sqlBuilder.append(" RANGE BETWEEN ")
                 sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND")
+                sqlBuilder.append(" AND ")
+                sqlBuilder.append(end.showString)
+            case Some(SqlWindowFrame.Groups(start, end)) =>
+                sqlBuilder.append(" GROUPS BETWEEN ")
+                sqlBuilder.append(start.showString)
+                sqlBuilder.append(" AND ")
                 sqlBuilder.append(end.showString)
             case None =>
         sqlBuilder.append(")")
