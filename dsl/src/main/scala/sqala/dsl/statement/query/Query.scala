@@ -284,7 +284,7 @@ class SelectQuery[T](
         val sqlOrderBy = orderBy.asSqlOrderBy
         new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], t: (na.R && nw.R) =:= true, ta: ChangeKind[G, AggKind]): GroupByQuery[(ta.R, T)] =
+    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind]): GroupByQuery[(ta.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = a.asExprs(groupByItems).map(_.asSqlExpr)
         GroupByQuery((ta.changeKind(groupByItems), items), ast.copy(groupBy = sqlGroupBy))

@@ -107,6 +107,40 @@ object NotWindowKind:
         new NotWindowKind[NamedQuery[N, V]]:
             type R = true
 
+trait NotValueKind[T]:
+    type R <: Boolean
+
+object NotValueKind:
+    type Aux[T, O <: Boolean] = NotValueKind[T] { type R = O }
+
+    given notValueKindCheck[T, K <: CommonKind | ColumnKind | WindowKind | AggKind]: Aux[Expr[T, K], true] =
+        new NotValueKind[Expr[T, K]]:
+            type R = true
+
+    given valueKindCheck[T, K <: ValueKind]: Aux[Expr[T, K], false] =
+        new NotValueKind[Expr[T, K]]:
+            type R = false
+
+    given tableCheck[T]: Aux[Table[T], true] =
+        new NotValueKind[Table[T]]:
+            type R = true
+
+    given tupleCheck[H, T <: Tuple](using ch: NotValueKind[H], ct: NotValueKind[T]): Aux[H *: T, ch.R && ct.R] =
+        new NotValueKind[H *: T]:
+            type R = ch.R && ct.R
+
+    given emptyTupleCheck: Aux[EmptyTuple, true] =
+        new NotValueKind[EmptyTuple]:
+            type R = true
+
+    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: NotValueKind[V]): Aux[NamedTuple[N, V], c.R] =
+        new NotValueKind[NamedTuple[N, V]]:
+            type R = c.R
+
+    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
+        new NotValueKind[NamedQuery[N, V]]:
+            type R = true
+
 trait IsAggOrWindowKind[T]:
     type R <: Boolean
 
