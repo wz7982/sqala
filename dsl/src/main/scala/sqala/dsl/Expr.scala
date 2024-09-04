@@ -169,11 +169,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def in[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, SubQuery(query.ast), false)
 
+    def in[I](exprs: I)(using CheckIn[I, T, K] =:= true): Expr[Boolean, ResultKind[K, ValueKind]] =
+        val inExprs = exprs match
+            case e: Expr[?, ?] => e :: Nil
+            case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+        In(this, Vector(inExprs), false)
+
     def notIn(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), true)
 
     def notIn[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, SubQuery(query.ast), true)
+
+    def notIn[I](exprs: I)(using CheckIn[I, T, K] =:= true): Expr[Boolean, ResultKind[K, ValueKind]] =
+        val inExprs = exprs match
+            case e: Expr[?, ?] => e :: Nil
+            case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+        In(this, Vector(inExprs), true)
 
     def between(start: T, end: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Between(this, Literal(start, a), Literal(end, a), false)

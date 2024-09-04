@@ -105,6 +105,15 @@ type CheckOverOrder[T] <: Boolean = T match
         case SimpleKind => true
         case _ => false
 
+type CheckIn[X, T, K <: ExprKind] <: Boolean = X match
+    case x *: xs => CheckIn[x, T, K] && CheckIn[xs, T, K]
+    case EmptyTuple => true
+    case Expr[t, k] => t match
+        case Operation[T] => k match
+            case OperationKind[K] => true
+            case _ => false
+        case _ => false
+
 type Union[A <: Tuple, B <: Tuple] <: Tuple = (A, B) match
     case (Expr[a, k] *: at, Expr[b, _] *: bt) => Expr[UnionTo[a, b], k] *: Union[at, bt]
     case (EmptyTuple, EmptyTuple) => EmptyTuple
