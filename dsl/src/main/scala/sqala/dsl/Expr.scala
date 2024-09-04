@@ -37,8 +37,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, CommonKind]
     case Unary[T, K <: CompositeKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
     case SubQuery[T](query: SqlQuery) extends Expr[T, CommonKind]
-    case Func[T](name: String, args: List[Expr[?, ?]]) extends Expr[T, CommonKind]
-    case Agg[T](name: String, args: List[Expr[?, ?]], distinct: Boolean, orderBy: List[OrderBy[?]]) extends Expr[T, AggKind]
+    case Func[T, K <: FuncKind](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?]] = Nil) extends Expr[T, K]
     case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
     case Vector[T](items: List[Expr[?, ?]]) extends Expr[T, CommonKind]
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
@@ -69,10 +68,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         case Unary(expr, op) =>
             SqlExpr.Unary(expr.asSqlExpr, op)
         case SubQuery(query) => SqlExpr.SubQuery(query)
-        case Func(name, args) =>
-            SqlExpr.Func(name, args.map(_.asSqlExpr))
-        case Agg(name, args, distinct, orderBy) =>
-            SqlExpr.Agg(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy))
+        case Func(name, args, distinct, orderBy) =>
+            SqlExpr.Func(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy))
         case Case(branches, default) =>
             SqlExpr.Case(branches.map((x, y) => SqlCase(x.asSqlExpr, y.asSqlExpr)), default.asSqlExpr)
         case Vector(items) =>
