@@ -289,12 +289,12 @@ class SelectQuery[T](
         val sqlGroupBy = a.asExprs(groupByItems).map(_.asSqlExpr)
         GroupByQuery((ta.changeKind(groupByItems), items), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], t: (na.R && nw.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
+    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlExpr.Func("CUBE", a.asExprs(groupByItems).map(_.asSqlExpr))
         GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
-    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], t: (na.R && nw.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
+    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlExpr.Func("ROLLUP", a.asExprs(groupByItems).map(_.asSqlExpr))
         GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
