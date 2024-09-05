@@ -104,8 +104,8 @@ def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggK
 def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
     Expr.Func("LAST_VALUE", expr :: Nil, false, Nil)
 
-def grouping[T](expr: Expr[T, AggKind]): Expr[Int, AggKind] =
-    Expr.Func("GROUPING", expr :: Nil, false, Nil)
+def grouping(items: Expr[?, AggKind]*): Expr[Int, AggKind] =
+    Expr.Grouping(items.toList)
 
 def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)

@@ -1,6 +1,7 @@
 package sqala.dynamic
 
 import sqala.ast.expr.SqlExpr
+import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.*
@@ -49,7 +50,7 @@ class Select(val ast: SqlQuery.Select) extends Query:
         new Select(ast.copy(orderBy = ast.orderBy ++ orderByItems))
 
     infix def groupBy(items: List[Expr]): Select =
-        val groupByItems = items.map(_.sqlExpr)
+        val groupByItems = items.map(i => SqlGroupItem.Singleton(i.sqlExpr))
         new Select(ast.copy(groupBy = ast.groupBy ++ groupByItems))
 
     infix def having(expr: Expr): Select = new Select(ast.addHaving(expr.sqlExpr))

@@ -47,6 +47,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
     case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
     case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
+    case Grouping(items: List[Expr[?, ?]]) extends Expr[Int, AggKind]
 
     private[sqala] def asSqlExpr: SqlExpr = this match
         case Literal(v, a) => a.asSqlExpr(v)
@@ -90,6 +91,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             SqlExpr.Cast(expr.asSqlExpr, castType)
         case Extract(unit, expr) =>
             SqlExpr.Extract(unit, expr.asSqlExpr)
+        case Grouping(items) =>
+            SqlExpr.Grouping(items.map(_.asSqlExpr))
 
     @targetName("eq")
     def ==(value: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =

@@ -38,7 +38,7 @@ class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
 
         if select.groupBy.nonEmpty then
             sqlBuilder.append(" GROUP BY ")
-            printList(select.groupBy)(printExpr)
+            printList(select.groupBy)(printGroupItem)
 
         for h <- select.having do
             sqlBuilder.append(" HAVING ")
