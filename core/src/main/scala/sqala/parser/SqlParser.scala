@@ -1,6 +1,6 @@
 package sqala.parser
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr, SqlSubLinkType}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
@@ -48,7 +48,7 @@ class SqlParser extends StandardTokenParsers:
            "BETWEEN", "IN", "LIKE", "IS",
            "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "LIMIT", "OFFSET",
            "JOIN", "OUTER", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "ON", "LATERAL",
-           "UNION", "EXCEPT", "INTERSECT", "ALL", "COUNT", "SUM", "AVG", "MAX", "MIN"
+           "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME", "COUNT", "SUM", "AVG", "MAX", "MIN"
        )
     )
 
@@ -130,8 +130,9 @@ class SqlParser extends StandardTokenParsers:
         windownFunction |
         function |
         aggFunction |
-        union |
+        "(" ~> union <~ ")" |
         column |
+        subLink |
         "(" ~> expr <~ ")"
 
     def function: Parser[SqlExpr] =
@@ -162,6 +163,23 @@ class SqlParser extends StandardTokenParsers:
     def windownFunction: Parser[SqlExpr] =
         aggFunction ~ "OVER" ~ over ^^ {
             case agg ~ _ ~ o => SqlExpr.Window(agg, o._1, o._2, None)
+        }
+
+    def subLink: Parser[SqlExpr] =
+        "ANY" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Any)
+        } |
+        "SOME" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Some)
+        } |
+        "ALL" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.All)
+        } |
+        "EXISTS" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
+        } |
+        "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.NotExists)
         }
 
     def order: Parser[SqlOrderBy] =
@@ -204,9 +222,13 @@ class SqlParser extends StandardTokenParsers:
             case _ => SqlUnionType.IntersectAll
         }
 
+    def query: Parser[SqlExpr.SubQuery] =
+        select |
+        "(" ~> union <~ ")"
+
     def union: Parser[SqlExpr.SubQuery] =
-        select ~ rep(
-            unionType ~ select ^^ {
+        query ~ rep(
+            unionType ~ query ^^ {
                 case t ~ s => (t, s)
             }
         ) ^^ {
@@ -239,7 +261,7 @@ class SqlParser extends StandardTokenParsers:
         ident ~ opt(opt("AS") ~> ident) ^^ {
             case table ~ alias => SqlTable.IdentTable(table, alias.map(a => SqlTableAlias(a, Nil)))
         } |
-        opt("LATERAL") ~ ("(" ~> select <~ ")") ~ (opt("AS") ~> ident) ^^ {
+        opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident) ^^ {
             case lateral ~ s ~ alias => SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(alias))
         }
 
@@ -285,7 +307,7 @@ class SqlParser extends StandardTokenParsers:
             case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
-    def parse(text: String): SqlExpr throws ParseException = 
+    def parseExpr(text: String): SqlExpr throws ParseException = 
         phrase(expr)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
@@ -293,6 +315,11 @@ class SqlParser extends StandardTokenParsers:
     def parseColumn(text: String): SqlExpr throws ParseException = 
         phrase(column)(new lexical.Scanner(text)) match
             case Success(result, _) => result
+            case e => throw ParseException(e.toString)
+
+    def parseQuery(text: String): SqlQuery throws ParseException =
+        phrase(union)(new lexical.Scanner(text)) match
+            case Success(result, _) => result.query
             case e => throw ParseException(e.toString)
 
 class ParseException(msg: String) extends Exception:
