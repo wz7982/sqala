@@ -1,6 +1,6 @@
 package sqala.parser
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr, SqlSubLinkType}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
@@ -48,7 +48,7 @@ class SqlParser extends StandardTokenParsers:
            "BETWEEN", "IN", "LIKE", "IS",
            "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "LIMIT", "OFFSET",
            "JOIN", "OUTER", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "ON", "LATERAL",
-           "UNION", "EXCEPT", "INTERSECT", "ALL", "COUNT", "SUM", "AVG", "MAX", "MIN"
+           "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME", "COUNT", "SUM", "AVG", "MAX", "MIN"
        )
     )
 
@@ -132,6 +132,7 @@ class SqlParser extends StandardTokenParsers:
         aggFunction |
         union |
         column |
+        subLink |
         "(" ~> expr <~ ")"
 
     def function: Parser[SqlExpr] =
@@ -162,6 +163,23 @@ class SqlParser extends StandardTokenParsers:
     def windownFunction: Parser[SqlExpr] =
         aggFunction ~ "OVER" ~ over ^^ {
             case agg ~ _ ~ o => SqlExpr.Window(agg, o._1, o._2, None)
+        }
+
+    def subLink: Parser[SqlExpr] =
+        "ANY" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Any)
+        } |
+        "SOME" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Some)
+        } |
+        "ALL" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.All)
+        } |
+        "EXISTS" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
+        } |
+        "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ {
+            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.NotExists)
         }
 
     def order: Parser[SqlOrderBy] =
