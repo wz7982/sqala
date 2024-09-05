@@ -4,6 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.table.SqlTable
+import sqala.ast.group.SqlGroupItem
 
 enum SqlStatement:
     case Delete(table: SqlTable, where: Option[SqlExpr])
@@ -27,7 +28,7 @@ enum SqlQuery:
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr] = None,
-        groupBy: List[SqlExpr] = Nil,
+        groupBy: List[SqlGroupItem] = Nil,
         having: Option[SqlExpr] = None,
         orderBy: List[SqlOrderBy] = Nil,
         limit: Option[SqlLimit] = None,

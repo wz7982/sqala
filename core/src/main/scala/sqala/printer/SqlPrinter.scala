@@ -2,6 +2,7 @@ package sqala.printer
 
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.{SqlExpr, SqlWindowFrame}
+import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
@@ -94,7 +95,7 @@ abstract class SqlPrinter(val prepare: Boolean):
 
         if select.groupBy.nonEmpty then
             sqlBuilder.append(" GROUP BY ")
-            printList(select.groupBy)(printExpr)
+            printList(select.groupBy)(printGroupItem)
 
         for h <- select.having do
             sqlBuilder.append(" HAVING ")
@@ -168,6 +169,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
+        case g: SqlExpr.Grouping => printGroupingExpr(g)
 
     def printAllColumnExpr(expr: SqlExpr.AllColumn): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -319,6 +321,11 @@ abstract class SqlPrinter(val prepare: Boolean):
         printExpr(expr.expr)
         sqlBuilder.append(")")
 
+    def printGroupingExpr(expr: SqlExpr.Grouping): Unit =
+        sqlBuilder.append("GROUPING(")
+        printList(expr.items)(printExpr)
+        sqlBuilder.append(")")
+
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
         if alias.columnAlias.nonEmpty then
@@ -360,6 +367,21 @@ abstract class SqlPrinter(val prepare: Boolean):
     def printSelectItem(item: SqlSelectItem): Unit =
         printExpr(item.expr)
         item.alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
+
+    def printGroupItem(item: SqlGroupItem): Unit = item match
+        case SqlGroupItem.Singleton(item) => printExpr(item)
+        case SqlGroupItem.Cube(items) =>
+            sqlBuilder.append("CUBE(")
+            printList(items)(printExpr)
+            sqlBuilder.append(")")
+        case SqlGroupItem.Rollup(items) =>
+            sqlBuilder.append("ROLLUP(")
+            printList(items)(printExpr)
+            sqlBuilder.append(")")
+        case SqlGroupItem.GroupingSets(items) =>
+            sqlBuilder.append("GROUPING SETS(")
+            printList(items)(printExpr)
+            sqlBuilder.append(")")
 
     def printOrderBy(orderBy: SqlOrderBy): Unit =
         printExpr(orderBy.expr)

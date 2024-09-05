@@ -1,6 +1,7 @@
 package sqala.parser
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
+import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
@@ -218,7 +219,7 @@ class SqlParser extends StandardTokenParsers:
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
                 val param = if distinct.isDefined then Some(SqlSelectParam.Distinct) else None
                 SqlExpr.SubQuery(
-                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1).getOrElse(Nil), g.map(_._2).getOrElse(None), o.getOrElse(Nil), l, false)
+                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.map(_._2).getOrElse(None), o.getOrElse(Nil), l, false)
                 )
         }
 
