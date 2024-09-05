@@ -130,7 +130,7 @@ class SqlParser extends StandardTokenParsers:
         windownFunction |
         function |
         aggFunction |
-        union |
+        "(" ~> union <~ ")" |
         column |
         subLink |
         "(" ~> expr <~ ")"
@@ -222,9 +222,13 @@ class SqlParser extends StandardTokenParsers:
             case _ => SqlUnionType.IntersectAll
         }
 
+    def query: Parser[SqlExpr.SubQuery] =
+        select |
+        "(" ~> union <~ ")"
+
     def union: Parser[SqlExpr.SubQuery] =
-        select ~ rep(
-            unionType ~ select ^^ {
+        query ~ rep(
+            unionType ~ query ^^ {
                 case t ~ s => (t, s)
             }
         ) ^^ {
@@ -257,7 +261,7 @@ class SqlParser extends StandardTokenParsers:
         ident ~ opt(opt("AS") ~> ident) ^^ {
             case table ~ alias => SqlTable.IdentTable(table, alias.map(a => SqlTableAlias(a, Nil)))
         } |
-        opt("LATERAL") ~ ("(" ~> select <~ ")") ~ (opt("AS") ~> ident) ^^ {
+        opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident) ^^ {
             case lateral ~ s ~ alias => SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(alias))
         }
 
@@ -303,7 +307,7 @@ class SqlParser extends StandardTokenParsers:
             case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
-    def parse(text: String): SqlExpr throws ParseException = 
+    def parseExpr(text: String): SqlExpr throws ParseException = 
         phrase(expr)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
@@ -311,6 +315,11 @@ class SqlParser extends StandardTokenParsers:
     def parseColumn(text: String): SqlExpr throws ParseException = 
         phrase(column)(new lexical.Scanner(text)) match
             case Success(result, _) => result
+            case e => throw ParseException(e.toString)
+
+    def parseQuery(text: String): SqlQuery throws ParseException =
+        phrase(union)(new lexical.Scanner(text)) match
+            case Success(result, _) => result.query
             case e => throw ParseException(e.toString)
 
 class ParseException(msg: String) extends Exception:
