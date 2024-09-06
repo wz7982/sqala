@@ -34,7 +34,7 @@ class Insert[T, S <: InsertState](
 
     inline infix def values(row: InverseMap[T, [t] =>> Expr[t, ?]])(using erased S =:= InsertTable): Insert[T, InsertValues] = values(row :: Nil)
 
-    inline infix def select[N <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V]])(using erased S =:= InsertTable, V =:= T): Insert[T, InsertQuery] =
+    inline infix def select[N <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(using erased S =:= InsertTable, V =:= T): Insert[T, InsertQuery] =
         new Insert(items, ast.copy(query = Some(query.ast)))
 
 object Insert:

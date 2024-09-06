@@ -42,19 +42,19 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
 
 def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
 
-def exists[T](query: Query[T]): SubLinkItem[Boolean] =
+def exists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
     SubLinkItem(query.ast, SqlSubLinkType.Exists)
 
-def notExists[T](query: Query[T]): SubLinkItem[Boolean] =
+def notExists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
     SubLinkItem(query.ast, SqlSubLinkType.NotExists)
 
-def all[T, K <: ExprKind](query: Query[Expr[T, K]]): SubLinkItem[Wrap[T, Option]] =
+def all[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
 
-def any[T, K <: ExprKind](query: Query[Expr[T, K]]): SubLinkItem[Wrap[T, Option]] =
+def any[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def some[T, K <: ExprKind](query: Query[Expr[T, K]]): SubLinkItem[Wrap[T, Option]] =
+def some[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
 def count(): Expr[Long, AggKind] = Expr.Func("COUNT", Nil, false, Nil)
@@ -215,7 +215,7 @@ inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.Product
     val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
     SelectQuery(table, ast)
 
-inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTuple[N, V]])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
+inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](q: Query[NamedTuple[N, V], S])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val innerQuery = NamedQuery(q, aliasName)
@@ -225,7 +225,7 @@ inline def query[N <: Tuple, V <: Tuple](q: Query[NamedTuple[N, V]])(using qc: Q
     )
     SelectQuery(innerQuery, ast)
 
-def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V]])(f: Option[WithContext] ?=> Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTuple[N, V]] =
+def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Option[WithContext] ?=> Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTuple[N, V]] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]
