@@ -16,7 +16,7 @@ class GroupByQuery[T](
         val sqlOrderBy = orderBy.asSqlOrderBy
         new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrWindowKind[R], t: a.R =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R] =
+    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrWindowKind[R], t: a.R =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R, ResultSize.Many.type] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
         SelectQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))

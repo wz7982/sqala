@@ -6,7 +6,7 @@ import scala.NamedTuple.*
 import scala.compiletime.constValue
 
 class NamedQuery[N <: Tuple, V <: Tuple](
-    private[sqala] val __query__ : Query[NamedTuple[N, V]], 
+    private[sqala] val __query__ : Query[NamedTuple[N, V], ?], 
     private[sqala] val __alias__ : String
 ) extends Selectable:
     type Fields = NamedTuple[N, V]

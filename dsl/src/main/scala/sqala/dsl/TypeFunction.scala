@@ -1,6 +1,6 @@
 package sqala.dsl
 
-import sqala.dsl.statement.query.NamedQuery
+import sqala.dsl.statement.query.{NamedQuery, ResultSize}
 
 import scala.Tuple.Append
 import scala.compiletime.ops.boolean.&&
@@ -128,3 +128,11 @@ type ==[A, B] <: Boolean = A match
         case A => true
         case _ => false
     case _ => false
+
+type QuerySize[N <: Int] <: ResultSize = N match
+    case 1 => ResultSize.One.type
+    case _ => ResultSize.Many.type
+
+type ProjectionSize[IsAgg <: Boolean] <: ResultSize = IsAgg match
+    case true => ResultSize.One.type
+    case _ => ResultSize.Many.type
