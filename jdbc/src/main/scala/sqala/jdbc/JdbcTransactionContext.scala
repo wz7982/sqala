@@ -56,7 +56,7 @@ def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransaction
     jdbcQuery(t.connection, sql, args)
 
 def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] throws SQLException =
-    fetchTo[T](query).headOption
+    fetchTo[T](query.take(1)).headOption
 
 def find[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] throws SQLException =
     findTo[r.R](query)
