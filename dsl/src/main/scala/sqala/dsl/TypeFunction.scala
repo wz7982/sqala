@@ -122,3 +122,7 @@ type UnionTo[A, B] = A match
     case B => B
     case Option[B] => A
     case Unwrap[B, Option] => B
+
+type ==[A, B] <: Boolean = A match
+    case B => true
+    case _ => false
