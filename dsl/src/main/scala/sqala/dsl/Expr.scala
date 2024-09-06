@@ -106,6 +106,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def ==[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, Equal, SubQuery(query.ast))
 
+    @targetName("eq")
+    def ==[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, Equal, SubLink(item.query, item.linkType))
+
     @targetName("ne")
     def !=(value: T)(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, Literal(value, a))
@@ -117,6 +121,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ne")
     def !=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, SubQuery(query.ast))
+
+    @targetName("ne")
+    def !=[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
     @targetName("gt")
     def >(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -130,6 +138,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def >[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, SubQuery(query.ast))
 
+    @targetName("gt")
+    def >[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, GreaterThan, SubLink(item.query, item.linkType))
+
     @targetName("ge")
     def >=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, Literal(value, a))
@@ -141,6 +153,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ge")
     def >=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
+
+    @targetName("ge")
+    def >=[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
     def <(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -154,6 +170,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def <[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, SubQuery(query.ast))
 
+    @targetName("lt")
+    def <[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, LessThan, SubLink(item.query, item.linkType))
+
     @targetName("le")
     def <=(value: Unwrap[T, Option])(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, Literal(value, a))
@@ -165,6 +185,10 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("le")
     def <=[R <: Operation[T], RK <: ExprKind](query: Query[Expr[R, RK]]): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, SubQuery(query.ast))
+
+    @targetName("le")
+    def <=[R <: Operation[T]](item: SubLinkItem[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
     def in(list: List[T])(using a: AsSqlExpr[T]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(Literal(_, a))), false)
@@ -351,3 +375,5 @@ case class OrderBy[K <: ExprKind](expr: Expr[?, ?], order: SqlOrderByOption, nul
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
 
 case class TimeInterval(value: Double, unit: SqlTimeUnit)
+
+case class SubLinkItem[T](query: SqlQuery, linkType: SqlSubLinkType)
