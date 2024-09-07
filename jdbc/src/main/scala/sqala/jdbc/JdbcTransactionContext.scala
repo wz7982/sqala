@@ -14,37 +14,37 @@ class JdbcTransactionContext(val connection: Connection, val dialect: Dialect)
 
 def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
     val (sql, args) = statementToString(insert.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcExec(t.connection, sql, args)
 
 def executeReturnKey(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): List[Long] throws SQLException =
     val (sql, args) = statementToString(insert.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcExecReturnKey(t.connection, sql, args)
 
 def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
     val (sql, args) = statementToString(update.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcExec(t.connection, sql, args)
     
 def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
     val (sql, args) = statementToString(delete.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcExec(t.connection, sql, args)
 
 def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
     val (sql, args) = statementToString(save.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcExec(t.connection, sql, args)
 
 def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
     val NativeSql(sql, args) = nativeSql
-    l(sql)
+    l(sql, args)
     jdbcExec(t.connection, sql, args)
 
 def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] throws SQLException =
     val (sql, args) = queryToString(query.ast, t.dialect, true)
-    l(sql)
+    l(sql, args)
     jdbcQuery(t.connection, sql, args)
     
 def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] throws SQLException =
@@ -52,7 +52,7 @@ def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: Jdb
 
 def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] throws SQLException =
     val NativeSql(sql, args) = nativeSql
-    l(sql)
+    l(sql, args)
     jdbcQuery(t.connection, sql, args)
 
 def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] throws SQLException =

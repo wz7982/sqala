@@ -6,5 +6,7 @@ object Logger:
     def apply(logger: String => Unit): Logger = logger
 
     extension (logger: Logger)
-        def apply(sql: String): Unit =
-            logger(s"execute sql: \n${sql}")
+        def apply(sql: String, args: Array[Any]): Unit =
+            logger(s"execute sql: \n${sql}\n")
+            val parameterString = args.map(_.toString).mkString("[", ", ", "]")
+            logger(s"parameters: \n${parameterString}")

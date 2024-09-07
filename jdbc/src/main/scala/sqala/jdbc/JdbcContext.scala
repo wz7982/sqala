@@ -19,7 +19,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         result
 
     private[sqala] def executeDml(sql: String, args: Array[Any]): Int throws SQLException =
-        logger(sql)
+        logger(sql, args)
         execute(c => jdbcExec(c, sql, args))
 
     def execute(insert: Insert[?, ?]): Int throws SQLException =
@@ -28,7 +28,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
 
     def executeReturnKey(insert: Insert[?, ?]): List[Long] throws SQLException =
         val (sql, args) = statementToString(insert.ast, dialect, true)
-        logger(sql)
+        logger(sql, args)
         execute(c => jdbcExecReturnKey(c, sql, args))
 
     def execute(update: Update[?, ?]): Int throws SQLException =
@@ -49,7 +49,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
 
     def fetchTo[T](query: Query[?, ?])(using JdbcDecoder[T]): List[T] throws SQLException =
         val (sql, args) = queryToString(query.ast, dialect, true)
-        logger(sql)
+        logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R]): List[r.R] throws SQLException =
@@ -57,7 +57,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
 
     def fetchTo[T](nativeSql: NativeSql)(using JdbcDecoder[T]): List[T] throws SQLException =
         val NativeSql(sql, args) = nativeSql
-        logger(sql)
+        logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     def pageTo[T](query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using JdbcDecoder[T]): Page[T] throws SQLException =
