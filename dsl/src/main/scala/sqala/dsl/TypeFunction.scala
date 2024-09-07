@@ -101,7 +101,7 @@ type CheckOverPartition[T] <: Boolean = T match
 type CheckOverOrder[T] <: Boolean = T match
     case x *: xs => CheckOverOrder[x] && CheckOverOrder[xs]
     case EmptyTuple => true
-    case OrderBy[k] => k match
+    case OrderBy[_, k] => k match
         case SimpleKind => true
         case _ => false
 

@@ -10,6 +10,8 @@ import sqala.dsl.statement.query.*
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
+import scala.compiletime.ops.boolean.&&
+import scala.compiletime.ops.double.{>=, <=}
 import scala.deriving.Mirror
 import scala.language.experimental.erasedDefinitions
 import java.util.Date
@@ -57,55 +59,58 @@ def any[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLink
 def some[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
-def count(): Expr[Long, AggKind] = Expr.Func("COUNT", Nil, false, Nil)
+def count(): Expr[Long, AggKind] = Expr.Func("COUNT", Nil)
 
 def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Func("COUNT", expr :: Nil, false, Nil)
+    Expr.Func("COUNT", expr :: Nil)
 
 def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Func("COUNT", expr :: Nil, true, Nil)
+    Expr.Func("COUNT", expr :: Nil, true)
 
 def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("SUM", expr :: Nil, false, Nil)
+    Expr.Func("SUM", expr :: Nil)
 
 def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("AVG", expr :: Nil, false, Nil)
+    Expr.Func("AVG", expr :: Nil)
 
 def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("MAX", expr :: Nil, false, Nil)
+    Expr.Func("MAX", expr :: Nil)
 
 def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("MIN", expr :: Nil, false, Nil)
+    Expr.Func("MIN", expr :: Nil)
 
-def rank(): Expr[Option[Long], AggKind] = Expr.Func("RANK", Nil, false, Nil)
+def percentileCont[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N, K])(using (n.type >= 0.0 && n.type <= 1.0) =:= true): Expr[Option[BigDecimal], AggKind] =
+    Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
-def denseRank(): Expr[Option[Long], AggKind] = Expr.Func("DENSE_RANK", Nil, false, Nil)
+def percentileDisc[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N, K])(using (n.type >= 0.0 && n.type <= 1.0) =:= true): Expr[Option[BigDecimal], AggKind] =
+    Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
-def rowNumber(): Expr[Option[Long], AggKind] = Expr.Func("ROW_NUMBER", Nil, false, Nil)
+def rank(): Expr[Option[Long], AggKind] = Expr.Func("RANK", Nil)
+
+def denseRank(): Expr[Option[Long], AggKind] = Expr.Func("DENSE_RANK", Nil)
+
+def rowNumber(): Expr[Option[Long], AggKind] = Expr.Func("ROW_NUMBER", Nil)
 
 def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
+    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
 def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil, false, Nil)
+    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
 def ntile(n: Int): Expr[Int, AggKind] =
-    Expr.Func("NTILE", n.asExpr :: Nil, false, Nil)
+    Expr.Func("NTILE", n.asExpr :: Nil)
 
 def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("FIRST_VALUE", expr :: Nil, false, Nil)
+    Expr.Func("FIRST_VALUE", expr :: Nil)
 
 def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("LAST_VALUE", expr :: Nil, false, Nil)
-
-def grouping(items: Expr[?, AggKind]*): Expr[Int, AggKind] =
-    Expr.Grouping(items.toList)
+    Expr.Func("LAST_VALUE", expr :: Nil)
 
 def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
@@ -164,6 +169,9 @@ def lower[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T
 
 def now(): Expr[Option[Date], ValueKind] =
     Expr.Func("NOW", Nil)
+
+def grouping(items: Expr[?, AggKind]*): Expr[Int, AggKind] =
+    Expr.Grouping(items.toList)
 
 sealed trait TimeUnit(val unit: SqlTimeUnit)
 case object Year extends TimeUnit(SqlTimeUnit.Year)

@@ -11,7 +11,7 @@ class GroupByQuery[T](
         val sqlCondition = f(items).asSqlExpr
         GroupByQuery(items, ast.addHaving(sqlCondition))
 
-    def sortBy(f: T => OrderBy[AggKind]): GroupByQuery[T] =
+    def sortBy[O](f: T => OrderBy[O, AggKind]): GroupByQuery[T] =
         val orderBy = f(items)
         val sqlOrderBy = orderBy.asSqlOrderBy
         new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))

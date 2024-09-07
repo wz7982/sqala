@@ -14,7 +14,15 @@ enum SqlExpr:
     case Vector(items: List[SqlExpr])
     case Unary(expr: SqlExpr, op: SqlUnaryOperator)
     case Binary(left: SqlExpr, op: SqlBinaryOperator, right: SqlExpr)
-    case Func(name: String, args: List[SqlExpr], distinct: Boolean = false, attrs: Map[String, SqlExpr] = Map(), orderBy: List[SqlOrderBy] = Nil)
+    case Func(
+        name: String, 
+        args: List[SqlExpr], 
+        distinct: Boolean = false, 
+        attrs: Map[String, SqlExpr] = Map(), 
+        orderBy: List[SqlOrderBy] = Nil,
+        withinGroupOrderBy: List[SqlOrderBy] = Nil,
+        filter: Option[SqlExpr] = None
+    )
     case In(expr: SqlExpr, inExpr: SqlExpr, not: Boolean)
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlCase], default: SqlExpr)

@@ -37,12 +37,19 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, CommonKind]
     case Unary[T, K <: CompositeKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
     case SubQuery[T](query: SqlQuery) extends Expr[T, CommonKind]
-    case Func[T, K <: FuncKind](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?]] = Nil) extends Expr[T, K]
+    case Func[T, K <: FuncKind](
+        name: String, 
+        args: List[Expr[?, ?]], 
+        distinct: Boolean = false, 
+        orderBy: List[OrderBy[?, ?]] = Nil,
+        withinGroupOrderBy: List[OrderBy[?, ?]] = Nil,
+        filter: Option[Expr[?, ?]] = None
+    ) extends Expr[T, K]
     case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
     case Vector[T](items: List[Expr[?, ?]]) extends Expr[T, CommonKind]
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
-    case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]
+    case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?, ?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]
     case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T, CommonKind]
     case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
     case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
@@ -69,8 +76,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         case Unary(expr, op) =>
             SqlExpr.Unary(expr.asSqlExpr, op)
         case SubQuery(query) => SqlExpr.SubQuery(query)
-        case Func(name, args, distinct, orderBy) =>
-            SqlExpr.Func(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy))
+        case Func(name, args, distinct, orderBy, withinGroupOrderBy, filter) =>
+            SqlExpr.Func(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy), withinGroupOrderBy.map(_.asSqlOrderBy), filter.map(_.asSqlExpr))
         case Case(branches, default) =>
             SqlExpr.Case(branches.map((x, y) => SqlCase(x.asSqlExpr, y.asSqlExpr)), default.asSqlExpr)
         case Vector(items) =>
@@ -344,34 +351,38 @@ object Expr:
             case Column(_, columnName) =>
                 UpdatePair(columnName, updateExpr)
 
-    extension [T](expr: Expr[T, AggKind])
+    extension [T](expr: Expr[T, AggKind])        
+        def filter[K <: SimpleKind](cond: Expr[Boolean, K]): Expr[T, AggKind] = expr match
+            case f: Func[?, ?] => f.copy(filter = Some(cond))
+            case _ => expr
+
         def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
             val partition = partitionBy match
                 case e: Expr[?, ?] => e :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
             val order = orderBy match
-                case o: OrderBy[?] => o :: Nil
-                case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?]])
+                case o: OrderBy[?, ?] => o :: Nil
+                case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
             val frameClause = frame match
                 case o: Option[?] => o
                 case o: SqlWindowFrame => Some(o)
             Window(expr, partition, order, frameClause)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])
-        def asc: OrderBy[K] = OrderBy(expr, Asc, None)
+        def asc: OrderBy[T, K] = OrderBy(expr, Asc, None)
 
-        def desc: OrderBy[K] = OrderBy(expr, Desc, None)
+        def desc: OrderBy[T, K] = OrderBy(expr, Desc, None)
 
     extension [T, K <: ExprKind](expr: Expr[Option[T], K])
-        def ascNullsFirst: OrderBy[K] = OrderBy(expr, Asc, Some(First))
+        def ascNullsFirst: OrderBy[T, K] = OrderBy(expr, Asc, Some(First))
 
-        def ascNullsLast: OrderBy[K] = OrderBy(expr, Asc, Some(Last))
+        def ascNullsLast: OrderBy[T, K] = OrderBy(expr, Asc, Some(Last))
 
-        def descNullsFirst: OrderBy[K] = OrderBy(expr, Desc, Some(First))
+        def descNullsFirst: OrderBy[T, K] = OrderBy(expr, Desc, Some(First))
 
-        def descNullsLast: OrderBy[K] = OrderBy(expr, Desc, Some(Last))
+        def descNullsLast: OrderBy[T, K] = OrderBy(expr, Desc, Some(Last))
 
-case class OrderBy[K <: ExprKind](expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
+case class OrderBy[T, K <: ExprKind](expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
 
 case class TimeInterval(value: Double, unit: SqlTimeUnit)
