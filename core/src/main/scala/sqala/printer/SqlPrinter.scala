@@ -238,6 +238,14 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append(s" $k ")
             printExpr(v)
         sqlBuilder.append(")")
+        if expr.withinGroupOrderBy.nonEmpty then
+            sqlBuilder.append(" WITHIN GROUP(ORDER BY ")
+            printList(expr.withinGroupOrderBy)(printOrderBy)
+            sqlBuilder.append(")")
+        if expr.filter.nonEmpty then
+            sqlBuilder.append(" FILTER(WHERE ")
+            printExpr(expr.filter.get)
+            sqlBuilder.append(")")
 
     def printInExpr(expr: SqlExpr.In): Unit =
         expr match

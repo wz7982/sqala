@@ -284,7 +284,7 @@ class SelectQuery[T](
     def distinct: SelectQuery[T] =
         new SelectQuery(items, ast.copy(param = Some(SqlSelectParam.Distinct)))
 
-    def sortBy[K <: SortKind](f: T => OrderBy[K]): SelectQuery[T] =
+    def sortBy[O, K <: SortKind](f: T => OrderBy[O, K]): SelectQuery[T] =
         val orderBy = f(queryItems)
         val sqlOrderBy = orderBy.asSqlOrderBy
         new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
