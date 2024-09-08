@@ -126,4 +126,4 @@ case class OrderBy(expr: Expr, order: SqlOrderByOption, nullsOrder: Option[SqlOr
     def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.sqlExpr, Some(order), nullsOrder)
 
 case class SelectItem(expr: Expr, alias: Option[String]):
-    def toSqlSelectItem: SqlSelectItem = SqlSelectItem(expr.sqlExpr, alias)
+    def toSqlSelectItem: SqlSelectItem = SqlSelectItem.Item(expr.sqlExpr, alias)

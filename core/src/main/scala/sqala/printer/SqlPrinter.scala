@@ -149,10 +149,8 @@ abstract class SqlPrinter(val prepare: Boolean):
         printQuery(cte.query)
 
     def printExpr(expr: SqlExpr): Unit = expr match
-        case a: SqlExpr.AllColumn => printAllColumnExpr(a)
         case c: SqlExpr.Column => printColumnExpr(c)
         case SqlExpr.Null => printNullExpr()
-        case SqlExpr.UnknownValue => printUnknownValueExpr()
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
@@ -171,17 +169,11 @@ abstract class SqlPrinter(val prepare: Boolean):
         case e: SqlExpr.Extract => printExtractExpr(e)
         case g: SqlExpr.Grouping => printGroupingExpr(g)
 
-    def printAllColumnExpr(expr: SqlExpr.AllColumn): Unit =
-        expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
-        sqlBuilder.append("*")
-
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
         sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
 
     def printNullExpr(): Unit = sqlBuilder.append("NULL")
-
-    def printUnknownValueExpr(): Unit = sqlBuilder.append("?")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         if prepare then
@@ -372,9 +364,13 @@ abstract class SqlPrinter(val prepare: Boolean):
                         printList(usingCondition)(printExpr)
                         sqlBuilder.append(")")
 
-    def printSelectItem(item: SqlSelectItem): Unit =
-        printExpr(item.expr)
-        item.alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
+    def printSelectItem(item: SqlSelectItem): Unit = item match
+        case SqlSelectItem.Wildcard(table) =>
+            table.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
+            sqlBuilder.append("*")
+        case SqlSelectItem.Item(expr, alias) =>
+            printExpr(expr)
+            alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 
     def printGroupItem(item: SqlGroupItem): Unit = item match
         case SqlGroupItem.Singleton(item) => printExpr(item)

@@ -4,10 +4,8 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.SqlQuery
 
 enum SqlExpr:
-    case AllColumn(tableName: Option[String])
     case Column(tableName: Option[String], columnName: String)
     case Null
-    case UnknownValue
     case StringLiteral(string: String)
     case NumberLiteral(number: Number)
     case BooleanLiteral(boolean: Boolean)

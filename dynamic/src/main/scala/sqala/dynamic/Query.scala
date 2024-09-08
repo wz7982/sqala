@@ -39,7 +39,7 @@ class Select(val ast: SqlQuery.Select) extends Query:
 
     infix def select(items: List[SelectItem]): Select =
         val selectItems = items.map: s =>
-            SqlSelectItem(s.expr.sqlExpr, s.alias)
+            SqlSelectItem.Item(s.expr.sqlExpr, s.alias)
         new Select(ast.copy(select = ast.select ++ selectItems))
 
     infix def where(expr: Expr): Select = new Select(ast.addWhere(expr.sqlExpr))
