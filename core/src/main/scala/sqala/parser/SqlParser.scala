@@ -144,7 +144,7 @@ class SqlParser extends StandardTokenParsers:
         ("COUNT" | "SUM" | "AVG" | "MAX" | "MIN")
 
     def aggFunction: Parser[SqlExpr] =
-        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", SqlExpr.AllColumn(None) :: Nil, false, Map(), Nil)) |
+        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, false, Map(), Nil)) |
         (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
             case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, false, Map(), Nil)
         } |
@@ -205,8 +205,7 @@ class SqlParser extends StandardTokenParsers:
         stringLit ^^ (xs => SqlExpr.StringLiteral(xs)) |
         "TRUE" ^^ (_ => SqlExpr.BooleanLiteral(true)) |
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
-        "NULL" ^^ (_ => SqlExpr.Null) |
-        "?" ^^ (_ => SqlExpr.UnknownValue)
+        "NULL" ^^ (_ => SqlExpr.Null)
 
     def unionType: Parser[SqlUnionType] =
         "UNION" ~> opt("ALL") ^^ {
@@ -249,12 +248,12 @@ class SqlParser extends StandardTokenParsers:
         rep1sep(selectItem, ",")
 
     def selectItem: Parser[SqlSelectItem] =
-        "*" ^^ (_ => SqlSelectItem(SqlExpr.AllColumn(None), None)) |
+        "*" ^^ (_ => SqlSelectItem.Wildcard(None)) |
         ident ~ "." ~ "*" ^^ {
-            case e ~ _ ~ _ => SqlSelectItem(SqlExpr.AllColumn(Some(e)), None)
+            case e ~ _ ~ _ => SqlSelectItem.Wildcard(Some(e))
         } |
         expr ~ opt(opt("AS") ~> ident) ^^ {
-            case expr ~ alias => SqlSelectItem(expr, alias)
+            case expr ~ alias => SqlSelectItem.Item(expr, alias)
         }
 
     def simpleTable: Parser[SqlTable] =

@@ -2,4 +2,6 @@ package sqala.ast.statement
 
 import sqala.ast.expr.SqlExpr
 
-case class SqlSelectItem(expr: SqlExpr, alias: Option[String])
+enum SqlSelectItem:
+    case Wildcard(table: Option[String])
+    case Item(expr: SqlExpr, alias: Option[String])

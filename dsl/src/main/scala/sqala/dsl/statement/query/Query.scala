@@ -56,10 +56,10 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
         val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
-                Query(expr, s.copy(select = SqlSelectItem(expr.asSqlExpr, None) :: Nil, limit = None))
+                Query(expr, s.copy(select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil, limit = None))
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
-                    select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
+                    select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
                     from = SqlTable.SubQueryTable(ast, false, SqlTableAlias("t")) :: Nil
                 )
                 Query(expr, outerQuery)
@@ -67,7 +67,7 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
     def exists: Query[Expr[Boolean, ColumnKind], ResultSize.One.type] =
         val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
-            select = SqlSelectItem(expr.asSqlExpr, None) :: Nil,
+            select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
             from = Nil
         )
         Query(expr, outerQuery)
@@ -216,8 +216,8 @@ class SelectQuery[T](
         val instances = AsSqlExpr.summonInstances[DropNames[From[L]]]
         val head = list.head
         val terms = head.productIterator.toList
-        val selectItems = terms.zip(instances).zip(terms.indices).map: (pair, i) =>
-            SqlSelectItem(pair._2.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(pair._1), Some(s"c$i"))
+        val selectItems: List[SqlSelectItem.Item] = terms.zip(instances).zip(terms.indices).map: (pair, i) =>
+            SqlSelectItem.Item(pair._2.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(pair._1), Some(s"c$i"))
         val columns = (
             inline erasedValue[J] match
                 case _: Tuple => Tuple.fromArray(selectItems.map(i => Expr.Column(aliasName, i.alias.get)).toArray)
