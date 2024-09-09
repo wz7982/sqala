@@ -13,7 +13,6 @@ import scala.annotation.targetName
 import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.double.{>=, <=}
 import scala.deriving.Mirror
-import scala.language.experimental.erasedDefinitions
 import java.util.Date
 
 extension [T: AsSqlExpr](value: T)
@@ -28,16 +27,16 @@ type CaseInit = CaseState.Init.type
 type CaseWhen = CaseState.When.type
 
 class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
-    infix def when[T, WK <: OperationKind[K]](expr: Expr[Boolean, WK])(using erased S =:= CaseInit): Case[T, ResultKind[K, WK], CaseWhen] =
+    infix def when[T, WK <: OperationKind[K]](expr: Expr[Boolean, WK])(using S =:= CaseInit): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T], WK <: OperationKind[K]](expr: Expr[E, WK])(using erased S =:= CaseWhen): Case[T, ResultKind[K, WK], CaseInit] =
+    infix def `then`[E <: Operation[T], WK <: OperationKind[K]](expr: Expr[E, WK])(using S =:= CaseWhen): Case[T, ResultKind[K, WK], CaseInit] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T]](value: E)(using erased p: S =:= CaseWhen, a: AsSqlExpr[E]): Case[T, ResultKind[K, ValueKind], CaseInit] =
+    infix def `then`[E <: Operation[T]](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E]): Case[T, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E <: Operation[T]](value: E)(using erased p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
+    infix def `else`[E <: Operation[T]](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))

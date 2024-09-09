@@ -1,13 +1,12 @@
 package sqala.jdbc
 
-import java.sql.{Connection, PreparedStatement, ResultSet, SQLException, Statement}
+import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
 import java.util.Date
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.language.experimental.saferExceptions
 import scala.language.unsafeNulls
 
-private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T]): List[T] throws SQLException =
+private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T]): List[T] =
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
@@ -33,7 +32,7 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
-private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int throws SQLException =
+private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int =
     var stmt: PreparedStatement = null
     try
         stmt = conn.prepareStatement(sql)
@@ -53,7 +52,7 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): In
     finally
         if stmt != null then stmt.close()
 
-private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] throws SQLException =
+private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] =
     var stmt: PreparedStatement = null
     val result = ListBuffer[Long]()
     try
