@@ -7,63 +7,62 @@ import sqala.dsl.statement.query.Query
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
-import java.sql.{Connection, SQLException}
-import scala.language.experimental.saferExceptions
+import java.sql.Connection
 
 class JdbcTransactionContext(val connection: Connection, val dialect: Dialect)
 
-def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
     val (sql, args) = statementToString(insert.ast, t.dialect, true)
     l(sql, args)
     jdbcExec(t.connection, sql, args)
 
-def executeReturnKey(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): List[Long] throws SQLException =
+def executeReturnKey(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): List[Long] =
     val (sql, args) = statementToString(insert.ast, t.dialect, true)
     l(sql, args)
     jdbcExecReturnKey(t.connection, sql, args)
 
-def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
     val (sql, args) = statementToString(update.ast, t.dialect, true)
     l(sql, args)
     jdbcExec(t.connection, sql, args)
     
-def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int =
     val (sql, args) = statementToString(delete.ast, t.dialect, true)
     l(sql, args)
     jdbcExec(t.connection, sql, args)
 
-def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int =
     val (sql, args) = statementToString(save.ast, t.dialect, true)
     l(sql, args)
     jdbcExec(t.connection, sql, args)
 
-def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int throws SQLException =
+def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int =
     val NativeSql(sql, args) = nativeSql
     l(sql, args)
     jdbcExec(t.connection, sql, args)
 
-def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] throws SQLException =
+def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
     val (sql, args) = queryToString(query.ast, t.dialect, true)
     l(sql, args)
     jdbcQuery(t.connection, sql, args)
     
-def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] throws SQLException =
+def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
     fetchTo[r.R](query)
 
-def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] throws SQLException =
+def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
     val NativeSql(sql, args) = nativeSql
     l(sql, args)
     jdbcQuery(t.connection, sql, args)
 
-def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] throws SQLException =
+def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] =
     fetchTo[T](query.take(1)).headOption
 
-def find[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] throws SQLException =
+def find[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] =
     findTo[r.R](query)
 
 def pageTo[T](
     query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
-)(using JdbcDecoder[T], JdbcTransactionContext, Logger): Page[T] throws SQLException =
+)(using JdbcDecoder[T], JdbcTransactionContext, Logger): Page[T] =
     val data = if pageSize == 0 then Nil
         else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
     val count = if returnCount then fetch(query.size).head else 0L
@@ -74,14 +73,14 @@ def pageTo[T](
 
 def page[T](
     query: Query[T, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
-)(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Page[r.R] throws SQLException =
+)(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Page[r.R] =
     pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-def fetchSize[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Long throws SQLException =
+def fetchSize[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Long =
     val sizeQuery = query.size
     fetch(sizeQuery).head
 
-def fetchExists[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Boolean throws SQLException =
+def fetchExists[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Boolean =
     val existsQuery = query.exists
     fetch(existsQuery).head
 

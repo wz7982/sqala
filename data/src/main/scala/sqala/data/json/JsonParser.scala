@@ -1,6 +1,5 @@
 package sqala.data.json
 
-import scala.language.experimental.saferExceptions
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.input.CharArrayReader.EofCh
@@ -64,7 +63,7 @@ class JsonParser extends StandardTokenParsers:
     def arrayLiteral: Parser[JsonNode] =
         "[" ~> repsep(literal, ",") <~ "]" ^^ (items => JsonNode.Array(items))
 
-    def parse(text: String): JsonNode throws JsonDecodeException = 
+    def parse(text: String): JsonNode = 
         phrase(objectLiteral | arrayLiteral)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw JsonDecodeException(e.toString)

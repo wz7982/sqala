@@ -7,19 +7,18 @@ import sqala.dsl.macros.TableMacro
 import sqala.dsl.{AsSqlExpr, Expr, SimpleKind, Table}
 
 import scala.deriving.Mirror
-import scala.language.experimental.erasedDefinitions
 
 class Update[T, S <: UpdateState](
     private[sqala] val items: T,
     val ast: SqlStatement.Update
 ):
-    inline def set(f: T => UpdatePair)(using erased S =:= UpdateTable): Update[T, UpdateTable] =
+    inline def set(f: T => UpdatePair)(using S =:= UpdateTable): Update[T, UpdateTable] =
         val pair = f(items)
         val expr = SqlExpr.Column(None, pair.columnName)
         val updateExpr = pair.updateExpr.asSqlExpr
         new Update(items, ast.copy(setList = ast.setList :+ (expr, updateExpr)))
 
-    inline def where[K <: SimpleKind](f: T => Expr[Boolean, K])(using erased S =:= UpdateTable): Update[T, UpdateTable] =
+    inline def where[K <: SimpleKind](f: T => Expr[Boolean, K])(using S =:= UpdateTable): Update[T, UpdateTable] =
         val condition = f(items)
         new Update(items, ast.addWhere(condition.asSqlExpr))
 

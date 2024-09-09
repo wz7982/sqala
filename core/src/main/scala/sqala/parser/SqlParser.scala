@@ -7,7 +7,6 @@ import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 
-import scala.language.experimental.saferExceptions
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.input.CharArrayReader.EofCh
@@ -306,17 +305,17 @@ class SqlParser extends StandardTokenParsers:
             case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
-    def parseExpr(text: String): SqlExpr throws ParseException = 
+    def parseExpr(text: String): SqlExpr = 
         phrase(expr)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
 
-    def parseColumn(text: String): SqlExpr throws ParseException = 
+    def parseColumn(text: String): SqlExpr = 
         phrase(column)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
 
-    def parseQuery(text: String): SqlQuery throws ParseException =
+    def parseQuery(text: String): SqlQuery =
         phrase(union)(new lexical.Scanner(text)) match
             case Success(result, _) => result.query
             case e => throw ParseException(e.toString)

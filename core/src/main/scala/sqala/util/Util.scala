@@ -2,10 +2,8 @@ package sqala.util
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.{SqlQuery, SqlStatement}
-import sqala.parser.{ParseException, SqlParser}
+import sqala.parser.SqlParser
 import sqala.printer.Dialect
-
-import scala.language.experimental.saferExceptions
 
 private[sqala] def camelListToSnakeList(s: List[Char]): List[Char] = s match
     case x :: y :: t if y.isUpper => x.toLower :: '_' :: camelListToSnakeList(y :: t)
@@ -24,8 +22,8 @@ def statementToString(statement: SqlStatement, dialect: Dialect, prepare: Boolea
     printer.printStatement(statement)
     printer.sql -> printer.args.toArray
 
-def parseExpr(text: String): SqlExpr throws ParseException =
+def parseExpr(text: String): SqlExpr =
     new SqlParser().parseExpr(text)
 
-def parseQuery(text: String): SqlQuery throws ParseException =
+def parseQuery(text: String): SqlQuery =
     new SqlParser().parseQuery(text)
