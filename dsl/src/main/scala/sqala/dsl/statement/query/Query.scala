@@ -146,6 +146,11 @@ class SelectQuery[T](
         val selectItems = s.selectItems(mappedItems, 0)
         Query(c.changeKind(mappedItems), ast.copy(select = selectItems))
 
+    def mapDistinct[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], t: (i.R || n.R) =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R, ProjectionSize[i.R]] =
+        val mappedItems = f(items)
+        val selectItems = s.selectItems(mappedItems, 0)
+        Query(c.changeKind(mappedItems), ast.copy(param = Some(SqlSelectParam.Distinct), select = selectItems))
+
     private inline def joinClause[JT, R](joinType: SqlJoinType)(using s: SelectItem[R], m: Mirror.ProductOf[JT]): JoinQuery[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]
         val joinTableName = TableMacro.tableName[JT]
