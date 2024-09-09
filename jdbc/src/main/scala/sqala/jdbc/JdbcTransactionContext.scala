@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.dsl.Result
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.native.NativeSql
-import sqala.dsl.statement.query.Query
+import sqala.dsl.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
@@ -47,6 +47,14 @@ def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionCo
     jdbcQuery(t.connection, sql, args)
     
 def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
+    fetchTo[r.R](query)
+
+def fetchTo[T](query: WithRecursive[?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
+    val (sql, args) = queryToString(query.ast, t.dialect, true)
+    l(sql, args)
+    jdbcQuery(t.connection, sql, args)
+    
+def fetch[T](query: WithRecursive[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
     fetchTo[r.R](query)
 
 def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
