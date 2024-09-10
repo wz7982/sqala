@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.dsl.Result
 import sqala.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.dsl.statement.native.NativeSql
-import sqala.dsl.statement.query.Query
+import sqala.dsl.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
@@ -52,6 +52,14 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         execute(c => jdbcQuery(c, sql, args))
 
     def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R]): List[r.R] =
+        fetchTo[r.R](query)
+
+    def fetchTo[T](query: WithRecursive[?])(using JdbcDecoder[T]): List[T] =
+        val (sql, args) = queryToString(query.ast, dialect, true)
+        logger(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
+
+    def fetch[T](query: WithRecursive[T])(using r: Result[T], d: JdbcDecoder[r.R]): List[r.R] =
         fetchTo[r.R](query)
 
     def fetchTo[T](nativeSql: NativeSql)(using JdbcDecoder[T]): List[T] =
