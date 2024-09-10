@@ -2,7 +2,6 @@ package sqala.jdbc
 
 import sqala.dsl.Result
 import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.native.NativeSql
 import sqala.dsl.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
