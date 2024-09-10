@@ -83,32 +83,32 @@ def percentileCont[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N
 def percentileDisc[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N, K])(using (n.type >= 0.0 && n.type <= 1.0) =:= true): Expr[Option[BigDecimal], AggKind] =
     Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
-def rank(): Expr[Option[Long], AggKind] = Expr.Func("RANK", Nil)
+def rank(): WindowFunc[Option[Long]] = WindowFunc("RANK", Nil)
 
-def denseRank(): Expr[Option[Long], AggKind] = Expr.Func("DENSE_RANK", Nil)
+def denseRank(): WindowFunc[Option[Long]] = WindowFunc("DENSE_RANK", Nil)
 
-def rowNumber(): Expr[Option[Long], AggKind] = Expr.Func("ROW_NUMBER", Nil)
+def rowNumber(): WindowFunc[Option[Long]] = WindowFunc("ROW_NUMBER", Nil)
 
-def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
+def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
+    WindowFunc("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): Expr[Wrap[T, Option], AggKind] =
+def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
     val defaultExpr = default match
         case Some(v) => Expr.Literal(v, a)
         case _ => Expr.Null
-    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
+    WindowFunc("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-def ntile(n: Int): Expr[Int, AggKind] =
-    Expr.Func("NTILE", n.asExpr :: Nil)
+def ntile(n: Int): WindowFunc[Int] =
+    WindowFunc("NTILE", n.asExpr :: Nil)
 
-def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("FIRST_VALUE", expr :: Nil)
+def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
+    WindowFunc("FIRST_VALUE", expr :: Nil)
 
-def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("LAST_VALUE", expr :: Nil)
+def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
+    WindowFunc("LAST_VALUE", expr :: Nil)
 
 def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
@@ -170,6 +170,18 @@ def now(): Expr[Option[Date], ValueKind] =
 
 def grouping(items: Expr[?, AggKind]*): Expr[Int, AggKind] =
     Expr.Grouping(items.toList)
+
+def createFunc[T](name: String, args: List[Expr[?, ?]]): Expr[T, CommonKind] =
+    Expr.Func(name, args)
+
+def createAggFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?, ?]] = Nil): Expr[T, AggKind] =
+    Expr.Func(name, args, distinct, orderBy)
+
+def createWindowFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?, ?]] = Nil): WindowFunc[T] =
+    WindowFunc(name, args, distinct, orderBy)
+
+def createBinaryOperator[T](left: Expr[?, ?], op: String, right: Expr[?, ?]): Expr[T, CommonKind] =
+    Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
 
 sealed trait TimeUnit(val unit: SqlTimeUnit)
 case object Year extends TimeUnit(SqlTimeUnit.Year)

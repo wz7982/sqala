@@ -34,7 +34,6 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Column[T](tableName: String, columnName: String) extends Expr[T, ColumnKind]
     case Null extends Expr[Null, CommonKind]
     case Binary[T, K <: CompositeKind](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, K]
-    case CustomBinary[T](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, CommonKind]
     case Unary[T, K <: CompositeKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
     case SubQuery[T](query: SqlQuery) extends Expr[T, CommonKind]
     case Func[T, K <: FuncKind](
@@ -70,8 +69,6 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         case Binary(_, _, Literal(None, _)) =>
             SqlExpr.BooleanLiteral(false)
         case Binary(left, op, right) =>
-            SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
-        case CustomBinary(left, op, right) =>
             SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
         case Unary(expr, op) =>
             SqlExpr.Unary(expr.asSqlExpr, op)
@@ -388,3 +385,22 @@ case class OrderBy[T, K <: ExprKind](expr: Expr[?, ?], order: SqlOrderByOption, 
 case class TimeInterval(value: Double, unit: SqlTimeUnit)
 
 case class SubLinkItem[T](query: SqlQuery, linkType: SqlSubLinkType)
+
+case class WindowFunc[T](
+    name: String, 
+    args: List[Expr[?, ?]], 
+    distinct: Boolean = false, 
+    orderBy: List[OrderBy[?, ?]] = Nil
+):
+    def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None)(using CheckOverPartition[P] =:= true, CheckOverOrder[O] =:= true): Expr[T, WindowKind] =
+        val partition = partitionBy match
+            case e: Expr[?, ?] => e :: Nil
+            case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+        val order = orderBy match
+            case o: OrderBy[?, ?] => o :: Nil
+            case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
+        val frameClause = frame match
+            case o: Option[?] => o
+            case o: SqlWindowFrame => Some(o)
+        val func = Expr.Func(name, args, distinct, this.orderBy)
+        Expr.Window(func, partition, order, frameClause)
