@@ -49,7 +49,7 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
     while strings.hasNext do
         val tpe = argTypes.next()
         tpe match
-            case '[List[t]] => testSqlBuilder.append("(?)")
+            case '[List[t]] => testSqlBuilder.append("(?, ?)")
             case _ => testSqlBuilder.append("?")
         testSqlBuilder.append(strings.next())
     val testSql = testSqlBuilder.toString
@@ -67,14 +67,17 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
         explainStmt = connection.prepareStatement("EXPLAIN " + testSql)
         var index = 1
         for t <- types do
-            val set = t match
+            t match
                 case '[List[t]] =>
                     val expr = Expr.summon[SetDefaultValue[t]].get
                     expr.value.get
+                    expr.value.get.setValue(explainStmt, index)
+                    index += 1
+                    expr.value.get.setValue(explainStmt, index)
                 case '[t] =>
                     val expr =Expr.summon[SetDefaultValue[t]].get
                     expr.value.get
-            set.setValue(explainStmt, index)
+                    expr.value.get.setValue(explainStmt, index)
             index += 1
         explainStmt.execute()
         None
@@ -99,6 +102,8 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
             import java.sql.Types.*
 
             val tpr = (columnType, columnNullable) match
+                case (SMALLINT, true) => TypeRepr.of[Option[Int]]
+                case (SMALLINT, false) => TypeRepr.of[Int]
                 case (INTEGER, true) => TypeRepr.of[Option[Int]]
                 case (INTEGER, false) => TypeRepr.of[Int]
                 case (BIGINT, true) => TypeRepr.of[Option[Long]]
