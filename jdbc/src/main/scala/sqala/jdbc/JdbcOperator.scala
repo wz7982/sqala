@@ -59,6 +59,8 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
             for i <- 1 to columnCount do
                 val key = metaData.getColumnLabel(i)
                 val value: Any = metaData.getColumnType(i) -> (metaData.isNullable(i) != java.sql.ResultSetMetaData.columnNoNulls) match
+                    case (SMALLINT, true) => Option(rs.getInt(i))
+                    case (SMALLINT, false) => rs.getInt(i)
                     case (INTEGER, true) => Option(rs.getInt(i))
                     case (INTEGER, false) => rs.getInt(i)
                     case (BIGINT, true) => Option(rs.getLong(i))
