@@ -56,10 +56,29 @@ def fetchTo[T](query: WithRecursive[?])(using d: JdbcDecoder[T], t: JdbcTransact
 def fetch[T](query: WithRecursive[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
     fetchTo[r.R](query)
 
+def fetch[T <: Record](nativeSql: StaticNativeSql[T])(using t: JdbcTransactionContext, l: Logger): List[T] =
+    l(nativeSql.sql, nativeSql.args)
+    jdbcQueryToMap(t.connection, nativeSql.sql, nativeSql.args).map(Record(_).asInstanceOf[T])
+
 def fetchTo[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
     val NativeSql(sql, args) = nativeSql
     l(sql, args)
     jdbcQuery(t.connection, sql, args)
+
+def fetchToMap[T](nativeSql: NativeSql)(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[Map[String, Any]] =
+    val NativeSql(sql, args) = nativeSql
+    l(sql, args)
+    jdbcQueryToMap(t.connection, sql, args)
+
+def fetchTo[T](nativeSql: (String, Array[Any]))(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
+    val (sql, args) = nativeSql
+    l(sql, args)
+    jdbcQuery(t.connection, sql, args)
+
+def fetchToMap[T](nativeSql: (String, Array[Any]))(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[Map[String, Any]] =
+    val (sql, args) = nativeSql
+    l(sql, args)
+    jdbcQueryToMap(t.connection, sql, args)
 
 def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] =
     fetchTo[T](query.take(1)).headOption
