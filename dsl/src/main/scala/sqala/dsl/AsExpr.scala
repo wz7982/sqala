@@ -1,7 +1,9 @@
 package sqala.dsl
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.implicitNotFound
 
+@implicitNotFound("Type ${T} cannot be converted to SQL expressions")
 trait AsExpr[T]:
     def asExprs(item: T): List[Expr[?, ?]]
 

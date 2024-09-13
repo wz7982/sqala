@@ -3,11 +3,13 @@ package sqala.dsl
 import sqala.ast.expr.SqlExpr
 
 import java.text.SimpleDateFormat
-import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 import java.util.Date
+import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
+@implicitNotFound("The type ${T} cannot be converted to SQL expression")
 trait AsSqlExpr[T]:
     def asSqlExpr(x: T): SqlExpr
 
@@ -40,7 +42,7 @@ object AsSqlExpr:
         override def asSqlExpr(x: Boolean): SqlExpr = SqlExpr.BooleanLiteral(x)
 
     given dateAsSqlExpr: AsSqlExpr[Date] with
-        override def asSqlExpr(x: Date): SqlExpr = 
+        override def asSqlExpr(x: Date): SqlExpr =
             val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             SqlExpr.StringLiteral(formatter.format(x))
 

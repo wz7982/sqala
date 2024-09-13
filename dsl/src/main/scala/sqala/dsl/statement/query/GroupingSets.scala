@@ -3,6 +3,9 @@ package sqala.dsl.statement.query
 import sqala.ast.expr.SqlExpr
 import sqala.dsl.{Expr, ExprKind}
 
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("Type ${T} cannot be converted to GROUPING SETS expressions")
 trait GroupingSetsItem[T]:
     def asSqlExpr(x: T): SqlExpr
 
@@ -22,10 +25,7 @@ object GroupingSetsItem:
         override def asSqlExpr(x: EmptyTuple): SqlExpr =
             SqlExpr.Vector(Nil)
 
-    given unitGrouping: GroupingSetsItem[Unit] with
-        override def asSqlExpr(x: Unit): SqlExpr =
-            SqlExpr.Vector(Nil)
-
+@implicitNotFound("Type ${T} cannot be converted to GROUPING SETS expressions")
 trait GroupingSets[T]:
     def asSqlExprs(x: T): List[SqlExpr]
 

@@ -12,13 +12,8 @@ import sqala.printer.Dialect
 import sqala.util.queryToString
 
 import scala.NamedTuple.*
-import scala.compiletime.erasedValue
-import scala.compiletime.ops.boolean.*
+import scala.compiletime.{erasedValue, error}
 import scala.deriving.Mirror
-
-enum ResultSize:
-    case One
-    case Many
 
 sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast: SqlQuery):
     def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
@@ -127,29 +122,70 @@ object Query:
         inline infix def intersectAll(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
             unionListClause(SqlUnionType.IntersectAll, list)
 
+class ProjectionQuery[T, S <: ResultSize](
+    private[sqala] val items: T,
+    override val ast: SqlQuery.Select
+)(using q: QueryContext) extends Query[T, S](items, ast):
+    def distinct(using a: AsExpr[T], c: ChangeKind[T, DistinctKind]): DistinctQuery[c.R, S] =
+        DistinctQuery(c.changeKind(items), ast.copy(param = Some(SqlSelectParam.Distinct)))
+
+    inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): SortQuery[T, S] =
+        inline erasedValue[K] match
+            case _: AggKind | AggOperationKind | WindowKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _ =>
+        val orderBy = f(queryItems)
+        val sqlOrderBy = orderBy.asSqlOrderBy
+        SortQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
+
+class SortQuery[T, S <: ResultSize](
+    private[sqala] val items: T,
+    override val ast: SqlQuery.Select
+)(using q: QueryContext) extends Query[T, S](items, ast):
+    inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): SortQuery[T, S] =
+        inline erasedValue[K] match
+            case _: AggKind | AggOperationKind | WindowKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _ =>
+        val orderBy = f(queryItems)
+        val sqlOrderBy = orderBy.asSqlOrderBy
+        SortQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
+
+class DistinctQuery[T, S <: ResultSize](
+    private[sqala] val items: T,
+    override val ast: SqlQuery.Select
+)(using q: QueryContext) extends Query[T, S](items, ast):
+    inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): DistinctQuery[T, S] =
+        inline erasedValue[K] match
+            case _: DistinctKind =>
+            case _ =>
+                error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.")
+        val orderBy = f(queryItems)
+        val sqlOrderBy = orderBy.asSqlOrderBy
+        DistinctQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
+
 class SelectQuery[T](
     private[sqala] val items: T,
     override val ast: SqlQuery.Select
 )(using q: QueryContext) extends Query[T, ResultSize.Many.type](items, ast):
-    def filter[K <: SimpleKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def filter[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
+        inline erasedValue[K] match
+            case _: AggKind | AggOperationKind => error("Aggregate functions are not allowed in WHERE.")
+            case _: WindowKind => error("Window functions are not allowed in WHERE.")
+            case _: SimpleKind =>
         val condition = f(items).asSqlExpr
         SelectQuery(items, ast.addWhere(condition))
 
-    def filterIf[K <: SimpleKind](test: Boolean)(f: T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def filterIf[K <: ExprKind](test: Boolean)(f: T => Expr[Boolean, K]): SelectQuery[T] =
         if test then filter(f) else this
 
-    def withFilter[K <: SimpleKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def withFilter[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         filter(f)
 
-    def map[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], t: (i.R || n.R) =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R, ProjectionSize[i.R]] =
+    inline def map[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], cm: CheckMapKind[i.R, n.R], c: ChangeKind[R, ColumnKind]): ProjectionQuery[c.R, ProjectionSize[i.R]] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        Query(c.changeKind(mappedItems), ast.copy(select = selectItems))
-
-    def mapDistinct[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], t: (i.R || n.R) =:= true, c: ChangeKind[R, ColumnKind]): Query[c.R, ProjectionSize[i.R]] =
-        val mappedItems = f(items)
-        val selectItems = s.selectItems(mappedItems, 0)
-        Query(c.changeKind(mappedItems), ast.copy(param = Some(SqlSelectParam.Distinct), select = selectItems))
+        ProjectionQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))
 
     private inline def joinClause[JT, R](joinType: SqlJoinType)(using s: SelectItem[R], m: Mirror.ProductOf[JT]): JoinQuery[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]
@@ -234,7 +270,7 @@ class SelectQuery[T](
                 terms.zip(instances).map: (term, instance) =>
                     instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(term)
         )
-        val values = new Query[NamedTuple[Names[From[L]], J], ResultSize.Many.type](NamedTuple(columns), valuesAst)
+        val values = Query[NamedTuple[Names[From[L]], J], ResultSize.Many.type](NamedTuple(columns), valuesAst)
         val rightTable = NamedQuery(values, aliasName)
         val tables = (
             inline items match
@@ -286,34 +322,31 @@ class SelectQuery[T](
     inline def rightJoin[L <: Product](list: List[L])(using SelectItem[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
         joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.RightJoin, list)
 
-    def distinct: SelectQuery[T] =
-        new SelectQuery(items, ast.copy(param = Some(SqlSelectParam.Distinct)))
-
-    def sortBy[O, K <: SortKind](f: T => OrderBy[O, K]): SelectQuery[T] =
-        val orderBy = f(queryItems)
-        val sqlOrderBy = orderBy.asSqlOrderBy
-        new SelectQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
-
-    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind]): GroupByQuery[(ta.R, T)] =
+    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind]): GroupByQuery[(ca.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = a.asExprs(groupByItems).map(i => SqlGroupItem.Singleton(i.asSqlExpr))
-        GroupByQuery((ta.changeKind(groupByItems), items), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery((ca.changeKind(groupByItems), items), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
+    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind], to: ChangeOption[ca.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlGroupItem.Cube(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.changeOption(ca.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
-    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R]): GroupByQuery[(to.R, T)] =
+    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind], to: ChangeOption[ca.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlGroupItem.Rollup(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.changeOption(ca.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
-    def groupByGroupingSets[G, S](f: T => G)(g: G => S)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], t: (na.R && nw.R && nv.R) =:= true, ta: ChangeKind[G, AggKind], to: ChangeOption[ta.R], s: GroupingSets[S]): GroupByQuery[(to.R, T)] =
+    inline def groupByGroupingSets[G, S](f: T => G)(using ca: ChangeKind[G, GroupKind])(g: ca.R => S)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], to: ChangeOption[ca.R], s: GroupingSets[S]): GroupByQuery[(to.R, T)] =
+        inline erasedValue[CheckGrouping[S]] match
+            case _: false => 
+                error("For GROUPING SETS, expressions must appear in grouping list.")
+            case _: true =>
         val groupByItems = f(items)
-        val sets = g(groupByItems)
+        val changedGroupByItems = ca.changeKind(groupByItems)
+        val sets = g(changedGroupByItems)
         val sqlGroupBy = SqlGroupItem.GroupingSets(s.asSqlExprs(sets))
-        GroupByQuery((to.changeOption(ta.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.changeOption(changedGroupByItems), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
 class UnionQuery[T](
     private[sqala] val left: Query[?, ?],
