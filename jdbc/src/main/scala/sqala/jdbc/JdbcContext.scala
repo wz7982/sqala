@@ -70,6 +70,21 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
+    def fetchToMap[T](nativeSql: NativeSql)(using JdbcDecoder[T]): List[Map[String, Any]] =
+        val NativeSql(sql, args) = nativeSql
+        logger(sql, args)
+        execute(c => jdbcQueryToMap(c, sql, args))
+
+    def fetchTo[T](nativeSql: (String, Array[Any]))(using JdbcDecoder[T]): List[T] =
+        val (sql, args) = nativeSql
+        logger(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
+
+    def fetchToMap[T](nativeSql: (String, Array[Any]))(using JdbcDecoder[T]): List[Map[String, Any]] =
+        val (sql, args) = nativeSql
+        logger(sql, args)
+        execute(c => jdbcQueryToMap(c, sql, args))
+
     def pageTo[T](query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using JdbcDecoder[T]): Page[T] =
         val data = if pageSize == 0 then Nil
             else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
