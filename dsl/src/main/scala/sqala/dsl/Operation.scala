@@ -1,10 +1,12 @@
 package sqala.dsl
 
+import java.util.Date
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
 @implicitNotFound("Types ${A} and ${B} be cannot compared")
-trait Operation[A, B]
+trait Operation[A, B]:
+    type R
 
 object Operation:
     inline def summonInstances[A, T]: List[Operation[?, ?]] =
@@ -12,21 +14,31 @@ object Operation:
             case _: EmptyTuple => Nil
             case _: (Expr[t, k] *: ts) => summonInline[Operation[A, t]] :: summonInstances[A, ts]
 
-    given compare[A]: Operation[A, A]()
+    type Aux[A, B, O] = Operation[A, B] { type R = O }
 
-    given compareOption[A]: Operation[A, Option[A]]()
+    given compare[A]: Aux[A, A, A] = new Operation[A, A]:
+        type R = A
 
-    given compreaValue[A]: Operation[Option[A], A]()
+    given compareOption[A]: Aux[A, Option[A], Option[A]] = new Operation[A, Option[A]]:
+        type R = Option[A]
 
-    given numericCompare[A: Number, B: Number]: Operation[A, B]()
+    given compreaValue[A]: Aux[Option[A], A, Option[A]] = new Operation[Option[A], A]:
+        type R = Option[A]
 
-    given timeCompare[A: DateTime, B: DateTime]: Operation[A, B]()
+    given numericCompare[A: Number, B: Number]: Aux[A, B, Option[BigDecimal]] = new Operation[A, B]:
+        type R = Option[BigDecimal]
 
-    given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: Operation[A, B]()
+    given timeCompare[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] = new Operation[A, B]:
+        type R = Option[Date]
 
-    given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: Operation[A, B]()
+    given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: Aux[A, B, Option[Date]] = new Operation[A, B]:
+        type R = Option[Date]
+    
+    given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: Aux[A, B, Option[Date]] = new Operation[A, B]:
+        type R = Option[Date]
 
-    given nothingCompare[B]: Operation[Nothing, B]()
+    given nothingCompare[B]: Aux[Nothing, B, B] = new Operation[Nothing, B]:
+        type R = B
 
 @implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function")
 trait OperationKind[A <: ExprKind, B <: ExprKind]

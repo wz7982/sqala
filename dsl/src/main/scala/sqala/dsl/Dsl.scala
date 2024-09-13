@@ -31,18 +31,18 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
     infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, OperationKind[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using S =:= CaseWhen, Operation[T, E], OperationKind[K, TK]): Case[E, ResultKind[K, TK], CaseInit] =
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseWhen, o: Operation[T, E], k: OperationKind[K, TK]): Case[o.R, ResultKind[K, TK], CaseInit] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: Operation[T, E]): Case[E, ResultKind[K, ValueKind], CaseInit] =
+    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: Operation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using S =:= CaseInit, Operation[T, E], OperationKind[K, TK]): Expr[E, ResultKind[K, ValueKind]] =
+    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseInit, o: Operation[T, E], k: OperationKind[K, TK]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: Operation[T, E]): Expr[E, ResultKind[K, ValueKind]] =
+    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: Operation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
