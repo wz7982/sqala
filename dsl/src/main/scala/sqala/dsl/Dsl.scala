@@ -7,12 +7,14 @@ import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
+import java.util.Date
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.&&
-import scala.compiletime.ops.double.{>=, <=}
+import scala.compiletime.ops.double.{<=, >=}
+import scala.compiletime.ops.int.>
+import scala.compiletime.{erasedValue, error}
 import scala.deriving.Mirror
-import java.util.Date
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
@@ -26,21 +28,26 @@ type CaseInit = CaseState.Init.type
 type CaseWhen = CaseState.When.type
 
 class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
-    infix def when[T, WK <: OperationKind[K]](expr: Expr[Boolean, WK])(using S =:= CaseInit): Case[T, ResultKind[K, WK], CaseWhen] =
+    infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, OperationKind[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T], WK <: OperationKind[K]](expr: Expr[E, WK])(using S =:= CaseWhen): Case[T, ResultKind[K, WK], CaseInit] =
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using S =:= CaseWhen, Operation[T, E], OperationKind[K, TK]): Case[E, ResultKind[K, TK], CaseInit] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E <: Operation[T]](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E]): Case[T, ResultKind[K, ValueKind], CaseInit] =
+    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: Operation[T, E]): Case[E, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E <: Operation[T]](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E]): Expr[E, ResultKind[K, ValueKind]] =
+    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using S =:= CaseInit, Operation[T, E], OperationKind[K, TK]): Expr[E, ResultKind[K, ValueKind]] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+        Expr.Case(caseBranches, expr)
+
+    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: Operation[T, E]): Expr[E, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
 
-def `case`: Case[Any, ValueKind, CaseInit] = new Case(Nil)
+def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
 
 def exists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
     SubLinkItem(query.ast, SqlSubLinkType.Exists)
@@ -57,31 +64,61 @@ def any[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLink
 def some[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
+private inline def aggregate[T, K <: ExprKind](name: String, expr: Expr[?, K], distinct: Boolean = false): Expr[T, AggKind] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ => Expr.Func(name, expr :: Nil, distinct)
+
 def count(): Expr[Long, AggKind] = Expr.Func("COUNT", Nil)
 
-def count[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Func("COUNT", expr :: Nil)
+inline def count[T, K <: ExprKind](expr: Expr[T, K]): Expr[Long, AggKind] =
+    aggregate("COUNT", expr)
 
-def countDistinct[K <: SimpleKind](expr: Expr[?, K]): Expr[Long, AggKind] =
-    Expr.Func("COUNT", expr :: Nil, true)
+inline def countDistinct[T, K <: ExprKind](expr: Expr[T, K]): Expr[Long, AggKind] =
+    aggregate("COUNT", expr, true)
 
-def sum[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("SUM", expr :: Nil)
+inline def sum[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+    aggregate("SUM", expr)
 
-def avg[T: Number, K <: SimpleKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("AVG", expr :: Nil)
+inline def avg[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+    aggregate("AVG", expr)
 
-def max[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("MAX", expr :: Nil)
+inline def max[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+    aggregate("MAX", expr)
 
-def min[T, K <: SimpleKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
-    Expr.Func("MIN", expr :: Nil)
+inline def min[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+    aggregate("MIN", expr)
 
-def percentileCont[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N, K])(using (n.type >= 0.0 && n.type <= 1.0) =:= true): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
+inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ => inline erasedValue[n.type >= 0.0 && n.type <= 1.0] match
+            case _: false => error("The percentage value is not between 0 and 1.")
+            case _ =>
+                Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
-def percentileDisc[N: Number, K <: SimpleKind](n: Double, withinGroup: OrderBy[N, K])(using (n.type >= 0.0 && n.type <= 1.0) =:= true): Expr[Option[BigDecimal], AggKind] =
-    Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
+inline def percentileDist[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ => inline erasedValue[n.type >= 0.0 && n.type <= 1.0] match
+            case _: false => error("The percentage value is not between 0 and 1.")
+            case _ =>
+                Expr.Func("PERCENTILE_DIST", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
 def rank(): WindowFunc[Option[Long]] = WindowFunc("RANK", Nil)
 
@@ -89,26 +126,60 @@ def denseRank(): WindowFunc[Option[Long]] = WindowFunc("DENSE_RANK", Nil)
 
 def rowNumber(): WindowFunc[Option[Long]] = WindowFunc("ROW_NUMBER", Nil)
 
-def lag[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
-    val defaultExpr = default match
-        case Some(v) => Expr.Literal(v, a)
-        case _ => Expr.Null
-    WindowFunc("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
+inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ =>
+            val defaultExpr = default match
+                case Some(v) => Expr.Literal(v, a)
+                case _ => Expr.Null
+            WindowFunc("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-def lead[T, K <: SimpleKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
-    val defaultExpr = default match
-        case Some(v) => Expr.Literal(v, a)
-        case _ => Expr.Null
-    WindowFunc("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
+inline def lead[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ =>
+            val defaultExpr = default match
+                case Some(v) => Expr.Literal(v, a)
+                case _ => Expr.Null
+            WindowFunc("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-def ntile(n: Int): WindowFunc[Int] =
-    WindowFunc("NTILE", n.asExpr :: Nil)
+inline def ntile(n: Int): WindowFunc[Int] =
+    inline erasedValue[n.type > 0] match
+        case _: false =>
+            error("The parameter of NTILE must be greater than 0.")
+        case _ =>
+            WindowFunc("NTILE", n.asExpr :: Nil)
 
-def firstValue[T, K <: SimpleKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
-    WindowFunc("FIRST_VALUE", expr :: Nil)
+inline def firstValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ => WindowFunc("FIRST_VALUE", expr :: Nil)
 
-def lastValue[T, K <: SimpleKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
-    WindowFunc("LAST_VALUE", expr :: Nil)
+inline def lastValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
+    inline erasedValue[K] match
+        case _: AggKind => 
+            error("Aggregate function calls cannot be nested.")
+        case _: AggOperationKind =>
+            error("Aggregate function calls cannot be nested.")
+        case _: WindowKind =>
+            error("Aggregate function calls cannot contain window function calls.")
+        case _ => WindowFunc("LAST_VALUE", expr :: Nil)
 
 def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
@@ -132,7 +203,7 @@ def power[T: Number, K <: ExprKind](expr: Expr[T, K], n: Double): Expr[Option[Bi
     Expr.Func("POWER", expr :: n.asExpr :: Nil)
 
 @targetName("concatAgg")
-def concat(expr: (Expr[String, AggKind] | Expr[Option[String], AggKind] | String)*): Expr[Option[String], AggKind] =
+def concat(expr: (Expr[String, AggKind] | Expr[Option[String], AggKind] | String)*): Expr[Option[String], AggOperationKind] =
     val args = expr.toList.map:
         case s: String => s.asExpr
         case e: Expr[?, ?] => e
@@ -165,11 +236,18 @@ def upper[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T
 def lower[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("LOWER", expr :: Nil)
 
-def now(): Expr[Option[Date], ValueKind] =
+def now(): Expr[Option[Date], CommonKind] =
     Expr.Func("NOW", Nil)
 
-def grouping(items: Expr[?, AggKind]*): Expr[Int, AggKind] =
-    Expr.Grouping(items.toList)
+inline def grouping[G](items: G): Expr[Int, AggOperationKind] =
+    inline erasedValue[CheckGrouping[items.type]] match
+        case _: false =>
+            error("The parameter of GROUPING must be a grouping expression.")
+        case _ =>
+            val groupingItems = items match
+                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+                case e: Expr[?, ?] => e :: Nil
+            Expr.Grouping(groupingItems)
 
 def createFunc[T](name: String, args: List[Expr[?, ?]]): Expr[T, CommonKind] =
     Expr.Func(name, args)

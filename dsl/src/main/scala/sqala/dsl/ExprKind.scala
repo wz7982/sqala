@@ -4,6 +4,33 @@ import sqala.dsl.statement.query.NamedQuery
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.&&
+import scala.annotation.implicitNotFound
+
+sealed trait ExprKind
+
+case object ValueKind extends ExprKind
+type ValueKind = ValueKind.type
+
+case object CommonKind extends ExprKind
+type CommonKind = CommonKind.type
+
+case object ColumnKind extends ExprKind
+type ColumnKind = ColumnKind.type
+
+case object AggKind extends ExprKind
+type AggKind = AggKind.type
+
+case object AggOperationKind extends ExprKind
+type AggOperationKind = AggOperationKind.type
+
+case object WindowKind extends ExprKind
+type WindowKind = WindowKind.type
+
+case object DistinctKind extends ExprKind
+type DistinctKind = DistinctKind.type
+
+case object GroupKind extends ExprKind
+type GroupKind = GroupKind.type
 
 trait IsAggKind[T]:
     type R <: Boolean
@@ -15,7 +42,7 @@ object IsAggKind:
         new IsAggKind[Expr[T, K]]:
             type R = false
 
-    given aggKindCheck[T, K <: AggKind | ValueKind]: Aux[Expr[T, K], true] =
+    given aggKindCheck[T, K <: AggKind | AggOperationKind | ValueKind]: Aux[Expr[T, K], true] =
         new IsAggKind[Expr[T, K]]:
             type R = true
 
@@ -49,7 +76,7 @@ object NotAggKind:
         new NotAggKind[Expr[T, K]]:
             type R = true
 
-    given aggKindCheck[T, K <: AggKind]: Aux[Expr[T, K], false] =
+    given aggKindCheck[T, K <: AggKind | AggOperationKind]: Aux[Expr[T, K], false] =
         new NotAggKind[Expr[T, K]]:
             type R = false
 
@@ -141,38 +168,38 @@ object NotValueKind:
         new NotValueKind[NamedQuery[N, V]]:
             type R = true
 
-trait IsAggOrWindowKind[T]:
+trait IsAggOrGroupKind[T]:
     type R <: Boolean
 
-object IsAggOrWindowKind:
-    type Aux[T, O <: Boolean] = IsAggOrWindowKind[T] { type R = O }
+object IsAggOrGroupKind:
+    type Aux[T, O <: Boolean] = IsAggOrGroupKind[T] { type R = O }
 
-    given norAggAndWindowKindCheck[T, K <: CommonKind | ColumnKind]: Aux[Expr[T, K], false] =
-        new IsAggOrWindowKind[Expr[T, K]]:
+    given notAggKindCheck[T, K <: CommonKind | ColumnKind | ValueKind | DistinctKind | WindowKind]: Aux[Expr[T, K], false] =
+        new IsAggOrGroupKind[Expr[T, K]]:
             type R = false
 
-    given aggOrWindowKindCheck[T, K <: AggKind | ValueKind | WindowKind]: Aux[Expr[T, K], true] =
-        new IsAggOrWindowKind[Expr[T, K]]:
+    given aggKindCheck[T, K <: AggKind | AggOperationKind | GroupKind]: Aux[Expr[T, K], true] =
+        new IsAggOrGroupKind[Expr[T, K]]:
             type R = true
 
     given tableCheck[T]: Aux[Table[T], false] =
-        new IsAggOrWindowKind[Table[T]]:
+        new IsAggOrGroupKind[Table[T]]:
             type R = false
 
-    given tupleCheck[H, T <: Tuple](using ch: IsAggOrWindowKind[H], ct: IsAggOrWindowKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new IsAggOrWindowKind[H *: T]:
+    given tupleCheck[H, T <: Tuple](using ch: IsAggOrGroupKind[H], ct: IsAggOrGroupKind[T]): Aux[H *: T, ch.R && ct.R] =
+        new IsAggOrGroupKind[H *: T]:
             type R = ch.R && ct.R
 
     given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new IsAggOrWindowKind[EmptyTuple]:
+        new IsAggOrGroupKind[EmptyTuple]:
             type R = true
 
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggOrWindowKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new IsAggOrWindowKind[NamedTuple[N, V]]:
+    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggOrGroupKind[V]): Aux[NamedTuple[N, V], c.R] =
+        new IsAggOrGroupKind[NamedTuple[N, V]]:
             type R = c.R
 
     given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], false] =
-        new IsAggOrWindowKind[NamedQuery[N, V]]:
+        new IsAggOrGroupKind[NamedQuery[N, V]]:
             type R = false
 
 trait ChangeKind[T, K <: ExprKind]:
@@ -271,3 +298,25 @@ object ChangeOption:
             def changeOption(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] =
                 val t = c.changeOption(x.toTuple).asInstanceOf[ToTuple[c.R]]
                 NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
+
+@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
+trait CheckMapKind[IsAgg <: Boolean, NotAgg <: Boolean]
+
+object CheckMapKind:
+    given checkTrueTrue: CheckMapKind[true, true]()
+
+    given checkTrueFalse: CheckMapKind[true, false]()
+
+    given checkFalseTrue: CheckMapKind[false, true]()
+
+@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
+trait CheckGroupMapKind[IsAggOrGroup <: Boolean]
+
+object CheckGroupMapKind:
+    given check: CheckGroupMapKind[true]()
+
+@implicitNotFound("Aggregate functions or window functions or constants are not allowed in GROUP BY")
+trait CheckGroupByKind[NotAgg <: Boolean, NotWindow <: Boolean, NotValue <: Boolean]
+
+object CheckGroupByKind:
+    given check: CheckGroupByKind[true, true, true]()

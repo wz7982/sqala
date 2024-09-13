@@ -18,11 +18,3 @@ object Table:
                 .map(n => Expr.Column(table.__aliasName__, n))
             val columnTuple = Tuple.fromArray(columns.toArray)
             NamedTuple(columnTuple).asInstanceOf[table.Fields]
-
-case class TableMetaData(
-    tableName: String,
-    primaryKeyFields: List[String],
-    incrementField: Option[String],
-    columnNames: List[String],
-    fieldNames: List[String]
-)

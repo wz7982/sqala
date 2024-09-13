@@ -14,8 +14,6 @@ type Unwrap[T, F[_]] = T match
     case F[t] => t
     case _ => T
 
-type Operation[T] = T | Wrap[T, Option] | Unwrap[T, Option]
-
 type ToTuple[T] <: Tuple = T match
     case h *: t => h *: t
     case EmptyTuple => EmptyTuple
@@ -23,23 +21,17 @@ type ToTuple[T] <: Tuple = T match
 
 type SimpleKind = ColumnKind | CommonKind | ValueKind
 
-type CompositeKind = CommonKind | AggKind | WindowKind
+type CompositeKind = CommonKind | AggOperationKind | WindowKind
 
 type SortKind = ColumnKind | CommonKind | WindowKind
 
-type FuncKind = CompositeKind | ValueKind
-
-type OperationKind[T <: ExprKind] <: ExprKind = T match
-    case ValueKind => ExprKind
-    case CommonKind | ColumnKind | WindowKind => 
-        CommonKind | ColumnKind | WindowKind | ValueKind
-    case AggKind => AggKind | ValueKind
+type FuncKind = CommonKind | AggKind | AggOperationKind | WindowKind
 
 type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (WindowKind, r) => WindowKind
     case (l, WindowKind) => WindowKind
-    case (AggKind, r) => AggKind
-    case (l, AggKind) => AggKind
+    case (AggKind | AggOperationKind | GroupKind, r) => AggOperationKind
+    case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
     case (l, r) => CommonKind
 
 type CastKind[E <: Expr[?, ?]] <: CompositeKind = E match
@@ -102,16 +94,14 @@ type CheckOverOrder[T] <: Boolean = T match
     case x *: xs => CheckOverOrder[x] && CheckOverOrder[xs]
     case EmptyTuple => true
     case OrderBy[_, k] => k match
-        case SimpleKind => true
+        case ColumnKind | CommonKind => true
         case _ => false
 
-type CheckIn[X, T, K <: ExprKind] <: Boolean = X match
-    case x *: xs => CheckIn[x, T, K] && CheckIn[xs, T, K]
+type CheckGrouping[T] <: Boolean = T match
+    case x *: xs => CheckGrouping[x] && CheckGrouping[xs]
     case EmptyTuple => true
-    case Expr[t, k] => t match
-        case Operation[T] => k match
-            case OperationKind[K] => true
-            case _ => false
+    case Expr[_, k] => k match
+        case GroupKind => true
         case _ => false
 
 type Union[A <: Tuple, B <: Tuple] <: Tuple = (A, B) match
@@ -122,12 +112,6 @@ type UnionTo[A, B] = A match
     case B => B
     case Option[B] => A
     case Unwrap[B, Option] => B
-
-type ==[A, B] <: Boolean = A match
-    case B => B match
-        case A => true
-        case _ => false
-    case _ => false
 
 type QuerySize[N <: Int] <: ResultSize = N match
     case 1 => ResultSize.One.type

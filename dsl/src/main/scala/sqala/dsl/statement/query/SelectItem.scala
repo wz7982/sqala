@@ -6,7 +6,9 @@ import sqala.dsl.{Expr, ExprKind, Table}
 
 import scala.NamedTuple.NamedTuple
 import scala.collection.mutable.ListBuffer
+import scala.annotation.implicitNotFound
 
+@implicitNotFound("Type ${T} cannot be converted to SELECT items.")
 trait SelectItem[T]:
     def offset(item: T): Int
 
