@@ -1,15 +1,15 @@
 package sqala.dsl
 
 import sqala.ast.expr.*
-import sqala.ast.statement.SqlQuery
+import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
 import java.util.Date
-import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
+import scala.collection.mutable.ListBuffer
 import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.double.{<=, >=}
 import scala.compiletime.ops.int.>
@@ -28,21 +28,21 @@ type CaseInit = CaseState.Init.type
 type CaseWhen = CaseState.When.type
 
 class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
-    infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, OperationKind[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
+    infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, KindOperation[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseWhen, o: Operation[T, E], k: OperationKind[K, TK]): Case[o.R, ResultKind[K, TK], CaseInit] =
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseWhen, o: ResultOperation[T, E], k: KindOperation[K, TK]): Case[o.R, ResultKind[K, TK], CaseInit] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: Operation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
+    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: ResultOperation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseInit, o: Operation[T, E], k: OperationKind[K, TK]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, TK]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: Operation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i.head, i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
@@ -302,26 +302,32 @@ def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
 
-inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
+inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T]): SelectQuery[a.R] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
-    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
-    SelectQuery(table, ast)
+    val ast = SqlQuery.Select(select = table.__selectItems__(0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
+    SelectQuery(table.asInstanceOf[a.R], table.__offset__, ast)
 
-inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](q: Query[NamedTuple[N, V], S])(using qc: QueryContext, s: SelectItem[NamedQuery[N, V]]): SelectQuery[NamedQuery[N, V]] =
+inline def query[Q, S <: ResultSize](q: Query[Q, S])(using qc: QueryContext, s: SelectItem[Q]): SelectQuery[s.R] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val innerQuery = NamedQuery(q, aliasName)
+    val selectItems = s.selectItems(q.queryItems, 0)
+    var tmpCursor = 0
+    val tmpItems = ListBuffer[SqlSelectItem.Item]()
+    for field <- selectItems.map(_.alias.get) do
+        tmpItems.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), field), Some(s"c${tmpCursor}")))
+        tmpCursor += 1
+    val queryItems = tmpItems.toList
     val ast = SqlQuery.Select(
-        select = s.selectItems(innerQuery, 0),
+        select = queryItems,
         from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
-    SelectQuery(innerQuery, ast)
+    SelectQuery(s.subQueryItems(q.queryItems, 0, aliasName), s.offset(q.queryItems), ast)
 
-def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Option[WithContext] ?=> Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using s: SelectItem[NamedQuery[N, V]]): WithRecursive[NamedTuple[N, V]] =
+def withRecursive[Q, V <: Tuple](query: Query[Q, ?])(f: Option[WithContext] ?=> Query[Q, ?] => Query[Q, ?])(using SelectItem[Q]): WithRecursive[Q] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]

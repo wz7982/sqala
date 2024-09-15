@@ -7,7 +7,6 @@ import sqala.dsl.*
 import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.query.Query
 
-import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
 
 class Insert[T, S <: InsertState](
@@ -33,7 +32,7 @@ class Insert[T, S <: InsertState](
 
     inline infix def values(row: InverseMap[T, [t] =>> Expr[t, ?]])(using S =:= InsertTable): Insert[T, InsertValues] = values(row :: Nil)
 
-    inline infix def select[N <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(using S =:= InsertTable, V =:= T): Insert[T, InsertQuery] =
+    inline infix def select[V <: Tuple](query: Query[T, ?])(using S =:= InsertTable, V =:= T): Insert[T, InsertQuery] =
         new Insert(items, ast.copy(query = Some(query.ast)))
 
 object Insert:

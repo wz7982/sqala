@@ -96,12 +96,6 @@ object JdbcDecoder:
 
         override inline def decode(data: ResultSet, cursor: Int): EmptyTuple = EmptyTuple
 
-    given namedTupleDecoder[N <: Tuple, V <: Tuple](using d: JdbcDecoder[V]): JdbcDecoder[NamedTuple.NamedTuple[N, V]] with
-        override inline def offset: Int = d.offset
-
-        override inline def decode(data: ResultSet, cursor: Int): NamedTuple.NamedTuple[N, V] =
-            NamedTuple(d.decode(data, cursor))
-
     inline given derived[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
         ${ productDecoderMacro[T] }
 

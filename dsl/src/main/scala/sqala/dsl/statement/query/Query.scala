@@ -11,14 +11,15 @@ import sqala.dsl.macros.TableMacro
 import sqala.printer.Dialect
 import sqala.util.queryToString
 
-import scala.NamedTuple.*
+import scala.Tuple.Append
+import scala.collection.mutable.ListBuffer
 import scala.compiletime.{erasedValue, error}
 import scala.deriving.Mirror
 
 sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast: SqlQuery):
     def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
         queryToString(ast, dialect, prepare)
-    
+
     def drop(n: Int): Query[T, S] =
         val limit = ast match
             case s: SqlQuery.Select => s.limit
@@ -47,7 +48,7 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long, ColumnKind], ResultSize.One.type] = 
+    def size: Query[Expr[Long, ColumnKind], ResultSize.OneRow] = 
         val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
@@ -59,7 +60,7 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
                 )
                 Query(expr, outerQuery)
 
-    def exists: Query[Expr[Boolean, ColumnKind], ResultSize.One.type] =
+    def exists: Query[Expr[Boolean, ColumnKind], ResultSize.OneRow] =
         val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
@@ -68,71 +69,48 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
         Query(expr, outerQuery)
 
 object Query:
-    extension [T, K <: ExprKind](query: Query[Expr[T, K], ResultSize.One.type])
+    extension [T, K <: ExprKind](query: Query[Expr[T, K], ResultSize.OneRow])
         def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
 
-    extension [N <: Tuple, V <: Tuple, S <: ResultSize, UN <: Tuple, UV <: Tuple, US <: ResultSize](query: Query[NamedTuple[N, V], S])
-        infix def union(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+    extension [T, S <: ResultSize, U, US <: ResultSize](query: Query[T, S])
+        infix def union(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.Union, unionQuery.ast)
 
-        infix def unionAll(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        infix def unionAll(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
 
-        def ++(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        def ++(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
 
-        infix def except(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        infix def except(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.Except, unionQuery.ast)
 
-        infix def exceptAll(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        infix def exceptAll(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.ExceptAll, unionQuery.ast)
 
-        infix def intersect(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        infix def intersect(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.Intersect, unionQuery.ast)
 
-        infix def intersectAll(unionQuery: Query[NamedTuple[UN, UV], US]): Query[NamedTuple[N, Union[V, UV]], ResultSize.Many.type] =
+        infix def intersectAll(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =
             UnionQuery(query, SqlUnionType.IntersectAll, unionQuery.ast)
-
-    extension [N <: Tuple, V <: Tuple, S <: ResultSize, L <: Product](query: Query[NamedTuple[N, V], S])
-        private inline def unionListClause(unionType: SqlUnionType, list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            val instances = AsSqlExpr.summonInstances[DropNames[From[L]]]
-            val values = SqlQuery.Values(
-                list.map: v =>
-                    val terms = v.productIterator.toList
-                    terms.zip(instances).map: (term, instance) =>
-                        instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(term)
-            )
-            UnionQuery(query, unionType, values)
-
-        inline infix def union(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.Union, list)
-
-        inline infix def unionAll(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.UnionAll, list)
-
-        inline infix def except(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.Except, list)
-
-        inline infix def exceptAll(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.ExceptAll, list)
-
-        inline infix def intersect(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.Intersect, list)
-
-        inline infix def intersectAll(list: List[L]): Query[NamedTuple[N, Union[V, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]]]], ResultSize.Many.type] =
-            unionListClause(SqlUnionType.IntersectAll, list)
 
 class ProjectionQuery[T, S <: ResultSize](
     private[sqala] val items: T,
     override val ast: SqlQuery.Select
 )(using q: QueryContext) extends Query[T, S](items, ast):
-    def distinct(using a: AsExpr[T], c: ChangeKind[T, DistinctKind]): DistinctQuery[c.R, S] =
-        DistinctQuery(c.changeKind(items), ast.copy(param = Some(SqlSelectParam.Distinct)))
+    def distinct(using t: TransformKindIfNot[T, DistinctKind, ValueKind]): DistinctQuery[t.R, S] =
+        DistinctQuery(t.tansform(items), ast.copy(param = Some(SqlSelectParam.Distinct)))
 
     inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): SortQuery[T, S] =
         inline erasedValue[K] match
-            case _: AggKind | AggOperationKind | WindowKind =>
+            case _: AggKind =>
                 error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: AggOperationKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: WindowKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: ValueKind =>
+                error("Constants are not allowed in ORDER BY.")
             case _ =>
         val orderBy = f(queryItems)
         val sqlOrderBy = orderBy.asSqlOrderBy
@@ -144,8 +122,14 @@ class SortQuery[T, S <: ResultSize](
 )(using q: QueryContext) extends Query[T, S](items, ast):
     inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): SortQuery[T, S] =
         inline erasedValue[K] match
-            case _: AggKind | AggOperationKind | WindowKind =>
+            case _: AggKind =>
                 error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: AggOperationKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: WindowKind =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
+            case _: ValueKind =>
+                error("Constants are not allowed in ORDER BY.")
             case _ =>
         val orderBy = f(queryItems)
         val sqlOrderBy = orderBy.asSqlOrderBy
@@ -158,6 +142,8 @@ class DistinctQuery[T, S <: ResultSize](
     inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): DistinctQuery[T, S] =
         inline erasedValue[K] match
             case _: DistinctKind =>
+            case _: ValueKind =>
+                error("Constants are not allowed in ORDER BY.")
             case _ =>
                 error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.")
         val orderBy = f(queryItems)
@@ -166,15 +152,17 @@ class DistinctQuery[T, S <: ResultSize](
 
 class SelectQuery[T](
     private[sqala] val items: T,
+    private[sqala] val columnCursor: Int,
     override val ast: SqlQuery.Select
-)(using q: QueryContext) extends Query[T, ResultSize.Many.type](items, ast):
+)(using q: QueryContext) extends Query[T, ResultSize.ManyRows](items, ast):
     inline def filter[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         inline erasedValue[K] match
-            case _: AggKind | AggOperationKind => error("Aggregate functions are not allowed in WHERE.")
+            case _: AggKind => error("Aggregate functions are not allowed in WHERE.")
+            case _: AggOperationKind => error("Aggregate functions are not allowed in WHERE.")
             case _: WindowKind => error("Window functions are not allowed in WHERE.")
             case _: SimpleKind =>
         val condition = f(items).asSqlExpr
-        SelectQuery(items, ast.addWhere(condition))
+        SelectQuery(items, columnCursor, ast.addWhere(condition))
 
     inline def filterIf[K <: ExprKind](test: Boolean)(f: T => Expr[Boolean, K]): SelectQuery[T] =
         if test then filter(f) else this
@@ -182,23 +170,23 @@ class SelectQuery[T](
     inline def withFilter[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         filter(f)
 
-    inline def map[R](f: T => R)(using s: SelectItem[R], i: IsAggKind[R], n: NotAggKind[R], cm: CheckMapKind[i.R, n.R], c: ChangeKind[R, ColumnKind]): ProjectionQuery[c.R, ProjectionSize[i.R]] =
+    inline def map[R](f: T => R)(using s: SelectItem[R], h: HasAgg[R], n: NotAgg[R], c: CheckMapKind[h.R, n.R]): ProjectionQuery[R, ProjectionSize[h.R]] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))
+        ProjectionQuery(mappedItems, ast.copy(select = selectItems))
 
-    private inline def joinClause[JT, R](joinType: SqlJoinType)(using s: SelectItem[R], m: Mirror.ProductOf[JT]): JoinQuery[R] =
+    private inline def joinClause[JT, R](joinType: SqlJoinType)(using m: Mirror.ProductOf[JT]): JoinQuery[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]
         val joinTableName = TableMacro.tableName[JT]
         q.tableIndex += 1
         val joinAliasName = s"t${q.tableIndex}"
-        val joinTable = Table(joinTableName, joinAliasName, TableMacro.tableMetaData[JT])
+        val joinTable = Table[JT](joinTableName, joinAliasName, TableMacro.tableMetaData[JT])
+        val selectItems = joinTable.__selectItems__(columnCursor)
         val tables = (
             inline items match
-                case x: Tuple => x ++ Tuple1(joinTable)
-                case _ => (items, joinTable)
+                case x: Tuple => x :* joinTable
+                case _ => Tuple1(items) :* joinTable
         ).asInstanceOf[R]
-        val selectItems = s.selectItems(tables, 0)
         val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
             SqlTable.JoinTable(
                 i,
@@ -206,18 +194,23 @@ class SelectQuery[T](
                 SqlTable.IdentTable(joinTableName, Some(SqlTableAlias(joinAliasName))),
                 None
             )
-        JoinQuery(tables, sqlTable, ast.copy(select = selectItems, from = sqlTable.toList))
+        JoinQuery(tables, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ selectItems, from = sqlTable.toList))
 
-    private def joinQueryClause[N <: Tuple, V <: Tuple, S <: ResultSize, R](joinType: SqlJoinType, query: Query[NamedTuple[N, V], S])(using s: SelectItem[R], c: Option[WithContext]): JoinQuery[R] =
+    private def joinQueryClause[Q, S <: ResultSize, R](joinType: SqlJoinType, query: Query[Q, S])(using s: SelectItem[Q], c: Option[WithContext]): JoinQuery[R] =
         q.tableIndex += 1
         val aliasName = c.map(_.alias).getOrElse(s"t${q.tableIndex}")
-        val joinQuery = query
-        val rightTable = NamedQuery(joinQuery, aliasName)
-        val tables = (
+        val newItems = (
             items match
-                case x: Tuple => x ++ Tuple1(rightTable)
-                case _ => (items, rightTable)
+                case x: Tuple => x :* s.subQueryItems(query.queryItems, 0, aliasName)
+                case _ => Tuple1(items) :* s.subQueryItems(query.queryItems, 0, aliasName)
         ).asInstanceOf[R]
+        val selectItems = s.selectItems(query.queryItems, 0)
+        var tmpCursor = columnCursor
+        val tmpItems = ListBuffer[SqlSelectItem.Item]()
+        for field <- selectItems.map(_.alias.get) do
+            tmpItems.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), field), Some(s"c${tmpCursor}")))
+            tmpCursor += 1
+        val queryItems = tmpItems.toList
         val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
             SqlTable.JoinTable(
                 i,
@@ -226,130 +219,58 @@ class SelectQuery[T](
                     case Some(WithContext(alias)) =>
                         SqlTable.IdentTable(alias, None)
                     case None =>
-                        SqlTable.SubQueryTable(joinQuery.ast, false, SqlTableAlias(aliasName))
+                        SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(aliasName))
                 ,
                 None
             )
-        JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
+        JoinQuery(newItems, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ queryItems, from = sqlTable.toList))
 
-    private def joinLateralClause[N <: Tuple, V <: Tuple, S <: ResultSize, R](joinType: SqlJoinType, query: T => Query[NamedTuple[N, V], S])(using s: SelectItem[R]): JoinQuery[R] =
-        q.tableIndex += 1
-        val aliasName = s"t${q.tableIndex}"
-        val joinQuery = query(items)
-        val rightTable = NamedQuery(joinQuery, aliasName)
-        val tables = (
-            items match
-                case x: Tuple => x ++ Tuple1(rightTable)
-                case _ => (items, rightTable)
-        ).asInstanceOf[R]
-        val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
-                i,
-                joinType,
-                SqlTable.SubQueryTable(joinQuery.ast, true, SqlTableAlias(aliasName)),
-                None
-            )
-        JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
+    inline def join[JT](using a: AsTable[JT], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[T], a.R]] =
+        joinClause[JT, Append[ToTuple[T], a.R]](SqlJoinType.InnerJoin)
 
-    private inline def joinListClause[L <: Product, J <: Tuple, R](joinType: SqlJoinType, list: List[L])(using s: SelectItem[R]): JoinQuery[R] =
-        q.tableIndex += 1
-        val aliasName = s"t${q.tableIndex}"
-        val instances = AsSqlExpr.summonInstances[DropNames[From[L]]]
-        val head = list.head
-        val terms = head.productIterator.toList
-        val selectItems: List[SqlSelectItem.Item] = terms.zip(instances).zip(terms.indices).map: (pair, i) =>
-            SqlSelectItem.Item(pair._2.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(pair._1), Some(s"c$i"))
-        val columns = (
-            inline erasedValue[J] match
-                case _: Tuple => Tuple.fromArray(selectItems.map(i => Expr.Column(aliasName, i.alias.get)).toArray)
-                case _ => Expr.Column(aliasName, selectItems.head.alias.get)
-        ).asInstanceOf[J]
-        val valuesAst = SqlQuery.Values(
-            list.map: v =>
-                val terms = v.productIterator.toList
-                terms.zip(instances).map: (term, instance) =>
-                    instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(term)
-        )
-        val values = Query[NamedTuple[Names[From[L]], J], ResultSize.Many.type](NamedTuple(columns), valuesAst)
-        val rightTable = NamedQuery(values, aliasName)
-        val tables = (
-            inline items match
-                case x: Tuple => x ++ Tuple1(rightTable)
-                case _ => (items, rightTable)
-        ).asInstanceOf[R]
-        val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
-                i,
-                joinType,
-                SqlTable.SubQueryTable(valuesAst, false, SqlTableAlias(aliasName, selectItems.map(i => i.alias.get))),
-                None
-            )
-        JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
+    inline def join[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[T], s.R]] =
+        joinQueryClause[Q, S, Append[ToTuple[T], s.R]](SqlJoinType.InnerJoin, query)
 
-    inline def join[R](using SelectItem[InnerJoin[T, R]], Mirror.ProductOf[R]): JoinQuery[InnerJoin[T, R]] =
-        joinClause[R, InnerJoin[T, R]](SqlJoinType.InnerJoin)
+    inline def leftJoin[JT](using a: AsTable[JT])(using o: ToOption[a.R], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[T], o.R]] =
+        joinClause[JT, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin)
 
-    inline def join[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using s: SelectItem[InnerJoinQuery[T, V, N]], a: AsExpr[V], c: Option[WithContext] = None): JoinQuery[InnerJoinQuery[T, V, N]] =
-        joinQueryClause[N, V, S, InnerJoinQuery[T, V, N]](SqlJoinType.InnerJoin, query)
+    inline def leftJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q])(using o: ToOption[s.R], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[T], o.R]] =
+        joinQueryClause[Q, S, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin, query)
 
-    inline def join[N <: Tuple, V <: Tuple, S <: ResultSize](query: T => Query[NamedTuple[N, V], S])(using SelectItem[InnerJoinQuery[T, V, N]], AsExpr[V]): JoinQuery[InnerJoinQuery[T, V, N]] =
-        joinLateralClause[N, V, S, InnerJoinQuery[T, V, N]](SqlJoinType.InnerJoin, query)
+    inline def rightJoin[JT](using a: AsTable[JT], o: ToOption[T], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[o.R], a.R]] =
+        joinClause[JT, Append[ToTuple[o.R], a.R]](SqlJoinType.RightJoin)
 
-    inline def join[L <: Product](list: List[L])(using SelectItem[InnerJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[InnerJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
-        joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], InnerJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.InnerJoin, list)
+    inline def rightJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q], o: ToOption[T], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[o.R], s.R]] =
+        joinQueryClause[Q, S, Append[ToTuple[o.R], s.R]](SqlJoinType.RightJoin, query)
 
-    inline def leftJoin[R](using SelectItem[LeftJoin[T, R]], Mirror.ProductOf[R]): JoinQuery[LeftJoin[T, R]] =
-        joinClause[R, LeftJoin[T, R]](SqlJoinType.LeftJoin)
-
-    inline def leftJoin[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using s: SelectItem[LeftJoinQuery[T, V, N]], a: AsExpr[V], c: Option[WithContext] = None): JoinQuery[LeftJoinQuery[T, V, N]] =
-        joinQueryClause[N, V, S, LeftJoinQuery[T, V, N]](SqlJoinType.LeftJoin, query)
-
-    inline def leftJoin[N <: Tuple, V <: Tuple, S <: ResultSize](query: T => Query[NamedTuple[N, V], S])(using SelectItem[LeftJoinQuery[T, V, N]], AsExpr[V]): JoinQuery[LeftJoinQuery[T, V, N]] =
-        joinLateralClause[N, V, S, LeftJoinQuery[T, V, N]](SqlJoinType.LeftJoin, query)
-
-    inline def leftJoin[L <: Product](list: List[L])(using SelectItem[LeftJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[LeftJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
-        joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], LeftJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.LeftJoin, list)
-
-    inline def rightJoin[R](using SelectItem[RightJoin[T, R]], Mirror.ProductOf[R]): JoinQuery[RightJoin[T, R]] =
-        joinClause[R, RightJoin[T, R]](SqlJoinType.RightJoin)
-
-    inline def rightJoin[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using s: SelectItem[RightJoinQuery[T, V, N]], a: AsExpr[V], c: Option[WithContext] = None): JoinQuery[RightJoinQuery[T, V, N]] =
-        joinQueryClause[N, V, S, RightJoinQuery[T, V, N]](SqlJoinType.RightJoin, query)
-
-    inline def rightJoin[N <: Tuple, V <: Tuple, S <: ResultSize](query: T => Query[NamedTuple[N, V], S])(using SelectItem[RightJoinQuery[T, V, N]], AsExpr[V]): JoinQuery[RightJoinQuery[T, V, N]] =
-        joinLateralClause[N, V, S, RightJoinQuery[T, V, N]](SqlJoinType.RightJoin, query)
-
-    inline def rightJoin[L <: Product](list: List[L])(using SelectItem[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]]): JoinQuery[RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]] =
-        joinListClause[L, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], RightJoinQuery[T, Tuple.Map[DropNames[From[L]], [t] =>> Expr[t, ColumnKind]], Names[From[L]]]](SqlJoinType.RightJoin, list)
-
-    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind]): GroupByQuery[(ca.R, T)] =
+    def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], t: TransformKind[G, GroupKind]): GroupByQuery[(t.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = a.asExprs(groupByItems).map(i => SqlGroupItem.Singleton(i.asSqlExpr))
-        GroupByQuery((ca.changeKind(groupByItems), items), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery((t.tansform(groupByItems), items), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind], to: ChangeOption[ca.R]): GroupByQuery[(to.R, T)] =
+    def groupByCube[G](f: T => G)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], t: TransformKind[G, GroupKind], to: ToOption[t.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlGroupItem.Cube(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.changeOption(ca.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.toOption(t.tansform(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
-    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], ca: ChangeKind[G, GroupKind], to: ChangeOption[ca.R]): GroupByQuery[(to.R, T)] =
+    def groupByRollup[G](f: T => G)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], t: TransformKind[G, GroupKind], to: ToOption[t.R]): GroupByQuery[(to.R, T)] =
         val groupByItems = f(items)
         val sqlGroupBy = SqlGroupItem.Rollup(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.changeOption(ca.changeKind(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.toOption(t.tansform(groupByItems)), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
-    inline def groupByGroupingSets[G, S](f: T => G)(using ca: ChangeKind[G, GroupKind])(g: ca.R => S)(using a: AsExpr[G], na: NotAggKind[G], nw: NotWindowKind[G], nv: NotValueKind[G], c: CheckGroupByKind[na.R, nw.R, nv.R], to: ChangeOption[ca.R], s: GroupingSets[S]): GroupByQuery[(to.R, T)] =
+    inline def groupByGroupingSets[G, S](f: T => G)(using t: TransformKind[G, GroupKind])(g: t.R => S)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], to: ToOption[t.R], s: GroupingSets[S]): GroupByQuery[(to.R, T)] =
         inline erasedValue[CheckGrouping[S]] match
             case _: false => 
                 error("For GROUPING SETS, expressions must appear in grouping list.")
             case _: true =>
         val groupByItems = f(items)
-        val changedGroupByItems = ca.changeKind(groupByItems)
+        val changedGroupByItems = t.tansform(groupByItems)
         val sets = g(changedGroupByItems)
         val sqlGroupBy = SqlGroupItem.GroupingSets(s.asSqlExprs(sets))
-        GroupByQuery((to.changeOption(changedGroupByItems), items), ast.copy(groupBy = sqlGroupBy :: Nil))
+        GroupByQuery((to.toOption(changedGroupByItems), items), ast.copy(groupBy = sqlGroupBy :: Nil))
 
 class UnionQuery[T](
     private[sqala] val left: Query[?, ?],
     private[sqala] val unionType: SqlUnionType,
     private[sqala] val right: SqlQuery
-) extends Query[T, ResultSize.Many.type](left.queryItems.asInstanceOf[T], SqlQuery.Union(left.ast, unionType, right))
+) extends Query[T, ResultSize.ManyRows](left.queryItems.asInstanceOf[T], SqlQuery.Union(left.ast, unionType, right))

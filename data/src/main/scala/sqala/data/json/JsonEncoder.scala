@@ -2,13 +2,13 @@ package sqala.data.json
 
 import sqala.util.*
 
-import scala.compiletime.{constValue, erasedValue, summonInline}
-import scala.deriving.Mirror
-import scala.quoted.*
 import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
+import scala.compiletime.{constValue, erasedValue, summonInline}
+import scala.deriving.Mirror
+import scala.quoted.*
 
 trait JsonEncoder[T]:
     def encode(x: T)(using JsonDateFormat): JsonNode
@@ -64,19 +64,6 @@ object JsonEncoder:
         override inline def encode(x: List[T])(using JsonDateFormat): JsonNode = 
             JsonNode.Array(x.map(e.encode))
 
-    inline given namedTupleEncoder[N <: Tuple, V <: Tuple]: JsonEncoder[NamedTuple.NamedTuple[N, V]] =
-        val names = fetchNames[N]
-        val instances = summonInstances[V]
-        newEncoderNamedTuple(names, instances)
-
-    private def newEncoderNamedTuple[N <: Tuple, V <: Tuple](names: List[String], instances: List[JsonEncoder[?]]): JsonEncoder[NamedTuple.NamedTuple[N, V]] =
-        new JsonEncoder[NamedTuple.NamedTuple[N, V]]:
-            override def encode(x: NamedTuple.NamedTuple[N, V])(using JsonDateFormat): JsonNode =
-                val data = x.toTuple.productIterator.toList
-                val nodes = data.zip(instances).map: (v, i) =>
-                    i.asInstanceOf[JsonEncoder[Any]].encode(v)
-                JsonNode.Object(names.zip(nodes).toMap)
-    
     inline given derived[T](using m: Mirror.Of[T]): JsonEncoder[T] =
         ${ jsonEncoderMacro[T] }
 
