@@ -4,8 +4,8 @@ trait Result[T]:
     type R
 
 object Result:
-    transparent inline given tableResult[T]: Result[Table[T]] = new Result[Table[T]]:
-        type R = T
+    transparent inline given tableResult[X, T <: Table[X]]: Result[T] = new Result[T]:
+        type R = X
 
     transparent inline given exprResult[T, K <: ExprKind]: Result[Expr[T, K]] = new Result[Expr[T, K]]:
         type R = T
