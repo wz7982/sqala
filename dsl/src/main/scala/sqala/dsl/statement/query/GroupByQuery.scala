@@ -18,14 +18,18 @@ class GroupByQuery[T](
 
     inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): GroupByQuery[T] =
         inline erasedValue[K] match
-            case _: AggKind | AggOperationKind =>
+            case _: AggKind =>
+            case _: AggOperationKind =>
+            case _: GroupKind =>
+            case _: ValueKind =>
+                error("Constants are not allowed in ORDER BY.")
             case _ =>
                 error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
         val orderBy = f(items)
         val sqlOrderBy = orderBy.asSqlOrderBy
         new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrGroupKind[R], ck: CheckGroupMapKind[a.R], c: ChangeKind[R, ColumnKind]): ProjectionQuery[c.R, ResultSize.Many.type] =
+    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrGroup[R], ck: CheckGroupMapKind[a.R]): ProjectionQuery[R, ResultSize.ManyRows] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(c.changeKind(mappedItems), ast.copy(select = selectItems))
+        ProjectionQuery(mappedItems, ast.copy(select = selectItems))

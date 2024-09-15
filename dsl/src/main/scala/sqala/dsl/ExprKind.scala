@@ -1,303 +1,205 @@
 package sqala.dsl
 
-import sqala.dsl.statement.query.NamedQuery
-
-import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.&&
 import scala.annotation.implicitNotFound
 
 sealed trait ExprKind
 
-case object ValueKind extends ExprKind
-type ValueKind = ValueKind.type
+case class ValueKind() extends ExprKind
 
-case object CommonKind extends ExprKind
-type CommonKind = CommonKind.type
+case class CommonKind() extends ExprKind
 
-case object ColumnKind extends ExprKind
-type ColumnKind = ColumnKind.type
+case class ColumnKind() extends ExprKind
 
-case object AggKind extends ExprKind
-type AggKind = AggKind.type
+case class AggKind() extends ExprKind
 
-case object AggOperationKind extends ExprKind
-type AggOperationKind = AggOperationKind.type
+case class AggOperationKind() extends ExprKind
 
-case object WindowKind extends ExprKind
-type WindowKind = WindowKind.type
+case class WindowKind() extends ExprKind
 
-case object DistinctKind extends ExprKind
-type DistinctKind = DistinctKind.type
+case class DistinctKind() extends ExprKind
 
-case object GroupKind extends ExprKind
-type GroupKind = GroupKind.type
+case class GroupKind() extends ExprKind
 
-trait IsAggKind[T]:
-    type R <: Boolean
+type SimpleKind = ColumnKind | CommonKind | ValueKind
 
-object IsAggKind:
-    type Aux[T, O <: Boolean] = IsAggKind[T] { type R = O }
+type CompositeKind = CommonKind | AggOperationKind | WindowKind
 
-    given notAggKindCheck[T, K <: CommonKind | ColumnKind | WindowKind]: Aux[Expr[T, K], false] =
-        new IsAggKind[Expr[T, K]]:
-            type R = false
+type SortKind = ColumnKind | CommonKind | WindowKind
 
-    given aggKindCheck[T, K <: AggKind | AggOperationKind | ValueKind]: Aux[Expr[T, K], true] =
-        new IsAggKind[Expr[T, K]]:
-            type R = true
+type FuncKind = CommonKind | AggKind | AggOperationKind | WindowKind
 
-    given tableCheck[T]: Aux[Table[T], false] =
-        new IsAggKind[Table[T]]:
-            type R = false
+type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
+    case (WindowKind, r) => WindowKind
+    case (l, WindowKind) => WindowKind
+    case (AggKind | AggOperationKind | GroupKind, r) => AggOperationKind
+    case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
+    case (l, r) => CommonKind
 
-    given tupleCheck[H, T <: Tuple](using ch: IsAggKind[H], ct: IsAggKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new IsAggKind[H *: T]:
-            type R = ch.R && ct.R
+type CastKind[E <: Expr[?, ?]] <: CompositeKind = E match
+    case Expr[_, k] => ResultKind[k, ValueKind]
 
-    given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new IsAggKind[EmptyTuple]:
-            type R = true
-
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new IsAggKind[NamedTuple[N, V]]:
-            type R = c.R
-
-    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], false] =
-        new IsAggKind[NamedQuery[N, V]]:
-            type R = false
-
-trait NotAggKind[T]:
-    type R <: Boolean
-
-object NotAggKind:
-    type Aux[T, O <: Boolean] = NotAggKind[T] { type R = O }
-
-    given notAggKindCheck[T, K <: CommonKind | ColumnKind | WindowKind | ValueKind]: Aux[Expr[T, K], true] =
-        new NotAggKind[Expr[T, K]]:
-            type R = true
-
-    given aggKindCheck[T, K <: AggKind | AggOperationKind]: Aux[Expr[T, K], false] =
-        new NotAggKind[Expr[T, K]]:
-            type R = false
-
-    given tableCheck[T]: Aux[Table[T], true] =
-        new NotAggKind[Table[T]]:
-            type R = true
-
-    given tupleCheck[H, T <: Tuple](using ch: NotAggKind[H], ct: NotAggKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new NotAggKind[H *: T]:
-            type R = ch.R && ct.R
-
-    given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new NotAggKind[EmptyTuple]:
-            type R = true
-
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: NotAggKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new NotAggKind[NamedTuple[N, V]]:
-            type R = c.R
-
-    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
-        new NotAggKind[NamedQuery[N, V]]:
-            type R = true
-
-trait NotWindowKind[T]:
-    type R <: Boolean
-
-object NotWindowKind:
-    type Aux[T, O <: Boolean] = NotWindowKind[T] { type R = O }
-
-    given notWindowKindCheck[T, K <: CommonKind | ColumnKind | ValueKind | AggKind]: Aux[Expr[T, K], true] =
-        new NotWindowKind[Expr[T, K]]:
-            type R = true
-
-    given windowKindCheck[T, K <: WindowKind]: Aux[Expr[T, K], false] =
-        new NotWindowKind[Expr[T, K]]:
-            type R = false
-
-    given tableCheck[T]: Aux[Table[T], true] =
-        new NotWindowKind[Table[T]]:
-            type R = true
-
-    given tupleCheck[H, T <: Tuple](using ch: NotWindowKind[H], ct: NotWindowKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new NotWindowKind[H *: T]:
-            type R = ch.R && ct.R
-
-    given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new NotWindowKind[EmptyTuple]:
-            type R = true
-
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: NotWindowKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new NotWindowKind[NamedTuple[N, V]]:
-            type R = c.R
-
-    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
-        new NotWindowKind[NamedQuery[N, V]]:
-            type R = true
-
-trait NotValueKind[T]:
-    type R <: Boolean
-
-object NotValueKind:
-    type Aux[T, O <: Boolean] = NotValueKind[T] { type R = O }
-
-    given notValueKindCheck[T, K <: CommonKind | ColumnKind | WindowKind | AggKind]: Aux[Expr[T, K], true] =
-        new NotValueKind[Expr[T, K]]:
-            type R = true
-
-    given valueKindCheck[T, K <: ValueKind]: Aux[Expr[T, K], false] =
-        new NotValueKind[Expr[T, K]]:
-            type R = false
-
-    given tableCheck[T]: Aux[Table[T], true] =
-        new NotValueKind[Table[T]]:
-            type R = true
-
-    given tupleCheck[H, T <: Tuple](using ch: NotValueKind[H], ct: NotValueKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new NotValueKind[H *: T]:
-            type R = ch.R && ct.R
-
-    given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new NotValueKind[EmptyTuple]:
-            type R = true
-
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: NotValueKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new NotValueKind[NamedTuple[N, V]]:
-            type R = c.R
-
-    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], true] =
-        new NotValueKind[NamedQuery[N, V]]:
-            type R = true
-
-trait IsAggOrGroupKind[T]:
-    type R <: Boolean
-
-object IsAggOrGroupKind:
-    type Aux[T, O <: Boolean] = IsAggOrGroupKind[T] { type R = O }
-
-    given notAggKindCheck[T, K <: CommonKind | ColumnKind | ValueKind | DistinctKind | WindowKind]: Aux[Expr[T, K], false] =
-        new IsAggOrGroupKind[Expr[T, K]]:
-            type R = false
-
-    given aggKindCheck[T, K <: AggKind | AggOperationKind | GroupKind]: Aux[Expr[T, K], true] =
-        new IsAggOrGroupKind[Expr[T, K]]:
-            type R = true
-
-    given tableCheck[T]: Aux[Table[T], false] =
-        new IsAggOrGroupKind[Table[T]]:
-            type R = false
-
-    given tupleCheck[H, T <: Tuple](using ch: IsAggOrGroupKind[H], ct: IsAggOrGroupKind[T]): Aux[H *: T, ch.R && ct.R] =
-        new IsAggOrGroupKind[H *: T]:
-            type R = ch.R && ct.R
-
-    given emptyTupleCheck: Aux[EmptyTuple, true] =
-        new IsAggOrGroupKind[EmptyTuple]:
-            type R = true
-
-    given namedTupleCheck[N <: Tuple, V <: Tuple](using c: IsAggOrGroupKind[V]): Aux[NamedTuple[N, V], c.R] =
-        new IsAggOrGroupKind[NamedTuple[N, V]]:
-            type R = c.R
-
-    given namedQueryCheck[N <: Tuple, V <: Tuple]: Aux[NamedQuery[N, V], false] =
-        new IsAggOrGroupKind[NamedQuery[N, V]]:
-            type R = false
-
-trait ChangeKind[T, K <: ExprKind]:
+trait TransformKind[T, TK <: ExprKind]:
     type R
 
-    def changeKind(x: T): R
+    def tansform(x: T): R
 
-object ChangeKind:
-    type Aux[T, K <: ExprKind, O] = ChangeKind[T, K] { type R = O }
+object TransformKind:
+    transparent inline given transformExpr[T, K <: ExprKind, TK <: ExprKind]: TransformKind[Expr[T, K], TK] =
+        new TransformKind[Expr[T, K], TK]:
+            type R = Expr[T, TK]
 
-    given exprChangeKind[T, EK <: ExprKind, K <: ExprKind]: Aux[Expr[T, EK], K, Expr[T, K]] =
-        new ChangeKind[Expr[T, EK], K]:
+            def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
+
+    transparent inline given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK]): TransformKind[H *: T, TK] =
+        new TransformKind[H *: T, TK]:
+            type R = h.R *: ToTuple[t.R]
+
+            def tansform(x: H *: T): R =
+                val head = h.tansform(x.head)
+                val tail = t.tansform(x.tail) match
+                    case x: Tuple => x
+                (head *: tail).asInstanceOf[R]
+
+    transparent inline given transformEmptyTuple[TK <: ExprKind, NK <: ExprKind]: TransformKind[EmptyTuple, TK] =
+        new TransformKind[EmptyTuple, TK]:
+            type R = EmptyTuple
+
+            def tansform(x: EmptyTuple): R = x
+
+trait TransformKindIfNot[T, TK <: ExprKind, NK <: ExprKind]:
+    type R
+
+    def tansform(x: T): R
+
+object TransformKindIfNot:
+    transparent inline given transformExpr[T, K <: ExprKind, TK <: ExprKind, NK <: ExprKind]: TransformKindIfNot[Expr[T, K], TK, NK] =
+        new TransformKindIfNot[Expr[T, K], TK, NK]:
+            type R = Expr[T, TK]
+
+            def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
+
+    transparent inline given transformExprSkip[T, K <: ExprKind, TK <: ExprKind]: TransformKindIfNot[Expr[T, K], TK, K] =
+        new TransformKindIfNot[Expr[T, K], TK, K]:
             type R = Expr[T, K]
 
-            def changeKind(x: Expr[T, EK]): Expr[T, K] = x.asInstanceOf[Expr[T, K]]
+            def tansform(x: Expr[T, K]): R = x
 
-    given tupleChangeKind[H, T <: Tuple, K <: ExprKind](using ch: ChangeKind[H, K], ct: ChangeKind[T, K]): Aux[H *: T, K, ch.R *: ToTuple[ct.R]] =
-        new ChangeKind[H *: T, K]:
-            type R = ch.R *: ToTuple[ct.R]
+    transparent inline given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK]): TransformKindIfNot[H *: T, TK, NK] =
+        new TransformKindIfNot[H *: T, TK, NK]:
+            type R = h.R *: ToTuple[t.R]
 
-            def changeKind(x: H *: T): ch.R *: ToTuple[ct.R] =
-                val h = ch.changeKind(x.head)
-                val t = ct.changeKind(x.tail) match
-                    case t: Tuple => t
-                    case x => Tuple1(x)
-                (h *: t).asInstanceOf[ch.R *: ToTuple[ct.R]]
+            def tansform(x: H *: T): R =
+                val head = h.tansform(x.head)
+                val tail = t.tansform(x.tail) match
+                    case x: Tuple => x
+                (head *: tail).asInstanceOf[R]
 
-    given emptyTupleChangeKind[K <: ExprKind]: Aux[EmptyTuple, K, EmptyTuple] =
-        new ChangeKind[EmptyTuple, K]:
+    transparent inline given transformEmptyTuple[TK <: ExprKind, NK <: ExprKind]: TransformKindIfNot[EmptyTuple, TK, NK] =
+        new TransformKindIfNot[EmptyTuple, TK, NK]:
             type R = EmptyTuple
 
-            def changeKind(x: EmptyTuple): EmptyTuple = x
+            def tansform(x: EmptyTuple): R = x
 
-    given namedTupleChangeKind[N <: Tuple, V <: Tuple, K <: ExprKind](using c: ChangeKind[V, K]): Aux[NamedTuple[N, V], K, NamedTuple[N, ToTuple[c.R]]] =
-        new ChangeKind[NamedTuple[N, V], K]:
-            type R = NamedTuple[N, ToTuple[c.R]]
+trait HasAgg[T]:
+    type R <: Boolean
 
-            def changeKind(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] =
-                val t = c.changeKind(x.toTuple).asInstanceOf[ToTuple[c.R]]
-                NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
+object HasAgg:
+    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: HasAgg[Expr[T, K]] =
+        new HasAgg[Expr[T, K]]:
+            type R = false
 
-    given tableChangeKind[T, K <: ExprKind]: Aux[Table[T], K, Table[T]] =
-        new ChangeKind[Table[T], K]:
-            type R = Table[T]
+    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind]: HasAgg[Expr[T, K]] =
+        new HasAgg[Expr[T, K]]:
+            type R = true
 
-            def changeKind(x: Table[T]): Table[T] = x
+    transparent inline given tupleHasAgg[H, T <: Tuple](using ch: HasAgg[H], ct: HasAgg[T]): HasAgg[H *: T] =
+        new HasAgg[H *: T]:
+            type R = ch.R && ct.R
 
-    given namedQueryChangeKind[N <: Tuple, V <: Tuple, K <: ExprKind]: Aux[NamedQuery[N, V], K, NamedQuery[N, V]] =
-        new ChangeKind[NamedQuery[N, V], K]:
-            type R = NamedQuery[N, V]
+    transparent inline given emptyTupleHasAgg: HasAgg[EmptyTuple] =
+        new HasAgg[EmptyTuple]:
+            type R = true
 
-            def changeKind(x: NamedQuery[N, V]): NamedQuery[N, V] = x
+trait IsAggOrGroup[T]:
+    type R <: Boolean
 
-trait ChangeOption[T]:
-    type R
+object IsAggOrGroup:
+    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: IsAggOrGroup[Expr[T, K]] =
+        new IsAggOrGroup[Expr[T, K]]:
+            type R = false
 
-    def changeOption(x: T): R
+    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind | GroupKind]: IsAggOrGroup[Expr[T, K]] =
+        new IsAggOrGroup[Expr[T, K]]:
+            type R = true
 
-object ChangeOption:
-    type Aux[T, O] = ChangeOption[T] { type R = O }
+    transparent inline given tupleHasAgg[H, T <: Tuple](using ch: IsAggOrGroup[H], ct: IsAggOrGroup[T]): IsAggOrGroup[H *: T] =
+        new IsAggOrGroup[H *: T]:
+            type R = ch.R && ct.R
 
-    given exprChangeOption[T, K <: ExprKind](using a: AsSqlExpr[Wrap[T, Option]]): Aux[Expr[T, K], Expr[Wrap[T, Option], K]] =
-        new ChangeOption[Expr[T, K]]:
-            type R = Expr[Wrap[T, Option], K]
+    transparent inline given emptyTupleHasAgg: IsAggOrGroup[EmptyTuple] =
+        new IsAggOrGroup[EmptyTuple]:
+            type R = true
 
-            def changeOption(x: Expr[T, K]): Expr[Wrap[T, Option], K] =
-                x match
-                    case Expr.Literal(v, _) =>
-                        val value = v match
-                            case o: Option[_] => o
-                            case x => Option(x)
-                        Expr.Literal(value.asInstanceOf[Wrap[T, Option]], a)
-                    case _ => x.asInstanceOf[Expr[Wrap[T, Option], K]]
+trait NotAgg[T]:
+    type R <: Boolean
 
-    given tupleChangeOption[H, T <: Tuple](using ch: ChangeOption[H], ct: ChangeOption[T]): Aux[H *: T, ch.R *: ToTuple[ct.R]] =
-        new ChangeOption[H *: T]:
-            type R = ch.R *: ToTuple[ct.R]
+object NotAgg:
+    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind | ValueKind]: NotAgg[Expr[T, K]] =
+        new NotAgg[Expr[T, K]]:
+            type R = true
 
-            def changeOption(x: H *: T): R =
-                val h = ch.changeOption(x.head)
-                val t = ct.changeOption(x.tail) match
-                    case t: Tuple => t
-                    case x => Tuple1(x)
-                (h *: t).asInstanceOf[ch.R *: ToTuple[ct.R]]
+    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind]: NotAgg[Expr[T, K]] =
+        new NotAgg[Expr[T, K]]:
+            type R = false
 
-    given emptyTupleChangeOption: Aux[EmptyTuple, EmptyTuple] =
-        new ChangeOption[EmptyTuple]:
-            type R = EmptyTuple
+    transparent inline given tupleNotAgg[H, T <: Tuple](using ch: NotAgg[H], ct: NotAgg[T]): NotAgg[H *: T] =
+        new NotAgg[H *: T]:
+            type R = ch.R && ct.R
 
-            def changeOption(x: EmptyTuple): EmptyTuple = x
+    transparent inline given emptyTupleNotAgg: NotAgg[EmptyTuple] =
+        new NotAgg[EmptyTuple]:
+            type R = true
 
-    given namedTupleChangeOption[N <: Tuple, V <: Tuple](using c: ChangeOption[V]): Aux[NamedTuple[N, V], NamedTuple[N, ToTuple[c.R]]] =
-        new ChangeOption[NamedTuple[N, V]]:
-            type R = NamedTuple[N, ToTuple[c.R]]
+trait NotWindow[T]:
+    type R <: Boolean
 
-            def changeOption(x: NamedTuple[N, V]): NamedTuple[N, ToTuple[c.R]] =
-                val t = c.changeOption(x.toTuple).asInstanceOf[ToTuple[c.R]]
-                NamedTuple(t).asInstanceOf[NamedTuple[N, ToTuple[c.R]]]
+object NotWindow:
+    transparent inline given notWindow[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | ValueKind]: NotWindow[Expr[T, K]] =
+        new NotWindow[Expr[T, K]]:
+            type R = true
+
+    transparent inline given hasWindow[T, K <: WindowKind]: NotWindow[Expr[T, K]] =
+        new NotWindow[Expr[T, K]]:
+            type R = false
+
+    transparent inline given tupleNotWindow[H, T <: Tuple](using ch: NotWindow[H], ct: NotWindow[T]): NotWindow[H *: T] =
+        new NotWindow[H *: T]:
+            type R = ch.R && ct.R
+
+    transparent inline given emptyTupleNotWindow: NotWindow[EmptyTuple] =
+        new NotWindow[EmptyTuple]:
+            type R = true
+
+trait NotValue[T]:
+    type R <: Boolean
+
+object NotValue:
+    transparent inline given notValue[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | WindowKind]: NotValue[Expr[T, K]] =
+        new NotValue[Expr[T, K]]:
+            type R = true
+
+    transparent inline given hasValue[T, K <: ValueKind]: NotValue[Expr[T, K]] =
+        new NotValue[Expr[T, K]]:
+            type R = false
+
+    transparent inline given tupleNotValue[H, T <: Tuple](using ch: NotValue[H], ct: NotValue[T]): NotValue[H *: T] =
+        new NotValue[H *: T]:
+            type R = ch.R && ct.R
+
+    transparent inline given emptyTupleNotValue: NotValue[EmptyTuple] =
+        new NotValue[EmptyTuple]:
+            type R = true
 
 @implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
 trait CheckMapKind[IsAgg <: Boolean, NotAgg <: Boolean]

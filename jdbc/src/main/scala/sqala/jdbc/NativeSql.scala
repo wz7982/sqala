@@ -29,7 +29,7 @@ extension (s: StringContext)
             builder.append(strings.next())
         NativeSql(builder.toString, argArray.toArray)
 
-case class StaticNativeSql[R <: Record](sql: String, args: Array[Any])
+case class StaticNativeSql[R](sql: String, args: Array[Any])
 
 extension (inline s: StringContext)
     transparent inline def staticSql(inline args: Any*)(using inline c: JdbcTestConnection): Any =
@@ -133,7 +133,7 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
         refinement = Refinement(refinement, i._1, i._2)
 
     refinement.asType match
-        case '[type r <: Record; r] =>
+        case '[r] =>
             '{
                 val strings = $s.parts.iterator
                 val argArray = ArrayBuffer[Any]()
