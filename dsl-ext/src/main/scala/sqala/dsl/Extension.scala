@@ -11,11 +11,19 @@ object Extension:
         def asExprs(x: NamedTuple[N, V]): List[Expr[?, ?]] = a.asExprs(x.toTuple)
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[NamedTuple[N, V], TK]): TransformKind[NamedTuple[N, V], TK] =
+    transparent inline given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK]): TransformKind[NamedTuple[N, V], TK] =
         new TransformKind[NamedTuple[N, V], TK]:
             type R = NamedTuple[N, ToTuple[t.R]]
 
             def tansform(x: NamedTuple[N, V]): R = 
+                NamedTuple(t.tansform(x.toTuple).asInstanceOf[ToTuple[t.R]])
+
+    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
+    transparent inline given transformTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK]): TransformKindIfNot[NamedTuple[N, V], TK, NK] =
+        new TransformKindIfNot[NamedTuple[N, V], TK, NK]:
+            type R = NamedTuple[N, ToTuple[t.R]]
+
+            def tansform(x: NamedTuple[N, V]): R =
                 NamedTuple(t.tansform(x.toTuple).asInstanceOf[ToTuple[t.R]])
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
