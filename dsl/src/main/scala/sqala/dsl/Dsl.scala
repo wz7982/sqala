@@ -19,6 +19,9 @@ import scala.deriving.Mirror
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
 
+extension [T](x: T)(using m: Merge[T])
+    def merge: Expr[m.R, CommonKind] = m.asExpr(x)
+
 enum CaseState:
     case Init
     case When
@@ -55,13 +58,13 @@ def exists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
 def notExists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
     SubLinkItem(query.ast, SqlSubLinkType.NotExists)
 
-def all[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
+def all[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
 
-def any[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
+def any[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def some[T, K <: ExprKind, S <: ResultSize](query: Query[Expr[T, K], S]): SubLinkItem[Wrap[T, Option]] =
+def some[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
 private inline def aggregate[T, K <: ExprKind](name: String, expr: Expr[?, K], distinct: Boolean = false): Expr[T, AggKind] =
