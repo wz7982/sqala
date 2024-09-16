@@ -69,8 +69,8 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
         Query(expr, outerQuery)
 
 object Query:
-    extension [T, K <: ExprKind](query: Query[Expr[T, K], ResultSize.OneRow])
-        def asExpr: Expr[T, CommonKind] = Expr.SubQuery(query.ast)
+    extension [Q](query: Query[Q, ResultSize.OneRow])(using m: Merge[Q])
+        def asExpr: Expr[m.R, CommonKind] = Expr.SubQuery(query.ast)
 
     extension [T, S <: ResultSize, U, US <: ResultSize](query: Query[T, S])
         infix def union(unionQuery: Query[U, US])(using u: UnionOperation[T, U]): Query[u.R, ResultSize.ManyRows] =

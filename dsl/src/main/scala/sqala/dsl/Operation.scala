@@ -4,6 +4,23 @@ import java.util.Date
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
+@implicitNotFound("The type ${T} cannot be converted to SQL expression")
+trait ComparableValue[T]:
+    def asExpr(x: T): Expr[?, ?]
+
+object ComparableValue:
+    given valueAsExpr[T](using a: AsSqlExpr[T]): ComparableValue[T] with
+        def asExpr(x: T): Expr[?, ?] = Expr.Literal(x, a)
+
+    given tupleAsExpr[H, T <: Tuple](using h: AsSqlExpr[H], t: ComparableValue[T]): ComparableValue[H *: T] with
+        def asExpr(x: H *: T): Expr[?, ?] =
+            val head = Expr.Literal(x.head, h)
+            val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?]]
+            Expr.Vector(head :: tail.items)
+
+    given emptyTupleAsExpr: ComparableValue[EmptyTuple] with
+        def asExpr(x: EmptyTuple): Expr[?, ?] = Expr.Vector(Nil)
+
 @implicitNotFound("Types ${A} and ${B} be cannot compared")
 trait CompareOperation[A, B]
 
@@ -28,6 +45,10 @@ object CompareOperation:
     given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: CompareOperation[A, B]()
 
     given nothingCompare[B]: CompareOperation[Nothing, B]()
+
+    given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()
+
+    given emptyTupleCompare: CompareOperation[EmptyTuple, EmptyTuple]()
 
 @implicitNotFound("Types ${A} and ${B} be cannot subtract")
 trait MinusOperation[A, B]:
