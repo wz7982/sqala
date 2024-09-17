@@ -81,3 +81,30 @@ object Extension:
 
             def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] =
                 s.selectItems(item.toTuple, cursor)
+
+    extension [T](table: Table[T])(using t: NamedTable[T])
+        transparent inline def * : t.Fields =
+            val columns = table.__metaData__.columnNames
+                .map(n => Expr.Column(table.__aliasName__, n))
+            val columnTuple = Tuple.fromArray(columns.toArray)
+            NamedTuple(columnTuple).asInstanceOf[t.Fields]
+
+type MapField[X, T] = T match
+    case Option[_] => Expr[Wrap[X, Option], ColumnKind]
+    case _ => Expr[X, ColumnKind]
+
+trait NamedTable[T]:
+    type Fields
+
+object NamedTable:
+    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
+    transparent inline given table[T]: NamedTable[T] =
+        new NamedTable[T]:
+            type Fields =
+                NamedTuple[
+                    NamedTuple.Names[NamedTuple.From[Unwrap[T, Option]]],
+                    Tuple.Map[
+                        NamedTuple.DropNames[NamedTuple.From[Unwrap[T, Option]]],
+                        [x] =>> MapField[x, T]
+                    ]
+                ]
