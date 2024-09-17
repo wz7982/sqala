@@ -330,6 +330,23 @@ inline def query[Q, S <: ResultSize](q: Query[Q, S])(using qc: QueryContext, s: 
     )
     SelectQuery(s.subQueryItems(q.queryItems, 0, aliasName), s.offset(q.queryItems), ast)
 
+inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T]): SelectQuery[a.R] =
+    val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
+    val tableName = TableMacro.tableName[T]
+    qc.tableIndex += 1
+    val aliasName = s"t${qc.tableIndex}"
+    val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
+    val selectItems: List[SqlSelectItem.Item] = table.__selectItems__(0).map: i =>
+        SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), i.alias.get), i.alias)
+    val exprList = list.map: datum =>
+        instances.zip(datum.productIterator).map: (i, v) =>
+            i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
+    val sqlValues = SqlQuery.Values(exprList)
+    val tableAlias = SqlTableAlias(aliasName, selectItems.map(_.alias.get))
+    val ast = SqlQuery.Select(select = selectItems, from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil)
+    val newTable = Table[T](aliasName, aliasName, TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get)))
+    SelectQuery(newTable.asInstanceOf[a.R], newTable.__offset__, ast)
+
 def withRecursive[Q, V <: Tuple](query: Query[Q, ?])(f: Option[WithContext] ?=> Query[Q, ?] => Query[Q, ?])(using SelectItem[Q]): WithRecursive[Q] =
     WithRecursive(query)(f)
 
