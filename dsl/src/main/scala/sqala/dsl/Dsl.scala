@@ -20,7 +20,7 @@ extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T, ValueKind] = Expr.Literal(value, summon[AsSqlExpr[T]])
 
 extension [T](x: T)(using m: Merge[T])
-    def merge: Expr[m.R, CommonKind] = m.asExpr(x)
+    def merge: Expr[m.R, m.K] = m.asExpr(x)
 
 enum CaseState:
     case Init
