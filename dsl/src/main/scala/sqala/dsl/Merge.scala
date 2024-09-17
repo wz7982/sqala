@@ -6,26 +6,26 @@ import scala.annotation.implicitNotFound
 trait Merge[T]:
     type R
 
-    def asExpr(x: T): Expr[R, CommonKind]
+    type K <: CompositeKind | ValueKind
+
+    def asExpr(x: T): Expr[R, K]
 
 object Merge:
-    transparent inline given mergeExpr[T, K <: SimpleKind]: Merge[Expr[T, K]] =
-        new Merge[Expr[T, K]]:
-            type R = T
-
-            def asExpr(x: Expr[T, K]): Expr[R, CommonKind] = x.asInstanceOf[Expr[R, CommonKind]]
-
-    transparent inline given mergeTuple[H, K <: SimpleKind, T <: Tuple](using t: Merge[T]): Merge[Expr[H, K] *: T] =
-        new Merge[Expr[H, K] *: T]:
+    transparent inline given mergeTuple[H, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K]): Merge[Expr[H, EK] *: T] =
+        new Merge[Expr[H, EK] *: T]:
             type R = H *: ToTuple[t.R]
 
-            def asExpr(x: Expr[H, K] *: T): Expr[R, CommonKind] =
+            type K = ResultKind[EK, t.K]
+
+            def asExpr(x: Expr[H, EK] *: T): Expr[R, K] =
                 val head = x.head
-                val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?]]
+                val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
                 Expr.Vector(head :: tail.items)
 
     transparent inline given mergeEmptyTuple: Merge[EmptyTuple] =
         new Merge[EmptyTuple]:
             type R = EmptyTuple
 
-            def asExpr(x: EmptyTuple): Expr[R, CommonKind] = Expr.Vector(Nil)
+            type K = ValueKind
+
+            def asExpr(x: EmptyTuple): Expr[R, K] = Expr.Vector(Nil)

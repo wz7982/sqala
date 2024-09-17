@@ -15,7 +15,7 @@ object ComparableValue:
     given tupleAsExpr[H, T <: Tuple](using h: AsSqlExpr[H], t: ComparableValue[T]): ComparableValue[H *: T] with
         def asExpr(x: H *: T): Expr[?, ?] =
             val head = Expr.Literal(x.head, h)
-            val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?]]
+            val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
             Expr.Vector(head :: tail.items)
 
     given emptyTupleAsExpr: ComparableValue[EmptyTuple] with
