@@ -234,6 +234,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def in[R](list: List[R])(using a: ComparableValue[R], o: CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(a.asExpr(_))), false)
 
+    inline def in[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        CompareOperation.summonInstances[T, R]
+        KindOperation.summonInstances[K, R]
+        In(this, Vector(a.asExprs(expr)), false)
+
     inline def in[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
             case _: AggKind => 
@@ -245,6 +250,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     def notIn[R](list: List[R])(using a: ComparableValue[R], o: CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.map(a.asExpr(_))), true)
+
+    inline def notIn[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+        CompareOperation.summonInstances[T, R]
+        KindOperation.summonInstances[K, R]
+        In(this, Vector(a.asExprs(expr)), true)
 
     inline def notIn[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
