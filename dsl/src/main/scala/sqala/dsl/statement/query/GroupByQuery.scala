@@ -29,7 +29,7 @@ class GroupByQuery[T](
         val sqlOrderBy = orderBy.asSqlOrderBy
         new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrGroup[R], ck: CheckGroupMapKind[a.R]): ProjectionQuery[R, ResultSize.ManyRows] =
+    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrGroup[R], ck: CheckGroupMapKind[a.R], t: TransformKind[R, ColumnKind]): ProjectionQuery[t.R, ResultSize.ManyRows] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(mappedItems, ast.copy(select = selectItems))
+        ProjectionQuery(t.tansform(mappedItems), ast.copy(select = selectItems))

@@ -170,10 +170,10 @@ class SelectQuery[T](
     inline def withFilter[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
         filter(f)
 
-    inline def map[R](f: T => R)(using s: SelectItem[R], h: HasAgg[R], n: NotAgg[R], c: CheckMapKind[h.R, n.R]): ProjectionQuery[R, ProjectionSize[h.R]] =
+    inline def map[R](f: T => R)(using s: SelectItem[R], h: HasAgg[R], n: NotAgg[R], c: CheckMapKind[h.R, n.R], t: TransformKind[R, ColumnKind]): ProjectionQuery[t.R, ProjectionSize[h.R]] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(mappedItems, ast.copy(select = selectItems))
+        ProjectionQuery(t.tansform(mappedItems), ast.copy(select = selectItems))
 
     private inline def joinClause[JT, R](joinType: SqlJoinType)(using m: Mirror.ProductOf[JT]): JoinQuery[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]

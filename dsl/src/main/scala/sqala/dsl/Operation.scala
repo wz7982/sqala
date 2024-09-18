@@ -111,4 +111,4 @@ object KindOperation:
 
     given agg[A <: AggKind | AggOperationKind | GroupKind, B <: AggKind | AggOperationKind | GroupKind | ValueKind]: KindOperation[A, B]()
 
-    given nonAgg[A <: CommonKind | ColumnKind | WindowKind, B <: CommonKind | ColumnKind | WindowKind | ValueKind]: KindOperation[A, B]()
+    given nonAgg[A <: CommonKind | ColumnKind | WindowKind | DistinctKind, B <: CommonKind | ColumnKind | WindowKind | ValueKind | DistinctKind]: KindOperation[A, B]()
