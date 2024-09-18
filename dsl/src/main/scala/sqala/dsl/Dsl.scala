@@ -58,13 +58,13 @@ def exists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
 def notExists[T, S <: ResultSize](query: Query[T, S]): SubLinkItem[Boolean] =
     SubLinkItem(query.ast, SqlSubLinkType.NotExists)
 
-def all[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
+def all[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
 
-def any[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
+def any[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def some[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[Wrap[m.R, Option]] =
+def some[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
 private inline def aggregate[T, K <: ExprKind](name: String, expr: Expr[?, K], distinct: Boolean = false): Expr[T, AggKind] =
