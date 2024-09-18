@@ -11,6 +11,15 @@ trait Merge[T]:
     def asExpr(x: T): Expr[R, K]
 
 object Merge:
+    transparent inline given mergeExpr[T, EK <: ExprKind]: Merge[Expr[T, EK]] =
+        new Merge[Expr[T, EK]]:
+            type R = T
+
+            type K = ResultKind[EK, ValueKind]
+
+            def asExpr(x: Expr[T, EK]): Expr[R, K] =
+                x.asInstanceOf[Expr[R, K]]
+
     transparent inline given mergeTuple[H, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K]): Merge[Expr[H, EK] *: T] =
         new Merge[Expr[H, EK] *: T]:
             type R = H *: ToTuple[t.R]

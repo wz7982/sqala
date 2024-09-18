@@ -82,6 +82,16 @@ object Extension:
             def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] =
                 s.selectItems(item.toTuple, cursor)
 
+    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
+    transparent inline given mergeNamedTuple[N <: Tuple, V <: Tuple](using m: Merge[V]): Merge[NamedTuple[N, V]] =
+        new Merge[NamedTuple[N, V]]:
+            type R = m.R
+
+            type K = m.K
+
+            def asExpr(x: NamedTuple[N, V]): Expr[R, K] =
+                m.asExpr(x.toTuple)
+
     extension [T](table: Table[T])(using t: NamedTable[T])
         transparent inline def * : t.Fields =
             val columns = table.__metaData__.columnNames
