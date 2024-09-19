@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.dsl.CustomField
+import sqala.dsl.{CustomField, Json}
 
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}
@@ -72,6 +72,12 @@ object JdbcDecoder:
         override inline def decode(data: ResultSet, cursor: Int): LocalDateTime =
             LocalDateTime.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
 
+    given jsonDecoder: JdbcDecoder[Json] with
+        override inline def offset: Int = 1
+
+        override inline def decode(data: ResultSet, cursor: Int): Json =
+            Json(data.getString(cursor))
+
     given optionDecoder[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
         override inline def offset: Int = d.offset
 
@@ -91,10 +97,11 @@ object JdbcDecoder:
         override inline def decode(data: ResultSet, cursor: Int): H *: T =
             headDecoder.decode(data, cursor) *: tailDecoder.decode(data, cursor + headDecoder.offset)
 
-    given emptyTupleDecoder: JdbcDecoder[EmptyTuple] with
-        override inline def offset: Int = 0
+    given tuple1Decoder[H](using headDecoder: JdbcDecoder[H]): JdbcDecoder[H *: EmptyTuple] with
+        override inline def offset: Int = headDecoder.offset
 
-        override inline def decode(data: ResultSet, cursor: Int): EmptyTuple = EmptyTuple
+        override inline def decode(data: ResultSet, cursor: Int): H *: EmptyTuple =
+            headDecoder.decode(data, cursor) *: EmptyTuple
 
     inline given derived[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
         ${ productDecoderMacro[T] }

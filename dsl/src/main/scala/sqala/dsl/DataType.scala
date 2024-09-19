@@ -31,3 +31,11 @@ object DateTime:
     given localDateTimeDateTime: DateTime[LocalDateTime]()
 
     given optionDateTime[T: DateTime]: DateTime[Option[T]]()
+
+opaque type Json = String
+
+object Json:
+    def apply(value: String): Json = value
+
+    extension (x: Json)
+        def toString: String = x

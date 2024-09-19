@@ -38,5 +38,6 @@ object GroupingSets:
         override def asSqlExprs(x: H *: T): List[SqlExpr] =
             hi.asSqlExpr(x.head) :: ti.asSqlExprs(x.tail)
 
-    given emptyTupleGrouping: GroupingSets[EmptyTuple] with
-        override def asSqlExprs(x: EmptyTuple): List[SqlExpr] = Nil
+    given tuple1Grouping[H](using hi: GroupingSetsItem[H]): GroupingSets[H *: EmptyTuple] with
+        override def asSqlExprs(x: H *: EmptyTuple): List[SqlExpr] =
+            hi.asSqlExpr(x.head) :: Nil

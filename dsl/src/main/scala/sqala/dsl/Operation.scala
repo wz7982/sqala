@@ -18,8 +18,10 @@ object ComparableValue:
             val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
             Expr.Vector(head :: tail.items)
 
-    given emptyTupleAsExpr: ComparableValue[EmptyTuple] with
-        def asExpr(x: EmptyTuple): Expr[?, ?] = Expr.Vector(Nil)
+    given tuple1AsExpr[H](using h: AsSqlExpr[H]): ComparableValue[H *: EmptyTuple] with
+        def asExpr(x: H *: EmptyTuple): Expr[?, ?] =
+            val head = Expr.Literal(x.head, h)
+            Expr.Vector(head :: Nil)
 
 @implicitNotFound("Types ${A} and ${B} be cannot compared")
 trait CompareOperation[A, B]

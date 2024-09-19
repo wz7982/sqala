@@ -14,5 +14,6 @@ object Result:
         new Result[H *: T]:
             type R = hr.R *: ToTuple[tr.R]
 
-    transparent inline given emptyTupleResult: Result[EmptyTuple] = new Result[EmptyTuple]:
-        type R = EmptyTuple
+    transparent inline given tuple1Result[H](using hr: Result[H]): Result[H *: EmptyTuple] = 
+        new Result[H *: EmptyTuple]:
+            type R = hr.R *: EmptyTuple

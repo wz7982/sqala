@@ -29,7 +29,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         filter: Option[Expr[?, ?]] = None
     ) extends Expr[T, K]
     case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
-    case Vector[T, K <: CompositeKind | ValueKind](items: List[Expr[?, ?]]) extends Expr[T, K]
+    case Vector[T, K <: CompositeKind](items: List[Expr[?, ?]]) extends Expr[T, K]
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?, ?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]
@@ -398,35 +398,35 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         like("%" + value)
 
     @targetName("json")
-    inline def ->(n: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
+    inline def ->(n: Int): Expr[Option[Json], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, Json, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("json")
-    inline def ->(n: String): Expr[Option[String], ResultKind[K, ValueKind]] =
+    inline def ->(n: String): Expr[Option[Json], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, Json, Literal(n, summon[AsSqlExpr[String]]))
 
     @targetName("jsonText")
     inline def ->>(n: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("jsonText")
     inline def ->>(n: String): Expr[Option[String], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
 
 object Expr:

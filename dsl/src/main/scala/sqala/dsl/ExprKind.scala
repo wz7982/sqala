@@ -117,9 +117,9 @@ object HasAgg:
         new HasAgg[H *: T]:
             type R = ch.R && ct.R
 
-    transparent inline given emptyTupleHasAgg: HasAgg[EmptyTuple] =
-        new HasAgg[EmptyTuple]:
-            type R = true
+    transparent inline given tuple1HasAgg[H](using ch: HasAgg[H]): HasAgg[H *: EmptyTuple] =
+        new HasAgg[H *: EmptyTuple]:
+            type R = ch.R
 
 trait IsAggOrGroup[T]:
     type R <: Boolean
@@ -137,9 +137,9 @@ object IsAggOrGroup:
         new IsAggOrGroup[H *: T]:
             type R = ch.R && ct.R
 
-    transparent inline given emptyTupleHasAgg: IsAggOrGroup[EmptyTuple] =
-        new IsAggOrGroup[EmptyTuple]:
-            type R = true
+    transparent inline given tuple1HasAgg[H](using ch: IsAggOrGroup[H]): IsAggOrGroup[H *: EmptyTuple] =
+        new IsAggOrGroup[H *: EmptyTuple]:
+            type R = ch.R
 
 trait NotAgg[T]:
     type R <: Boolean
@@ -157,9 +157,9 @@ object NotAgg:
         new NotAgg[H *: T]:
             type R = ch.R && ct.R
 
-    transparent inline given emptyTupleNotAgg: NotAgg[EmptyTuple] =
-        new NotAgg[EmptyTuple]:
-            type R = true
+    transparent inline given tuple1NotAgg[H](using ch: NotAgg[H]): NotAgg[H *: EmptyTuple] =
+        new NotAgg[H *: EmptyTuple]:
+            type R = ch.R
 
 trait NotWindow[T]:
     type R <: Boolean
@@ -177,9 +177,9 @@ object NotWindow:
         new NotWindow[H *: T]:
             type R = ch.R && ct.R
 
-    transparent inline given emptyTupleNotWindow: NotWindow[EmptyTuple] =
-        new NotWindow[EmptyTuple]:
-            type R = true
+    transparent inline given tuple1NotWindow[H](using ch: NotWindow[H]): NotWindow[H *: EmptyTuple] =
+        new NotWindow[H *: EmptyTuple]:
+            type R = ch.R
 
 trait NotValue[T]:
     type R <: Boolean
@@ -197,9 +197,9 @@ object NotValue:
         new NotValue[H *: T]:
             type R = ch.R && ct.R
 
-    transparent inline given emptyTupleNotValue: NotValue[EmptyTuple] =
-        new NotValue[EmptyTuple]:
-            type R = true
+    transparent inline given tuple1NotValue[H](using ch: NotValue[H]): NotValue[H *: EmptyTuple] =
+        new NotValue[H *: EmptyTuple]:
+            type R = ch.R
 
 @implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
 trait CheckMapKind[IsAgg <: Boolean, NotAgg <: Boolean]
