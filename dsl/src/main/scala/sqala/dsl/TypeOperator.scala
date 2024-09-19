@@ -22,25 +22,22 @@ type InverseMap[T, F[_]] = T match
     case F[x] => x
 
 type CheckOverPartition[T] <: Boolean = T match
-    case x *: xs => CheckOverPartition[x] && CheckOverPartition[xs]
-    case EmptyTuple => true
-    case Expr[_, k] => k match
-        case SimpleKind => true
+    case Expr[_, k] *: xs => k match
+        case SimpleKind => CheckOverPartition[xs]
         case _ => false
+    case EmptyTuple => true
 
 type CheckOverOrder[T] <: Boolean = T match
-    case x *: xs => CheckOverOrder[x] && CheckOverOrder[xs]
-    case EmptyTuple => true
-    case OrderBy[_, k] => k match
-        case ColumnKind | CommonKind => true
+    case OrderBy[_, k] *: xs => k match
+        case ColumnKind | CommonKind => CheckOverOrder[xs]
         case _ => false
+    case EmptyTuple => true
 
 type CheckGrouping[T] <: Boolean = T match
-    case x *: xs => CheckGrouping[x] && CheckGrouping[xs]
-    case EmptyTuple => true
-    case Expr[_, k] => k match
-        case GroupKind => true
+    case Expr[_, k] *: xs => k match
+        case GroupKind => CheckGrouping[xs]
         case _ => false
+    case EmptyTuple => true
 
 type QuerySize[N <: Int] <: ResultSize = N match
     case 1 => ResultSize.OneRow
