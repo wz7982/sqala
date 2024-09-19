@@ -22,7 +22,8 @@ object ToOption:
         def toOption(x: H *: T): R =
             (h.toOption(x.head) *: t.toOption(x.tail).asInstanceOf[Tuple]).asInstanceOf[R]
 
-    transparent inline given emptyTupleToOption: ToOption[EmptyTuple] = new ToOption[EmptyTuple]:
-        type R = EmptyTuple
+    transparent inline given tuple1ToOption[H](using h: ToOption[H]): ToOption[H *: EmptyTuple] = new ToOption[H *: EmptyTuple]:
+        type R = h.R *: EmptyTuple
 
-        def toOption(x: EmptyTuple): R = x
+        def toOption(x: H *: EmptyTuple): R =
+            (h.toOption(x.head) *: EmptyTuple).asInstanceOf[R]

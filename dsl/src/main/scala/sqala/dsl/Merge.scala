@@ -6,7 +6,7 @@ import scala.annotation.implicitNotFound
 trait Merge[T]:
     type R
 
-    type K <: CompositeKind | ValueKind
+    type K <: CompositeKind
 
     def asExpr(x: T): Expr[R, K]
 
@@ -31,10 +31,12 @@ object Merge:
                 val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
                 Expr.Vector(head :: tail.items)
 
-    transparent inline given mergeEmptyTuple: Merge[EmptyTuple] =
-        new Merge[EmptyTuple]:
-            type R = EmptyTuple
+    transparent inline given mergeTuple1[H, EK <: ExprKind]: Merge[Expr[H, EK] *: EmptyTuple] =
+        new Merge[Expr[H, EK] *: EmptyTuple]:
+            type R = H *: EmptyTuple
 
-            type K = ValueKind
+            type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: EmptyTuple): Expr[R, K] = Expr.Vector(Nil)
+            def asExpr(x: Expr[H, EK] *: EmptyTuple): Expr[R, K] =
+                val head = x.head
+                Expr.Vector(head :: Nil)

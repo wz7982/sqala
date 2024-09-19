@@ -29,7 +29,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         filter: Option[Expr[?, ?]] = None
     ) extends Expr[T, K]
     case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
-    case Vector[T, K <: CompositeKind | ValueKind](items: List[Expr[?, ?]]) extends Expr[T, K]
+    case Vector[T, K <: CompositeKind](items: List[Expr[?, ?]]) extends Expr[T, K]
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Between[K <: CompositeKind](expr: Expr[?, ?], start: Expr[?, ?], end: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?, ?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]

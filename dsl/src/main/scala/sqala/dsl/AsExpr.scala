@@ -13,5 +13,5 @@ object AsExpr:
     given tupleAsExpr[H, T <: Tuple](using h: AsExpr[H], t: AsExpr[T]): AsExpr[H *: T] with
         def asExprs(x: H *: T): List[Expr[?, ?]] = h.asExprs(x.head) ++ t.asExprs(x.tail)
 
-    given emptyTupleAsExpr: AsExpr[EmptyTuple] with
-        def asExprs(x: EmptyTuple): List[Expr[?, ?]] = Nil
+    given tuple1AsExpr[H](using h: AsExpr[H]): AsExpr[H *: EmptyTuple] with
+        def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] = h.asExprs(x.head)

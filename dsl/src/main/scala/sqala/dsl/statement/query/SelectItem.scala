@@ -44,11 +44,14 @@ object SelectItem:
         def selectItems(item: H *: T, cursor: Int): List[SqlSelectItem.Item] =
             sh.selectItems(item.head, cursor) ++ st.selectItems(item.tail, cursor + sh.offset(item.head))
 
-    transparent inline given emptyTupleSelectItem: SelectItem[EmptyTuple] = new SelectItem[EmptyTuple]:
-        type R = EmptyTuple
+    transparent inline given tuple1SelectItem[H](using sh: SelectItem[H]): SelectItem[H *: EmptyTuple] = new SelectItem[H *: EmptyTuple]:
+        type R = sh.R *: EmptyTuple
 
-        def subQueryItems(item: EmptyTuple, cursor: Int, alias: String): R = EmptyTuple
+        def subQueryItems(item: H *: EmptyTuple, cursor: Int, alias: String): R =
+            val head = sh.subQueryItems(item.head, cursor, alias)
+            head *: EmptyTuple
 
-        def offset(item: EmptyTuple): Int = 0
+        def offset(item: H *: EmptyTuple): Int = sh.offset(item.head)
 
-        def selectItems(item: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] = Nil
+        def selectItems(item: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
+            sh.selectItems(item.head, cursor)
