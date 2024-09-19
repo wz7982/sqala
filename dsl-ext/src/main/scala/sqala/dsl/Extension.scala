@@ -5,6 +5,7 @@ import sqala.dsl.statement.query.SelectItem
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.nowarn
+import sqala.ast.statement.SqlSelectItem.Item
 
 object Extension:
     given namedTupleAsExpr[N <: Tuple, V <: Tuple](using a: AsExpr[V]): AsExpr[NamedTuple[N, V]] with
@@ -15,7 +16,7 @@ object Extension:
         new TransformKind[NamedTuple[N, V], TK]:
             type R = NamedTuple[N, ToTuple[t.R]]
 
-            def tansform(x: NamedTuple[N, V]): R = 
+            def tansform(x: NamedTuple[N, V]): R =
                 NamedTuple(t.tansform(x.toTuple).asInstanceOf[ToTuple[t.R]])
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
@@ -52,7 +53,7 @@ object Extension:
             type R = n.R
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using u: UnionOperation[LV, RV]): UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]] = 
+    transparent inline given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using u: UnionOperation[LV, RV]): UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]] =
         new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
             type R = NamedTuple[LN, ToTuple[u.R]]
 
@@ -62,7 +63,7 @@ object Extension:
             type R = NamedTuple[N, ToTuple[r.R]]
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleToOption[N <: Tuple, V <: Tuple](using t: ToOption[V]): ToOption[NamedTuple[N, V]] = 
+    transparent inline given namedTupleToOption[N <: Tuple, V <: Tuple](using t: ToOption[V]): ToOption[NamedTuple[N, V]] =
         new ToOption[NamedTuple[N, V]]:
             type R = NamedTuple[N, ToTuple[t.R]]
 
@@ -70,14 +71,17 @@ object Extension:
                 NamedTuple(t.toOption(x.toTuple).asInstanceOf[ToTuple[t.R]])
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleSelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[V]): SelectItem[NamedTuple[N, V]] = 
+    transparent inline given namedTupleSelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[V]): SelectItem[NamedTuple[N, V]] =
         new SelectItem[NamedTuple[N, V]]:
             type R = NamedTuple[N, ToTuple[s.R]]
+
+            def offset(item: NamedTuple[N, V]): Int = s.offset(item.toTuple)
 
             def subQueryItems(item: NamedTuple[N, V], cursor: Int, alias: String): R =
                 NamedTuple(s.subQueryItems(item.toTuple, cursor, alias).asInstanceOf[ToTuple[s.R]])
 
-            def offset(item: NamedTuple[N, V]): Int = s.offset(item.toTuple)
+            def subQuerySelectItems(item: NamedTuple[N, ToTuple[s.R]], cursor: Int): List[Item] =
+                s.subQuerySelectItems(item.toTuple.asInstanceOf[s.R], cursor)
 
             def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] =
                 s.selectItems(item.toTuple, cursor)

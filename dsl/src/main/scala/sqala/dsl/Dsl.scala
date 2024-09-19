@@ -9,7 +9,6 @@ import sqala.dsl.statement.query.*
 
 import java.util.Date
 import scala.annotation.targetName
-import scala.collection.mutable.ListBuffer
 import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.double.{<=, >=}
 import scala.compiletime.ops.int.>
@@ -313,18 +312,13 @@ inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.Product
 inline def query[Q, S <: ResultSize](q: Query[Q, S])(using qc: QueryContext, s: SelectItem[Q]): SelectQuery[s.R] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val selectItems = s.selectItems(q.queryItems, 0)
-    var tmpCursor = 0
-    val tmpItems = ListBuffer[SqlSelectItem.Item]()
-    for field <- selectItems.map(_.alias.get) do
-        tmpItems.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), field), Some(s"c${tmpCursor}")))
-        tmpCursor += 1
-    val queryItems = tmpItems.toList
+    val subQueryItems = s.subQueryItems(q.queryItems, 0, aliasName)
+    val subQuerySelectItems = s.subQuerySelectItems(subQueryItems, 0)
     val ast = SqlQuery.Select(
-        select = queryItems,
+        select = subQuerySelectItems,
         from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
-    SelectQuery(s.subQueryItems(q.queryItems, 0, aliasName), s.offset(q.queryItems), ast)
+    SelectQuery(subQueryItems, s.offset(q.queryItems), ast)
 
 inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T]): SelectQuery[a.R] =
     val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
@@ -343,7 +337,7 @@ inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryCon
     val newTable = Table[T](aliasName, aliasName, TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get)))
     SelectQuery(newTable.asInstanceOf[a.R], newTable.__offset__, ast)
 
-def withRecursive[Q, V <: Tuple](query: Query[Q, ?])(f: Option[WithContext] ?=> Query[Q, ?] => Query[Q, ?])(using SelectItem[Q]): WithRecursive[Q] =
+def withRecursive[Q](query: Query[Q, ?])(f: Query[Q, ?] => Query[Q, ?])(using SelectItem[Q]): WithRecursive[Q] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]

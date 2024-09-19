@@ -12,7 +12,6 @@ import sqala.printer.Dialect
 import sqala.util.queryToString
 
 import scala.Tuple.Append
-import scala.collection.mutable.ListBuffer
 import scala.compiletime.{erasedValue, error}
 import scala.deriving.Mirror
 
@@ -48,7 +47,7 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long, ColumnKind], ResultSize.OneRow] = 
+    def size: Query[Expr[Long, ColumnKind], ResultSize.OneRow] =
         val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
@@ -190,88 +189,53 @@ class SelectQuery[T](
         val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
             SqlTable.JoinTable(
                 i,
-                joinType, 
+                joinType,
                 SqlTable.IdentTable(joinTableName, Some(SqlTableAlias(joinAliasName))),
                 None
             )
         JoinQuery(tables, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ selectItems, from = sqlTable.toList))
 
-    private def joinQueryClause[Q, S <: ResultSize, R](joinType: SqlJoinType, query: Query[Q, S])(using s: SelectItem[Q], c: Option[WithContext]): JoinQuery[R] =
-        q.tableIndex += 1
-        val aliasName = c.map(_.alias).getOrElse(s"t${q.tableIndex}")
-        val newItems = (
-            items match
-                case x: Tuple => x :* s.subQueryItems(query.queryItems, 0, aliasName)
-                case _ => Tuple1(items) :* s.subQueryItems(query.queryItems, 0, aliasName)
-        ).asInstanceOf[R]
-        val selectItems = s.selectItems(query.queryItems, 0)
-        var tmpCursor = columnCursor
-        val tmpItems = ListBuffer[SqlSelectItem.Item]()
-        for field <- selectItems.map(_.alias.get) do
-            tmpItems.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), field), Some(s"c${tmpCursor}")))
-            tmpCursor += 1
-        val queryItems = tmpItems.toList
-        val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
-                i,
-                joinType,
-                c match
-                    case Some(WithContext(alias)) =>
-                        SqlTable.IdentTable(alias, None)
-                    case None =>
-                        SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(aliasName))
-                ,
-                None
-            )
-        JoinQuery(newItems, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ queryItems, from = sqlTable.toList))
-
-    private def joinLateralQueryClause[Q, S <: ResultSize, R](joinType: SqlJoinType, f: T => Query[Q, S])(using s: SelectItem[Q]): JoinQuery[R] =
+    private def joinQueryClause[Q, S <: ResultSize, R](joinType: SqlJoinType, query: Query[Q, S], lateral: Boolean = false)(using s: SelectItem[Q]): JoinQuery[R] =
         q.tableIndex += 1
         val aliasName = s"t${q.tableIndex}"
-        val query = f(items)
         val newItems = (
             items match
                 case x: Tuple => x :* s.subQueryItems(query.queryItems, 0, aliasName)
                 case _ => Tuple1(items) :* s.subQueryItems(query.queryItems, 0, aliasName)
         ).asInstanceOf[R]
         val selectItems = s.selectItems(query.queryItems, 0)
-        var tmpCursor = columnCursor
-        val tmpItems = ListBuffer[SqlSelectItem.Item]()
-        for field <- selectItems.map(_.alias.get) do
-            tmpItems.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), field), Some(s"c${tmpCursor}")))
-            tmpCursor += 1
-        val queryItems = tmpItems.toList
+        val subQuerySelectItems = s.subQuerySelectItems(s.subQueryItems(query.queryItems, 0, aliasName), 0)
         val sqlTable: Option[SqlTable.JoinTable] = ast.from.headOption.map: i =>
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(query.ast, true, SqlTableAlias(aliasName)),
+                SqlTable.SubQueryTable(query.ast, lateral, SqlTableAlias(aliasName)),
                 None
             )
-        JoinQuery(newItems, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ queryItems, from = sqlTable.toList))
+        JoinQuery(newItems, sqlTable, columnCursor + selectItems.size, ast.copy(select = ast.select ++ subQuerySelectItems, from = sqlTable.toList))
 
     inline def join[JT](using a: AsTable[JT], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[T], a.R]] =
         joinClause[JT, Append[ToTuple[T], a.R]](SqlJoinType.InnerJoin)
 
-    inline def join[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[T], s.R]] =
+    inline def join[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q]): JoinQuery[Append[ToTuple[T], s.R]] =
         joinQueryClause[Q, S, Append[ToTuple[T], s.R]](SqlJoinType.InnerJoin, query)
 
     inline def joinLateral[Q, S <: ResultSize](f: T => Query[Q, S])(using s: SelectItem[Q]): JoinQuery[Append[ToTuple[T], s.R]] =
-        joinLateralQueryClause[Q, S, Append[ToTuple[T], s.R]](SqlJoinType.InnerJoin, f)
+        joinQueryClause[Q, S, Append[ToTuple[T], s.R]](SqlJoinType.InnerJoin, f(items), true)
 
     inline def leftJoin[JT](using a: AsTable[JT])(using o: ToOption[a.R], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[T], o.R]] =
         joinClause[JT, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin)
 
-    inline def leftJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q])(using o: ToOption[s.R], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[T], o.R]] =
+    inline def leftJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q])(using o: ToOption[s.R]): JoinQuery[Append[ToTuple[T], o.R]] =
         joinQueryClause[Q, S, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin, query)
 
     inline def leftJoinLateral[Q, S <: ResultSize](f: T => Query[Q, S])(using s: SelectItem[Q])(using o: ToOption[s.R]): JoinQuery[Append[ToTuple[T], o.R]] =
-        joinLateralQueryClause[Q, S, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin, f)
+        joinQueryClause[Q, S, Append[ToTuple[T], o.R]](SqlJoinType.LeftJoin, f(items), true)
 
     inline def rightJoin[JT](using a: AsTable[JT], o: ToOption[T], m: Mirror.ProductOf[JT]): JoinQuery[Append[ToTuple[o.R], a.R]] =
         joinClause[JT, Append[ToTuple[o.R], a.R]](SqlJoinType.RightJoin)
 
-    inline def rightJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q], o: ToOption[T], c: Option[WithContext] = None): JoinQuery[Append[ToTuple[o.R], s.R]] =
+    inline def rightJoin[Q, S <: ResultSize](query: Query[Q, S])(using s: SelectItem[Q], o: ToOption[T]): JoinQuery[Append[ToTuple[o.R], s.R]] =
         joinQueryClause[Q, S, Append[ToTuple[o.R], s.R]](SqlJoinType.RightJoin, query)
 
     def groupBy[G](f: T => G)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], t: TransformKind[G, GroupKind]): GroupByQuery[(t.R, T)] =
@@ -291,7 +255,7 @@ class SelectQuery[T](
 
     inline def groupByGroupingSets[G, S](f: T => G)(using t: TransformKind[G, GroupKind])(g: t.R => S)(using a: AsExpr[G], na: NotAgg[G], nw: NotWindow[G], nv: NotValue[G], c: CheckGroupByKind[na.R, nw.R, nv.R], to: ToOption[t.R], s: GroupingSets[S]): GroupByQuery[(to.R, T)] =
         inline erasedValue[CheckGrouping[S]] match
-            case _: false => 
+            case _: false =>
                 error("For GROUPING SETS, expressions must appear in grouping list.")
             case _: true =>
         val groupByItems = f(items)
