@@ -50,7 +50,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("eq")
     inline def ==[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -64,7 +64,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("eq")
     inline def ==[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -82,7 +82,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ne")
     inline def !=[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -96,7 +96,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ne")
     inline def !=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -114,7 +114,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("gt")
     inline def >[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -128,7 +128,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("gt")
     inline def >[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -146,7 +146,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ge")
     inline def >=[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -160,7 +160,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("ge")
     inline def >=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -178,7 +178,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("lt")
     inline def <[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -192,7 +192,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("lt")
     inline def <[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -210,7 +210,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("le")
     inline def <=[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using AsExpr[Q], CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -224,7 +224,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("le")
     inline def <=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -241,7 +241,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     inline def in[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -258,7 +258,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     inline def notIn[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q])(using CompareOperation[T, m.R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
-            case _: AggKind => 
+            case _: AggKind =>
                 error("Aggregate function cannot be compared with subquery.")
             case _: AggOperationKind =>
                 error("Aggregate function cannot be compared with subquery.")
@@ -334,21 +334,21 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("and")
     inline def &&[R, RK <: ExprKind](that: Expr[R, RK])(using KindOperation[K, RK]): Expr[Boolean, ResultKind[K, RK]] =
         inline (erasedValue[T], erasedValue[R]) match
-            case (_: Boolean, _: Boolean) => 
+            case (_: Boolean, _: Boolean) =>
             case _ => error("The parameters for AND must be of Boolean type.")
         Binary(this, And, that)
 
     @targetName("or")
     inline def ||[R, RK <: ExprKind](that: Expr[R, RK])(using KindOperation[K, RK]): Expr[Boolean, ResultKind[K, RK]] =
         inline (erasedValue[T], erasedValue[R]) match
-            case (_: Boolean, _: Boolean) => 
+            case (_: Boolean, _: Boolean) =>
             case _ => error("The parameters for OR must be of Boolean type.")
         Binary(this, Or, that)
 
     @targetName("not")
     inline def unary_! : Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: Boolean => 
+            case _: Boolean =>
             case _ => error("The parameters for NOT must be of Boolean type.")
         Unary(this, Not)
 
@@ -393,7 +393,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     inline def startsWith(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
         like(value + "%")
-    
+
     inline def endsWith(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
         like("%" + value)
 
@@ -486,7 +486,7 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        inline def filter[RK <: ExprKind](cond: Expr[Boolean, RK]): Expr[T, AggKind] = 
+        inline def filter[RK <: ExprKind](cond: Expr[Boolean, RK]): Expr[T, AggKind] =
             inline erasedValue[RK] match
                 case _: SimpleKind =>
                 case _ => error("The parameters for FILTER cannot contain aggregate functions or window functions.")
@@ -495,20 +495,20 @@ object Expr:
 
         inline def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None): Expr[T, WindowKind] =
             inline erasedValue[CheckOverPartition[P]] match
-                case _: false => 
+                case _: false =>
                     error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
                 case _ =>
             inline erasedValue[CheckOverOrder[O]] match
-                case _: false => 
+                case _: false =>
                     error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
                 case _ =>
-            val partition = partitionBy match
+            val partition = inline partitionBy match
                 case e: Expr[?, ?] => e :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-            val order = orderBy match
+            val order = inline orderBy match
                 case o: OrderBy[?, ?] => o :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-            val frameClause = frame match
+            val frameClause = inline frame match
                 case o: Option[?] => o
                 case o: SqlWindowFrame => Some(o)
             Window(expr, partition, order, frameClause)
@@ -541,17 +541,17 @@ case class WindowFunc[T](
 ):
     inline def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None): Expr[T, WindowKind] =
         inline erasedValue[CheckOverPartition[P]] match
-            case _: false => 
+            case _: false =>
                 error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
             case _ =>
         inline erasedValue[CheckOverOrder[O]] match
-            case _: false => 
+            case _: false =>
                 error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
             case _ =>
-        val partition = partitionBy match
+        val partition = inline partitionBy match
             case e: Expr[?, ?] => e :: Nil
             case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-        val order = orderBy match
+        val order = inline orderBy match
             case o: OrderBy[?, ?] => o :: Nil
             case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
         val frameClause = frame match
