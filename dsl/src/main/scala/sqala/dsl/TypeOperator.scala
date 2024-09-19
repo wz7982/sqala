@@ -2,8 +2,6 @@ package sqala.dsl
 
 import sqala.dsl.statement.query.ResultSize
 
-import scala.compiletime.ops.boolean.&&
-
 type Wrap[T, F[_]] = T match
     case F[t] => T
     case _ => F[T]
@@ -22,22 +20,34 @@ type InverseMap[T, F[_]] = T match
     case F[x] => x
 
 type CheckOverPartition[T] <: Boolean = T match
+    case Expr[_, k] => k match
+        case SimpleKind => true
+        case _ => false
     case Expr[_, k] *: xs => k match
         case SimpleKind => CheckOverPartition[xs]
         case _ => false
     case EmptyTuple => true
 
 type CheckOverOrder[T] <: Boolean = T match
+    case OrderBy[_, k] => k match
+        case ColumnKind | CommonKind => true
+        case _ => false
     case OrderBy[_, k] *: xs => k match
         case ColumnKind | CommonKind => CheckOverOrder[xs]
         case _ => false
     case EmptyTuple => true
 
 type CheckGrouping[T] <: Boolean = T match
+    case Expr[_, k] => k match
+        case GroupKind => true
+        case _ => false
+    case Expr[_, k] *: EmptyTuple => k match
+        case GroupKind => true
+        case _ => false
     case Expr[_, k] *: xs => k match
         case GroupKind => CheckGrouping[xs]
         case _ => false
-    case EmptyTuple => true
+    case _ => false
 
 type QuerySize[N <: Int] <: ResultSize = N match
     case 1 => ResultSize.OneRow

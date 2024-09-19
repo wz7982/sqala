@@ -69,7 +69,7 @@ def some[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem
 
 private inline def aggregate[T, K <: ExprKind](name: String, expr: Expr[?, K], distinct: Boolean = false): Expr[T, AggKind] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
@@ -99,7 +99,7 @@ inline def min[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecim
 
 inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
@@ -112,7 +112,7 @@ inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
 
 inline def percentileDist[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
@@ -129,32 +129,28 @@ def denseRank(): WindowFunc[Option[Long]] = WindowFunc("DENSE_RANK", Nil)
 
 def rowNumber(): WindowFunc[Option[Long]] = WindowFunc("ROW_NUMBER", Nil)
 
-inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
+inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
         case _: WindowKind =>
             error("Aggregate function calls cannot contain window function calls.")
         case _ =>
-            val defaultExpr = default match
-                case Some(v) => Expr.Literal(v, a)
-                case _ => Expr.Null
+            val defaultExpr = Expr.Literal(default, a)
             WindowFunc("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-inline def lead[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Unwrap[T, Option]]): WindowFunc[Wrap[T, Option]] =
+inline def lead[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
         case _: WindowKind =>
             error("Aggregate function calls cannot contain window function calls.")
         case _ =>
-            val defaultExpr = default match
-                case Some(v) => Expr.Literal(v, a)
-                case _ => Expr.Null
+            val defaultExpr = Expr.Literal(default, a)
             WindowFunc("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
 inline def ntile(n: Int): WindowFunc[Int] =
@@ -166,7 +162,7 @@ inline def ntile(n: Int): WindowFunc[Int] =
 
 inline def firstValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
@@ -176,7 +172,7 @@ inline def firstValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Op
 
 inline def lastValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
-        case _: AggKind => 
+        case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
         case _: AggOperationKind =>
             error("Aggregate function calls cannot be nested.")
@@ -247,7 +243,7 @@ inline def grouping[G](items: G): Expr[Int, AggOperationKind] =
         case _: false =>
             error("The parameter of GROUPING must be a grouping expression.")
         case _ =>
-            val groupingItems = items match
+            val groupingItems = inline items match
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
                 case e: Expr[?, ?] => e :: Nil
             Expr.Grouping(groupingItems)
