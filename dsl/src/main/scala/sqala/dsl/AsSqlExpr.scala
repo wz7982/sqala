@@ -56,6 +56,9 @@ object AsSqlExpr:
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             SqlExpr.StringLiteral(formatter.format(x))
 
+    given jsonAsSqlExpr: AsSqlExpr[Json] with
+        override def asSqlExpr(x: Json): SqlExpr = SqlExpr.StringLiteral(x.toString)
+
     given optionAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Option[T]] with
         override def asSqlExpr(x: Option[T]): SqlExpr = x match
             case None => SqlExpr.Null

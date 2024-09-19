@@ -398,35 +398,35 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         like("%" + value)
 
     @targetName("json")
-    inline def ->(n: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
+    inline def ->(n: Int): Expr[Option[Json], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, Json, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("json")
-    inline def ->(n: String): Expr[Option[String], ResultKind[K, ValueKind]] =
+    inline def ->(n: String): Expr[Option[Json], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, Json, Literal(n, summon[AsSqlExpr[String]]))
 
     @targetName("jsonText")
     inline def ->>(n: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("jsonText")
     inline def ->>(n: String): Expr[Option[String], ResultKind[K, ValueKind]] =
         inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The first parameters for -> must be of String type.")
+            case _: Json =>
+            case _: Option[Json] =>
+            case _ => error("The first parameters for -> must be of Json type.")
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
 
 object Expr:
