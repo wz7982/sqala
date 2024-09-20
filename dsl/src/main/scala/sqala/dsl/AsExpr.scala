@@ -1,5 +1,6 @@
 package sqala.dsl
 
+import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions")
@@ -15,3 +16,6 @@ object AsExpr:
 
     given tuple1AsExpr[X, K <: ExprKind](using h: AsExpr[Expr[X, K]]): AsExpr[Expr[X, K] *: EmptyTuple] with
         def asExprs(x: Expr[X, K] *: EmptyTuple): List[Expr[?, ?]] = h.asExprs(x.head)
+
+    given namedTupleAsExpr[N <: Tuple, V <: Tuple](using a: AsExpr[V]): AsExpr[NamedTuple[N, V]] with
+        def asExprs(x: NamedTuple[N, V]): List[Expr[?, ?]] = a.asExprs(x.toTuple)

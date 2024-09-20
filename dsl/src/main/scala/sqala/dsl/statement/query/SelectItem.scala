@@ -2,56 +2,73 @@ package sqala.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
-import sqala.dsl.{Expr, ExprKind}
+import sqala.dsl.*
 
+import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
-import sqala.dsl.ColumnKind
-import sqala.dsl.ToTuple
+import scala.collection.mutable.ListBuffer
 
 @implicitNotFound("Type ${T} cannot be converted to SELECT items")
 trait SelectItem[T]:
-    type R
-
-    def subQueryItems(item: T, cursor: Int, alias: String): R
-
     def offset(item: T): Int
 
     def selectItems(item: T, cursor: Int): List[SqlSelectItem.Item]
 
 object SelectItem:
-    transparent inline given exprSelectItem[T, K <: ExprKind]: SelectItem[Expr[T, K]] = new SelectItem[Expr[T, K]]:
-        type R = Expr[T, ColumnKind]
-
-        def subQueryItems(item: Expr[T, K], cursor: Int, alias: String): R =
-            Expr.Column(alias, s"c${cursor}")
-
+    given exprSelectItem[T, K <: ExprKind]: SelectItem[Expr[T, K]] with
         def offset(item: Expr[T, K]): Int = 1
 
-        def selectItems(item: Expr[T, K], cursor: Int): List[SqlSelectItem.Item] = 
+        def selectItems(item: Expr[T, K], cursor: Int): List[SqlSelectItem.Item] =
             SqlSelectItem.Item(item.asSqlExpr, Some(s"c${cursor}")) :: Nil
 
-    transparent inline given tupleSelectItem[X, K <: ExprKind, T <: Tuple](using sh: SelectItem[Expr[X, K]], st: SelectItem[T]): SelectItem[Expr[X, K] *: T] = new SelectItem[Expr[X, K] *: T]:
-        type R = sh.R *: ToTuple[st.R]
+    given tableSelectItem[T <: Table[?]]: SelectItem[T] with
+        override def offset(item: T): Int = item.__metaData__.fieldNames.size
 
-        def subQueryItems(item: Expr[X, K] *: T, cursor: Int, alias: String): R =
-            val head = sh.subQueryItems(item.head, cursor, alias)
-            val tail = st.subQueryItems(item.tail, cursor + sh.offset(item.head), alias) match
-                case x: Tuple => x
-            (head *: tail).asInstanceOf[R]
+        override def selectItems(item: T, cursor: Int): List[SqlSelectItem.Item] =
+            var tmpCursor = cursor
+            val items = ListBuffer[SqlSelectItem.Item]()
+            for field <- item.__metaData__.columnNames do
+                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__aliasName__), field), Some(s"c${tmpCursor}")))
+                tmpCursor += 1
+            items.toList
 
-        def offset(item: Expr[X, K] *: T): Int = sh.offset(item.head) + st.offset(item.tail)
+    given subQuerySelectItem[N <: Tuple, V <: Tuple]: SelectItem[SubQuery[N, V]] with
+        override def offset(item: SubQuery[N, V]): Int = item.__columnSize__
 
-        def selectItems(item: Expr[X, K] *: T, cursor: Int): List[SqlSelectItem.Item] =
+        override def selectItems(item: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Item] =
+            var tmpCursor = cursor
+            val items = ListBuffer[SqlSelectItem.Item]()
+            for index <- (0 until offset(item)) do
+                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}")))
+                tmpCursor += 1
+            items.toList
+
+    given tupleSelectItem[H, T <: Tuple](using sh: SelectItem[H], st: SelectItem[T]): SelectItem[H *: T] with
+        def offset(item: H *: T): Int = sh.offset(item.head) + st.offset(item.tail)
+
+        def selectItems(item: H *: T, cursor: Int): List[SqlSelectItem.Item] =
             sh.selectItems(item.head, cursor) ++ st.selectItems(item.tail, cursor + sh.offset(item.head))
 
-    transparent inline given tuple1SelectItem[X, K <: ExprKind](using sh: SelectItem[Expr[X, K]]): SelectItem[Expr[X, K] *: EmptyTuple] = new SelectItem[Expr[X, K] *: EmptyTuple]:
-        type R = sh.R *: EmptyTuple
+    given tuple1SelectItem[H](using sh: SelectItem[H]): SelectItem[H *: EmptyTuple] with
+        def offset(item: H *: EmptyTuple): Int = sh.offset(item.head)
 
-        def subQueryItems(item: Expr[X, K] *: EmptyTuple, cursor: Int, alias: String): R =
-            val head = sh.subQueryItems(item.head, cursor, alias)
-            head *: EmptyTuple
-
-        def offset(item: Expr[X, K] *: EmptyTuple): Int = sh.offset(item.head)
-
-        def selectItems(item: Expr[X, K] *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(item: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
             sh.selectItems(item.head, cursor)
+
+    given namedTupleSelectItem[N <: Tuple, V <: Tuple](using s: SelectItem[V]): SelectItem[NamedTuple[N, V]] with
+        def offset(item: NamedTuple[N, V]): Int = s.offset(item.toTuple)
+
+        def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] = 
+            s.selectItems(item.toTuple, cursor)
+
+@implicitNotFound("Type ${T} cannot be converted to SELECT items")
+trait SelectItemAsExpr[T]
+
+object SelectItemAsExpr:
+    given exprAsExpr[T, K <: ExprKind](using AsSqlExpr[T]): SelectItemAsExpr[Expr[T, K]]()
+    
+    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using h: SelectItemAsExpr[Expr[X, K]], t: SelectItemAsExpr[T], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: T]()
+
+    given tuple1AsExpr[X, K <: ExprKind](using h: SelectItemAsExpr[Expr[X, K]], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
+
+    given namedTupleAsExpr[N <: Tuple, V <: Tuple](using SelectItemAsExpr[V]): SelectItemAsExpr[NamedTuple[N, V]]()

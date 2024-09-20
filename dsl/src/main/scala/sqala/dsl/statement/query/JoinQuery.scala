@@ -10,10 +10,9 @@ import scala.compiletime.{erasedValue, error}
 class JoinQuery[T](
     private[sqala] val tables: T,
     private[sqala] val table: Option[SqlTable.JoinTable],
-    private[sqala] val columnCursor: Int,
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    inline def on[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def on[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
         inline erasedValue[K] match
             case _: AggKind => error("Aggregate functions are not allowed in ON.")
             case _: AggOperationKind => error("Aggregate functions are not allowed in ON.")
@@ -21,12 +20,12 @@ class JoinQuery[T](
             case _: SimpleKind =>
         val sqlCondition = f(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
-        SelectQuery(tables, columnCursor, ast.copy(from = sqlTable.toList))
+        SelectQuery(tables, ast.copy(from = sqlTable.toList))
 
-    inline def apply[K <: ExprKind](f: T => Expr[Boolean, K]): SelectQuery[T] = on(f)
+    inline def apply[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] = on(f)
 
-    def using[E](f: T => Expr[E, ColumnKind]): SelectQuery[T] =
+    def using[E](f: QueryContext ?=> T => Expr[E, ColumnKind]): SelectQuery[T] =
         val sqlCondition = f(tables) match
             case Expr.Column(_, columnName) => SqlExpr.Column(None, columnName)
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.Using(sqlCondition :: Nil))))
-        SelectQuery(tables, columnCursor, ast.copy(from = sqlTable.toList))
+        SelectQuery(tables, ast.copy(from = sqlTable.toList))
