@@ -9,14 +9,14 @@ class GroupByQuery[T](
     private[sqala] val items: T,
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    inline def having[K <: ExprKind](f: T => Expr[Boolean, K]): GroupByQuery[T] =
+    inline def having[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): GroupByQuery[T] =
         inline erasedValue[K] match
             case _: WindowKind => error("Window functions are not allowed in HAVING.")
             case _ =>
         val sqlCondition = f(items).asSqlExpr
         GroupByQuery(items, ast.addHaving(sqlCondition))
 
-    inline def sortBy[O, K <: ExprKind](f: T => OrderBy[O, K]): GroupByQuery[T] =
+    inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): GroupByQuery[T] =
         inline erasedValue[K] match
             case _: AggKind =>
             case _: AggOperationKind =>
@@ -29,7 +29,7 @@ class GroupByQuery[T](
         val sqlOrderBy = orderBy.asSqlOrderBy
         new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    def map[R](f: T => R)(using s: SelectItem[R], a: IsAggOrGroup[R], ck: CheckGroupMapKind[a.R], t: TransformKind[R, ColumnKind]): ProjectionQuery[t.R, ResultSize.ManyRows] =
+    def map[R](f: QueryContext ?=> T => R)(using s: SelectItem[R], a: SelectItemAsExpr[R], i: IsAggOrGroup[R], ck: CheckGroupMapKind[i.R]): ProjectionQuery[R, ResultSize.ManyRows] =
         val mappedItems = f(items)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(t.tansform(mappedItems), ast.copy(select = selectItems))
+        ProjectionQuery(mappedItems, ast.copy(select = selectItems))

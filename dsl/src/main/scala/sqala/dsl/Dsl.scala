@@ -8,6 +8,7 @@ import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
 import java.util.Date
+import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.&&
 import scala.compiletime.ops.double.{<=, >=}
@@ -242,7 +243,7 @@ inline def grouping[G](items: G): Expr[Int, AggOperationKind] =
         case _: false =>
             error("The parameter of GROUPING must be a grouping expression.")
         case _ =>
-            val groupingItems = inline items match
+            val groupingItems = items match
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
                 case e: Expr[?, ?] => e :: Nil
             Expr.Grouping(groupingItems)
@@ -300,33 +301,33 @@ def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
 
-inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T]): SelectQuery[a.R] =
+inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
-    val ast = SqlQuery.Select(select = table.__selectItems__(0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
-    SelectQuery(table.asInstanceOf[a.R], table.__offset__, ast)
+    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
+    SelectQuery(table.asInstanceOf[a.R], ast)
 
-inline def query[Q, S <: ResultSize](q: Query[Q, S])(using qc: QueryContext, s: SelectItem[Q]): SelectQuery[s.R] =
+inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](q: Query[NamedTuple[N, V], S])(using t: TransformKind[V, ColumnKind])(using s: SelectItem[SubQuery[N, ToTuple[t.R]]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, ToTuple[t.R]]] =
+    given qc: QueryContext = q.qc
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val subQueryItems = s.subQueryItems(q.queryItems, 0, aliasName)
-    val subQuerySelectItems = s.subQuerySelectItems(subQueryItems, 0)
+    val innerQuery = SubQuery[N, ToTuple[t.R]](aliasName, sq.offset(q.queryItems))
     val ast = SqlQuery.Select(
-        select = subQuerySelectItems,
+        select = s.selectItems(innerQuery, 0),
         from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
-    SelectQuery(subQueryItems, s.offset(q.queryItems), ast)
+    SelectQuery(innerQuery, ast)
 
-inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T]): SelectQuery[a.R] =
+inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
     val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
-    val selectItems: List[SqlSelectItem.Item] = table.__selectItems__(0).map: i =>
+    val selectItems: List[SqlSelectItem.Item] = s.selectItems(table, 0).map: i =>
         SqlSelectItem.Item(SqlExpr.Column(Some(aliasName), i.alias.get), i.alias)
     val exprList = list.map: datum =>
         instances.zip(datum.productIterator).map: (i, v) =>
@@ -335,9 +336,9 @@ inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryCon
     val tableAlias = SqlTableAlias(aliasName, selectItems.map(_.alias.get))
     val ast = SqlQuery.Select(select = selectItems, from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil)
     val newTable = Table[T](aliasName, aliasName, TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get)))
-    SelectQuery(newTable.asInstanceOf[a.R], newTable.__offset__, ast)
+    SelectQuery(newTable.asInstanceOf[a.R], ast)
 
-def withRecursive[Q](query: Query[Q, ?])(f: Query[Q, ?] => Query[Q, ?])(using SelectItem[Q]): WithRecursive[Q] =
+def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using sq: SelectItem[SubQuery[N, V]], s: SelectItem[V], qc: QueryContext): WithRecursive[NamedTuple[N, V]] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]

@@ -1,9 +1,7 @@
 package sqala.dsl
 
-import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.SqlSelectItem
-
-import scala.collection.mutable.ListBuffer
+import scala.NamedTuple.NamedTuple
+import scala.annotation.nowarn
 
 case class Table[T](
     private[sqala] __tableName__ : String, 
@@ -14,12 +12,26 @@ case class Table[T](
         val columnMap = __metaData__.fieldNames.zip(__metaData__.columnNames).toMap
         Expr.Column(__aliasName__, columnMap(name))
     
-    private[sqala] def __offset__ : Int = __metaData__.fieldNames.size
+object Table:
+    extension [T](table: Table[T])(using t: NamedTable[T])
+        transparent inline def * : t.Fields =
+            val columns = table.__metaData__.columnNames
+                .map(n => Expr.Column(table.__aliasName__, n))
+            val columnTuple = Tuple.fromArray(columns.toArray)
+            NamedTuple(columnTuple).asInstanceOf[t.Fields]
 
-    private[sqala] def __selectItems__(cursor: Int): List[SqlSelectItem.Item] =
-        var tmpCursor = cursor
-        val items = ListBuffer[SqlSelectItem.Item]()
-        for field <- __metaData__.columnNames do
-            items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(__aliasName__), field), Some(s"c${tmpCursor}")))
-            tmpCursor += 1
-        items.toList
+trait NamedTable[T]:
+    type Fields
+
+object NamedTable:
+    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
+    transparent inline given table[T]: NamedTable[T] =
+        new NamedTable[T]:
+            type Fields =
+                NamedTuple[
+                    NamedTuple.Names[NamedTuple.From[Unwrap[T, Option]]],
+                    Tuple.Map[
+                        NamedTuple.DropNames[NamedTuple.From[Unwrap[T, Option]]],
+                        [t] =>> MapField[t, T]
+                    ]
+                ]

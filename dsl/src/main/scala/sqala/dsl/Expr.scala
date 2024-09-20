@@ -502,13 +502,13 @@ object Expr:
                 case _: false =>
                     error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
                 case _ =>
-            val partition = inline partitionBy match
+            val partition = partitionBy match
                 case e: Expr[?, ?] => e :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-            val order = inline orderBy match
+            val order = orderBy match
                 case o: OrderBy[?, ?] => o :: Nil
                 case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-            val frameClause = inline frame match
+            val frameClause = frame match
                 case o: Option[?] => o
                 case o: SqlWindowFrame => Some(o)
             Window(expr, partition, order, frameClause)
@@ -548,10 +548,10 @@ case class WindowFunc[T](
             case _: false =>
                 error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
             case _ =>
-        val partition = inline partitionBy match
+        val partition = partitionBy match
             case e: Expr[?, ?] => e :: Nil
             case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-        val order = inline orderBy match
+        val order = orderBy match
             case o: OrderBy[?, ?] => o :: Nil
             case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
         val frameClause = frame match

@@ -2,6 +2,8 @@ package sqala.dsl
 
 import sqala.dsl.statement.query.ResultSize
 
+import scala.compiletime.ops.int.S
+
 type Wrap[T, F[_]] = T match
     case F[t] => T
     case _ => F[T]
@@ -18,6 +20,14 @@ type ToTuple[T] <: Tuple = T match
 type InverseMap[T, F[_]] = T match
     case x *: xs => Tuple.InverseMap[x *: xs, F]
     case F[x] => x
+
+type MapField[X, T] = T match
+    case Option[_] => Expr[Wrap[X, Option], ColumnKind]
+    case _ => Expr[X, ColumnKind]
+
+type Index[T <: Tuple, X, N <: Int] <: Int = T match
+    case X *: xs => N
+    case x *: xs => Index[xs, X, S[N]]
 
 type CheckOverPartition[T] <: Boolean = T match
     case Expr[_, k] => k match

@@ -5,6 +5,7 @@ import sqala.dsl.{CustomField, Json}
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Date
+import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.quoted.*
@@ -102,6 +103,12 @@ object JdbcDecoder:
 
         override inline def decode(data: ResultSet, cursor: Int): H *: EmptyTuple =
             headDecoder.decode(data, cursor) *: EmptyTuple
+
+    given namedTupleDecoder[N <: Tuple, V <: Tuple](using d: JdbcDecoder[V]): JdbcDecoder[NamedTuple[N, V]] with
+        override inline def offset: Int = d.offset
+
+        override inline def decode(data: ResultSet, cursor: Int): NamedTuple[N, V] =
+            NamedTuple(d.decode(data, cursor))
 
     inline given derived[T <: Product](using m: Mirror.ProductOf[T]): JdbcDecoder[T] =
         ${ productDecoderMacro[T] }

@@ -1,9 +1,9 @@
 import xerial.sbt.Sonatype.*
 
 lazy val commonSettings = Seq(
-    scalaVersion := "3.3.3",
+    scalaVersion := "3.5.0",
 
-    version := "0.0.20",
+    version := "0.0.21",
 
     organization := "com.wz7982",
 
@@ -36,23 +36,14 @@ lazy val commonSettings = Seq(
 
     scalacOptions += "-Wunused:all",
     scalacOptions += "-Wsafe-init",
+    scalacOptions += "-experimental",
     libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
-    .aggregate(core, dsl, jdbc, dynamic, data, dslExt, jdbcExt)
+    .aggregate(core, dsl, jdbc, dynamic, data)
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
 lazy val dsl = project.in(file("dsl")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dsl")
 lazy val jdbc = project.in(file("jdbc")).dependsOn(dsl).settings(commonSettings).settings(name := "sqala-jdbc")
 lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
 lazy val data = project.in(file("data")).settings(commonSettings).settings(name := "sqala-data")
-lazy val dslExt = project.in(file("dsl-ext")).dependsOn(dsl).settings(commonSettings).settings(
-    name := "sqala-dsl-ext",
-    scalaVersion := "3.5.0",
-    scalacOptions += "-experimental"
-)
-lazy val jdbcExt = project.in(file("jdbc-ext")).dependsOn(jdbc).settings(commonSettings).settings(
-    name := "sqala-jdbc-ext",
-    scalaVersion := "3.5.0",
-    scalacOptions += "-experimental"
-)

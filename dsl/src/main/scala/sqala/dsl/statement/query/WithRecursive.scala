@@ -6,15 +6,17 @@ import sqala.ast.table.SqlTable
 import sqala.printer.Dialect
 import sqala.util.queryToString
 
+import scala.NamedTuple.NamedTuple
+
 class WithRecursive[T](val ast: SqlQuery.Cte):
     def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
         queryToString(ast, dialect, prepare)
 
 object WithRecursive:
-    def apply[Q](query: Query[Q, ?])(f: Query[Q, ?] => Query[Q, ?])(using s: SelectItem[Q]): WithRecursive[Q] =
+    def apply[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using sq: SelectItem[SubQuery[N, V]], s: SelectItem[V], qc: QueryContext): WithRecursive[NamedTuple[N, V]] =
         val aliasName = "cte"
-        val items = s.subQueryItems(query.queryItems, 0, aliasName)
-        val selectItems = s.subQuerySelectItems(items, 0)
+        val subQuery = SubQuery[N, V](aliasName, s.offset(query.queryItems.toTuple))
+        val selectItems = sq.selectItems(subQuery, 0)
         val cteQuery = f(query)
 
         def transformTable(table: SqlTable): SqlTable = table match
