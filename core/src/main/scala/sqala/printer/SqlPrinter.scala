@@ -234,9 +234,7 @@ abstract class SqlPrinter(val prepare: Boolean):
         def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             (parent.op, child) match
                 case (parentOp, SqlExpr.Binary(_, op, _))
-                    if op.priority < parentOp.priority => true
-                case (Minus, SqlExpr.Binary(_, Plus | Minus, _)) => true
-                case (Div | Mod, SqlExpr.Binary(_, Times | Div | Mod, _)) => true
+                    if op.priority <= parentOp.priority => true
                 case _ => false
 
         if hasBracketsLeft(expr, expr.left) then
