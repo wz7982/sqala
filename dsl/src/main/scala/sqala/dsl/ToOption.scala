@@ -3,6 +3,7 @@ package sqala.dsl
 import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.query.SubQuery
 
+import scala.NamedTuple.NamedTuple
 import scala.annotation.nowarn
 
 trait ToOption[T]:
@@ -17,7 +18,7 @@ object ToOption:
 
         def toOption(x: Expr[T, K]): R = x.asInstanceOf[R]
 
-    transparent inline given tableToOption[X, T <: Table[X]]: ToOption[T] = 
+    transparent inline given tableToOption[X, T <: Table[X]]: ToOption[T] =
         ${ TableMacro.toOptionTableMacro[X, T] }
 
     @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
@@ -41,3 +42,10 @@ object ToOption:
 
         def toOption(x: H *: EmptyTuple): R =
             (h.toOption(x.head) *: EmptyTuple).asInstanceOf[R]
+
+    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
+    transparent inline given namedTupleToOption[N <: Tuple, V <: Tuple](using t: ToOption[V]): ToOption[NamedTuple[N, V]] = new ToOption[NamedTuple[N, V]]:
+        type R = NamedTuple[N, ToTuple[t.R]]
+
+        def toOption(x: NamedTuple[N, V]): R =
+            NamedTuple(t.toOption(x.toTuple).asInstanceOf[ToTuple[t.R]])
