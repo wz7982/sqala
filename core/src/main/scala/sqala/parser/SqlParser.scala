@@ -95,8 +95,10 @@ class SqlParser extends StandardTokenParsers:
                 case (acc, (false, "is", _)) => SqlExpr.Binary(acc, SqlBinaryOperator.Is, SqlExpr.Null)
                 case (acc, (true, "is", _)) => SqlExpr.Binary(acc, SqlBinaryOperator.IsNot, SqlExpr.Null)
                 case (acc, (not: Boolean, "between", l: SqlExpr, r: SqlExpr)) => SqlExpr.Between(acc, l, r, not)
-                case (acc, (not: Boolean, "in", in: SqlExpr.Binary)) => SqlExpr.In(acc, in, not)
-                case (acc, (not: Boolean, "in", in: List[?])) => SqlExpr.In(acc, SqlExpr.Vector(in.asInstanceOf[List[SqlExpr]]), not)
+                case (acc, (false, "in", in: SqlExpr.Binary)) => SqlExpr.Binary(acc, SqlBinaryOperator.In, in)
+                case (acc, (true, "in", in: SqlExpr.Binary)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, in)
+                case (acc, (false, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.In, SqlExpr.Vector(in.asInstanceOf[List[SqlExpr]]))
+                case (acc, (true, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, SqlExpr.Vector(in.asInstanceOf[List[SqlExpr]]))
                 case (acc, (false, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.Like, expr)
                 case (acc, (true, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotLike, expr)
                 case _ => SqlExpr.Null

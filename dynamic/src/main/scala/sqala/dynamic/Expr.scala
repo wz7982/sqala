@@ -41,11 +41,11 @@ case class Expr(sqlExpr: SqlExpr):
 
     def in(list: List[Expr]): Expr =
         if list.isEmpty then Expr(SqlExpr.BooleanLiteral(false)) 
-        else Expr(SqlExpr.In(sqlExpr, SqlExpr.Vector(list.map(_.sqlExpr)), false))
+        else Expr(SqlExpr.Binary(sqlExpr, In, SqlExpr.Vector(list.map(_.sqlExpr))))
 
     def notIn(list: List[Expr]): Expr =
         if list.isEmpty then Expr(SqlExpr.BooleanLiteral(true)) 
-        else Expr(SqlExpr.In(sqlExpr, SqlExpr.Vector(list.map(_.sqlExpr)), true))
+        else Expr(SqlExpr.Binary(sqlExpr, NotIn, SqlExpr.Vector(list.map(_.sqlExpr))))
 
     def between(start: Expr, end: Expr): Expr = Expr(SqlExpr.Between(sqlExpr, start.sqlExpr, end.sqlExpr, false))
 

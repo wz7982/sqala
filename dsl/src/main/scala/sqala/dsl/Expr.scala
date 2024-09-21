@@ -457,8 +457,10 @@ object Expr:
                 SqlExpr.Vector(items.map(_.asSqlExpr))
             case In(_, Vector(Nil), false) => SqlExpr.BooleanLiteral(false)
             case In(_, Vector(Nil), true) => SqlExpr.BooleanLiteral(true)
-            case In(expr, inExpr, not) =>
-                SqlExpr.In(expr.asSqlExpr, inExpr.asSqlExpr, not)
+            case In(expr, inExpr, false) =>
+                SqlExpr.Binary(expr.asSqlExpr, SqlBinaryOperator.In, inExpr.asSqlExpr)
+            case In(expr, inExpr, true) =>
+                SqlExpr.Binary(expr.asSqlExpr, SqlBinaryOperator.NotIn, inExpr.asSqlExpr)
             case Between(expr, start, end, not) =>
                 SqlExpr.Between(expr.asSqlExpr, start.asSqlExpr, end.asSqlExpr, not)
             case Window(expr, partitionBy, orderBy, frame) =>
