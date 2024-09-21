@@ -9,9 +9,9 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.order.SqlOrderByNullsOption.*
 import sqala.ast.order.SqlOrderByOption.*
 
-class SqlitePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
+class SqlitePrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
     override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append(" LIMIT ")
+        sqlBuilder.append("LIMIT ")
         printExpr(limit.offset)
         sqlBuilder.append(", ")
         printExpr(limit.limit)
@@ -48,7 +48,7 @@ class SqlitePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
             val intervalValue = op match
                 case SqlBinaryOperator.Minus => value * -1
                 case _ => value
-            val printValue = 
+            val printValue =
                 if intervalValue >= 0 then
                     "+" + intervalValue
                 else intervalValue.toString

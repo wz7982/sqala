@@ -31,14 +31,13 @@ enum SqlQuery:
         groupBy: List[SqlGroupItem] = Nil,
         having: Option[SqlExpr] = None,
         orderBy: List[SqlOrderBy] = Nil,
-        limit: Option[SqlLimit] = None,
-        forUpdate: Boolean = false
+        limit: Option[SqlLimit] = None
     )
     case Union(
-        left: SqlQuery, 
-        unionType: SqlUnionType, 
-        right: SqlQuery, 
-        orderBy: List[SqlOrderBy] = Nil, 
+        left: SqlQuery,
+        unionType: SqlUnionType,
+        right: SqlQuery,
+        orderBy: List[SqlOrderBy] = Nil,
         limit: Option[SqlLimit] = None
     )
     case Values(values: List[List[SqlExpr]])

@@ -12,8 +12,8 @@ private[sqala] def camelListToSnakeList(s: List[Char]): List[Char] = s match
 
 private[sqala] def camelToSnake(s: String): String = camelListToSnakeList(s.toList).mkString
 
-def queryToString(query: SqlQuery, dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
-    val printer = dialect.printer(prepare)
+def queryToString(query: SqlQuery, dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
+    val printer = dialect.printer(prepare, indent)
     printer.printQuery(query)
     printer.sql -> printer.args.toArray
 

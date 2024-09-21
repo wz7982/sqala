@@ -17,8 +17,8 @@ import scala.compiletime.{erasedValue, error}
 import scala.deriving.Mirror
 
 sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast: SqlQuery)(using val qc: QueryContext):
-    def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
-        queryToString(ast, dialect, prepare)
+    def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
+        queryToString(ast, dialect, prepare, indent)
 
     def drop(n: Int): Query[T, S] =
         val limit = ast match
@@ -51,7 +51,7 @@ sealed class Query[T, S <: ResultSize](private[sqala] val queryItems: T, val ast
     def size: Query[Expr[Long, ColumnKind], ResultSize.OneRow] =
         val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
         ast match
-            case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _, _) =>
+            case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _) =>
                 Query(expr, s.copy(select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil, limit = None))
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
@@ -169,7 +169,7 @@ class SelectQuery[T](
             case _: SimpleKind =>
         val condition = f(queryItems).asSqlExpr
         SelectQuery(queryItems, ast.addWhere(condition))
-        
+
     inline def withFilter[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
         filter(f)
 

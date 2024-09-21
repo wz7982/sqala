@@ -14,8 +14,8 @@ sealed trait Query:
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(ast))
 
-    def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
-        val printer = dialect.printer(prepare)
+    def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
+        val printer = dialect.printer(prepare, indent)
         printer.printQuery(ast)
         printer.sql -> printer.args.toArray
 

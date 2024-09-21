@@ -2,53 +2,19 @@ package sqala.printer
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.limit.SqlLimit
-import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.statement.SqlStatement
 
-class MssqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
+class MssqlPrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare, indent):
     override val leftQuote: String = "["
 
     override val rightQuote: String = "]"
 
     override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append(" OFFSET ")
+        sqlBuilder.append("OFFSET ")
         printExpr(limit.offset)
         sqlBuilder.append(" ROWS FETCH NEXT ")
         printExpr(limit.limit)
         sqlBuilder.append(" ROWS ONLY")
-
-    override def printForUpdate(): Unit = sqlBuilder.append(" WITH (UPDLOCK)")
-
-    override def printSelect(select: SqlQuery.Select): Unit =
-        sqlBuilder.append("SELECT ")
-
-        select.param.foreach(p => sqlBuilder.append(p.param + " "))
-
-        if select.select.isEmpty then sqlBuilder.append("*") else printList(select.select)(printSelectItem)
-
-        if select.from.nonEmpty then
-            sqlBuilder.append(" FROM ")
-            printList(select.from)(printTable)
-
-        if select.forUpdate then
-            printForUpdate()
-
-        for w <- select.where do
-            sqlBuilder.append(" WHERE ")
-            printExpr(w)
-
-        if select.groupBy.nonEmpty then
-            sqlBuilder.append(" GROUP BY ")
-            printList(select.groupBy)(printGroupItem)
-
-        for h <- select.having do
-            sqlBuilder.append(" HAVING ")
-            printExpr(h)
-
-        if select.orderBy.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(select.orderBy)(printOrderBy)
-
-        for l <- select.limit do printLimit(l)
 
     override def printCteRecursive(): Unit = {}
 

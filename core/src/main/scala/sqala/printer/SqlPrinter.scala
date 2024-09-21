@@ -1,7 +1,7 @@
 package sqala.printer
 
 import sqala.ast.expr.SqlBinaryOperator.*
-import sqala.ast.expr.{SqlExpr, SqlWindowFrame}
+import sqala.ast.expr.{SqlExpr, SqlUnaryOperator, SqlWindowFrame}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
@@ -9,9 +9,8 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 
 import scala.collection.mutable.ArrayBuffer
-import sqala.ast.expr.SqlUnaryOperator
 
-abstract class SqlPrinter(val prepare: Boolean):
+abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     val sqlBuilder: StringBuilder = StringBuilder()
 
     val leftQuote: String = "\""
@@ -19,6 +18,8 @@ abstract class SqlPrinter(val prepare: Boolean):
     val rightQuote: String = "\""
 
     val args: ArrayBuffer[Any] = ArrayBuffer()
+
+    var spaceNum = 0
 
     def sql: String = sqlBuilder.toString
 
@@ -80,73 +81,115 @@ abstract class SqlPrinter(val prepare: Boolean):
         case cte: SqlQuery.Cte => printCte(cte)
 
     def printSelect(select: SqlQuery.Select): Unit =
+        printSpace()
         sqlBuilder.append("SELECT ")
 
         select.param.foreach(p => sqlBuilder.append(p.param + " "))
 
-        if select.select.isEmpty then sqlBuilder.append("*") else printList(select.select)(printSelectItem)
+        if select.select.isEmpty then sqlBuilder.append("*")
+        else
+            sqlBuilder.append("\n")
+            printList(select.select, ",\n")(printSelectItem |> printWithSpace)
 
         if select.from.nonEmpty then
-            sqlBuilder.append(" FROM ")
-            printList(select.from)(printTable)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("FROM\n")
+            printList(select.from, ",\n")(printTable |> printWithSpace)
 
         for w <- select.where do
-            sqlBuilder.append(" WHERE ")
-            printExpr(w)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("WHERE\n")
+            w |> printWithSpace(printExpr)
 
         if select.groupBy.nonEmpty then
-            sqlBuilder.append(" GROUP BY ")
-            printList(select.groupBy)(printGroupItem)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("GROUP BY\n")
+            printList(select.groupBy, ",\n")(printGroupItem |> printWithSpace)
 
         for h <- select.having do
-            sqlBuilder.append(" HAVING ")
-            printExpr(h)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("HAVING\n")
+            h |> printWithSpace(printExpr)
 
         if select.orderBy.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(select.orderBy)(printOrderBy)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("ORDER BY\n")
+            printList(select.orderBy, ",\n")(printOrderBy |> printWithSpace)
 
-        for l <- select.limit do printLimit(l)
-
-        if select.forUpdate then printForUpdate()
+        for l <- select.limit do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLimit(l)
 
     def printUnion(union: SqlQuery.Union): Unit =
-        sqlBuilder.append("(")
+        printSpace()
+        sqlBuilder.append("(\n")
+        push()
         printQuery(union.left)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
         sqlBuilder.append(")")
-        sqlBuilder.append(" ")
+        sqlBuilder.append("\n")
+
+        printSpace()
         sqlBuilder.append(union.unionType.unionType)
-        sqlBuilder.append(" ")
-        sqlBuilder.append("(")
+        sqlBuilder.append("\n")
+
+        printSpace()
+        sqlBuilder.append("(\n")
+        push()
         printQuery(union.right)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
         sqlBuilder.append(")")
+
         if union.orderBy.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(union.orderBy)(printOrderBy)
-        for l <- union.limit do printLimit(l)
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("ORDER BY\n")
+            printList(union.orderBy, ",\n")(printOrderBy |> printWithSpace)
+
+        for l <- union.limit do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLimit(l)
 
     def printValues(values: SqlQuery.Values): Unit =
         sqlBuilder.append("VALUES ")
         printList(values.values.map(SqlExpr.Vector(_)))(printExpr)
 
     def printCte(cte: SqlQuery.Cte): Unit =
+        printSpace()
         sqlBuilder.append("WITH")
         if cte.recursive then printCteRecursive()
+        sqlBuilder.append("\n")
 
         def printWithItem(item: SqlWithItem): Unit =
-            sqlBuilder.append(" ")
+            printSpace()
             sqlBuilder.append(s"$leftQuote${item.name}$rightQuote")
             if item.columns.nonEmpty then
                 sqlBuilder.append("(")
                 printList(item.columns)(c => sqlBuilder.append(s"$leftQuote${c}$rightQuote"))
                 sqlBuilder.append(")")
             sqlBuilder.append(" AS ")
+            push()
             sqlBuilder.append("(")
+            sqlBuilder.append("\n")
             printQuery(item.query)
+            sqlBuilder.append("\n")
+            pull()
+            printSpace()
             sqlBuilder.append(")")
 
-        printList(cte.queryItems)(printWithItem)
-        sqlBuilder.append(" ")
+        printList(cte.queryItems, ",\n")(printWithItem)
+        sqlBuilder.append("\n")
         printQuery(cte.query)
 
     def printExpr(expr: SqlExpr): Unit = expr match
@@ -329,14 +372,22 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append(")")
 
     def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
-        sqlBuilder.append("(")
+        push()
+        sqlBuilder.append("(\n")
         printQuery(expr.query)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
         sqlBuilder.append(")")
 
     def printSubLinkExpr(expr: SqlExpr.SubLink): Unit =
+        push()
         sqlBuilder.append(expr.linkType.linkType)
-        sqlBuilder.append("(")
+        sqlBuilder.append("(\n")
         printQuery(expr.query)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
         sqlBuilder.append(")")
 
     def printIntervalExpr(expr: SqlExpr.Interval): Unit
@@ -367,17 +418,30 @@ abstract class SqlPrinter(val prepare: Boolean):
                 printTableAlias(a)
         case SqlTable.SubQueryTable(query, lateral, alias) =>
             if lateral then sqlBuilder.append("LATERAL ")
-            sqlBuilder.append("(")
+            sqlBuilder.append("(\n")
+            push()
             printQuery(query)
+            pull()
+            sqlBuilder.append("\n")
+            printSpace()
             sqlBuilder.append(")")
             printTableAlias(alias)
         case SqlTable.JoinTable(left, joinType, right, condition) =>
             printTable(left)
-            sqlBuilder.append(s" ${joinType.joinType} ")
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append(s"${joinType.joinType} ")
             right match
                 case _: SqlTable.JoinTable =>
                     sqlBuilder.append("(")
+                    sqlBuilder.append("\n")
+                    push()
+                    printSpace()
                     printTable(right)
+                    printSpace()
+                    pull()
+                    sqlBuilder.append("\n")
+                    printSpace()
                     sqlBuilder.append(")")
                 case _ =>
                     printTable(right)
@@ -424,17 +488,34 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append(" LIMIT ")
+        sqlBuilder.append("LIMIT ")
         printExpr(limit.limit)
         sqlBuilder.append(" OFFSET ")
         printExpr(limit.offset)
 
-    def printForUpdate(): Unit = sqlBuilder.append(" FOR UPDATE")
-
     def printCteRecursive(): Unit = sqlBuilder.append(" RECURSIVE")
 
-    def printList[T](list: List[T])(printer: T => Unit): Unit =
+    def printList[T](list: List[T], separator: String = ", ")(printer: T => Unit): Unit =
         for i <- list.indices do
             printer(list(i))
             if i < list.size - 1 then
-                sqlBuilder.append(", ")
+                sqlBuilder.append(separator)
+
+    def printSpace(): Unit =
+        val spaceString = (0 until spaceNum).map(_ => " ").mkString
+        sqlBuilder.append(spaceString)
+
+    def push(): Unit =
+        spaceNum += indent
+
+    def pull(): Unit =
+        spaceNum -= indent
+
+    def printWithSpace[T](f: T => Unit)(x: T): Unit =
+        push()
+        printSpace()
+        f(x)
+        pull()
+
+    extension [A, B](a: A)
+        private[sqala] def |>(f: A => B): B = f(a)

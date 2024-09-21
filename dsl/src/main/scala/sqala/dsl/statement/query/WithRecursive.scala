@@ -9,8 +9,8 @@ import sqala.util.queryToString
 import scala.NamedTuple.NamedTuple
 
 class WithRecursive[T](val ast: SqlQuery.Cte):
-    def sql(dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
-        queryToString(ast, dialect, prepare)
+    def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
+        queryToString(ast, dialect, prepare, indent)
 
 object WithRecursive:
     def apply[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using sq: SelectItem[SubQuery[N, V]], s: SelectItem[V], qc: QueryContext): WithRecursive[NamedTuple[N, V]] =
