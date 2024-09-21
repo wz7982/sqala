@@ -21,7 +21,6 @@ enum SqlExpr:
         withinGroupOrderBy: List[SqlOrderBy] = Nil,
         filter: Option[SqlExpr] = None
     )
-    case In(expr: SqlExpr, inExpr: SqlExpr, not: Boolean)
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlCase], default: SqlExpr)
     case Cast(expr: SqlExpr, castType: String)

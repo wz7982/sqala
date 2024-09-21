@@ -159,7 +159,6 @@ abstract class SqlPrinter(val prepare: Boolean):
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case f: SqlExpr.Func => printFuncExpr(f)
-        case i: SqlExpr.In => printInExpr(i)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
         case c: SqlExpr.Cast => printCastExpr(c)
@@ -274,14 +273,6 @@ abstract class SqlPrinter(val prepare: Boolean):
             sqlBuilder.append(" FILTER(WHERE ")
             printExpr(expr.filter.get)
             sqlBuilder.append(")")
-
-    def printInExpr(expr: SqlExpr.In): Unit =
-        expr match
-            case SqlExpr.In(exp, inExpr, not) =>
-                printExpr(exp)
-                if not then sqlBuilder.append(" NOT")
-                sqlBuilder.append(" IN ")
-                printExpr(inExpr)
 
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         printExpr(expr.expr)
