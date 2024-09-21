@@ -52,10 +52,10 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
 
 def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
 
-def exists[T, S <: ResultSize](query: Query[T, S]): Expr.SubLink[Boolean] =
+def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean, CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
 
-def notExists[T, S <: ResultSize](query: Query[T, S]): Expr.SubLink[Boolean] =
+def notExists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean, CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.NotExists)
 
 def all[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[m.R] =
