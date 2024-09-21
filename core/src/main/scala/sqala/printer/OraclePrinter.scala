@@ -4,9 +4,9 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 
-class OraclePrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
+class OraclePrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
     override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append(" OFFSET ")
+        sqlBuilder.append("OFFSET ")
         printExpr(limit.offset)
         sqlBuilder.append(" ROWS FETCH FIRST ")
         printExpr(limit.limit)

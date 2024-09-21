@@ -9,13 +9,13 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.order.SqlOrderByNullsOption.*
 import sqala.ast.order.SqlOrderByOption.*
 
-class MysqlPrinter(override val prepare: Boolean) extends SqlPrinter(prepare):
+class MysqlPrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
     override val leftQuote: String = "`"
 
     override val rightQuote: String = "`"
 
     override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append(" LIMIT ")
+        sqlBuilder.append("LIMIT ")
         printExpr(limit.offset)
         sqlBuilder.append(", ")
         printExpr(limit.limit)

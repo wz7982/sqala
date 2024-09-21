@@ -123,7 +123,7 @@ class SqlParser extends StandardTokenParsers:
             case id ~ None => SqlExpr.Column(None, id)
             case table ~ Some(column) => SqlExpr.Column(Some(table), column)
         }
-  
+
     def primary: Parser[SqlExpr] =
         literal |
         caseWhen |
@@ -241,7 +241,7 @@ class SqlParser extends StandardTokenParsers:
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
                 val param = if distinct.isDefined then Some(SqlSelectParam.Distinct) else None
                 SqlExpr.SubQuery(
-                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.map(_._2).getOrElse(None), o.getOrElse(Nil), l, false)
+                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.map(_._2).getOrElse(None), o.getOrElse(Nil), l)
                 )
         }
 
@@ -307,12 +307,12 @@ class SqlParser extends StandardTokenParsers:
             case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
         }
 
-    def parseExpr(text: String): SqlExpr = 
+    def parseExpr(text: String): SqlExpr =
         phrase(expr)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
 
-    def parseColumn(text: String): SqlExpr = 
+    def parseColumn(text: String): SqlExpr =
         phrase(column)(new lexical.Scanner(text)) match
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
