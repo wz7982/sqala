@@ -9,6 +9,7 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 
 import scala.collection.mutable.ArrayBuffer
+import sqala.ast.expr.SqlUnaryOperator
 
 abstract class SqlPrinter(val prepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
@@ -205,10 +206,24 @@ abstract class SqlPrinter(val prepare: Boolean):
         sqlBuilder.append(")")
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
-        sqlBuilder.append(expr.op)
-        sqlBuilder.append("(")
-        printExpr(expr.expr)
-        sqlBuilder.append(")")
+        expr.op match
+            case SqlUnaryOperator.Not =>
+                sqlBuilder.append(expr.op.operator)
+                sqlBuilder.append(" ")
+                printExpr(expr.expr)
+            case _ =>
+                val hasBrackets = expr.expr match
+                    case SqlExpr.Null => false
+                    case SqlExpr.Column(_, _) => false
+                    case SqlExpr.NumberLiteral(_) => false
+                    case _ => true
+                sqlBuilder.append(expr.op.operator)
+                if hasBrackets then
+                    sqlBuilder.append("(")
+                    printExpr(expr.expr)
+                    sqlBuilder.append(")")
+                else
+                    printExpr(expr.expr)
 
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
