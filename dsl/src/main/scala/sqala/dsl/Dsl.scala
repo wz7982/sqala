@@ -110,7 +110,7 @@ inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
             case _ =>
                 Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
-inline def percentileDist[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
+inline def percentileDisc[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -121,7 +121,7 @@ inline def percentileDist[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
         case _ => inline erasedValue[n.type >= 0.0 && n.type <= 1.0] match
             case _: false => error("The percentage value is not between 0 and 1.")
             case _ =>
-                Expr.Func("PERCENTILE_DIST", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
+                Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroupOrderBy = withinGroup :: Nil)
 
 def rank(): WindowFunc[Option[Long]] = WindowFunc("RANK", Nil)
 
