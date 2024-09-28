@@ -11,8 +11,12 @@ class GroupByQuery[T](
 )(using QueryContext):
     inline def having[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): GroupByQuery[T] =
         inline erasedValue[K] match
+            case _: AggKind =>
+            case _: AggOperationKind =>
+            case _: GroupKind =>
             case _: WindowKind => error("Window functions are not allowed in HAVING.")
             case _ =>
+                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
         val sqlCondition = f(items).asSqlExpr
         GroupByQuery(items, ast.addHaving(sqlCondition))
 
