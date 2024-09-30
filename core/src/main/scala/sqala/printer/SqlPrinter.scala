@@ -162,6 +162,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             printLimit(l)
 
     def printValues(values: SqlQuery.Values): Unit =
+        printSpace()
         sqlBuilder.append("VALUES ")
         printList(values.values.map(SqlExpr.Vector(_)))(printExpr)
 
@@ -176,7 +177,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             sqlBuilder.append(s"$leftQuote${item.name}$rightQuote")
             if item.columns.nonEmpty then
                 sqlBuilder.append("(")
-                printList(item.columns)(c => sqlBuilder.append(s"$leftQuote${c}$rightQuote"))
+                printList(item.columns)(c => sqlBuilder.append(s"$leftQuote$c$rightQuote"))
                 sqlBuilder.append(")")
             sqlBuilder.append(" AS ")
             push()
