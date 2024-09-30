@@ -26,6 +26,7 @@ class MysqlPrinter(override val prepare: Boolean, override val indent: Int) exte
         sqlBuilder.append(expr.unit.unit)
 
     override def printValues(values: SqlQuery.Values): Unit =
+        printSpace()
         sqlBuilder.append("VALUES ")
         printList(values.values.map(SqlExpr.Vector(_))): v =>
             sqlBuilder.append("ROW")
