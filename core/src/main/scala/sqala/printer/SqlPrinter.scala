@@ -201,6 +201,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case v: SqlExpr.Vector => printVectorExpr(v)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
+        case n: SqlExpr.NullTest => printNullTestExpr(n)
         case f: SqlExpr.Func => printFuncExpr(f)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
@@ -294,6 +295,11 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             sqlBuilder.append(")")
         else
             printExpr(expr.right)
+            
+    def printNullTestExpr(expr: SqlExpr.NullTest): Unit =
+        printExpr(expr.expr)
+        if expr.not then sqlBuilder.append(" IS NOT NULL")
+        else sqlBuilder.append(" IS NULL")
 
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
