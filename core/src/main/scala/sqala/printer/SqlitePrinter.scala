@@ -1,6 +1,5 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlBinaryOperator.Is
 import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr}
 import sqala.ast.expr.SqlExpr.*
 import sqala.ast.limit.SqlLimit
@@ -32,14 +31,15 @@ class SqlitePrinter(override val prepare: Boolean, override val indent: Int) ext
         val order = orderBy.order match
             case None | Some(Asc) => Asc
             case _ => Desc
-        val orderExpr = Case(SqlCase(Binary(orderBy.expr, Is, Null), NumberLiteral(1)) :: Nil, NumberLiteral(0))
+        val orderExpr = Case(SqlCase(NullTest(orderBy.expr, false), NumberLiteral(1)) :: Nil, NumberLiteral(0))
         (order, orderBy.nullsOrder) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)
                 sqlBuilder.append(s" ${order.order}")
             case (Asc, Some(Last)) | (Desc, Some(First)) =>
                 printExpr(orderExpr)
-                sqlBuilder.append(s" ${order.order}, ")
+                sqlBuilder.append(s" ${order.order},\n")
+                printSpace()
                 printExpr(orderBy.expr)
                 sqlBuilder.append(s" ${order.order}")
 

@@ -11,12 +11,12 @@ import scala.annotation.targetName
 case class Expr(sqlExpr: SqlExpr):
     @targetName("eq")
     def ==(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.Binary(sqlExpr, Is, SqlExpr.Null))
+        case Expr(SqlExpr.Null) => Expr(SqlExpr.NullTest(sqlExpr, false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, Equal, expr.sqlExpr))
 
     @targetName("ne")
     def <>(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.Binary(sqlExpr, IsNot, SqlExpr.Null))
+        case Expr(SqlExpr.Null) => Expr(SqlExpr.NullTest(sqlExpr, true))
         case _ => Expr(SqlExpr.Binary(sqlExpr, NotEqual, expr.sqlExpr))
 
     @targetName("gt")

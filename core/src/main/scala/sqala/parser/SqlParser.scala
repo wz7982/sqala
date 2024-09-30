@@ -69,19 +69,19 @@ class SqlParser extends StandardTokenParsers:
                 case op ~ right => (op, right)
             } |
             "IS" ~ opt("NOT") ~ "NULL" ^^ {
-                case op ~ n ~ right => (n.isDefined, "is", right)
+                case _ ~ n ~ right => (n.isDefined, "is", right)
             } |
             opt("NOT") ~ "BETWEEN" ~ add ~ "AND" ~ add ^^ {
-                case n ~ op ~ start ~ _ ~ end => (n.isDefined, "between", start, end)
+                case n ~ _ ~ start ~ _ ~ end => (n.isDefined, "between", start, end)
             } |
             opt("NOT") ~ "IN" ~ "(" ~ select ~ ")" ^^ {
-                case n ~ op ~ _ ~ in ~ _ => (n.isDefined, "in", in)
+                case n ~ _ ~ _ ~ in ~ _ => (n.isDefined, "in", in)
             } |
             opt("NOT") ~ "IN" ~ "(" ~ rep1sep(expr, ",") ~ ")" ^^ {
-                case n ~ op ~ _ ~ in ~ _ => (n.isDefined, "in", in)
+                case n ~ _ ~ _ ~ in ~ _ => (n.isDefined, "in", in)
             } |
             opt("NOT") ~ "LIKE" ~ add ^^ {
-                case n ~ op ~ right => (n.isDefined, "like", right)
+                case n ~ _ ~ right => (n.isDefined, "like", right)
             }
         ) ^^ {
             case left ~ elems => elems.foldLeft(left) {
@@ -92,8 +92,8 @@ class SqlParser extends StandardTokenParsers:
                 case (acc, (">=", right)) => SqlExpr.Binary(acc, SqlBinaryOperator.GreaterThanEqual, right)
                 case (acc, ("<", right)) => SqlExpr.Binary(acc, SqlBinaryOperator.LessThan, right)
                 case (acc, ("<=", right)) => SqlExpr.Binary(acc, SqlBinaryOperator.LessThanEqual, right)
-                case (acc, (false, "is", _)) => SqlExpr.Binary(acc, SqlBinaryOperator.Is, SqlExpr.Null)
-                case (acc, (true, "is", _)) => SqlExpr.Binary(acc, SqlBinaryOperator.IsNot, SqlExpr.Null)
+                case (acc, (false, "is", _)) => SqlExpr.NullTest(acc, false)
+                case (acc, (true, "is", _)) => SqlExpr.NullTest(acc, true)
                 case (acc, (not: Boolean, "between", l: SqlExpr, r: SqlExpr)) => SqlExpr.Between(acc, l, r, not)
                 case (acc, (false, "in", in: SqlExpr.Binary)) => SqlExpr.Binary(acc, SqlBinaryOperator.In, in)
                 case (acc, (true, "in", in: SqlExpr.Binary)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, in)
@@ -142,7 +142,7 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def aggFunc: Parser[String] =
-        ("COUNT" | "SUM" | "AVG" | "MAX" | "MIN")
+        "COUNT" | "SUM" | "AVG" | "MAX" | "MIN"
 
     def aggFunction: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, false, Map(), Nil)) |
@@ -157,8 +157,8 @@ class SqlParser extends StandardTokenParsers:
         "(" ~> "PARTITION" ~> "BY" ~> rep1sep(expr, ",") ~ opt("ORDER" ~> "BY" ~> rep1sep(order, ",")) <~ ")" ^^ {
             case partition ~ order => (partition, order.getOrElse(Nil))
         } |
-        "(" ~> "ORDER" ~> "BY" ~> rep1sep(order, ",") <~ ")" ^^ {
-            case o => (Nil, o)
+        "(" ~> "ORDER" ~> "BY" ~> rep1sep(order, ",") <~ ")" ^^ { o =>
+            (Nil, o)
         }
 
     def windownFunction: Parser[SqlExpr] =
@@ -167,20 +167,20 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def subLink: Parser[SqlExpr] =
-        "ANY" ~> "(" ~> union <~ ")" ^^ {
-            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Any)
+        "ANY" ~> "(" ~> union <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkType.Any)
         } |
-        "SOME" ~> "(" ~> union <~ ")" ^^ {
-            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Some)
+        "SOME" ~> "(" ~> union <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkType.Some)
         } |
-        "ALL" ~> "(" ~> union <~ ")" ^^ {
-            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.All)
+        "ALL" ~> "(" ~> union <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkType.All)
         } |
-        "EXISTS" ~> "(" ~> union <~ ")" ^^ {
-            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
+        "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
         } |
-        "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ {
-            case u => SqlExpr.SubLink(u.query, SqlSubLinkType.NotExists)
+        "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkType.NotExists)
         }
 
     def order: Parser[SqlOrderBy] =
@@ -241,7 +241,7 @@ class SqlParser extends StandardTokenParsers:
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
                 val param = if distinct.isDefined then Some(SqlSelectParam.Distinct) else None
                 SqlExpr.SubQuery(
-                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.map(_._2).getOrElse(None), o.getOrElse(Nil), l)
+                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.flatMap(_._2), o.getOrElse(Nil), l)
                 )
         }
 
@@ -258,11 +258,15 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def simpleTable: Parser[SqlTable] =
-        ident ~ opt(opt("AS") ~> ident) ^^ {
-            case table ~ alias => SqlTable.IdentTable(table, alias.map(a => SqlTableAlias(a, Nil)))
+        ident ~ opt(opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
+            case table ~ alias =>
+                val tableAlias = alias.map:
+                    case ta ~ ca => SqlTableAlias(ta, ca.getOrElse(Nil))
+                SqlTable.IdentTable(table, tableAlias)
         } |
-        opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident) ^^ {
-            case lateral ~ s ~ alias => SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(alias))
+        opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
+            case lateral ~ s ~ (tableAlias ~ columnAlias) =>
+                SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(tableAlias, columnAlias.getOrElse(Nil)))
         }
 
     def joinType: Parser[SqlJoinType] =

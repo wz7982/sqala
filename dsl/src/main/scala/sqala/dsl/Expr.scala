@@ -437,11 +437,11 @@ object Expr:
                 SqlExpr.Column(Some(tableName), columnName)
             case Null => SqlExpr.Null
             case Binary(left, Equal, Literal(None, _)) =>
-                SqlExpr.Binary(left.asSqlExpr, Is, SqlExpr.Null)
+                SqlExpr.NullTest(left.asSqlExpr, false)
             case Binary(left, NotEqual, Literal(None, _)) =>
-                SqlExpr.Binary(left.asSqlExpr, IsNot, SqlExpr.Null)
+                SqlExpr.NullTest(left.asSqlExpr, true)
             case Binary(left, NotEqual, right@Literal(Some(_), _)) =>
-                SqlExpr.Binary(SqlExpr.Binary(left.asSqlExpr, NotEqual, right.asSqlExpr), Or, SqlExpr.Binary(left.asSqlExpr, Is, SqlExpr.Null))
+                SqlExpr.Binary(SqlExpr.Binary(left.asSqlExpr, NotEqual, right.asSqlExpr), Or, SqlExpr.NullTest(left.asSqlExpr, false))
             case Binary(_, _, Literal(None, _)) =>
                 SqlExpr.BooleanLiteral(false)
             case Binary(left, op, right) =>
