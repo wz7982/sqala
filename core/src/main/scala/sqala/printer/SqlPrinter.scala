@@ -7,6 +7,7 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
+import sqala.util.*
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -523,6 +524,3 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         printSpace()
         f(x)
         pull()
-
-    extension [A, B](a: A)
-        private[sqala] def |>(f: A => B): B = f(a)
