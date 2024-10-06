@@ -312,13 +312,10 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         if expr.orderBy.nonEmpty then
             sqlBuilder.append(" ORDER BY ")
             printList(expr.orderBy)(printOrderBy)
-        for (k, v) <- expr.attrs do
-            sqlBuilder.append(s" $k ")
-            printExpr(v)
         sqlBuilder.append(")")
-        if expr.withinGroupOrderBy.nonEmpty then
+        if expr.withinGroup.nonEmpty then
             sqlBuilder.append(" WITHIN GROUP(ORDER BY ")
-            printList(expr.withinGroupOrderBy)(printOrderBy)
+            printList(expr.withinGroup)(printOrderBy)
             sqlBuilder.append(")")
         if expr.filter.nonEmpty then
             sqlBuilder.append(" FILTER(WHERE ")

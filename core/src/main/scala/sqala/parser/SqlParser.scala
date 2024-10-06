@@ -145,12 +145,12 @@ class SqlParser extends StandardTokenParsers:
         "COUNT" | "SUM" | "AVG" | "MAX" | "MIN"
 
     def aggFunction: Parser[SqlExpr] =
-        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, false, Map(), Nil)) |
+        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, false, Nil)) |
         (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
-            case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, false, Map(), Nil)
+            case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, false, Nil)
         } |
         ident ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
-            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, true, Map(), Nil)
+            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, true, Nil)
         }
 
     def over: Parser[(List[SqlExpr], List[SqlOrderBy])] =
