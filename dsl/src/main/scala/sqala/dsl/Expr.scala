@@ -25,7 +25,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         args: List[Expr[?, ?]],
         distinct: Boolean = false,
         orderBy: List[OrderBy[?, ?]] = Nil,
-        withinGroupOrderBy: List[OrderBy[?, ?]] = Nil,
+        withinGroup: List[OrderBy[?, ?]] = Nil,
         filter: Option[Expr[?, ?]] = None
     ) extends Expr[T, K]
     case Case[T, K <: CompositeKind](branches: List[(Expr[?, ?], Expr[?, ?])], default: Expr[?, ?]) extends Expr[T, K]
@@ -449,8 +449,8 @@ object Expr:
             case Unary(expr, op) =>
                 SqlExpr.Unary(expr.asSqlExpr, op)
             case SubQuery(query) => SqlExpr.SubQuery(query)
-            case Func(name, args, distinct, orderBy, withinGroupOrderBy, filter) =>
-                SqlExpr.Func(name, args.map(_.asSqlExpr), distinct, Map(), orderBy.map(_.asSqlOrderBy), withinGroupOrderBy.map(_.asSqlOrderBy), filter.map(_.asSqlExpr))
+            case Func(name, args, distinct, orderBy, withinGroup, filter) =>
+                SqlExpr.Func(name, args.map(_.asSqlExpr), distinct, orderBy.map(_.asSqlOrderBy), withinGroup.map(_.asSqlOrderBy), filter.map(_.asSqlExpr))
             case Case(branches, default) =>
                 SqlExpr.Case(branches.map((x, y) => SqlCase(x.asSqlExpr, y.asSqlExpr)), default.asSqlExpr)
             case Vector(items) =>
