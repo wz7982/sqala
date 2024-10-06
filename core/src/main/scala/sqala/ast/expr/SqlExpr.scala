@@ -16,10 +16,9 @@ enum SqlExpr:
     case Func(
         name: String, 
         args: List[SqlExpr], 
-        distinct: Boolean = false, 
-        attrs: Map[String, SqlExpr] = Map(), 
+        distinct: Boolean = false,
         orderBy: List[SqlOrderBy] = Nil,
-        withinGroupOrderBy: List[SqlOrderBy] = Nil,
+        withinGroup: List[SqlOrderBy] = Nil,
         filter: Option[SqlExpr] = None
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
