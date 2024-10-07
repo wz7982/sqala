@@ -203,6 +203,7 @@ class SqlParser extends StandardTokenParsers:
 
     def literal: Parser[SqlExpr] =
         numericLit ^^ (i => SqlExpr.NumberLiteral(BigDecimal(i))) |
+        "-" ~> numericLit ^^ (i => SqlExpr.NumberLiteral(BigDecimal(i) * -1)) |
         stringLit ^^ (xs => SqlExpr.StringLiteral(xs)) |
         "TRUE" ^^ (_ => SqlExpr.BooleanLiteral(true)) |
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
@@ -308,7 +309,15 @@ class SqlParser extends StandardTokenParsers:
 
     def limit: Parser[SqlLimit] =
         "LIMIT" ~ numericLit ~ opt("OFFSET" ~> numericLit) ^^ {
-            case _ ~ limit ~ offset => SqlLimit(SqlExpr.NumberLiteral(limit.toInt), SqlExpr.NumberLiteral(offset.map(_.toInt).getOrElse(0)))
+            case _ ~ limit ~ offset => 
+                val limitInt = BigDecimal(limit).setScale(0, BigDecimal.RoundingMode.HALF_UP).toInt
+                val offsetInt = offset
+                    .map(BigDecimal(_).setScale(0, BigDecimal.RoundingMode.HALF_UP).toInt)
+                    .getOrElse(0) 
+                SqlLimit(
+                    SqlExpr.NumberLiteral(limitInt), 
+                    SqlExpr.NumberLiteral(offsetInt)
+                )
         }
 
     def parseExpr(text: String): SqlExpr =
