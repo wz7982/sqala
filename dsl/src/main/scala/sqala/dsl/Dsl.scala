@@ -91,10 +91,10 @@ inline def sum[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecim
 inline def avg[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
     aggregate("AVG", expr)
 
-inline def max[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+inline def max[T, K <: ExprKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
     aggregate("MAX", expr)
 
-inline def min[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[Option[BigDecimal], AggKind] =
+inline def min[T, K <: ExprKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
     aggregate("MIN", expr)
 
 inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
