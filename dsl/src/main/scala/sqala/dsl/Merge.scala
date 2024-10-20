@@ -3,7 +3,7 @@ package sqala.dsl
 import scala.NamedTuple.NamedTuple
 import scala.annotation.{implicitNotFound, nowarn}
 
-@implicitNotFound("The type ${T} cannot be merged into a SQL expression")
+@implicitNotFound("The type ${T} cannot be merged into a SQL expression.")
 trait Merge[T]:
     type R
 

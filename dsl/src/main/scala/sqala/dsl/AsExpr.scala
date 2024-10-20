@@ -3,7 +3,7 @@ package sqala.dsl
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 
-@implicitNotFound("Type ${T} cannot be converted to SQL expressions")
+@implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsExpr[T]:
     def asExprs(x: T): List[Expr[?, ?]]
 

@@ -4,7 +4,7 @@ import java.time.{LocalDate, LocalDateTime}
 import java.util.Date
 import scala.annotation.implicitNotFound
 
-@implicitNotFound("Expr must be a numeric type")
+@implicitNotFound("Expr must be a numeric type.")
 trait Number[T]
 
 object Number:
@@ -20,7 +20,7 @@ object Number:
 
     given optionNumber[T: Number]: Number[Option[T]]()
 
-@implicitNotFound("Expr must be a time type")
+@implicitNotFound("Expr must be a time type.")
 trait DateTime[T]
 
 object DateTime:

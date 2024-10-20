@@ -274,7 +274,7 @@ object NotValue:
         new NotValue[NamedTuple[N, V]]:
             type R = n.R
 
-@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
+@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function.")
 trait CheckMapKind[IsAgg <: Boolean, NotAgg <: Boolean]
 
 object CheckMapKind:
@@ -284,13 +284,13 @@ object CheckMapKind:
 
     given checkFalseTrue: CheckMapKind[false, true]()
 
-@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function")
+@implicitNotFound("Column must appear in the GROUP BY clause or be used in an aggregate function.")
 trait CheckGroupMapKind[IsAggOrGroup <: Boolean]
 
 object CheckGroupMapKind:
     given check: CheckGroupMapKind[true]()
 
-@implicitNotFound("Aggregate functions or window functions or constants are not allowed in GROUP BY")
+@implicitNotFound("Aggregate functions or window functions or constants are not allowed in GROUP BY.")
 trait CheckGroupByKind[NotAgg <: Boolean, NotWindow <: Boolean, NotValue <: Boolean]
 
 object CheckGroupByKind:

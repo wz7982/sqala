@@ -30,7 +30,7 @@ type CaseInit = CaseState.Init.type
 
 type CaseWhen = CaseState.When.type
 
-class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
+class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr[?, ?]]):
     infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, KindOperation[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
@@ -40,17 +40,40 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
     infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: ResultOperation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, TK]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
     infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
 
 def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
+
+class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using o: ResultOperation[T, E], k: KindOperation[K, TK]): IfThen[o.R, ResultKind[K, TK]] =
+        IfThen(exprs :+ expr)
+
+    infix def `then`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): IfThen[o.R, ResultKind[K, ValueKind]] =
+        IfThen(exprs :+ Expr.Literal(value, a))
+
+class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+        Expr.Case(caseBranches, expr)
+
+    infix def `else`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+        Expr.Case(caseBranches, Expr.Literal(value, a))
+
+    infix def `else if`[EK <: ExprKind](expr: Expr[Boolean, EK])(using k: KindOperation[K, EK]): If[T, ResultKind[K, EK]] =
+        If(exprs :+ expr)
+
+def `if`[K <: ExprKind](expr: Expr[Boolean, K]): If[Nothing, K] = If(expr :: Nil)
 
 def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean, CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
@@ -260,20 +283,56 @@ def createWindowFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean 
 def createBinaryOperator[T](left: Expr[?, ?], op: String, right: Expr[?, ?]): Expr[T, CommonKind] =
     Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
 
-sealed trait TimeUnit(val unit: SqlTimeUnit)
-case object Year extends TimeUnit(SqlTimeUnit.Year)
-case object Month extends TimeUnit(SqlTimeUnit.Month)
-case object Week extends TimeUnit(SqlTimeUnit.Week)
-case object Day extends TimeUnit(SqlTimeUnit.Day)
-case object Hour extends TimeUnit(SqlTimeUnit.Hour)
-case object Minute extends TimeUnit(SqlTimeUnit.Minute)
-case object Second extends TimeUnit(SqlTimeUnit.Second)
+case class IntervalValue(n: Double, unit: SqlTimeUnit)
 
-def interval(value: Double, unit: TimeUnit): TimeInterval =
-    TimeInterval(value, unit.unit)
+extension (n: Double)
+    def year: IntervalValue = IntervalValue(n, SqlTimeUnit.Year)
 
-def extract[T: DateTime, K <: ExprKind](unit: TimeUnit, expr: Expr[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
-    Expr.Extract(unit.unit, expr)
+    def month: IntervalValue = IntervalValue(n, SqlTimeUnit.Month)
+
+    def week: IntervalValue = IntervalValue(n, SqlTimeUnit.Week)
+
+    def day: IntervalValue = IntervalValue(n, SqlTimeUnit.Day)
+
+    def hour: IntervalValue = IntervalValue(n, SqlTimeUnit.Hour)
+
+    def minute: IntervalValue = IntervalValue(n, SqlTimeUnit.Minute)
+
+    def second: IntervalValue = IntervalValue(n, SqlTimeUnit.Second)
+
+def interval(value: IntervalValue): TimeInterval =
+    TimeInterval(value.n, value.unit)
+
+case class ExtractValue[T, K <: ExprKind](unit: SqlTimeUnit, expr: Expr[?, ?])
+
+private enum TimeUnit(val unit: SqlTimeUnit):
+    case Year extends TimeUnit(SqlTimeUnit.Year)
+    case Month extends TimeUnit(SqlTimeUnit.Month)
+    case Week extends TimeUnit(SqlTimeUnit.Week)
+    case Day extends TimeUnit(SqlTimeUnit.Day)
+    case Hour extends TimeUnit(SqlTimeUnit.Hour)
+    case Minute extends TimeUnit(SqlTimeUnit.Minute)
+    case Second extends TimeUnit(SqlTimeUnit.Second)
+
+    infix def from[T, K <: ExprKind](expr: Expr[T, K]): ExtractValue[T, K] =
+        ExtractValue(unit, expr)
+
+def year: TimeUnit = TimeUnit.Year
+
+def month: TimeUnit = TimeUnit.Month
+
+def week: TimeUnit = TimeUnit.Week
+
+def day: TimeUnit = TimeUnit.Day
+
+def hour: TimeUnit = TimeUnit.Hour
+
+def minute: TimeUnit = TimeUnit.Minute
+
+def second: TimeUnit = TimeUnit.Second
+
+def extract[T: DateTime, K <: ExprKind](value: ExtractValue[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+    Expr.Extract(value.unit, value.expr)
 
 def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
     Expr.Cast(expr, castType)
@@ -284,18 +343,20 @@ def unboundedPreceding: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedPre
 
 def unboundedFollowing: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedFollowing
 
-def preceding(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
+extension (n: Int)
+    def preceding: SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
 
-def following(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
+    def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Rows(start, end)
-
-def rangeBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Range(start, end)
-
-def groupsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Groups(start, end)
+inline def partitionBy[P](partitionValue: P): OverValue =
+    inline erasedValue[CheckOverPartition[P]] match
+        case _: false =>
+            error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
+        case _ =>
+    val partition = partitionValue match
+        case e: Expr[?, ?] => e :: Nil
+        case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+    OverValue(partitionBy = partition)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)

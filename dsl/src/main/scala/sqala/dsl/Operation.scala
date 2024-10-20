@@ -5,7 +5,7 @@ import scala.NamedTuple.NamedTuple
 import scala.annotation.{implicitNotFound, nowarn}
 import scala.compiletime.{erasedValue, summonInline}
 
-@implicitNotFound("The type ${T} cannot be converted to SQL expression")
+@implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait ComparableValue[T]:
     def asExpr(x: T): Expr[?, ?]
 
@@ -24,7 +24,7 @@ object ComparableValue:
             val head = Expr.Literal(x.head, h)
             Expr.Vector(head :: Nil)
 
-@implicitNotFound("Types ${A} and ${B} be cannot compared")
+@implicitNotFound("Types ${A} and ${B} be cannot compared.")
 trait CompareOperation[A, B]
 
 object CompareOperation:
@@ -53,7 +53,7 @@ object CompareOperation:
 
     given tuple1Compare[LH, RH](using CompareOperation[LH, RH]): CompareOperation[LH *: EmptyTuple, RH *: EmptyTuple]()
 
-@implicitNotFound("Types ${A} and ${B} be cannot subtract")
+@implicitNotFound("Types ${A} and ${B} be cannot subtract.")
 trait MinusOperation[A, B]:
     type R
 
@@ -66,7 +66,7 @@ object MinusOperation:
     transparent inline given timeMinus[A: DateTime, B: DateTime]: MinusOperation[A, B] = new MinusOperation[A, B]:
         type R = Option[Date]
 
-@implicitNotFound("Types ${A} and ${B} cannot be returned as results")
+@implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait ResultOperation[A, B]:
     type R
 
@@ -95,7 +95,7 @@ object ResultOperation:
     transparent inline given nothingResult[B]: ResultOperation[Nothing, B] = new ResultOperation[Nothing, B]:
         type R = B
 
-@implicitNotFound("Types ${A} and ${B} cannot be UNION")
+@implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait UnionOperation[A, B]:
     type R
 
@@ -116,7 +116,7 @@ object UnionOperation:
     transparent inline given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using u: UnionOperation[LV, RV]): UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]] = new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
         type R = NamedTuple[LN, ToTuple[u.R]]
 
-@implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function")
+@implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function.")
 trait KindOperation[A <: ExprKind, B <: ExprKind]
 
 object KindOperation:
