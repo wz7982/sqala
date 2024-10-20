@@ -511,17 +511,21 @@ object Expr:
 
         def descNullsLast: OrderBy[T, K] = OrderBy(expr, Desc, Some(Last))
 
-case class OrderBy[T, K <: ExprKind](expr: Expr[?, ?], order: SqlOrderByOption, nullsOrder: Option[SqlOrderByNullsOption]):
+class OrderBy[T, K <: ExprKind](
+    private[sqala] val expr: Expr[?, ?], 
+    private[sqala] val order: SqlOrderByOption, 
+    private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
+):
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
 
-case class TimeInterval(value: Double, unit: SqlTimeUnit)
+class TimeInterval(private[sqala] val value: Double, private[sqala] val unit: SqlTimeUnit)
 
-case class SubLinkItem[T](query: SqlQuery, linkType: SqlSubLinkType)
+class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val linkType: SqlSubLinkType)
 
 case class OverValue(
-    partitionBy: List[Expr[?, ?]] = Nil, 
-    orderBy: List[OrderBy[?, ?]] = Nil,
-    frame: Option[SqlWindowFrame] = None
+    private[sqala] val partitionBy: List[Expr[?, ?]] = Nil, 
+    private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil,
+    private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
     inline infix def orderBy[O](orderByValue: O): OverValue =
         inline erasedValue[CheckOverOrder[O]] match
@@ -542,11 +546,11 @@ case class OverValue(
     infix def groupsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Groups(start, end)))
 
-case class WindowFunc[T](
-   name: String,
-   args: List[Expr[?, ?]],
-   distinct: Boolean = false,
-   orderBy: List[OrderBy[?, ?]] = Nil
+class WindowFunc[T](
+   private[sqala] val name: String,
+   private[sqala] val args: List[Expr[?, ?]],
+   private[sqala] val distinct: Boolean = false,
+   private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil
 ):
     infix def over(overValue: OverValue): Expr[T, WindowKind] =
         val func = Expr.Func(name, args, distinct, orderBy)

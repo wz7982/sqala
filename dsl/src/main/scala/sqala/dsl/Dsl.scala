@@ -30,7 +30,7 @@ type CaseInit = CaseState.Init.type
 
 type CaseWhen = CaseState.When.type
 
-class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
+class Case[T, K <: ExprKind, S <: CaseState](exprs: List[Expr[?, ?]]):
     infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, KindOperation[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
@@ -40,17 +40,40 @@ class Case[T, K <: ExprKind, S <: CaseState](val exprs: List[Expr[?, ?]]):
     infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: ResultOperation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, TK]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
     infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i.head, i(1)))
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
 
 def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
+
+class If[T, K <: ExprKind](exprs: List[Expr[?, ?]]):
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using o: ResultOperation[T, E], k: KindOperation[K, TK]): IfThen[o.R, ResultKind[K, TK]] =
+        IfThen(exprs :+ expr)
+
+    infix def `then`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): IfThen[o.R, ResultKind[K, ValueKind]] =
+        IfThen(exprs :+ Expr.Literal(value, a))
+
+class IfThen[T, K <: ExprKind](exprs: List[Expr[?, ?]]):
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+        Expr.Case(caseBranches, expr)
+
+    infix def `else`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+        Expr.Case(caseBranches, Expr.Literal(value, a))
+
+    infix def `else if`[EK <: ExprKind](expr: Expr[Boolean, EK])(using k: KindOperation[K, EK]): If[T, ResultKind[K, EK]] =
+        If(exprs :+ expr)
+
+def `if`[K <: ExprKind](expr: Expr[Boolean, K]): If[Nothing, K] = If(expr :: Nil)
 
 def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean, CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
