@@ -260,20 +260,56 @@ def createWindowFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean 
 def createBinaryOperator[T](left: Expr[?, ?], op: String, right: Expr[?, ?]): Expr[T, CommonKind] =
     Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
 
-sealed trait TimeUnit(val unit: SqlTimeUnit)
-case object Year extends TimeUnit(SqlTimeUnit.Year)
-case object Month extends TimeUnit(SqlTimeUnit.Month)
-case object Week extends TimeUnit(SqlTimeUnit.Week)
-case object Day extends TimeUnit(SqlTimeUnit.Day)
-case object Hour extends TimeUnit(SqlTimeUnit.Hour)
-case object Minute extends TimeUnit(SqlTimeUnit.Minute)
-case object Second extends TimeUnit(SqlTimeUnit.Second)
+case class IntervalValue(n: Double, unit: SqlTimeUnit)
 
-def interval(value: Double, unit: TimeUnit): TimeInterval =
-    TimeInterval(value, unit.unit)
+extension (n: Double)
+    def year: IntervalValue = IntervalValue(n, SqlTimeUnit.Year)
 
-def extract[T: DateTime, K <: ExprKind](unit: TimeUnit, expr: Expr[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
-    Expr.Extract(unit.unit, expr)
+    def month: IntervalValue = IntervalValue(n, SqlTimeUnit.Month)
+
+    def week: IntervalValue = IntervalValue(n, SqlTimeUnit.Week)
+
+    def day: IntervalValue = IntervalValue(n, SqlTimeUnit.Day)
+
+    def hour: IntervalValue = IntervalValue(n, SqlTimeUnit.Hour)
+
+    def minute: IntervalValue = IntervalValue(n, SqlTimeUnit.Minute)
+
+    def second: IntervalValue = IntervalValue(n, SqlTimeUnit.Second)
+
+def interval(value: IntervalValue): TimeInterval =
+    TimeInterval(value.n, value.unit)
+
+case class ExtractValue[T, K <: ExprKind](unit: SqlTimeUnit, expr: Expr[?, ?])
+
+private enum TimeUnit(val unit: SqlTimeUnit):
+    case Year extends TimeUnit(SqlTimeUnit.Year)
+    case Month extends TimeUnit(SqlTimeUnit.Month)
+    case Week extends TimeUnit(SqlTimeUnit.Week)
+    case Day extends TimeUnit(SqlTimeUnit.Day)
+    case Hour extends TimeUnit(SqlTimeUnit.Hour)
+    case Minute extends TimeUnit(SqlTimeUnit.Minute)
+    case Second extends TimeUnit(SqlTimeUnit.Second)
+
+    infix def from[T, K <: ExprKind](expr: Expr[T, K]): ExtractValue[T, K] =
+        ExtractValue(unit, expr)
+
+def year: TimeUnit = TimeUnit.Year
+
+def month: TimeUnit = TimeUnit.Month
+
+def week: TimeUnit = TimeUnit.Week
+
+def day: TimeUnit = TimeUnit.Day
+
+def hour: TimeUnit = TimeUnit.Hour
+
+def minute: TimeUnit = TimeUnit.Minute
+
+def second: TimeUnit = TimeUnit.Second
+
+def extract[T: DateTime, K <: ExprKind](value: ExtractValue[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+    Expr.Extract(value.unit, value.expr)
 
 def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
     Expr.Cast(expr, castType)
