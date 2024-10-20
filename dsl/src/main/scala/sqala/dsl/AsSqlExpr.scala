@@ -9,7 +9,7 @@ import java.util.Date
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
-@implicitNotFound("The type ${T} cannot be converted to SQL expression")
+@implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait AsSqlExpr[T]:
     def asSqlExpr(x: T): SqlExpr
 

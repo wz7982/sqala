@@ -8,7 +8,7 @@ import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
 
-@implicitNotFound("Type ${T} cannot be converted to SELECT items")
+@implicitNotFound("Type ${T} cannot be converted to SELECT items.")
 trait SelectItem[T]:
     def offset(item: T): Int
 
@@ -61,7 +61,7 @@ object SelectItem:
         def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] = 
             s.selectItems(item.toTuple, cursor)
 
-@implicitNotFound("Type ${T} cannot be converted to SELECT items")
+@implicitNotFound("Type ${T} cannot be converted to SELECT items.")
 trait SelectItemAsExpr[T]
 
 object SelectItemAsExpr:
