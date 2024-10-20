@@ -488,32 +488,15 @@ object Expr:
                 UpdatePair(columnName, updateExpr)
 
     extension [T](expr: Expr[T, AggKind])
-        inline def filter[RK <: ExprKind](cond: Expr[Boolean, RK]): Expr[T, AggKind] =
+        inline infix def filter[RK <: ExprKind](cond: Expr[Boolean, RK]): Expr[T, AggKind] =
             inline erasedValue[RK] match
                 case _: SimpleKind =>
                 case _ => error("The parameters for FILTER cannot contain aggregate functions or window functions.")
             expr match
                 case f: Func[?, ?] => f.copy(filter = Some(cond))
 
-        inline def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None): Expr[T, WindowKind] =
-            inline erasedValue[CheckOverPartition[P]] match
-                case _: false =>
-                    error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
-                case _ =>
-            inline erasedValue[CheckOverOrder[O]] match
-                case _: false =>
-                    error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
-                case _ =>
-            val partition = partitionBy match
-                case e: Expr[?, ?] => e :: Nil
-                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-            val order = orderBy match
-                case o: OrderBy[?, ?] => o :: Nil
-                case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-            val frameClause = frame match
-                case o: Option[?] => o
-                case o: SqlWindowFrame => Some(o)
-            Window(expr, partition, order, frameClause)
+        infix def over(overValue: OverValue): Expr[T, WindowKind] =
+            Expr.Window(expr, overValue.partitionBy, overValue.orderBy, overValue.frame)
 
     extension [T, K <: ExprKind](expr: Expr[T, K])
         def asc: OrderBy[T, K] = OrderBy(expr, Asc, None)
@@ -535,29 +518,36 @@ case class TimeInterval(value: Double, unit: SqlTimeUnit)
 
 case class SubLinkItem[T](query: SqlQuery, linkType: SqlSubLinkType)
 
+case class OverValue(
+    partitionBy: List[Expr[?, ?]] = Nil, 
+    orderBy: List[OrderBy[?, ?]] = Nil,
+    frame: Option[SqlWindowFrame] = None
+):
+    inline infix def orderBy[O](orderByValue: O): OverValue =
+        inline erasedValue[CheckOverOrder[O]] match
+            case _: false =>
+                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
+            case _ =>
+        val order = orderByValue match
+            case o: OrderBy[?, ?] => o :: Nil
+            case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
+        copy(orderBy = order)
+
+    infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
+        copy(frame = Some(SqlWindowFrame.Rows(start, end)))
+
+    infix def rangeBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
+        copy(frame = Some(SqlWindowFrame.Range(start, end)))
+
+    infix def groupsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
+        copy(frame = Some(SqlWindowFrame.Groups(start, end)))
+
 case class WindowFunc[T](
    name: String,
    args: List[Expr[?, ?]],
    distinct: Boolean = false,
    orderBy: List[OrderBy[?, ?]] = Nil
 ):
-    inline def over[P, O](partitionBy: P = EmptyTuple, orderBy: O = EmptyTuple, frame: Option[SqlWindowFrame] | SqlWindowFrame = None): Expr[T, WindowKind] =
-        inline erasedValue[CheckOverPartition[P]] match
-            case _: false =>
-                error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
-            case _ =>
-        inline erasedValue[CheckOverOrder[O]] match
-            case _: false =>
-                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
-            case _ =>
-        val partition = partitionBy match
-            case e: Expr[?, ?] => e :: Nil
-            case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-        val order = orderBy match
-            case o: OrderBy[?, ?] => o :: Nil
-            case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-        val frameClause = frame match
-            case o: Option[?] => o
-            case o: SqlWindowFrame => Some(o)
-        val func = Expr.Func(name, args, distinct, this.orderBy)
-        Expr.Window(func, partition, order, frameClause)
+    infix def over(overValue: OverValue): Expr[T, WindowKind] =
+        val func = Expr.Func(name, args, distinct, orderBy)
+        Expr.Window(func, overValue.partitionBy, overValue.orderBy, overValue.frame)

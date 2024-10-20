@@ -320,18 +320,20 @@ def unboundedPreceding: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedPre
 
 def unboundedFollowing: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedFollowing
 
-def preceding(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
+extension (n: Int)
+    def preceding: SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
 
-def following(n: Int): SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
+    def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Rows(start, end)
-
-def rangeBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Range(start, end)
-
-def groupsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): SqlWindowFrame =
-    SqlWindowFrame.Groups(start, end)
+inline def partitionBy[P](partitionValue: P): OverValue =
+    inline erasedValue[CheckOverPartition[P]] match
+        case _: false =>
+            error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
+        case _ =>
+    val partition = partitionValue match
+        case e: Expr[?, ?] => e :: Nil
+        case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
+    OverValue(partitionBy = partition)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
