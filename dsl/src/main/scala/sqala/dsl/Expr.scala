@@ -498,6 +498,9 @@ object Expr:
         infix def over(overValue: OverValue): Expr[T, WindowKind] =
             Expr.Window(expr, overValue.partitionBy, overValue.orderBy, overValue.frame)
 
+        infix def over(overValue: Unit): Expr[T, WindowKind] =
+            Expr.Window(expr, Nil, Nil, None)
+
     extension [T, K <: ExprKind](expr: Expr[T, K])
         def asc: OrderBy[T, K] = OrderBy(expr, Asc, None)
 
@@ -527,12 +530,12 @@ case class OverValue(
     private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    inline infix def orderBy[O](orderByValue: O): OverValue =
+    inline infix def orderBy[O](orderValue: O): OverValue =
         inline erasedValue[CheckOverOrder[O]] match
             case _: false =>
                 error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
             case _ =>
-        val order = orderByValue match
+        val order = orderValue match
             case o: OrderBy[?, ?] => o :: Nil
             case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
         copy(orderBy = order)
@@ -555,3 +558,7 @@ class WindowFunc[T](
     infix def over(overValue: OverValue): Expr[T, WindowKind] =
         val func = Expr.Func(name, args, distinct, orderBy)
         Expr.Window(func, overValue.partitionBy, overValue.orderBy, overValue.frame)
+
+    infix def over(overValue: Unit): Expr[T, WindowKind] =
+        val func = Expr.Func(name, args, distinct, orderBy)
+        Expr.Window(func, Nil, Nil, None)

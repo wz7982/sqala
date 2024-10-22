@@ -358,6 +358,16 @@ inline def partitionBy[P](partitionValue: P): OverValue =
         case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
     OverValue(partitionBy = partition)
 
+inline def orderBy[O](orderValue: O): OverValue =
+    inline erasedValue[CheckOverOrder[O]] match
+            case _: false =>
+                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
+            case _ =>
+    val order = orderValue match
+        case o: OrderBy[?, ?] => o :: Nil
+        case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
+    OverValue(orderBy = order)
+
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
