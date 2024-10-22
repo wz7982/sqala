@@ -14,3 +14,9 @@ class SubQuery[N <: Tuple, V <: Tuple](
     inline def selectDynamic(name: String): Expr[?, ColumnKind] = 
         val index = constValue[Index[N, name.type, 0]]
         Expr.Column(__alias__, s"c${index}")
+
+    inline def * : Fields =
+        val columns = (0 until __columnSize__).toArray.map: i =>
+            Expr.Column(__alias__, s"c${i}")
+        val columnTuple = Tuple.fromArray(columns.toArray)
+        NamedTuple(columnTuple).asInstanceOf[Fields]

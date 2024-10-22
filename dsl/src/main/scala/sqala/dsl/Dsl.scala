@@ -146,11 +146,11 @@ inline def percentileDisc[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
             case _ =>
                 Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
-def rank(): WindowFunc[Option[Long]] = WindowFunc("RANK", Nil)
+def rank(): WindowFunc[Long] = WindowFunc("RANK", Nil)
 
-def denseRank(): WindowFunc[Option[Long]] = WindowFunc("DENSE_RANK", Nil)
+def denseRank(): WindowFunc[Long] = WindowFunc("DENSE_RANK", Nil)
 
-def rowNumber(): WindowFunc[Option[Long]] = WindowFunc("ROW_NUMBER", Nil)
+def rowNumber(): WindowFunc[Long] = WindowFunc("ROW_NUMBER", Nil)
 
 inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
