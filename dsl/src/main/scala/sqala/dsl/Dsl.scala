@@ -146,11 +146,11 @@ inline def percentileDisc[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
             case _ =>
                 Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
-def rank(): WindowFunc[Option[Long]] = WindowFunc("RANK", Nil)
+def rank(): WindowFunc[Long] = WindowFunc("RANK", Nil)
 
-def denseRank(): WindowFunc[Option[Long]] = WindowFunc("DENSE_RANK", Nil)
+def denseRank(): WindowFunc[Long] = WindowFunc("DENSE_RANK", Nil)
 
-def rowNumber(): WindowFunc[Option[Long]] = WindowFunc("ROW_NUMBER", Nil)
+def rowNumber(): WindowFunc[Long] = WindowFunc("ROW_NUMBER", Nil)
 
 inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
@@ -357,6 +357,16 @@ inline def partitionBy[P](partitionValue: P): OverValue =
         case e: Expr[?, ?] => e :: Nil
         case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
     OverValue(partitionBy = partition)
+
+inline def orderBy[O](orderValue: O): OverValue =
+    inline erasedValue[CheckOverOrder[O]] match
+            case _: false =>
+                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
+            case _ =>
+    val order = orderValue match
+        case o: OrderBy[?, ?] => o :: Nil
+        case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
+    OverValue(orderBy = order)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
