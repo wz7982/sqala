@@ -35,7 +35,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Window[T](expr: Expr[?, ?], partitionBy: List[Expr[?, ?]], orderBy: List[OrderBy[?, ?]], frame: Option[SqlWindowFrame]) extends Expr[T, WindowKind]
     case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T, CommonKind]
     case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
-    case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: String) extends Expr[T, K]
+    case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: SqlCastType) extends Expr[T, K]
     case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
     case Grouping(items: List[Expr[?, ?]]) extends Expr[Int, AggOperationKind]
 
