@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 
@@ -58,6 +58,18 @@ class OraclePrinter(override val prepare: Boolean, override val indent: Int) ext
         sqlBuilder.append(" VALUES (")
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
+
+    override def printCastType(castType: SqlCastType): Unit =
+        val t = castType match
+            case SqlCastType.Varchar => "VARCHAR"
+            case SqlCastType.Int4 => "INTEGER"
+            case SqlCastType.Int8 => "NUMBER"
+            case SqlCastType.Float4 => "FLOAT"
+            case SqlCastType.Float8 => "BINARY_DOUBLE"
+            case SqlCastType.DateTime => "TIMESTAMP"
+            case SqlCastType.Json => "JSON"
+            case SqlCastType.Custom(c) => c
+        sqlBuilder.append(t)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")

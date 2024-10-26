@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
 
 class DB2Printer(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
@@ -52,6 +52,18 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
 
     override def printCteRecursive(): Unit = {}
 
+    override def printCastType(castType: SqlCastType): Unit =
+        val t = castType match
+            case SqlCastType.Varchar => "VARCHAR"
+            case SqlCastType.Int4 => "INTEGER"
+            case SqlCastType.Int8 => "BIGINT"
+            case SqlCastType.Float4 => "REAL"
+            case SqlCastType.Float8 => "DOUBLE"
+            case SqlCastType.DateTime => "TIMESTAMP"
+            case SqlCastType.Json => "JSON"
+            case SqlCastType.Custom(c) => c
+        sqlBuilder.append(t)
+    
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
