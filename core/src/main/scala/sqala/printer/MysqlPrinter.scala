@@ -1,7 +1,7 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCase, SqlExpr}
 import sqala.ast.expr.SqlExpr.*
+import sqala.ast.expr.{SqlCase, SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.ast.order.SqlOrderBy
@@ -51,6 +51,18 @@ class MysqlPrinter(override val prepare: Boolean, override val indent: Int) exte
             sqlBuilder.append(" = VALUES (")
             printExpr(u)
             sqlBuilder.append(")")
+
+    override def printCastType(castType: SqlCastType): Unit =
+        val t = castType match
+            case SqlCastType.Varchar => "CHAR"
+            case SqlCastType.Int4 => "SIGNED"
+            case SqlCastType.Int8 => "SIGNED"
+            case SqlCastType.Float4 => "FLOAT"
+            case SqlCastType.Float8 => "DOUBLE"
+            case SqlCastType.DateTime => "DATETIME"
+            case SqlCastType.Json => "JSON"
+            case SqlCastType.Custom(c) => c
+        sqlBuilder.append(t)
 
     override def printOrderBy(orderBy: SqlOrderBy): Unit =
         val order = orderBy.order match

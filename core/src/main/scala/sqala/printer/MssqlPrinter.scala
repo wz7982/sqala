@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 
@@ -78,6 +78,18 @@ class MssqlPrinter(override val prepare: Boolean, override val indent: Int) exte
         case _ => super.printBinaryExpr(expr)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
+
+    override def printCastType(castType: SqlCastType): Unit =
+        val t = castType match
+            case SqlCastType.Varchar => "VARCHAR"
+            case SqlCastType.Int4 => "INT"
+            case SqlCastType.Int8 => "BIGINT"
+            case SqlCastType.Float4 => "FLOAT"
+            case SqlCastType.Float8 => "REAL"
+            case SqlCastType.DateTime => "DATETIME"
+            case SqlCastType.Json => "VARCHAR"
+            case SqlCastType.Custom(c) => c
+        sqlBuilder.append(t)
 
     override def printExtractExpr(expr: SqlExpr.Extract): Unit =
         sqlBuilder.append("DATEPART(")

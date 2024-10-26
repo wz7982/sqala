@@ -37,9 +37,6 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
     case (l, r) => CommonKind
 
-type CastKind[E <: Expr[?, ?]] <: CompositeKind = E match
-    case Expr[_, k] => ResultKind[k, ValueKind]
-
 trait TransformKind[T, TK <: ExprKind]:
     type R
 

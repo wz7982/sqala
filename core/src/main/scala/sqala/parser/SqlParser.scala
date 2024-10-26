@@ -1,6 +1,6 @@
 package sqala.parser
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlExpr, SqlSubLinkType}
+import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
@@ -191,7 +191,7 @@ class SqlParser extends StandardTokenParsers:
 
     def cast: Parser[SqlExpr] =
         "CAST" ~> ("(" ~> expr ~ "AS" ~ ident <~ ")") ^^ {
-            case expr ~ _ ~ castType => SqlExpr.Cast(expr, castType.toUpperCase.nn)
+            case expr ~ _ ~ castType => SqlExpr.Cast(expr, SqlCastType.Custom(castType.toUpperCase.nn))
         }
 
     def caseWhen: Parser[SqlExpr] =

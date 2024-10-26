@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
 
 class PostgresqlPrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
@@ -23,6 +23,18 @@ class PostgresqlPrinter(override val prepare: Boolean, override val indent: Int)
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")
             printExpr(u)
+
+    override def printCastType(castType: SqlCastType): Unit =
+        val t = castType match
+            case SqlCastType.Varchar => "VARCHAR"
+            case SqlCastType.Int4 => "INT4"
+            case SqlCastType.Int8 => "INT8"
+            case SqlCastType.Float4 => "FLOAT4"
+            case SqlCastType.Float8 => "FLOAT8"
+            case SqlCastType.DateTime => "TIMESTAMP"
+            case SqlCastType.Json => "JSONB"
+            case SqlCastType.Custom(c) => c
+        sqlBuilder.append(t)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")

@@ -10,6 +10,7 @@ import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.*
 
 import scala.collection.mutable.ArrayBuffer
+import sqala.ast.expr.SqlCastType
 
 abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     val sqlBuilder: StringBuilder = StringBuilder()
@@ -344,7 +345,11 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     def printCastExpr(expr: SqlExpr.Cast): Unit =
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
-        sqlBuilder.append(s" AS ${expr.castType})")
+        sqlBuilder.append(s" AS ")
+        printCastType(expr.castType)
+        sqlBuilder.append(")")
+
+    def printCastType(castType: SqlCastType): Unit
 
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)

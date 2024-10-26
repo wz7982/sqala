@@ -54,10 +54,10 @@ def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
 
 class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
     infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using o: ResultOperation[T, E], k: KindOperation[K, TK]): IfThen[o.R, ResultKind[K, TK]] =
-        IfThen(exprs :+ expr)
+        new IfThen(exprs :+ expr)
 
     infix def `then`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): IfThen[o.R, ResultKind[K, ValueKind]] =
-        IfThen(exprs :+ Expr.Literal(value, a))
+        new IfThen(exprs :+ Expr.Literal(value, a))
 
 class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
     infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
@@ -71,9 +71,9 @@ class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
         Expr.Case(caseBranches, Expr.Literal(value, a))
 
     infix def `else if`[EK <: ExprKind](expr: Expr[Boolean, EK])(using k: KindOperation[K, EK]): If[T, ResultKind[K, EK]] =
-        If(exprs :+ expr)
+        new If(exprs :+ expr)
 
-def `if`[K <: ExprKind](expr: Expr[Boolean, K]): If[Nothing, K] = If(expr :: Nil)
+def `if`[K <: ExprKind](expr: Expr[Boolean, K]): If[Nothing, K] = new If(expr :: Nil)
 
 def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean, CommonKind] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
@@ -334,8 +334,38 @@ def second: TimeUnit = TimeUnit.Second
 def extract[T: DateTime, K <: ExprKind](value: ExtractValue[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
     Expr.Extract(value.unit, value.expr)
 
-def cast[T](expr: Expr[?, ?], castType: String): Expr[Wrap[T, Option], CastKind[expr.type]] =
-    Expr.Cast(expr, castType)
+enum CastType[T](val castType: SqlCastType):
+    case Varchar extends CastType[String](SqlCastType.Varchar)
+    case Int4 extends CastType[Int](SqlCastType.Int4)
+    case Int8 extends CastType[Long](SqlCastType.Int8)
+    case Float4 extends CastType[Float](SqlCastType.Float4)
+    case Float8 extends CastType[Double](SqlCastType.Float8)
+    case Timestamp extends CastType[Date](SqlCastType.DateTime)
+    case Json extends CastType[Json](SqlCastType.Json)
+    case Custom[T](t: String) extends CastType[T](SqlCastType.Custom(t))
+
+case class CastValue[T, K <: ExprKind](expr: Expr[?, K], castType: CastType[T])
+
+extension [K <: ExprKind](expr: Expr[?, K])
+    infix def as[T](castType: CastType[T]): CastValue[T, K] =
+        CastValue(expr, castType)
+
+def varchar: CastType[String] = CastType.Varchar
+
+def int4: CastType[Int] = CastType.Int4
+
+def int8: CastType[Long] = CastType.Int8
+
+def float4: CastType[Float] = CastType.Float4
+
+def float8: CastType[Double] = CastType.Float8
+
+def timestamp: CastType[Date] = CastType.Timestamp
+
+def json: CastType[Json] = CastType.Json
+
+def cast[T, K <: ExprKind](castValue: CastValue[T, K]): Expr[Option[T], ResultKind[K, ValueKind]] =
+    Expr.Cast(castValue.expr, castValue.castType.castType)
 
 def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
 
