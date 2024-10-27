@@ -7,22 +7,28 @@ import scala.compiletime.{erasedValue, summonInline}
 
 @implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait ComparableValue[T]:
-    def asExpr(x: T): Expr[?, ?]
+    def exprs(x: T): List[Expr[?, ?]]
+
+    def asExpr(x: T): Expr[?, ?] =
+        val exprList = exprs(x)
+        if exprList.size == 1 then Expr.Ref(exprList.head)
+        else Expr.Vector(exprList)
 
 object ComparableValue:
     given valueAsExpr[T](using a: AsSqlExpr[T]): ComparableValue[T] with
-        def asExpr(x: T): Expr[?, ?] = Expr.Literal(x, a)
+        def exprs(x: T): List[Expr[?, ?]] =
+            Expr.Literal(x, a) :: Nil
 
     given tupleAsExpr[H, T <: Tuple](using h: AsSqlExpr[H], t: ComparableValue[T]): ComparableValue[H *: T] with
-        def asExpr(x: H *: T): Expr[?, ?] =
+        def exprs(x: H *: T): List[Expr[?, ?]] =
             val head = Expr.Literal(x.head, h)
-            val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
-            Expr.Vector(head :: tail.items)
+            val tail = t.exprs(x.tail)
+            head :: tail
 
     given tuple1AsExpr[H](using h: AsSqlExpr[H]): ComparableValue[H *: EmptyTuple] with
-        def asExpr(x: H *: EmptyTuple): Expr[?, ?] =
+        def exprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
             val head = Expr.Literal(x.head, h)
-            Expr.Vector(head :: Nil)
+            head :: Nil
 
 @implicitNotFound("Types ${A} and ${B} be cannot compared.")
 trait CompareOperation[A, B]

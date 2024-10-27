@@ -9,7 +9,12 @@ trait Merge[T]:
 
     type K <: CompositeKind
 
-    def asExpr(x: T): Expr[R, K]
+    def exprs(x: T): List[Expr[?, ?]]
+
+    def asExpr(x: T): Expr[R, K] = 
+        val exprList = exprs(x)
+        if exprList.size == 1 then Expr.Ref(exprList.head)
+        else Expr.Vector(exprList)
 
 object Merge:
     type Aux[T, OR, OK <: CompositeKind] = Merge[T]:
@@ -23,8 +28,8 @@ object Merge:
 
             type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[T, EK]): Expr[R, K] =
-                x.asInstanceOf[Expr[R, K]]
+            def exprs(x: Expr[T, EK]): List[Expr[?, ?]] =
+                x :: Nil
 
     given mergeTuple[H: AsSqlExpr, EK <: SimpleKind, T <: Tuple](using 
         t: Merge[T], 
@@ -36,10 +41,8 @@ object Merge:
 
             type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[H, EK] *: T): Expr[R, K] =
-                val head = x.head
-                val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
-                Expr.Vector(head :: tail.items)
+            def exprs(x: Expr[H, EK] *: T): List[Expr[?, ?]] =
+                x.head :: t.exprs(x.tail)
 
     given mergeTuple1[H: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[H, EK] *: EmptyTuple, H, ResultKind[EK, ValueKind]] =
         new Merge[Expr[H, EK] *: EmptyTuple]:
@@ -47,9 +50,8 @@ object Merge:
 
             type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[H, EK] *: EmptyTuple): Expr[R, K] =
-                val head = x.head
-                Expr.Vector(head :: Nil)
+            def exprs(x: Expr[H, EK] *: EmptyTuple): List[Expr[?, ?]] =
+                x.head :: Nil
 
     given mergeNamedTuple[N <: Tuple, V <: Tuple](using m: Merge[V]): Aux[NamedTuple[N, V], m.R, m.K] =
         new Merge[NamedTuple[N, V]]:
@@ -57,5 +59,5 @@ object Merge:
 
             type K = m.K
 
-            def asExpr(x: NamedTuple[N, V]): Expr[R, K] =
-                m.asExpr(x.toTuple)
+            def exprs(x: NamedTuple[N, V]): List[Expr[?, ?]] =
+                m.exprs(x.toTuple)

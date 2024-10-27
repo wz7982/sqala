@@ -66,7 +66,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
 
-    case Ref[T, K <: GroupKind | DistinctKind](expr: Expr[?, ?]) extends Expr[T, K]
+    case Ref[T, K <: GroupKind | DistinctKind | CompositeKind](expr: Expr[?, ?]) extends Expr[T, K]
 
     @targetName("eq")
     def ==[R](value: R)(using 
