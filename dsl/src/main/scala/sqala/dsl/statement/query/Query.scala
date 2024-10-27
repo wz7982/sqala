@@ -195,7 +195,7 @@ class SelectQuery[T](
 
     inline def map[R](f: QueryContext ?=> T => R)(using 
         s: SelectItem[R], 
-        a: AsExpr[R], 
+        a: SelectItemAsExpr[R], 
         h: HasAgg[R], 
         n: NotAgg[R], 
         c: CheckMapKind[h.R, n.R],

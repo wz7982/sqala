@@ -35,7 +35,7 @@ class GroupByQuery[T](
 
     def map[R](f: QueryContext ?=> T => R)(using 
         s: SelectItem[R], 
-        a: AsExpr[R], 
+        a: SelectItemAsExpr[R], 
         i: IsAggOrGroup[R], 
         ck: CheckGroupMapKind[i.R]
     ): ProjectionQuery[R, ManyRows] =

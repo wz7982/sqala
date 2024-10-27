@@ -71,7 +71,7 @@ object ResultOperation:
     type Aux[A, B, O] = ResultOperation[A, B]:
         type R = O
 
-    given result[A: AsSqlExpr]: Aux[A, A, A] = new ResultOperation[A, A]:
+    given result[A]: Aux[A, A, A] = new ResultOperation[A, A]:
         type R = A
 
     given optionResult[A: AsSqlExpr]: Aux[A, Option[A], Option[A]] = new ResultOperation[A, Option[A]]:
@@ -122,13 +122,6 @@ object UnionOperation:
         tt: ToTuple[u.R]
     ): Aux[NamedTuple[LN, LV], NamedTuple[RN, RV], NamedTuple[LN, tt.R]] = 
         new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
-            type R = NamedTuple[LN, tt.R]
-
-    given namedTupleAndTupleUnion[LN <: Tuple, LV <: Tuple, RV <: Tuple](using 
-        u: UnionOperation[LV, RV], 
-        tt: ToTuple[u.R]
-    ): Aux[NamedTuple[LN, LV], RV, NamedTuple[LN, tt.R]] = 
-        new UnionOperation[NamedTuple[LN, LV], RV]:
             type R = NamedTuple[LN, tt.R]
 
 @implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function.")
