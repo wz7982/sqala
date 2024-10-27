@@ -36,21 +36,3 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (AggKind | AggOperationKind | GroupKind, r) => AggOperationKind
     case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
     case (l, r) => CommonKind
-
-type CheckOverPartition[T] <: Boolean = T match
-    case Expr[_, k] => k match
-        case SimpleKind => true
-        case _ => false
-    case Expr[_, k] *: xs => k match
-        case SimpleKind => CheckOverPartition[xs]
-        case _ => false
-    case EmptyTuple => true
-
-type CheckOverOrder[T] <: Boolean = T match
-    case OrderBy[_, k] => k match
-        case ColumnKind | CommonKind => true
-        case _ => false
-    case OrderBy[_, k] *: xs => k match
-        case ColumnKind | CommonKind => CheckOverOrder[xs]
-        case _ => false
-    case EmptyTuple => true

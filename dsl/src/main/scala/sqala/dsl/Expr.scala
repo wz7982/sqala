@@ -702,15 +702,8 @@ case class OverValue(
     private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    inline infix def orderBy[O](orderValue: O): OverValue =
-        inline erasedValue[CheckOverOrder[O]] match
-            case _: false =>
-                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
-            case _ =>
-        val order = orderValue match
-            case o: OrderBy[?, ?] => o :: Nil
-            case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-        copy(orderBy = order)
+    infix def orderBy[O](orderValue: O)(using a: OrderArg[O]): OverValue =
+        copy(orderBy = a.orders(orderValue))
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Rows(start, end)))

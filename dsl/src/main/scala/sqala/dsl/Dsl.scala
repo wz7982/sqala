@@ -447,25 +447,11 @@ extension (n: Int)
 
     def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-inline def partitionBy[P](partitionValue: P): OverValue =
-    inline erasedValue[CheckOverPartition[P]] match
-        case _: false =>
-            error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
-        case _ =>
-    val partition = partitionValue match
-        case e: Expr[?, ?] => e :: Nil
-        case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-    OverValue(partitionBy = partition)
+def partitionBy[P](partitionValue: P)(using a: PartitionArg[P]): OverValue =
+    OverValue(partitionBy = a.exprs(partitionValue))
 
-inline def orderBy[O](orderValue: O): OverValue =
-    inline erasedValue[CheckOverOrder[O]] match
-            case _: false =>
-                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
-            case _ =>
-    val order = orderValue match
-        case o: OrderBy[?, ?] => o :: Nil
-        case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-    OverValue(orderBy = order)
+def orderBy[O](orderValue: O)(using a: OrderArg[O]): OverValue =
+    OverValue(orderBy = a.orders(orderValue))
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
