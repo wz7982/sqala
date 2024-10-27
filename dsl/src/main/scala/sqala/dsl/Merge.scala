@@ -17,7 +17,7 @@ object Merge:
 
         type K = OK
 
-    given mergeExpr[T: AsSqlExpr, EK <: ExprKind]: Aux[Expr[T, EK], T, ResultKind[EK, ValueKind]] =
+    given mergeExpr[T: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[T, EK], T, ResultKind[EK, ValueKind]] =
         new Merge[Expr[T, EK]]:
             type R = T
 
@@ -26,18 +26,22 @@ object Merge:
             def asExpr(x: Expr[T, EK]): Expr[R, K] =
                 x.asInstanceOf[Expr[R, K]]
 
-    given mergeTuple[H: AsSqlExpr, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K], tt: ToTuple[t.R]): Aux[Expr[H, EK] *: T, H *: tt.R, ResultKind[EK, t.K]] =
+    given mergeTuple[H: AsSqlExpr, EK <: SimpleKind, T <: Tuple](using 
+        t: Merge[T], 
+        k: KindOperation[EK, t.K], 
+        tt: ToTuple[t.R]
+    ): Aux[Expr[H, EK] *: T, H *: tt.R, ResultKind[EK, ValueKind]] =
         new Merge[Expr[H, EK] *: T]:
             type R = H *: tt.R
 
-            type K = ResultKind[EK, t.K]
+            type K = ResultKind[EK, ValueKind]
 
             def asExpr(x: Expr[H, EK] *: T): Expr[R, K] =
                 val head = x.head
                 val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
                 Expr.Vector(head :: tail.items)
 
-    given mergeTuple1[H: AsSqlExpr, EK <: ExprKind]: Aux[Expr[H, EK] *: EmptyTuple, H, ResultKind[EK, ValueKind]] =
+    given mergeTuple1[H: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[H, EK] *: EmptyTuple, H, ResultKind[EK, ValueKind]] =
         new Merge[Expr[H, EK] *: EmptyTuple]:
             type R = H
 

@@ -17,7 +17,11 @@ object Result:
     given exprResult[T, K <: ExprKind]: Aux[Expr[T, K], T] = new Result[Expr[T, K]]:
         type R = T
 
-    given tupleResult[H, T <: Tuple](using hr: Result[H], tr: Result[T], tt: ToTuple[tr.R]): Aux[H *: T, hr.R *: tt.R] = 
+    given tupleResult[H, T <: Tuple](using 
+        hr: Result[H], 
+        tr: Result[T], 
+        tt: ToTuple[tr.R]
+    ): Aux[H *: T, hr.R *: tt.R] = 
         new Result[H *: T]:
             type R = hr.R *: tt.R
 
@@ -25,10 +29,16 @@ object Result:
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
-    given namedTupleResult[N <: Tuple, V <: Tuple](using r: Result[V], tt: ToTuple[r.R]): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+    given namedTupleResult[N <: Tuple, V <: Tuple](using 
+        r: Result[V], 
+        tt: ToTuple[r.R]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
         new Result[NamedTuple[N, V]]:
             type R = NamedTuple[N, tt.R]
 
-    given subQueryResult[N <: Tuple, V <: Tuple](using r: Result[V], tt: ToTuple[r.R]): Aux[SubQuery[N, V], NamedTuple[N, tt.R]] =
+    given subQueryResult[N <: Tuple, V <: Tuple](using 
+        r: Result[V], 
+        tt: ToTuple[r.R]
+    ): Aux[SubQuery[N, V], NamedTuple[N, tt.R]] =
         new Result[SubQuery[N, V]]:
             type R = NamedTuple[N, tt.R]

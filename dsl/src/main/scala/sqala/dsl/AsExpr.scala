@@ -11,7 +11,10 @@ object AsExpr:
     given exprAsExpr[T, K <: ExprKind]: AsExpr[Expr[T, K]] with
         def asExprs(x: Expr[T, K]): List[Expr[?, ?]] = x :: Nil
     
-    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using h: AsExpr[Expr[X, K]], t: AsExpr[T]): AsExpr[Expr[X, K] *: T] with
+    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using 
+        h: AsExpr[Expr[X, K]], 
+        t: AsExpr[T]
+    ): AsExpr[Expr[X, K] *: T] with
         def asExprs(x: Expr[X, K] *: T): List[Expr[?, ?]] = h.asExprs(x.head) ++ t.asExprs(x.tail)
 
     given tuple1AsExpr[X, K <: ExprKind](using h: AsExpr[Expr[X, K]]): AsExpr[Expr[X, K] *: EmptyTuple] with

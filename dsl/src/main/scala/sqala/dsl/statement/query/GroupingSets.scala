@@ -14,7 +14,10 @@ object GroupingSetsItem:
         override def asSqlExpr(x: Expr[T, K]): SqlExpr =
             x.asSqlExpr
 
-    given tupleGrouping[T, K <: ExprKind, Tail <: Tuple](using hi: GroupingSetsItem[Expr[T, K]], ti: GroupingSetsItem[Tail]): GroupingSetsItem[Expr[T, K] *: Tail] with
+    given tupleGrouping[T, K <: ExprKind, Tail <: Tuple](using 
+        hi: GroupingSetsItem[Expr[T, K]], 
+        ti: GroupingSetsItem[Tail]
+    ): GroupingSetsItem[Expr[T, K] *: Tail] with
         override def asSqlExpr(x: Expr[T, K] *: Tail): SqlExpr =
             val tailExpr = ti.asSqlExpr(x.tail) match
                 case SqlExpr.Vector(list) => list
@@ -34,7 +37,10 @@ object GroupingSets:
         override def asSqlExprs(x: Expr[T, K]): List[SqlExpr] =
             x.asSqlExpr :: Nil
 
-    given tupleGrouping[H, T <: Tuple](using hi: GroupingSetsItem[H], ti: GroupingSets[T]): GroupingSets[H *: T] with
+    given tupleGrouping[H, T <: Tuple](using 
+        hi: GroupingSetsItem[H], 
+        ti: GroupingSets[T]
+    ): GroupingSets[H *: T] with
         override def asSqlExprs(x: H *: T): List[SqlExpr] =
             hi.asSqlExpr(x.head) :: ti.asSqlExprs(x.tail)
 

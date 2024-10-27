@@ -91,20 +91,39 @@ object UnionOperation:
     type Aux[A, B, O] = UnionOperation[A, B]:
         type R = O
 
-    given union[A, K <: ExprKind, B, UK <: ExprKind](using r: ResultOperation[A, B]): Aux[Expr[A, K], Expr[B, UK], Expr[r.R, ColumnKind]] = new UnionOperation[Expr[A, K], Expr[B, UK]]:
-        type R = Expr[r.R, ColumnKind]
+    given union[A, K <: ExprKind, B, UK <: ExprKind](using 
+        r: ResultOperation[A, B]
+    ): Aux[Expr[A, K], Expr[B, UK], Expr[r.R, ColumnKind]] = 
+        new UnionOperation[Expr[A, K], Expr[B, UK]]:
+            type R = Expr[r.R, ColumnKind]
 
-    given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using h: UnionOperation[LH, RH], t: UnionOperation[LT, RT], tt: ToTuple[t.R]): Aux[LH *: LT, RH *: RT, h.R *: tt.R] = new UnionOperation[LH *: LT, RH *: RT]:
-        type R = h.R *: tt.R
+    given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using 
+        h: UnionOperation[LH, RH], 
+        t: UnionOperation[LT, RT], 
+        tt: ToTuple[t.R]
+    ): Aux[LH *: LT, RH *: RT, h.R *: tt.R] = 
+        new UnionOperation[LH *: LT, RH *: RT]:
+            type R = h.R *: tt.R
 
-    given tuple1Union[LH, RH](using h: UnionOperation[LH, RH]): Aux[LH *: EmptyTuple, RH *: EmptyTuple, h.R *: EmptyTuple] = new UnionOperation[LH *: EmptyTuple, RH *: EmptyTuple]:
-        type R = h.R *: EmptyTuple
+    given tuple1Union[LH, RH](using 
+        h: UnionOperation[LH, RH]
+    ): Aux[LH *: EmptyTuple, RH *: EmptyTuple, h.R *: EmptyTuple] = 
+        new UnionOperation[LH *: EmptyTuple, RH *: EmptyTuple]:
+            type R = h.R *: EmptyTuple
 
-    given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using u: UnionOperation[LV, RV], tt: ToTuple[u.R]): Aux[NamedTuple[LN, LV], NamedTuple[RN, RV], NamedTuple[LN, tt.R]] = new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
-        type R = NamedTuple[LN, tt.R]
+    given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using 
+        u: UnionOperation[LV, RV], 
+        tt: ToTuple[u.R]
+    ): Aux[NamedTuple[LN, LV], NamedTuple[RN, RV], NamedTuple[LN, tt.R]] = 
+        new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
+            type R = NamedTuple[LN, tt.R]
 
-    given namedTupleAndTupleUnion[LN <: Tuple, LV <: Tuple, RV <: Tuple](using u: UnionOperation[LV, RV], tt: ToTuple[u.R]): Aux[NamedTuple[LN, LV], RV, NamedTuple[LN, tt.R]] = new UnionOperation[NamedTuple[LN, LV], RV]:
-        type R = NamedTuple[LN, tt.R]
+    given namedTupleAndTupleUnion[LN <: Tuple, LV <: Tuple, RV <: Tuple](using 
+        u: UnionOperation[LV, RV], 
+        tt: ToTuple[u.R]
+    ): Aux[NamedTuple[LN, LV], RV, NamedTuple[LN, tt.R]] = 
+        new UnionOperation[NamedTuple[LN, LV], RV]:
+            type R = NamedTuple[LN, tt.R]
 
 @implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function.")
 trait KindOperation[A <: ExprKind, B <: ExprKind]

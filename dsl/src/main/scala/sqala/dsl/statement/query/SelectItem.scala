@@ -28,7 +28,9 @@ object SelectItem:
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for field <- item.__metaData__.columnNames do
-                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__aliasName__), field), Some(s"c${tmpCursor}")))
+                items.addOne(
+                    SqlSelectItem.Item(SqlExpr.Column(Some(item.__aliasName__), field), Some(s"c${tmpCursor}"))
+                )
                 tmpCursor += 1
             items.toList
 
@@ -39,7 +41,9 @@ object SelectItem:
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for index <- (0 until offset(item)) do
-                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}")))
+                items.addOne(
+                    SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}"))
+                )
                 tmpCursor += 1
             items.toList
 
@@ -67,8 +71,15 @@ trait SelectItemAsExpr[T]
 object SelectItemAsExpr:
     given exprAsExpr[T, K <: ExprKind](using AsSqlExpr[T]): SelectItemAsExpr[Expr[T, K]]()
     
-    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using h: SelectItemAsExpr[Expr[X, K]], t: SelectItemAsExpr[T], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: T]()
+    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using 
+        h: SelectItemAsExpr[Expr[X, K]], 
+        t: SelectItemAsExpr[T], 
+        a: AsSqlExpr[X]
+    ): SelectItemAsExpr[Expr[X, K] *: T]()
 
-    given tuple1AsExpr[X, K <: ExprKind](using h: SelectItemAsExpr[Expr[X, K]], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
+    given tuple1AsExpr[X, K <: ExprKind](using 
+        h: SelectItemAsExpr[Expr[X, K]], 
+        a: AsSqlExpr[X]
+    ): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
 
     given namedTupleAsExpr[N <: Tuple, V <: Tuple](using SelectItemAsExpr[V]): SelectItemAsExpr[NamedTuple[N, V]]()
