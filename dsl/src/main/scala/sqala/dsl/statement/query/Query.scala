@@ -37,7 +37,7 @@ sealed class Query[T, S <: ResultSize](
             case _ => ast
         Query(queryItems, newAst)
 
-    def take(n: Int): Query[T, QuerySize[n.type]] =
+    def take(n: Int)(using s: QuerySize[n.type]): Query[T, s.R] =
         val limit = ast match
             case s: SqlQuery.Select => s.limit
             case u: SqlQuery.Union => u.limit
@@ -51,7 +51,7 @@ sealed class Query[T, S <: ResultSize](
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long, ColumnKind], ResultSize.OneRow] =
+    def size: Query[Expr[Long, ColumnKind], OneRow] =
         val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _) =>
@@ -63,7 +63,7 @@ sealed class Query[T, S <: ResultSize](
                 )
                 Query(expr, outerQuery)
 
-    def exists: Query[Expr[Boolean, ColumnKind], ResultSize.OneRow] =
+    def exists: Query[Expr[Boolean, ColumnKind], OneRow] =
         val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
@@ -72,49 +72,49 @@ sealed class Query[T, S <: ResultSize](
         Query(expr, outerQuery)
 
 object Query:
-    extension [Q](query: Query[Q, ResultSize.OneRow])(using m: Merge[Q])
+    extension [Q](query: Query[Q, OneRow])(using m: Merge[Q])
         def asExpr: Expr[m.R, CommonKind] = Expr.SubQuery(query.ast)
 
     extension [T, S <: ResultSize, U, US <: ResultSize](query: Query[T, S])
         infix def union(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.Union, unionQuery.ast)
 
         infix def unionAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
 
         def ++(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
 
         infix def except(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.Except, unionQuery.ast)
 
         infix def exceptAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.ExceptAll, unionQuery.ast)
 
         infix def intersect(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.Intersect, unionQuery.ast)
 
         infix def intersectAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ResultSize.ManyRows] =
+        ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
             UnionQuery(query, SqlUnionType.IntersectAll, unionQuery.ast)
 
@@ -177,7 +177,7 @@ class DistinctQuery[T, S <: ResultSize](
 class SelectQuery[T](
     private[sqala] override val queryItems: T,
     override val ast: SqlQuery.Select
-)(using QueryContext) extends Query[T, ResultSize.ManyRows](queryItems, ast):
+)(using QueryContext) extends Query[T, ManyRows](queryItems, ast):
     inline def filter[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
         inline erasedValue[K] match
             case _: AggKind => error("Aggregate functions are not allowed in WHERE.")
@@ -198,8 +198,9 @@ class SelectQuery[T](
         a: AsExpr[R], 
         h: HasAgg[R], 
         n: NotAgg[R], 
-        c: CheckMapKind[h.R, n.R]
-    ): ProjectionQuery[R, ProjectionSize[h.R]] =
+        c: CheckMapKind[h.R, n.R],
+        p: ProjectionSize[h.R]
+    ): ProjectionQuery[R, p.R] =
         val mappedItems = f(queryItems)
         val selectItems = s.selectItems(mappedItems, 0)
         ProjectionQuery(mappedItems, ast.copy(select = selectItems))
@@ -334,7 +335,7 @@ class UnionQuery[T](
     private[sqala] val left: Query[?, ?],
     private[sqala] val unionType: SqlUnionType,
     private[sqala] val right: SqlQuery
-)(using QueryContext) extends Query[T, ResultSize.ManyRows](
+)(using QueryContext) extends Query[T, ManyRows](
     left.queryItems.asInstanceOf[T], 
     SqlQuery.Union(left.ast, unionType, right)
 )

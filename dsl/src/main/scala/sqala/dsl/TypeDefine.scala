@@ -1,7 +1,5 @@
 package sqala.dsl
 
-import sqala.dsl.statement.query.ResultSize
-
 import scala.compiletime.ops.int.S
 
 type Wrap[T, F[_]] = T match
@@ -56,11 +54,3 @@ type CheckOverOrder[T] <: Boolean = T match
         case ColumnKind | CommonKind => CheckOverOrder[xs]
         case _ => false
     case EmptyTuple => true
-
-type QuerySize[N <: Int] <: ResultSize = N match
-    case 1 => ResultSize.OneRow
-    case _ => ResultSize.ManyRows
-
-type ProjectionSize[IsAgg <: Boolean] <: ResultSize = IsAgg match
-    case true => ResultSize.OneRow
-    case _ => ResultSize.ManyRows

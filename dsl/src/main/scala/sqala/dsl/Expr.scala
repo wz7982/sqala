@@ -8,7 +8,7 @@ import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
 import sqala.ast.order.{SqlOrderBy, SqlOrderByNullsOption, SqlOrderByOption}
 import sqala.ast.statement.SqlQuery
 import sqala.dsl.statement.dml.UpdatePair
-import sqala.dsl.statement.query.{Query, ResultSize}
+import sqala.dsl.statement.query.*
 
 import scala.annotation.targetName
 import scala.compiletime.{erasedValue, error}
@@ -95,7 +95,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, Equal, SubQuery(query.ast))
@@ -137,7 +137,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, NotEqual, SubQuery(query.ast))
@@ -179,7 +179,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, GreaterThan, SubQuery(query.ast))
@@ -221,7 +221,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
@@ -263,7 +263,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, LessThan, SubQuery(query.ast))
@@ -305,7 +305,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
                 error("Aggregate function cannot be compared with subquery.")
             case _ =>
         inline erasedValue[S] match
-            case _: ResultSize.ManyRows =>
+            case _: ManyRows =>
                 error("Subquery must return only one row.")
             case _ =>
         Binary(this, LessThanEqual, SubQuery(query.ast))

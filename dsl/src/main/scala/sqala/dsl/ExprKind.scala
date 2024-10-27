@@ -5,23 +5,31 @@ import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.&&
 import scala.util.NotGiven
 
-sealed trait ExprKind
+enum ExprKind:
+    case Value
+    case Common
+    case Column
+    case Agg
+    case AggOperation
+    case Window
+    case Distinct
+    case Group
 
-case class ValueKind() extends ExprKind
+type ValueKind = ExprKind.Value.type
 
-case class CommonKind() extends ExprKind
+type CommonKind = ExprKind.Common.type
 
-case class ColumnKind() extends ExprKind
+type ColumnKind = ExprKind.Column.type
 
-case class AggKind() extends ExprKind
+type AggKind = ExprKind.Agg.type
 
-case class AggOperationKind() extends ExprKind
+type AggOperationKind = ExprKind.AggOperation.type
 
-case class WindowKind() extends ExprKind
+type WindowKind = ExprKind.Window.type
 
-case class DistinctKind() extends ExprKind
+type DistinctKind = ExprKind.Distinct.type
 
-case class GroupKind() extends ExprKind
+type GroupKind = ExprKind.Group.type
 
 trait SubQueryKind[T]:
     type R
