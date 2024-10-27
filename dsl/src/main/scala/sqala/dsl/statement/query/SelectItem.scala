@@ -64,22 +64,3 @@ object SelectItem:
 
         def selectItems(item: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] = 
             s.selectItems(item.toTuple, cursor)
-
-@implicitNotFound("Type ${T} cannot be converted to SELECT items.")
-trait SelectItemAsExpr[T]
-
-object SelectItemAsExpr:
-    given exprAsExpr[T, K <: ExprKind](using AsSqlExpr[T]): SelectItemAsExpr[Expr[T, K]]()
-    
-    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using 
-        h: SelectItemAsExpr[Expr[X, K]], 
-        t: SelectItemAsExpr[T], 
-        a: AsSqlExpr[X]
-    ): SelectItemAsExpr[Expr[X, K] *: T]()
-
-    given tuple1AsExpr[X, K <: ExprKind](using 
-        h: SelectItemAsExpr[Expr[X, K]], 
-        a: AsSqlExpr[X]
-    ): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
-
-    given namedTupleAsExpr[N <: Tuple, V <: Tuple](using SelectItemAsExpr[V]): SelectItemAsExpr[NamedTuple[N, V]]()
