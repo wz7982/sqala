@@ -8,7 +8,7 @@ import scala.compiletime.constValue
 class SubQuery[N <: Tuple, V <: Tuple](
     private[sqala] val __alias__ : String,
     private[sqala] val __columnSize__ : Int
-)(using QueryContext) extends Selectable:
+)(using val qc: QueryContext) extends Selectable:
     type Fields = NamedTuple[N, V]
 
     inline def selectDynamic(name: String): Expr[?, ColumnKind] = 

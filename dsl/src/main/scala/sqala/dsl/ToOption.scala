@@ -1,10 +1,6 @@
 package sqala.dsl
 
-import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.query.SubQuery
-
-import scala.NamedTuple.NamedTuple
-import scala.annotation.nowarn
 
 trait ToOption[T]:
     type R
@@ -12,40 +8,40 @@ trait ToOption[T]:
     def toOption(x: T): R
 
 object ToOption:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given exprToOption[T, K <: ExprKind]: ToOption[Expr[T, K]] = new ToOption[Expr[T, K]]:
-        type R = Expr[Wrap[T, Option], K]
+    type Aux[T, O] = ToOption[T]:
+        type R = O
 
-        def toOption(x: Expr[T, K]): R = x.asInstanceOf[R]
+    given tableToOption[T]: Aux[Table[T], Table[Wrap[T, Option]]] = 
+        new ToOption[Table[T]]:
+            type R = Table[Wrap[T, Option]]
 
-    transparent inline given tableToOption[X, T <: Table[X]]: ToOption[T] =
-        ${ TableMacro.toOptionTableMacro[X, T] }
+            def toOption(x: Table[T]): R = 
+                new Table(x.__tableName__, x.__aliasName__, x.__metaData__)
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given subQueryToOption[N <: Tuple, V <: Tuple](using t: ToOption[V]): ToOption[SubQuery[N, V]] =
+    given subQueryToOption[N <: Tuple, V <: Tuple](using 
+        t: ToOption[V], 
+        tt: ToTuple[t.R]
+    ): Aux[SubQuery[N, V], SubQuery[N, tt.R]] =
         new ToOption[SubQuery[N, V]]:
-            type R = SubQuery[N, ToTuple[t.R]]
+            type R = SubQuery[N, tt.R]
 
             def toOption(x: SubQuery[N, V]): R =
-                x.asInstanceOf[R]
+                new SubQuery(x.__alias__, x.__columnSize__)(using x.qc)
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleToOption[H, T <: Tuple](using h: ToOption[H], t: ToOption[T]): ToOption[H *: T] = new ToOption[H *: T]:
-        type R = h.R *: ToTuple[t.R]
+    given tupleToOption[H, T <: Tuple](using 
+        h: ToOption[H], 
+        t: ToOption[T], 
+        tt: ToTuple[t.R]
+    ): Aux[H *: T, h.R *: tt.R] = 
+        new ToOption[H *: T]:
+            type R = h.R *: tt.R
 
-        def toOption(x: H *: T): R =
-            (h.toOption(x.head) *: t.toOption(x.tail).asInstanceOf[Tuple]).asInstanceOf[R]
+            def toOption(x: H *: T): R =
+                h.toOption(x.head) *: tt.toTuple(t.toOption(x.tail))
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1ToOption[H](using h: ToOption[H]): ToOption[H *: EmptyTuple] = new ToOption[H *: EmptyTuple]:
-        type R = h.R *: EmptyTuple
+    given tuple1ToOption[H](using h: ToOption[H]): Aux[H *: EmptyTuple, h.R *: EmptyTuple] = 
+        new ToOption[H *: EmptyTuple]:
+            type R = h.R *: EmptyTuple
 
-        def toOption(x: H *: EmptyTuple): R =
-            (h.toOption(x.head) *: EmptyTuple).asInstanceOf[R]
-
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleToOption[N <: Tuple, V <: Tuple](using t: ToOption[V]): ToOption[NamedTuple[N, V]] = new ToOption[NamedTuple[N, V]]:
-        type R = NamedTuple[N, ToTuple[t.R]]
-
-        def toOption(x: NamedTuple[N, V]): R =
-            NamedTuple(t.toOption(x.toTuple).asInstanceOf[ToTuple[t.R]])
+            def toOption(x: H *: EmptyTuple): R =
+                h.toOption(x.head) *: EmptyTuple

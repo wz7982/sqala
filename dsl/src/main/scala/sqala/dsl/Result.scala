@@ -3,36 +3,42 @@ package sqala.dsl
 import sqala.dsl.statement.query.SubQuery
 
 import scala.NamedTuple.NamedTuple
-import scala.annotation.nowarn
 
 trait Result[T]:
     type R
 
 object Result:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tableResult[X, T <: Table[X]]: Result[T] = new Result[T]:
-        type R = X
+    type Aux[T, O] = Result[T]:
+        type R = O
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given exprResult[T, K <: ExprKind]: Result[Expr[T, K]] = new Result[Expr[T, K]]:
+    given tableResult[T]: Aux[Table[T], T] = new Result[Table[T]]:
         type R = T
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleResult[H, T <: Tuple](using hr: Result[H], tr: Result[T]): Result[H *: T] = 
-        new Result[H *: T]:
-            type R = hr.R *: ToTuple[tr.R]
+    given exprResult[T, K <: ExprKind]: Aux[Expr[T, K], T] = new Result[Expr[T, K]]:
+        type R = T
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1Result[H](using hr: Result[H]): Result[H *: EmptyTuple] = 
+    given tupleResult[H, T <: Tuple](using 
+        hr: Result[H], 
+        tr: Result[T], 
+        tt: ToTuple[tr.R]
+    ): Aux[H *: T, hr.R *: tt.R] = 
+        new Result[H *: T]:
+            type R = hr.R *: tt.R
+
+    given tuple1Result[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] = 
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleResult[N <: Tuple, V <: Tuple](using r: Result[V]): Result[NamedTuple[N, V]] =
+    given namedTupleResult[N <: Tuple, V <: Tuple](using 
+        r: Result[V], 
+        tt: ToTuple[r.R]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
         new Result[NamedTuple[N, V]]:
-            type R = NamedTuple[N, ToTuple[r.R]]
+            type R = NamedTuple[N, tt.R]
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given subQueryResult[N <: Tuple, V <: Tuple](using r: Result[V]): Result[SubQuery[N, V]] =
+    given subQueryResult[N <: Tuple, V <: Tuple](using 
+        r: Result[V], 
+        tt: ToTuple[r.R]
+    ): Aux[SubQuery[N, V], NamedTuple[N, tt.R]] =
         new Result[SubQuery[N, V]]:
-            type R = NamedTuple[N, ToTuple[r.R]]
+            type R = NamedTuple[N, tt.R]

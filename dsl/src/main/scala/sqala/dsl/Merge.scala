@@ -1,7 +1,7 @@
 package sqala.dsl
 
 import scala.NamedTuple.NamedTuple
-import scala.annotation.{implicitNotFound, nowarn}
+import scala.annotation.implicitNotFound
 
 @implicitNotFound("The type ${T} cannot be merged into a SQL expression.")
 trait Merge[T]:
@@ -9,48 +9,55 @@ trait Merge[T]:
 
     type K <: CompositeKind
 
-    def asExpr(x: T): Expr[R, K]
+    def exprs(x: T): List[Expr[?, ?]]
+
+    def asExpr(x: T): Expr[R, K] = 
+        val exprList = exprs(x)
+        if exprList.size == 1 then Expr.Ref(exprList.head)
+        else Expr.Vector(exprList)
 
 object Merge:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given mergeExpr[T, EK <: ExprKind]: Merge[Expr[T, EK]] =
+    type Aux[T, OR, OK <: CompositeKind] = Merge[T]:
+        type R = OR
+
+        type K = OK
+
+    given mergeExpr[T: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[T, EK], T, ResultKind[EK, ValueKind]] =
         new Merge[Expr[T, EK]]:
             type R = T
 
             type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[T, EK]): Expr[R, K] =
-                x.asInstanceOf[Expr[R, K]]
+            def exprs(x: Expr[T, EK]): List[Expr[?, ?]] =
+                x :: Nil
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given mergeTuple[H, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K]): Merge[Expr[H, EK] *: T] =
+    given mergeTuple[H: AsSqlExpr, EK <: SimpleKind, T <: Tuple](using 
+        t: Merge[T], 
+        k: KindOperation[EK, t.K], 
+        tt: ToTuple[t.R]
+    ): Aux[Expr[H, EK] *: T, H *: tt.R, ResultKind[EK, ValueKind]] =
         new Merge[Expr[H, EK] *: T]:
-            type R = H *: ToTuple[t.R]
+            type R = H *: tt.R
 
-            type K = ResultKind[EK, t.K]
+            type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[H, EK] *: T): Expr[R, K] =
-                val head = x.head
-                val tail = t.asExpr(x.tail).asInstanceOf[Expr.Vector[?, ?]]
-                Expr.Vector(head :: tail.items)
+            def exprs(x: Expr[H, EK] *: T): List[Expr[?, ?]] =
+                x.head :: t.exprs(x.tail)
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given mergeTuple1[H, EK <: ExprKind]: Merge[Expr[H, EK] *: EmptyTuple] =
+    given mergeTuple1[H: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[H, EK] *: EmptyTuple, H, ResultKind[EK, ValueKind]] =
         new Merge[Expr[H, EK] *: EmptyTuple]:
             type R = H
 
             type K = ResultKind[EK, ValueKind]
 
-            def asExpr(x: Expr[H, EK] *: EmptyTuple): Expr[R, K] =
-                val head = x.head
-                Expr.Vector(head :: Nil)
+            def exprs(x: Expr[H, EK] *: EmptyTuple): List[Expr[?, ?]] =
+                x.head :: Nil
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given mergeNamedTuple[N <: Tuple, V <: Tuple](using m: Merge[V]): Merge[NamedTuple[N, V]] =
+    given mergeNamedTuple[N <: Tuple, V <: Tuple](using m: Merge[V]): Aux[NamedTuple[N, V], m.R, m.K] =
         new Merge[NamedTuple[N, V]]:
             type R = m.R
 
             type K = m.K
 
-            def asExpr(x: NamedTuple[N, V]): Expr[R, K] =
-                m.asExpr(x.toTuple)
+            def exprs(x: NamedTuple[N, V]): List[Expr[?, ?]] =
+                m.exprs(x.toTuple)

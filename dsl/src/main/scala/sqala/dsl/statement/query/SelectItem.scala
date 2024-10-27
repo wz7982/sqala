@@ -21,14 +21,16 @@ object SelectItem:
         def selectItems(item: Expr[T, K], cursor: Int): List[SqlSelectItem.Item] =
             SqlSelectItem.Item(item.asSqlExpr, Some(s"c${cursor}")) :: Nil
 
-    given tableSelectItem[T <: Table[?]]: SelectItem[T] with
-        override def offset(item: T): Int = item.__metaData__.fieldNames.size
+    given tableSelectItem[T]: SelectItem[Table[T]] with
+        override def offset(item: Table[T]): Int = item.__metaData__.fieldNames.size
 
-        override def selectItems(item: T, cursor: Int): List[SqlSelectItem.Item] =
+        override def selectItems(item: Table[T], cursor: Int): List[SqlSelectItem.Item] =
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for field <- item.__metaData__.columnNames do
-                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__aliasName__), field), Some(s"c${tmpCursor}")))
+                items.addOne(
+                    SqlSelectItem.Item(SqlExpr.Column(Some(item.__aliasName__), field), Some(s"c${tmpCursor}"))
+                )
                 tmpCursor += 1
             items.toList
 
@@ -39,7 +41,9 @@ object SelectItem:
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for index <- (0 until offset(item)) do
-                items.addOne(SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}")))
+                items.addOne(
+                    SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}"))
+                )
                 tmpCursor += 1
             items.toList
 
@@ -65,10 +69,15 @@ object SelectItem:
 trait SelectItemAsExpr[T]
 
 object SelectItemAsExpr:
-    given exprAsExpr[T, K <: ExprKind](using AsSqlExpr[T]): SelectItemAsExpr[Expr[T, K]]()
+    given exprAsExpr[T: AsSqlExpr, K <: ExprKind]: SelectItemAsExpr[Expr[T, K]]()
     
-    given tupleAsExpr[X, K <: ExprKind, T <: Tuple](using h: SelectItemAsExpr[Expr[X, K]], t: SelectItemAsExpr[T], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: T]()
+    given tupleAsExpr[X: AsSqlExpr, K <: ExprKind, T <: Tuple](using 
+        h: SelectItemAsExpr[Expr[X, K]], 
+        t: SelectItemAsExpr[T]
+    ): SelectItemAsExpr[Expr[X, K] *: T]()
 
-    given tuple1AsExpr[X, K <: ExprKind](using h: SelectItemAsExpr[Expr[X, K]], a: AsSqlExpr[X]): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
+    given tuple1AsExpr[X: AsSqlExpr, K <: ExprKind](using 
+        h: SelectItemAsExpr[Expr[X, K]]
+    ): SelectItemAsExpr[Expr[X, K] *: EmptyTuple]()
 
     given namedTupleAsExpr[N <: Tuple, V <: Tuple](using SelectItemAsExpr[V]): SelectItemAsExpr[NamedTuple[N, V]]()

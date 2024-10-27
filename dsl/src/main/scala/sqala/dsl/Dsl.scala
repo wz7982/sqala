@@ -31,21 +31,39 @@ type CaseInit = CaseState.Init.type
 type CaseWhen = CaseState.When.type
 
 class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using S =:= CaseInit, KindOperation[K, WK]): Case[T, ResultKind[K, WK], CaseWhen] =
+    infix def when[WK <: ExprKind](expr: Expr[Boolean, WK])(using 
+        S =:= CaseInit, KindOperation[K, WK]
+    ): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using p: S =:= CaseWhen, o: ResultOperation[T, E], k: KindOperation[K, TK]): Case[o.R, ResultKind[K, TK], CaseInit] =
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using 
+        p: S =:= CaseWhen, 
+        o: ResultOperation[T, E], 
+        k: KindOperation[K, TK]
+    ): Case[o.R, ResultKind[K, TK], CaseInit] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E](value: E)(using p: S =:= CaseWhen, a: AsSqlExpr[E], o: ResultOperation[T, E]): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
+    infix def `then`[E](value: E)(using 
+        p: S =:= CaseWhen, 
+        a: AsSqlExpr[E], 
+        o: ResultOperation[T, E]
+    ): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using p: S =:= CaseInit, o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using 
+        p: S =:= CaseInit, 
+        o: ResultOperation[T, E], 
+        k: KindOperation[K, EK]
+    ): Expr[o.R, ResultKind[K, EK]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`[E](value: E)(using p: S =:= CaseInit, a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E](value: E)(using 
+        p: S =:= CaseInit, 
+        a: AsSqlExpr[E], 
+        o: ResultOperation[T, E]
+    ): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
@@ -53,24 +71,38 @@ class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr
 def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
 
 class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using o: ResultOperation[T, E], k: KindOperation[K, TK]): IfThen[o.R, ResultKind[K, TK]] =
+    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using 
+        o: ResultOperation[T, E], 
+        k: KindOperation[K, TK]
+    ): IfThen[o.R, ResultKind[K, TK]] =
         new IfThen(exprs :+ expr)
 
-    infix def `then`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): IfThen[o.R, ResultKind[K, ValueKind]] =
+    infix def `then`[E](value: E)(using 
+        a: AsSqlExpr[E], 
+        o: ResultOperation[T, E]
+    ): IfThen[o.R, ResultKind[K, ValueKind]] =
         new IfThen(exprs :+ Expr.Literal(value, a))
 
 class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using o: ResultOperation[T, E], k: KindOperation[K, EK]): Expr[o.R, ResultKind[K, EK]] =
+    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using 
+        o: ResultOperation[T, E], 
+        k: KindOperation[K, EK]
+    ): Expr[o.R, ResultKind[K, EK]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`[E](value: E)(using a: AsSqlExpr[E], o: ResultOperation[T, E]): Expr[o.R, ResultKind[K, ValueKind]] =
+    infix def `else`[E](value: E)(using 
+        a: AsSqlExpr[E], 
+        o: ResultOperation[T, E]
+    ): Expr[o.R, ResultKind[K, ValueKind]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, Expr.Literal(value, a))
 
-    infix def `else if`[EK <: ExprKind](expr: Expr[Boolean, EK])(using k: KindOperation[K, EK]): If[T, ResultKind[K, EK]] =
+    infix def `else if`[EK <: ExprKind](expr: Expr[Boolean, EK])(using 
+        k: KindOperation[K, EK]
+    ): If[T, ResultKind[K, EK]] =
         new If(exprs :+ expr)
 
 def `if`[K <: ExprKind](expr: Expr[Boolean, K]): If[Nothing, K] = new If(expr :: Nil)
@@ -90,7 +122,11 @@ def any[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[
 def some[Q, S <: ResultSize](query: Query[Q, S])(using m: Merge[Q]): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Some)
 
-private inline def aggregate[T, K <: ExprKind](name: String, expr: Expr[?, K], distinct: Boolean = false): Expr[T, AggKind] =
+private inline def aggregate[T, K <: ExprKind](
+    name: String, 
+    expr: Expr[?, K], 
+    distinct: Boolean = false
+): Expr[T, AggKind] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -120,7 +156,10 @@ inline def max[T, K <: ExprKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKin
 inline def min[T, K <: ExprKind](expr: Expr[T, K]): Expr[Wrap[T, Option], AggKind] =
     aggregate("MIN", expr)
 
-inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
+inline def percentileCont[N: Number, K <: ExprKind](
+    n: Double, 
+    withinGroup: OrderBy[N, K]
+): Expr[Option[BigDecimal], AggKind] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -133,7 +172,10 @@ inline def percentileCont[N: Number, K <: ExprKind](n: Double, withinGroup: Orde
             case _ =>
                 Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
-inline def percentileDisc[N: Number, K <: ExprKind](n: Double, withinGroup: OrderBy[N, K]): Expr[Option[BigDecimal], AggKind] =
+inline def percentileDisc[N: Number, K <: ExprKind](
+    n: Double, 
+    withinGroup: OrderBy[N, K]
+): Expr[Option[BigDecimal], AggKind] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -152,7 +194,11 @@ def denseRank(): WindowFunc[Long] = WindowFunc("DENSE_RANK", Nil)
 
 def rowNumber(): WindowFunc[Long] = WindowFunc("ROW_NUMBER", Nil)
 
-inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
+inline def lag[T, K <: ExprKind](
+    expr: Expr[T, K], 
+    offset: Int = 1, 
+    default: Option[Unwrap[T, Option]] = None
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -164,7 +210,11 @@ inline def lag[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Opt
             val defaultExpr = Expr.Literal(default, a)
             WindowFunc("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
-inline def lead[T, K <: ExprKind](expr: Expr[T, K], offset: Int = 1, default: Option[Unwrap[T, Option]] = None)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
+inline def lead[T, K <: ExprKind](
+    expr: Expr[T, K], 
+    offset: Int = 1, 
+    default: Option[Unwrap[T, Option]] = None
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): WindowFunc[Wrap[T, Option]] =
     inline erasedValue[K] match
         case _: AggKind =>
             error("Aggregate function calls cannot be nested.")
@@ -203,10 +253,14 @@ inline def lastValue[T, K <: ExprKind](expr: Expr[T, K]): WindowFunc[Wrap[T, Opt
             error("Aggregate function calls cannot contain window function calls.")
         case _ => WindowFunc("LAST_VALUE", expr :: Nil)
 
-def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using a: AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
+def coalesce[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using 
+    a: AsSqlExpr[T]
+): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
 
-def ifnull[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using AsSqlExpr[T]): Expr[T, ResultKind[K, ValueKind]] =
+def ifnull[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using 
+    AsSqlExpr[T]
+): Expr[T, ResultKind[K, ValueKind]] =
     coalesce(expr, value)
 
 def abs[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
@@ -225,7 +279,9 @@ def power[T: Number, K <: ExprKind](expr: Expr[T, K], n: Double): Expr[Option[Bi
     Expr.Func("POWER", expr :: n.asExpr :: Nil)
 
 @targetName("concatAgg")
-def concat(expr: (Expr[String, AggKind] | Expr[Option[String], AggKind] | String)*): Expr[Option[String], AggOperationKind] =
+def concat(
+    expr: (Expr[String, AggKind] | Expr[Option[String], AggKind] | String)*
+): Expr[Option[String], AggOperationKind] =
     val args = expr.toList.map:
         case s: String => s.asExpr
         case e: Expr[?, ?] => e
@@ -237,10 +293,18 @@ def concat(expr: (Expr[String, ?] | Expr[Option[String], ?] | String)*): Expr[Op
         case e: Expr[?, ?] => e
     Expr.Func("CONCAT", args)
 
-def substring[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K], start: Int, end: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
+def substring[T <: String | Option[String], K <: ExprKind](
+    expr: Expr[T, K], 
+    start: Int, 
+    end: Int
+): Expr[Option[String], ResultKind[K, ValueKind]] =
     Expr.Func("SUBSTRING", expr :: start.asExpr :: end.asExpr :: Nil)
 
-def replace[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K], oldString: String, newString: String): Expr[T, ResultKind[K, ValueKind]] =
+def replace[T <: String | Option[String], K <: ExprKind](
+    expr: Expr[T, K], 
+    oldString: String, 
+    newString: String
+): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("REPLACE", expr :: oldString.asExpr :: newString.asExpr :: Nil)
 
 def length[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[Option[Long], ResultKind[K, ValueKind]] =
@@ -261,27 +325,30 @@ def lower[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T
 def now(): Expr[Option[Date], CommonKind] =
     Expr.Func("NOW", Nil)
 
-inline def grouping[G](items: G): Expr[Int, AggOperationKind] =
-    inline erasedValue[CheckGrouping[items.type]] match
-        case _: false =>
-            error("The parameter of GROUPING must be a grouping expression.")
-        case _ =>
-            val groupingItems = items match
-                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-                case e: Expr[?, ?] => e :: Nil
-            Expr.Grouping(groupingItems)
-
 def createFunc[T](name: String, args: List[Expr[?, ?]]): Expr[T, CommonKind] =
     Expr.Func(name, args)
 
-def createAggFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?, ?]] = Nil): Expr[T, AggKind] =
+def createAggFunc[T](
+    name: String, 
+    args: List[Expr[?, ?]], 
+    distinct: Boolean = false, 
+    orderBy: List[OrderBy[?, ?]] = Nil
+): Expr[T, AggKind] =
     Expr.Func(name, args, distinct, orderBy)
 
-def createWindowFunc[T](name: String, args: List[Expr[?, ?]], distinct: Boolean = false, orderBy: List[OrderBy[?, ?]] = Nil): WindowFunc[T] =
+def createWindowFunc[T](
+    name: String, 
+    args: List[Expr[?, ?]], 
+    distinct: Boolean = false, 
+    orderBy: List[OrderBy[?, ?]] = Nil
+): WindowFunc[T] =
     WindowFunc(name, args, distinct, orderBy)
 
 def createBinaryOperator[T](left: Expr[?, ?], op: String, right: Expr[?, ?]): Expr[T, CommonKind] =
     Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
+
+def createCastType[T](name: String): CastType[T] =
+    CastType.Custom(name)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
 
@@ -331,7 +398,9 @@ def minute: TimeUnit = TimeUnit.Minute
 
 def second: TimeUnit = TimeUnit.Second
 
-def extract[T: DateTime, K <: ExprKind](value: ExtractValue[T, K]): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+def extract[T: DateTime, K <: ExprKind](
+    value: ExtractValue[T, K]
+): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
     Expr.Extract(value.unit, value.expr)
 
 enum CastType[T](val castType: SqlCastType):
@@ -378,51 +447,56 @@ extension (n: Int)
 
     def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-inline def partitionBy[P](partitionValue: P): OverValue =
-    inline erasedValue[CheckOverPartition[P]] match
-        case _: false =>
-            error("The parameters for PARTITION BY cannot contain aggregate functions or window functions.")
-        case _ =>
-    val partition = partitionValue match
-        case e: Expr[?, ?] => e :: Nil
-        case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-    OverValue(partitionBy = partition)
+def partitionBy[P](partitionValue: P)(using a: PartitionArg[P]): OverValue =
+    OverValue(partitionBy = a.exprs(partitionValue))
 
-inline def orderBy[O](orderValue: O): OverValue =
-    inline erasedValue[CheckOverOrder[O]] match
-            case _: false =>
-                error("The parameters for ORDER BY cannot contain aggregate functions or window functions or constants.")
-            case _ =>
-    val order = orderValue match
-        case o: OrderBy[?, ?] => o :: Nil
-        case t: Tuple => t.toList.map(_.asInstanceOf[OrderBy[?, ?]])
-    OverValue(orderBy = order)
+def orderBy[O](orderValue: O)(using a: OrderArg[O]): OverValue =
+    OverValue(orderBy = a.orders(orderValue))
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
 
-inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
+inline def query[T](using 
+    qc: QueryContext = QueryContext(-1), 
+    p: Mirror.ProductOf[T], 
+    s: SelectItem[Table[T]]
+): SelectQuery[Table[T]] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
-    val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
-    SelectQuery(table.asInstanceOf[a.R], ast)
+    val ast = SqlQuery.Select(
+        select = s.selectItems(table, 0), 
+        from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil
+    )
+    SelectQuery(table, ast)
 
-inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](q: Query[NamedTuple[N, V], S])(using t: TransformKind[V, ColumnKind])(using s: SelectItem[SubQuery[N, ToTuple[t.R]]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, ToTuple[t.R]]] =
-    given qc: QueryContext = q.qc
+inline def subquery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    q: QueryContext ?=> Query[NamedTuple[N, V], S]
+)(using 
+    qc: QueryContext = QueryContext(-1), 
+    t: SubQueryKind[V], 
+    tt: ToTuple[t.R], 
+    s: SelectItem[SubQuery[N, tt.R]], 
+    sq: SelectItem[NamedTuple[N, V]]
+): SelectQuery[SubQuery[N, tt.R]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val innerQuery = SubQuery[N, ToTuple[t.R]](aliasName, sq.offset(q.queryItems))
+    val query = q
+    val innerQuery = SubQuery[N, tt.R](aliasName, sq.offset(query.queryItems))
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, 0),
-        from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
+        from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
     SelectQuery(innerQuery, ast)
 
-inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
+inline def values[T <: Product](list: List[T])(using 
+    qc: QueryContext = QueryContext(-1), 
+    p: Mirror.ProductOf[T], 
+    s: SelectItem[Table[T]]
+): SelectQuery[Table[T]] =
     val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
@@ -435,11 +509,24 @@ inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryCon
             i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
     val sqlValues = SqlQuery.Values(exprList)
     val tableAlias = SqlTableAlias(aliasName, selectItems.map(_.alias.get))
-    val ast = SqlQuery.Select(select = selectItems, from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil)
-    val newTable = Table[T](aliasName, aliasName, TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get)))
-    SelectQuery(newTable.asInstanceOf[a.R], ast)
+    val ast = SqlQuery.Select(
+        select = selectItems, 
+        from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil
+    )
+    val newTable = Table[T](
+        aliasName, 
+        aliasName, 
+        TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get))
+    )
+    SelectQuery(newTable, ast)
 
-def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using sq: SelectItem[SubQuery[N, V]], s: SelectItem[V], qc: QueryContext): WithRecursive[NamedTuple[N, V]] =
+def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
+    query: Query[NamedTuple[N, V], ?]
+)(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using 
+    sq: SelectItem[SubQuery[N, V]], 
+    s: SelectItem[V], 
+    qc: QueryContext
+): WithRecursive[NamedTuple[N, V]] =
     WithRecursive(query)(f)
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]
@@ -452,7 +539,9 @@ inline def insert[T <: Product](entities: List[T])(using Mirror.ProductOf[T]): I
 
 inline def update[T <: Product]: Update[Table[T], UpdateTable] = Update[T]
 
-inline def update[T <: Product](entity: T, skipNone: Boolean = false)(using Mirror.ProductOf[T]): Update[Table[T], UpdateEntity] =
+inline def update[T <: Product](entity: T, skipNone: Boolean = false)(using 
+    Mirror.ProductOf[T]
+): Update[Table[T], UpdateEntity] =
     Update[T](entity, skipNone)
 
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]
