@@ -1,9 +1,9 @@
 import xerial.sbt.Sonatype.*
 
 lazy val commonSettings = Seq(
-    scalaVersion := "3.5.0",
+    scalaVersion := "3.6.1",
 
-    version := "0.0.31",
+    version := "0.0.32",
 
     organization := "com.wz7982",
 
@@ -36,7 +36,6 @@ lazy val commonSettings = Seq(
 
     scalacOptions += "-Wunused:all",
     scalacOptions += "-Wsafe-init",
-    scalacOptions += "-experimental",
     libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
 )
 
