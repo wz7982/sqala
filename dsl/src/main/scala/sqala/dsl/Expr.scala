@@ -396,15 +396,17 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("plus")
     def +[R: Number](value: R)(using 
         n: Number[T], 
-        a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+        a: AsSqlExpr[R],
+        r: ResultOperation[T, R]
+    ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Plus, Literal(value, a))
 
     @targetName("plus")
     def +[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        Number[T], 
-        KindOperation[K, RK]
-    ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
+        n: Number[T], 
+        o: KindOperation[K, RK],
+        r: ResultOperation[T, R]
+    ): Expr[r.R, ResultKind[K, RK]] =
         Binary(this, Plus, that)
 
     @targetName("plus")
@@ -414,8 +416,9 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("minus")
     def -[R: Number](value: R)(using 
         n: Number[T], 
-        a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+        a: AsSqlExpr[R],
+        r: ResultOperation[T, R]
+    ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
@@ -432,15 +435,17 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     @targetName("times")
     def *[R: Number](value: R)(using 
         n: Number[T], 
-        a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+        a: AsSqlExpr[R],
+        r: ResultOperation[T, R]
+    ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Times, Literal(value, a))
 
     @targetName("times")
     def *[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        Number[T], 
-        KindOperation[K, RK]
-    ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
+        n: Number[T], 
+        k: KindOperation[K, RK],
+        r: ResultOperation[T, R]
+    ): Expr[r.R, ResultKind[K, RK]] =
         Binary(this, Times, that)
 
     @targetName("div")
