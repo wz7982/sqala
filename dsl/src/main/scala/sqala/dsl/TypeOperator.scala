@@ -12,11 +12,6 @@ type Unwrap[T, F[_]] = T match
     case F[t] => t
     case _ => T
 
-type ToTuple[T] <: Tuple = T match
-    case h *: t => h *: t
-    case EmptyTuple => EmptyTuple
-    case _ => Tuple1[T]
-
 type InverseMap[T, F[_]] = T match
     case x *: xs => Tuple.InverseMap[x *: xs, F]
     case F[x] => x

@@ -21,10 +21,10 @@ object SelectItem:
         def selectItems(item: Expr[T, K], cursor: Int): List[SqlSelectItem.Item] =
             SqlSelectItem.Item(item.asSqlExpr, Some(s"c${cursor}")) :: Nil
 
-    given tableSelectItem[T <: Table[?]]: SelectItem[T] with
-        override def offset(item: T): Int = item.__metaData__.fieldNames.size
+    given tableSelectItem[T]: SelectItem[Table[T]] with
+        override def offset(item: Table[T]): Int = item.__metaData__.fieldNames.size
 
-        override def selectItems(item: T, cursor: Int): List[SqlSelectItem.Item] =
+        override def selectItems(item: Table[T], cursor: Int): List[SqlSelectItem.Item] =
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for field <- item.__metaData__.columnNames do

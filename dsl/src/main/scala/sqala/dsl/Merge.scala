@@ -26,9 +26,9 @@ object Merge:
             def asExpr(x: Expr[T, EK]): Expr[R, K] =
                 x.asInstanceOf[Expr[R, K]]
 
-    given mergeTuple[H: AsSqlExpr, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K]): Aux[Expr[H, EK] *: T, H *: ToTuple[t.R], ResultKind[EK, t.K]] =
+    given mergeTuple[H: AsSqlExpr, EK <: ExprKind, T <: Tuple](using t: Merge[T], k: KindOperation[EK, t.K], tt: ToTuple[t.R]): Aux[Expr[H, EK] *: T, H *: tt.R, ResultKind[EK, t.K]] =
         new Merge[Expr[H, EK] *: T]:
-            type R = H *: ToTuple[t.R]
+            type R = H *: tt.R
 
             type K = ResultKind[EK, t.K]
 

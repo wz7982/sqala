@@ -411,11 +411,11 @@ inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.Product
     val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
     SelectQuery(table, ast)
 
-inline def subquery[N <: Tuple, V <: Tuple, S <: ResultSize](q: QueryContext ?=> Query[NamedTuple[N, V], S])(using qc: QueryContext = QueryContext(-1), t: TransformKind[V, ColumnKind])(using s: SelectItem[SubQuery[N, ToTuple[t.R]]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, ToTuple[t.R]]] =
+inline def subquery[N <: Tuple, V <: Tuple, S <: ResultSize](q: QueryContext ?=> Query[NamedTuple[N, V], S])(using qc: QueryContext = QueryContext(-1), t: TransformKind[V, ColumnKind], tt: ToTuple[t.R])(using s: SelectItem[SubQuery[N, tt.R]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, tt.R]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val query = q
-    val innerQuery = SubQuery[N, ToTuple[t.R]](aliasName, sq.offset(query.queryItems))
+    val innerQuery = SubQuery[N, tt.R](aliasName, sq.offset(query.queryItems))
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, 0),
         from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil

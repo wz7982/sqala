@@ -52,15 +52,12 @@ object TransformKind:
 
             def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
 
-    given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK]): Aux[H *: T, TK, h.R *: ToTuple[t.R]] =
+    given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK], tt: ToTuple[t.R]): Aux[H *: T, TK, h.R *: tt.R] =
         new TransformKind[H *: T, TK]:
-            type R = h.R *: ToTuple[t.R]
+            type R = h.R *: tt.R
 
             def tansform(x: H *: T): R =
-                val head = h.tansform(x.head)
-                val tail = t.tansform(x.tail) match
-                    case x: Tuple => x
-                (head *: tail).asInstanceOf[R]
+                h.tansform(x.head) *: tt.toTuple(t.tansform(x.tail))
 
     given transformTuple1[H, TK <: ExprKind](using h: TransformKind[H, TK]): Aux[H *: EmptyTuple, TK, h.R *: EmptyTuple] =
         new TransformKind[H *: EmptyTuple, TK]:
@@ -69,13 +66,12 @@ object TransformKind:
             def tansform(x: H *: EmptyTuple): R =
                 h.tansform(x.head) *: EmptyTuple
 
-    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK]): Aux[NamedTuple[N, V], TK, NamedTuple[N, ToTuple[t.R]]] =
+    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], TK, NamedTuple[N, tt.R]] =
         new TransformKind[NamedTuple[N, V], TK]:
-            type R = NamedTuple[N, ToTuple[t.R]]
+            type R = NamedTuple[N, tt.R]
 
             def tansform(x: NamedTuple[N, V]): R =
-                val v = t.tansform(x.toTuple).asInstanceOf[ToTuple[t.R]]
-                NamedTuple(v)
+                NamedTuple(tt.toTuple(t.tansform(x.toTuple)))
 
 trait TransformKindIfNot[T, TK <: ExprKind, NK <: ExprKind]:
     type R
@@ -98,15 +94,12 @@ object TransformKindIfNot:
 
             def tansform(x: Expr[T, K]): R = x
 
-    given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK]): Aux[H *: T, TK, NK, h.R *: ToTuple[t.R]] =
+    given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK], tt: ToTuple[t.R]): Aux[H *: T, TK, NK, h.R *: tt.R] =
         new TransformKindIfNot[H *: T, TK, NK]:
-            type R = h.R *: ToTuple[t.R]
+            type R = h.R *: tt.R
 
             def tansform(x: H *: T): R =
-                val head = h.tansform(x.head)
-                val tail = t.tansform(x.tail) match
-                    case x: Tuple => x
-                (head *: tail).asInstanceOf[R]
+                h.tansform(x.head) *: tt.toTuple(t.tansform(x.tail))
 
     given transformTuple1[H, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK]): Aux[H *: EmptyTuple, TK, NK, h.R *: EmptyTuple] =
         new TransformKindIfNot[H *: EmptyTuple, TK, NK]:
@@ -115,13 +108,12 @@ object TransformKindIfNot:
             def tansform(x: H *: EmptyTuple): R =
                 h.tansform(x.head) *: EmptyTuple
 
-    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK]): Aux[NamedTuple[N, V], TK, NK, NamedTuple[N, ToTuple[t.R]]] =
+    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], TK, NK, NamedTuple[N, tt.R]] =
         new TransformKindIfNot[NamedTuple[N, V], TK, NK]:
-            type R = NamedTuple[N, ToTuple[t.R]]
+            type R = NamedTuple[N, tt.R]
 
             def tansform(x: NamedTuple[N, V]): R =
-                val v = t.tansform(x.toTuple).asInstanceOf[ToTuple[t.R]]
-                NamedTuple(v)
+                NamedTuple(tt.toTuple(t.tansform(x.toTuple)))
 
 trait HasAgg[T]:
     type R <: Boolean
