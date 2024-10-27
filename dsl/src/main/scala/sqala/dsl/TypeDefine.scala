@@ -57,18 +57,6 @@ type CheckOverOrder[T] <: Boolean = T match
         case _ => false
     case EmptyTuple => true
 
-type CheckGrouping[T] <: Boolean = T match
-    case Expr[_, k] => k match
-        case GroupKind => true
-        case _ => false
-    case Expr[_, k] *: EmptyTuple => k match
-        case GroupKind => true
-        case _ => false
-    case Expr[_, k] *: xs => k match
-        case GroupKind => CheckGrouping[xs]
-        case _ => false
-    case _ => false
-
 type QuerySize[N <: Int] <: ResultSize = N match
     case 1 => ResultSize.OneRow
     case _ => ResultSize.ManyRows

@@ -330,53 +330,6 @@ class SelectQuery[T](
         val sqlGroupBy = a.asExprs(groupByItems).map(i => SqlGroupItem.Singleton(i.asSqlExpr))
         GroupByQuery((t.tansform(groupByItems), queryItems), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByCube[G](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind], 
-        to: ToOption[t.R]
-    ): GroupByQuery[(to.R, T)] =
-        val groupByItems = f(queryItems)
-        val sqlGroupBy = SqlGroupItem.Cube(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.toOption(t.tansform(groupByItems)), queryItems), ast.copy(groupBy = sqlGroupBy :: Nil))
-
-    def groupByRollup[G](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind], 
-        to: ToOption[t.R]
-    ): GroupByQuery[(to.R, T)] =
-        val groupByItems = f(queryItems)
-        val sqlGroupBy = SqlGroupItem.Rollup(a.asExprs(groupByItems).map(_.asSqlExpr))
-        GroupByQuery((to.toOption(t.tansform(groupByItems)), queryItems), ast.copy(groupBy = sqlGroupBy :: Nil))
-
-    inline def groupByGroupingSets[G, S](f: QueryContext ?=> T => G)(using 
-        t: TransformKind[G, GroupKind]
-    )(g: t.R => S)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        to: ToOption[t.R], 
-        s: GroupingSets[S]
-    ): GroupByQuery[(to.R, T)] =
-        inline erasedValue[CheckGrouping[S]] match
-            case _: false =>
-                error("For GROUPING SETS, expressions must appear in grouping list.")
-            case _: true =>
-        val groupByItems = f(queryItems)
-        val changedGroupByItems = t.tansform(groupByItems)
-        val sets = g(changedGroupByItems)
-        val sqlGroupBy = SqlGroupItem.GroupingSets(s.asSqlExprs(sets))
-        GroupByQuery((to.toOption(changedGroupByItems), queryItems), ast.copy(groupBy = sqlGroupBy :: Nil))
-
 class UnionQuery[T](
     private[sqala] val left: Query[?, ?],
     private[sqala] val unionType: SqlUnionType,

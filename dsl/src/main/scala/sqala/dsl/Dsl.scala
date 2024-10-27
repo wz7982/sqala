@@ -325,16 +325,6 @@ def lower[T <: String | Option[String], K <: ExprKind](expr: Expr[T, K]): Expr[T
 def now(): Expr[Option[Date], CommonKind] =
     Expr.Func("NOW", Nil)
 
-inline def grouping[G](items: G): Expr[Int, AggOperationKind] =
-    inline erasedValue[CheckGrouping[items.type]] match
-        case _: false =>
-            error("The parameter of GROUPING must be a grouping expression.")
-        case _ =>
-            val groupingItems = items match
-                case t: Tuple => t.toList.map(_.asInstanceOf[Expr[?, ?]])
-                case e: Expr[?, ?] => e :: Nil
-            Expr.Grouping(groupingItems)
-
 def createFunc[T](name: String, args: List[Expr[?, ?]]): Expr[T, CommonKind] =
     Expr.Func(name, args)
 
