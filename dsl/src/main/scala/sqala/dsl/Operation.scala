@@ -93,15 +93,20 @@ object ResultOperation:
 trait UnionOperation[A, B]:
     type R
 
+    def unionQueryItems(x: A): R
+
 object UnionOperation:
     type Aux[A, B, O] = UnionOperation[A, B]:
         type R = O
 
     given union[A, K <: ExprKind, B, UK <: ExprKind](using 
         r: ResultOperation[A, B]
-    ): Aux[Expr[A, K], Expr[B, UK], Expr[r.R, ColumnKind]] = 
+    ): Aux[Expr[A, K], Expr[B, UK], Expr[r.R, CommonKind]] = 
         new UnionOperation[Expr[A, K], Expr[B, UK]]:
-            type R = Expr[r.R, ColumnKind]
+            type R = Expr[r.R, CommonKind]
+
+            def unionQueryItems(x: Expr[A, K]): R =
+                Expr.Ref(x)
 
     given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using 
         h: UnionOperation[LH, RH], 
@@ -111,11 +116,17 @@ object UnionOperation:
         new UnionOperation[LH *: LT, RH *: RT]:
             type R = h.R *: tt.R
 
+            def unionQueryItems(x: LH *: LT): R =
+                h.unionQueryItems(x.head) *: tt.toTuple(t.unionQueryItems(x.tail))
+
     given tuple1Union[LH, RH](using 
         h: UnionOperation[LH, RH]
     ): Aux[LH *: EmptyTuple, RH *: EmptyTuple, h.R *: EmptyTuple] = 
         new UnionOperation[LH *: EmptyTuple, RH *: EmptyTuple]:
             type R = h.R *: EmptyTuple
+
+            def unionQueryItems(x: LH *: EmptyTuple): R =
+                h.unionQueryItems(x.head) *: EmptyTuple
 
     given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using 
         u: UnionOperation[LV, RV], 
@@ -123,6 +134,9 @@ object UnionOperation:
     ): Aux[NamedTuple[LN, LV], NamedTuple[RN, RV], NamedTuple[LN, tt.R]] = 
         new UnionOperation[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
             type R = NamedTuple[LN, tt.R]
+
+            def unionQueryItems(x: NamedTuple[LN, LV]): R =
+                NamedTuple(tt.toTuple(u.unionQueryItems(x.toTuple)))
 
 @implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function.")
 trait KindOperation[A <: ExprKind, B <: ExprKind]

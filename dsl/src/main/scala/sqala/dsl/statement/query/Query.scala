@@ -51,8 +51,8 @@ sealed class Query[T, S <: ResultSize](
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long, ColumnKind], OneRow] =
-        val expr = count().asInstanceOf[Expr[Long, ColumnKind]]
+    def size: Query[Expr[Long, AggKind], OneRow] =
+        val expr = count()
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _) =>
                 Query(expr, s.copy(select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil, limit = None))
@@ -63,8 +63,8 @@ sealed class Query[T, S <: ResultSize](
                 )
                 Query(expr, outerQuery)
 
-    def exists: Query[Expr[Boolean, ColumnKind], OneRow] =
-        val expr = sqala.dsl.exists(this).asInstanceOf[Expr[Boolean, ColumnKind]]
+    def exists: Query[Expr[Boolean, CommonKind], OneRow] =
+        val expr = sqala.dsl.exists(this)
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
             from = Nil
@@ -80,43 +80,41 @@ object Query:
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.Union, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Union, unionQuery.ast)
 
         infix def unionAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.UnionAll, unionQuery.ast)
 
         def ++(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
-            given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.UnionAll, unionQuery.ast)
+        ): Query[u.R, ManyRows] = unionAll(unionQuery)
 
         infix def except(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.Except, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Except, unionQuery.ast)
 
         infix def exceptAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.ExceptAll, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.ExceptAll, unionQuery.ast)
 
         infix def intersect(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.Intersect, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Intersect, unionQuery.ast)
 
         infix def intersectAll(unionQuery: QueryContext ?=> Query[U, US])(using 
             u: UnionOperation[T, U]
         ): Query[u.R, ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(query, SqlUnionType.IntersectAll, unionQuery.ast)
+            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Intersect, unionQuery.ast)
 
 class ProjectionQuery[T, S <: ResultSize](
     private[sqala] override val queryItems: T,
@@ -332,10 +330,11 @@ class SelectQuery[T](
         GroupByQuery((t.tansform(groupByItems), queryItems), ast.copy(groupBy = sqlGroupBy))
 
 class UnionQuery[T](
-    private[sqala] val left: Query[?, ?],
+    private[sqala] override val queryItems: T,
+    private[sqala] val left: SqlQuery,
     private[sqala] val unionType: SqlUnionType,
     private[sqala] val right: SqlQuery
 )(using QueryContext) extends Query[T, ManyRows](
-    left.queryItems.asInstanceOf[T], 
-    SqlQuery.Union(left.ast, unionType, right)
+    queryItems,
+    SqlQuery.Union(left, unionType, right)
 )
