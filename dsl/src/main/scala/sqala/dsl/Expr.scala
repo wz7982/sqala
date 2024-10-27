@@ -320,11 +320,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ =>
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
-    def in[R](list: List[R])(using 
+    def in[R, I <: Iterable[R]](list: I)(using 
         a: ComparableValue[R], 
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        In(this, Vector(list.map(a.asExpr(_))), false)
+        In(this, Vector(list.toList.map(a.asExpr(_))), false)
 
     inline def in[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         CompareOperation.summonInstances[T, R]
@@ -342,11 +342,11 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ =>
         In(this, SubQuery(query.ast), false)
 
-    def notIn[R](list: List[R])(using 
+    def notIn[R, I <: Iterable[R]](list: I)(using 
         a: ComparableValue[R], 
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        In(this, Vector(list.map(a.asExpr(_))), true)
+        In(this, Vector(list.toList.map(a.asExpr(_))), true)
 
     inline def notIn[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         CompareOperation.summonInstances[T, R]
