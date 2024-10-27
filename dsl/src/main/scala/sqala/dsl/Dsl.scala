@@ -402,27 +402,27 @@ def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
     v
 
-inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
+inline def query[T](using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
     val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
     val ast = SqlQuery.Select(select = s.selectItems(table, 0), from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil)
-    SelectQuery(table.asInstanceOf[a.R], ast)
+    SelectQuery(table, ast)
 
-inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](q: Query[NamedTuple[N, V], S])(using t: TransformKind[V, ColumnKind])(using s: SelectItem[SubQuery[N, ToTuple[t.R]]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, ToTuple[t.R]]] =
-    given qc: QueryContext = q.qc
+inline def subquery[N <: Tuple, V <: Tuple, S <: ResultSize](q: QueryContext ?=> Query[NamedTuple[N, V], S])(using qc: QueryContext = QueryContext(-1), t: TransformKind[V, ColumnKind])(using s: SelectItem[SubQuery[N, ToTuple[t.R]]], sq: SelectItem[NamedTuple[N, V]]): SelectQuery[SubQuery[N, ToTuple[t.R]]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
-    val innerQuery = SubQuery[N, ToTuple[t.R]](aliasName, sq.offset(q.queryItems))
+    val query = q
+    val innerQuery = SubQuery[N, ToTuple[t.R]](aliasName, sq.offset(query.queryItems))
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, 0),
-        from = SqlTable.SubQueryTable(q.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
+        from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(aliasName, Nil)) :: Nil
     )
     SelectQuery(innerQuery, ast)
 
-inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], a: AsTable[T], s: SelectItem[Table[T]]): SelectQuery[a.R] =
+inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryContext(-1), p: Mirror.ProductOf[T], s: SelectItem[Table[T]]): SelectQuery[Table[T]] =
     val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
     qc.tableIndex += 1
@@ -437,7 +437,7 @@ inline def values[T <: Product](list: List[T])(using qc: QueryContext = QueryCon
     val tableAlias = SqlTableAlias(aliasName, selectItems.map(_.alias.get))
     val ast = SqlQuery.Select(select = selectItems, from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil)
     val newTable = Table[T](aliasName, aliasName, TableMacro.tableMetaData[T].copy(columnNames = selectItems.map(_.alias.get)))
-    SelectQuery(newTable.asInstanceOf[a.R], ast)
+    SelectQuery(newTable, ast)
 
 def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], ?])(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using sq: SelectItem[SubQuery[N, V]], s: SelectItem[V], qc: QueryContext): WithRecursive[NamedTuple[N, V]] =
     WithRecursive(query)(f)

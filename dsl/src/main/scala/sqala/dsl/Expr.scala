@@ -294,7 +294,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
-    def -[R, RK <: ExprKind](that: Expr[R, RK])(using m: MinusOperation[T, R], k: KindOperation[K, RK]): Expr[m.R, ResultKind[K, RK]] =
+    def -[R, RK <: ExprKind](that: Expr[R, RK])(using r: ResultOperation[T, R], k: KindOperation[K, RK]): Expr[r.R, ResultKind[K, RK]] =
         Binary(this, Minus, that)
 
     @targetName("minus")

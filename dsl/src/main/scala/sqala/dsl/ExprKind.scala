@@ -1,7 +1,7 @@
 package sqala.dsl
 
 import scala.NamedTuple.NamedTuple
-import scala.annotation.{implicitNotFound, nowarn}
+import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.&&
 
 sealed trait ExprKind
@@ -43,15 +43,16 @@ trait TransformKind[T, TK <: ExprKind]:
     def tansform(x: T): R
 
 object TransformKind:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformExpr[T, K <: ExprKind, TK <: ExprKind]: TransformKind[Expr[T, K], TK] =
+    type Aux[T, TK <: ExprKind, O] = TransformKind[T, TK]:
+        type R = O
+
+    given transformExpr[T, K <: ExprKind, TK <: ExprKind]: Aux[Expr[T, K], TK, Expr[T, TK]] =
         new TransformKind[Expr[T, K], TK]:
             type R = Expr[T, TK]
 
             def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK]): TransformKind[H *: T, TK] =
+    given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK]): Aux[H *: T, TK, h.R *: ToTuple[t.R]] =
         new TransformKind[H *: T, TK]:
             type R = h.R *: ToTuple[t.R]
 
@@ -61,16 +62,14 @@ object TransformKind:
                     case x: Tuple => x
                 (head *: tail).asInstanceOf[R]
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformTuple1[H, TK <: ExprKind](using h: TransformKind[H, TK]): TransformKind[H *: EmptyTuple, TK] =
+    given transformTuple1[H, TK <: ExprKind](using h: TransformKind[H, TK]): Aux[H *: EmptyTuple, TK, h.R *: EmptyTuple] =
         new TransformKind[H *: EmptyTuple, TK]:
             type R = h.R *: EmptyTuple
 
             def tansform(x: H *: EmptyTuple): R =
                 h.tansform(x.head) *: EmptyTuple
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK]): TransformKind[NamedTuple[N, V], TK] =
+    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK]): Aux[NamedTuple[N, V], TK, NamedTuple[N, ToTuple[t.R]]] =
         new TransformKind[NamedTuple[N, V], TK]:
             type R = NamedTuple[N, ToTuple[t.R]]
 
@@ -84,22 +83,22 @@ trait TransformKindIfNot[T, TK <: ExprKind, NK <: ExprKind]:
     def tansform(x: T): R
 
 object TransformKindIfNot:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformExpr[T, K <: ExprKind, TK <: ExprKind, NK <: ExprKind]: TransformKindIfNot[Expr[T, K], TK, NK] =
+    type Aux[T, TK <: ExprKind, NK <: ExprKind, O] = TransformKindIfNot[T, TK, NK]:
+        type R = O
+
+    given transformExpr[T, K <: ExprKind, TK <: ExprKind, NK <: ExprKind]: Aux[Expr[T, K], TK, NK, Expr[T, TK]] =
         new TransformKindIfNot[Expr[T, K], TK, NK]:
             type R = Expr[T, TK]
 
             def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformExprSkip[T, K <: ExprKind, TK <: ExprKind]: TransformKindIfNot[Expr[T, K], TK, K] =
+    given transformExprSkip[T, K <: ExprKind, TK <: ExprKind]: Aux[Expr[T, K], TK, K, Expr[T, K]] =
         new TransformKindIfNot[Expr[T, K], TK, K]:
             type R = Expr[T, K]
 
             def tansform(x: Expr[T, K]): R = x
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK]): TransformKindIfNot[H *: T, TK, NK] =
+    given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK]): Aux[H *: T, TK, NK, h.R *: ToTuple[t.R]] =
         new TransformKindIfNot[H *: T, TK, NK]:
             type R = h.R *: ToTuple[t.R]
 
@@ -109,16 +108,14 @@ object TransformKindIfNot:
                     case x: Tuple => x
                 (head *: tail).asInstanceOf[R]
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformTuple1[H, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK]): TransformKindIfNot[H *: EmptyTuple, TK, NK] =
+    given transformTuple1[H, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK]): Aux[H *: EmptyTuple, TK, NK, h.R *: EmptyTuple] =
         new TransformKindIfNot[H *: EmptyTuple, TK, NK]:
             type R = h.R *: EmptyTuple
 
             def tansform(x: H *: EmptyTuple): R =
                 h.tansform(x.head) *: EmptyTuple
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK]): TransformKindIfNot[NamedTuple[N, V], TK, NK] =
+    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK]): Aux[NamedTuple[N, V], TK, NK, NamedTuple[N, ToTuple[t.R]]] =
         new TransformKindIfNot[NamedTuple[N, V], TK, NK]:
             type R = NamedTuple[N, ToTuple[t.R]]
 
@@ -130,28 +127,26 @@ trait HasAgg[T]:
     type R <: Boolean
 
 object HasAgg:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: HasAgg[Expr[T, K]] =
+    type Aux[T, O <: Boolean] = HasAgg[T]:
+        type R = O
+
+    given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: Aux[Expr[T, K], false] =
         new HasAgg[Expr[T, K]]:
             type R = false
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind]: HasAgg[Expr[T, K]] =
+    given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind]: Aux[Expr[T, K], true] =
         new HasAgg[Expr[T, K]]:
             type R = true
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleHasAgg[H, T <: Tuple](using ch: HasAgg[H], ct: HasAgg[T]): HasAgg[H *: T] =
+    given tupleHasAgg[H, T <: Tuple](using ch: HasAgg[H], ct: HasAgg[T]): Aux[H *: T, ch.R && ct.R] =
         new HasAgg[H *: T]:
             type R = ch.R && ct.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1HasAgg[H](using ch: HasAgg[H]): HasAgg[H *: EmptyTuple] =
+    given tuple1HasAgg[H](using ch: HasAgg[H]): Aux[H *: EmptyTuple, ch.R] =
         new HasAgg[H *: EmptyTuple]:
             type R = ch.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleHasAgg[N <: Tuple, V <: Tuple](using h: HasAgg[V]): HasAgg[NamedTuple[N, V]] =
+    given namedTupleHasAgg[N <: Tuple, V <: Tuple](using h: HasAgg[V]): Aux[NamedTuple[N, V], h.R] =
         new HasAgg[NamedTuple[N, V]]:
             type R = h.R
 
@@ -159,28 +154,26 @@ trait IsAggOrGroup[T]:
     type R <: Boolean
 
 object IsAggOrGroup:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: IsAggOrGroup[Expr[T, K]] =
+    type Aux[T, O <: Boolean] = IsAggOrGroup[T]:
+        type R = O
+
+    given notAgg[T, K <: CommonKind | ColumnKind | WindowKind]: Aux[Expr[T, K], false] =
         new IsAggOrGroup[Expr[T, K]]:
             type R = false
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind | GroupKind]: IsAggOrGroup[Expr[T, K]] =
+    given hasAgg[T, K <: AggKind | AggOperationKind | ValueKind | GroupKind]: Aux[Expr[T, K], true] =
         new IsAggOrGroup[Expr[T, K]]:
             type R = true
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleHasAgg[H, T <: Tuple](using ch: IsAggOrGroup[H], ct: IsAggOrGroup[T]): IsAggOrGroup[H *: T] =
+    given tupleHasAgg[H, T <: Tuple](using ch: IsAggOrGroup[H], ct: IsAggOrGroup[T]): Aux[H *: T, ch.R && ct.R] =
         new IsAggOrGroup[H *: T]:
             type R = ch.R && ct.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1HasAgg[H](using ch: IsAggOrGroup[H]): IsAggOrGroup[H *: EmptyTuple] =
+    given tuple1HasAgg[H](using ch: IsAggOrGroup[H]): Aux[H *: EmptyTuple, ch.R] =
         new IsAggOrGroup[H *: EmptyTuple]:
             type R = ch.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleHasAgg[N <: Tuple, V <: Tuple](using i: IsAggOrGroup[V]): IsAggOrGroup[NamedTuple[N, V]] =
+    given namedTupleHasAgg[N <: Tuple, V <: Tuple](using i: IsAggOrGroup[V]): Aux[NamedTuple[N, V], i.R] =
         new IsAggOrGroup[NamedTuple[N, V]]:
             type R = i.R
 
@@ -188,28 +181,26 @@ trait NotAgg[T]:
     type R <: Boolean
 
 object NotAgg:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given notAgg[T, K <: CommonKind | ColumnKind | WindowKind | ValueKind]: NotAgg[Expr[T, K]] =
+    type Aux[T, O <: Boolean] = NotAgg[T]:
+        type R = O
+
+    given notAgg[T, K <: CommonKind | ColumnKind | WindowKind | ValueKind]: Aux[Expr[T, K], true] =
         new NotAgg[Expr[T, K]]:
             type R = true
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given hasAgg[T, K <: AggKind | AggOperationKind]: NotAgg[Expr[T, K]] =
+    given hasAgg[T, K <: AggKind | AggOperationKind]: Aux[Expr[T, K], false] =
         new NotAgg[Expr[T, K]]:
             type R = false
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleNotAgg[H, T <: Tuple](using ch: NotAgg[H], ct: NotAgg[T]): NotAgg[H *: T] =
+    given tupleNotAgg[H, T <: Tuple](using nh: NotAgg[H], nt: NotAgg[T]): Aux[H *: T, nh.R && nt.R] =
         new NotAgg[H *: T]:
-            type R = ch.R && ct.R
+            type R = nh.R && nt.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1NotAgg[H](using ch: NotAgg[H]): NotAgg[H *: EmptyTuple] =
+    given tuple1NotAgg[H](using nh: NotAgg[H]): Aux[H *: EmptyTuple, nh.R] =
         new NotAgg[H *: EmptyTuple]:
-            type R = ch.R
+            type R = nh.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleNotAgg[N <: Tuple, V <: Tuple](using n: NotAgg[V]): NotAgg[NamedTuple[N, V]] =
+    given namedTupleNotAgg[N <: Tuple, V <: Tuple](using n: NotAgg[V]): Aux[NamedTuple[N, V], n.R] =
         new NotAgg[NamedTuple[N, V]]:
             type R = n.R
 
@@ -217,28 +208,26 @@ trait NotWindow[T]:
     type R <: Boolean
 
 object NotWindow:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given notWindow[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | ValueKind]: NotWindow[Expr[T, K]] =
+    type Aux[T, O <: Boolean] = NotWindow[T]:
+        type R = O
+
+    given notWindow[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | ValueKind]: Aux[Expr[T, K], true] =
         new NotWindow[Expr[T, K]]:
             type R = true
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given hasWindow[T, K <: WindowKind]: NotWindow[Expr[T, K]] =
+    given hasWindow[T, K <: WindowKind]: Aux[Expr[T, K], false] =
         new NotWindow[Expr[T, K]]:
             type R = false
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleNotWindow[H, T <: Tuple](using ch: NotWindow[H], ct: NotWindow[T]): NotWindow[H *: T] =
+    given tupleNotWindow[H, T <: Tuple](using nh: NotWindow[H], nt: NotWindow[T]): Aux[H *: T, nh.R && nt.R] =
         new NotWindow[H *: T]:
-            type R = ch.R && ct.R
+            type R = nh.R && nt.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1NotWindow[H](using ch: NotWindow[H]): NotWindow[H *: EmptyTuple] =
+    given tuple1NotWindow[H](using nh: NotWindow[H]): Aux[H *: EmptyTuple, nh.R] =
         new NotWindow[H *: EmptyTuple]:
-            type R = ch.R
+            type R = nh.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleNotWindow[N <: Tuple, V <: Tuple](using n: NotWindow[V]): NotWindow[NamedTuple[N, V]] =
+    given namedTupleNotWindow[N <: Tuple, V <: Tuple](using n: NotWindow[V]): Aux[NamedTuple[N, V], n.R] =
         new NotWindow[NamedTuple[N, V]]:
             type R = n.R
 
@@ -246,28 +235,26 @@ trait NotValue[T]:
     type R <: Boolean
 
 object NotValue:
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given notValue[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | WindowKind]: NotValue[Expr[T, K]] =
+    type Aux[T, O <: Boolean] = NotValue[T]:
+        type R = O
+
+    given notValue[T, K <: CommonKind | ColumnKind | AggKind | AggOperationKind | WindowKind]: Aux[Expr[T, K], true] =
         new NotValue[Expr[T, K]]:
             type R = true
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given hasValue[T, K <: ValueKind]: NotValue[Expr[T, K]] =
+    given hasValue[T, K <: ValueKind]: Aux[Expr[T, K], false] =
         new NotValue[Expr[T, K]]:
             type R = false
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tupleNotValue[H, T <: Tuple](using ch: NotValue[H], ct: NotValue[T]): NotValue[H *: T] =
+    given tupleNotValue[H, T <: Tuple](using nh: NotValue[H], nt: NotValue[T]): Aux[H *: T, nh.R && nt.R] =
         new NotValue[H *: T]:
-            type R = ch.R && ct.R
+            type R = nh.R && nt.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given tuple1NotValue[H](using ch: NotValue[H]): NotValue[H *: EmptyTuple] =
+    given tuple1NotValue[H](using nh: NotValue[H]): Aux[H *: EmptyTuple, nh.R] =
         new NotValue[H *: EmptyTuple]:
-            type R = ch.R
+            type R = nh.R
 
-    @nowarn("msg=New anonymous class definition will be duplicated at each inline site")
-    transparent inline given namedTupleNotValue[N <: Tuple, V <: Tuple](using n: NotValue[V]): NotValue[NamedTuple[N, V]] =
+    given namedTupleNotValue[N <: Tuple, V <: Tuple](using n: NotValue[V]): Aux[NamedTuple[N, V], n.R] =
         new NotValue[NamedTuple[N, V]]:
             type R = n.R
 

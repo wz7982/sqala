@@ -221,7 +221,7 @@ class SelectQuery[T](
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
 
-    inline def join[J](using a: AsTable[J], m: Mirror.ProductOf[J])(using SelectItem[Append[ToTuple[T], a.R]]): JoinQuery[Append[ToTuple[T], a.R]] =
+    inline def join[J](using m: Mirror.ProductOf[J])(using SelectItem[Append[ToTuple[T], Table[J]]]): JoinQuery[Append[ToTuple[T], Table[J]]] =
         joinClause(SqlJoinType.InnerJoin)
 
     inline def joinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](query: QueryContext ?=> Query[NamedTuple[N, V], S])(using SelectItem[Append[ToTuple[T], SubQuery[N, V]]], SelectItem[NamedTuple[N, V]]): JoinQuery[Append[ToTuple[T], SubQuery[N, V]]] =
@@ -230,7 +230,7 @@ class SelectQuery[T](
     inline def joinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](f: QueryContext ?=> T => Query[NamedTuple[N, V], S])(using SelectItem[Append[ToTuple[T], SubQuery[N, V]]], SelectItem[NamedTuple[N, V]]): JoinQuery[Append[ToTuple[T], SubQuery[N, V]]] =
         joinQueryClause(SqlJoinType.InnerJoin, f(queryItems), true)
 
-    inline def leftJoin[J](using a: AsTable[J])(using o: ToOption[a.R], m: Mirror.ProductOf[J])(using s: SelectItem[Append[ToTuple[T], o.R]]): JoinQuery[Append[ToTuple[T], o.R]] =
+    inline def leftJoin[J](using o: ToOption[Table[J]], m: Mirror.ProductOf[J])(using s: SelectItem[Append[ToTuple[T], o.R]]): JoinQuery[Append[ToTuple[T], o.R]] =
         joinClause(SqlJoinType.LeftJoin)
 
     inline def leftJoinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](query: QueryContext ?=> Query[NamedTuple[N, V], S])(using o: ToOption[SubQuery[N, V]])(using SelectItem[Append[ToTuple[T], o.R]], SelectItem[NamedTuple[N, V]]): JoinQuery[Append[ToTuple[T], o.R]] =
@@ -239,7 +239,7 @@ class SelectQuery[T](
     inline def leftJoinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](f: QueryContext ?=> T => Query[NamedTuple[N, V], S])(using o: ToOption[SubQuery[N, V]])(using SelectItem[Append[ToTuple[T], o.R]], SelectItem[NamedTuple[N, V]]): JoinQuery[Append[ToTuple[T], o.R]] =
         joinQueryClause(SqlJoinType.LeftJoin, f(queryItems), true)
 
-    inline def rightJoin[J](using a: AsTable[J], o: ToOption[T], m: Mirror.ProductOf[J])(using SelectItem[Append[ToTuple[o.R], a.R]]): JoinQuery[Append[ToTuple[o.R], a.R]] =
+    inline def rightJoin[J](using o: ToOption[T], m: Mirror.ProductOf[J])(using SelectItem[Append[ToTuple[o.R], Table[J]]]): JoinQuery[Append[ToTuple[o.R], Table[J]]] =
         joinClause(SqlJoinType.RightJoin)
 
     inline def rightJoinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](query: QueryContext ?=> Query[NamedTuple[N, V], S])(using o: ToOption[T])(using SelectItem[Append[ToTuple[o.R], SubQuery[N, V]]], SelectItem[NamedTuple[N, V]]): JoinQuery[Append[ToTuple[o.R], SubQuery[N, V]]] =
