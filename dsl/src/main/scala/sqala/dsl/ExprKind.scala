@@ -3,6 +3,7 @@ package sqala.dsl
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.&&
+import scala.util.NotGiven
 
 sealed trait ExprKind
 
@@ -30,6 +31,7 @@ type SortKind = ColumnKind | CommonKind | WindowKind
 
 type FuncKind = CommonKind | AggKind | AggOperationKind | WindowKind
 
+// TODO 改成trait
 type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (WindowKind, r) => WindowKind
     case (l, WindowKind) => WindowKind
@@ -37,79 +39,66 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
     case (l, r) => CommonKind
 
-trait TransformKind[T, TK <: ExprKind]:
+trait SubQueryKind[T]:
+    type R
+
+object SubQueryKind:
+    type Aux[T, O] = SubQueryKind[T]:
+        type R = O
+
+    given transformExpr[T, K <: ExprKind]: Aux[Expr[T, K], Expr[T, ColumnKind]] =
+        new SubQueryKind[Expr[T, K]]:
+            type R = Expr[T, ColumnKind]
+
+    given transformTuple[H, T <: Tuple](using h: SubQueryKind[H], t: SubQueryKind[T], tt: ToTuple[t.R]): Aux[H *: T, h.R *: tt.R] =
+        new SubQueryKind[H *: T]:
+            type R = h.R *: tt.R
+
+    given transformTuple1[H](using h: SubQueryKind[H]): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
+        new SubQueryKind[H *: EmptyTuple]:
+            type R = h.R *: EmptyTuple
+
+    given transformNamedTuple[N <: Tuple, V <: Tuple](using t: SubQueryKind[V], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+        new SubQueryKind[NamedTuple[N, V]]:
+            type R = NamedTuple[N, tt.R]
+
+trait TransformKind[T, TK <: GroupKind | DistinctKind]:
     type R
 
     def tansform(x: T): R
 
 object TransformKind:
-    type Aux[T, TK <: ExprKind, O] = TransformKind[T, TK]:
+    type Aux[T, TK <: GroupKind | DistinctKind, O] = TransformKind[T, TK]:
         type R = O
 
-    given transformExpr[T, K <: ExprKind, TK <: ExprKind]: Aux[Expr[T, K], TK, Expr[T, TK]] =
+    given transformValue[T, TK <: GroupKind | DistinctKind]: Aux[Expr[T, ValueKind], TK, Expr[T, ValueKind]] =
+        new TransformKind[Expr[T, ValueKind], TK]:
+            type R = Expr[T, ValueKind]
+
+            def tansform(x: Expr[T, ValueKind]): R = x
+
+    given transformExpr[T, K <: ExprKind, TK <: GroupKind | DistinctKind](using NotGiven[K =:= ValueKind]): Aux[Expr[T, K], TK, Expr[T, TK]] =
         new TransformKind[Expr[T, K], TK]:
             type R = Expr[T, TK]
 
-            def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
+            def tansform(x: Expr[T, K]): R = Expr.Ref(x)
 
-    given transformTuple[H, T <: Tuple, TK <: ExprKind](using h: TransformKind[H, TK], t: TransformKind[T, TK], tt: ToTuple[t.R]): Aux[H *: T, TK, h.R *: tt.R] =
+    given transformTuple[H, T <: Tuple, TK <: GroupKind | DistinctKind](using h: TransformKind[H, TK], t: TransformKind[T, TK], tt: ToTuple[t.R]): Aux[H *: T, TK, h.R *: tt.R] =
         new TransformKind[H *: T, TK]:
             type R = h.R *: tt.R
 
             def tansform(x: H *: T): R =
                 h.tansform(x.head) *: tt.toTuple(t.tansform(x.tail))
 
-    given transformTuple1[H, TK <: ExprKind](using h: TransformKind[H, TK]): Aux[H *: EmptyTuple, TK, h.R *: EmptyTuple] =
+    given transformTuple1[H, TK <: GroupKind | DistinctKind](using h: TransformKind[H, TK]): Aux[H *: EmptyTuple, TK, h.R *: EmptyTuple] =
         new TransformKind[H *: EmptyTuple, TK]:
             type R = h.R *: EmptyTuple
 
             def tansform(x: H *: EmptyTuple): R =
                 h.tansform(x.head) *: EmptyTuple
 
-    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind](using t: TransformKind[V, TK], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], TK, NamedTuple[N, tt.R]] =
+    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: GroupKind | DistinctKind](using t: TransformKind[V, TK], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], TK, NamedTuple[N, tt.R]] =
         new TransformKind[NamedTuple[N, V], TK]:
-            type R = NamedTuple[N, tt.R]
-
-            def tansform(x: NamedTuple[N, V]): R =
-                NamedTuple(tt.toTuple(t.tansform(x.toTuple)))
-
-trait TransformKindIfNot[T, TK <: ExprKind, NK <: ExprKind]:
-    type R
-
-    def tansform(x: T): R
-
-object TransformKindIfNot:
-    type Aux[T, TK <: ExprKind, NK <: ExprKind, O] = TransformKindIfNot[T, TK, NK]:
-        type R = O
-
-    given transformExpr[T, K <: ExprKind, TK <: ExprKind, NK <: ExprKind]: Aux[Expr[T, K], TK, NK, Expr[T, TK]] =
-        new TransformKindIfNot[Expr[T, K], TK, NK]:
-            type R = Expr[T, TK]
-
-            def tansform(x: Expr[T, K]): R = x.asInstanceOf[R]
-
-    given transformExprSkip[T, K <: ExprKind, TK <: ExprKind]: Aux[Expr[T, K], TK, K, Expr[T, K]] =
-        new TransformKindIfNot[Expr[T, K], TK, K]:
-            type R = Expr[T, K]
-
-            def tansform(x: Expr[T, K]): R = x
-
-    given transformTuple[H, T <: Tuple, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK], t: TransformKindIfNot[T, TK, NK], tt: ToTuple[t.R]): Aux[H *: T, TK, NK, h.R *: tt.R] =
-        new TransformKindIfNot[H *: T, TK, NK]:
-            type R = h.R *: tt.R
-
-            def tansform(x: H *: T): R =
-                h.tansform(x.head) *: tt.toTuple(t.tansform(x.tail))
-
-    given transformTuple1[H, TK <: ExprKind, NK <: ExprKind](using h: TransformKindIfNot[H, TK, NK]): Aux[H *: EmptyTuple, TK, NK, h.R *: EmptyTuple] =
-        new TransformKindIfNot[H *: EmptyTuple, TK, NK]:
-            type R = h.R *: EmptyTuple
-
-            def tansform(x: H *: EmptyTuple): R =
-                h.tansform(x.head) *: EmptyTuple
-
-    given transformNamedTuple[N <: Tuple, V <: Tuple, TK <: ExprKind, NK <: ExprKind](using t: TransformKindIfNot[V, TK, NK], tt: ToTuple[t.R]): Aux[NamedTuple[N, V], TK, NK, NamedTuple[N, tt.R]] =
-        new TransformKindIfNot[NamedTuple[N, V], TK, NK]:
             type R = NamedTuple[N, tt.R]
 
             def tansform(x: NamedTuple[N, V]): R =

@@ -105,7 +105,7 @@ class ProjectionQuery[T, S <: ResultSize](
     private[sqala] override val queryItems: T,
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[T, S](queryItems, ast):
-    def distinct(using t: TransformKindIfNot[T, DistinctKind, ValueKind]): DistinctQuery[t.R, S] =
+    def distinct(using t: TransformKind[T, DistinctKind]): DistinctQuery[t.R, S] =
         DistinctQuery(t.tansform(queryItems), ast.copy(param = Some(SqlSelectParam.Distinct)))
 
     inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): SortQuery[T, S] =

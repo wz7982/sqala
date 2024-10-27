@@ -38,6 +38,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: SqlCastType) extends Expr[T, K]
     case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
     case Grouping(items: List[Expr[?, ?]]) extends Expr[Int, AggOperationKind]
+    case Ref[T, K <: GroupKind | DistinctKind](expr: Expr[?, ?]) extends Expr[T, K]
 
     @targetName("eq")
     def ==[R](value: R)(using a: ComparableValue[R], o: CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
@@ -475,6 +476,7 @@ object Expr:
                 SqlExpr.Extract(unit, expr.asSqlExpr)
             case Grouping(items) =>
                 SqlExpr.Grouping(items.map(_.asSqlExpr))
+            case Ref(e) => e.asSqlExpr
 
     extension [T](expr: Expr[T, ColumnKind])
         @targetName("to")
