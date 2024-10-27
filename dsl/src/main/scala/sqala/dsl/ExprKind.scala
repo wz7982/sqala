@@ -23,21 +23,6 @@ case class DistinctKind() extends ExprKind
 
 case class GroupKind() extends ExprKind
 
-type SimpleKind = ColumnKind | CommonKind | ValueKind
-
-type CompositeKind = CommonKind | AggOperationKind | WindowKind
-
-type SortKind = ColumnKind | CommonKind | WindowKind
-
-type FuncKind = CommonKind | AggKind | AggOperationKind | WindowKind
-
-type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
-    case (WindowKind, r) => WindowKind
-    case (l, WindowKind) => WindowKind
-    case (AggKind | AggOperationKind | GroupKind, r) => AggOperationKind
-    case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
-    case (l, r) => CommonKind
-
 trait SubQueryKind[T]:
     type R
 
