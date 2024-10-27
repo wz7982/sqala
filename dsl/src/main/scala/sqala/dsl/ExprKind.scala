@@ -31,7 +31,6 @@ type SortKind = ColumnKind | CommonKind | WindowKind
 
 type FuncKind = CommonKind | AggKind | AggOperationKind | WindowKind
 
-// TODO 改成trait
 type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (WindowKind, r) => WindowKind
     case (l, WindowKind) => WindowKind
