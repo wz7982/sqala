@@ -247,7 +247,10 @@ class SelectQuery[T](
         tt: ToTuple[T],
         s: SelectItem[Append[tt.R, Table[J]]]
     ): JoinQuery[Append[tt.R, Table[J]]] =
-        joinClause[J, Append[tt.R, Table[J]]](SqlJoinType.InnerJoin, j => tt.toTuple(queryItems) :* j)
+        joinClause[J, Append[tt.R, Table[J]]](
+            SqlJoinType.InnerJoin, 
+            j => tt.toTuple(queryItems) :* j
+        )
 
     inline def joinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         query: QueryContext ?=> Query[NamedTuple[N, V], S]
