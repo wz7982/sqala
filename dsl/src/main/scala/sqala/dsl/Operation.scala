@@ -138,6 +138,16 @@ object UnionOperation:
             def unionQueryItems(x: NamedTuple[LN, LV]): R =
                 NamedTuple(tt.toTuple(u.unionQueryItems(x.toTuple)))
 
+    given namedTupleUnionTuple[LN <: Tuple, LV <: Tuple, RV <: Tuple](using 
+        u: UnionOperation[LV, RV], 
+        tt: ToTuple[u.R]
+    ): Aux[NamedTuple[LN, LV], RV, NamedTuple[LN, tt.R]] = 
+        new UnionOperation[NamedTuple[LN, LV], RV]:
+            type R = NamedTuple[LN, tt.R]
+
+            def unionQueryItems(x: NamedTuple[LN, LV]): R =
+                NamedTuple(tt.toTuple(u.unionQueryItems(x.toTuple)))
+
 @implicitNotFound("Aggregate function or grouped column cannot be compared with non-aggregate function.")
 trait KindOperation[A <: ExprKind, B <: ExprKind]
 
