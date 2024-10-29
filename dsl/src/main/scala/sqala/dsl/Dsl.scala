@@ -263,6 +263,11 @@ def ifnull[T, K <: ExprKind](expr: Expr[Option[T], K], value: T)(using
 ): Expr[T, ResultKind[K, ValueKind]] =
     coalesce(expr, value)
 
+def nullif[T, K <: ExprKind](expr: Expr[T, K], value: T)(using 
+    a: AsSqlExpr[T]
+): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
+    Expr.Func("NULLIF", expr :: Expr.Literal(value, a) :: Nil)
+
 def abs[T: Number, K <: ExprKind](expr: Expr[T, K]): Expr[T, ResultKind[K, ValueKind]] =
     Expr.Func("ABS", expr :: Nil)
 
