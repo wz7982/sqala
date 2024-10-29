@@ -2,6 +2,8 @@ package sqala.dsl
 
 import sqala.dsl.statement.query.SubQuery
 
+import scala.NamedTuple.NamedTuple
+
 trait ToOption[T]:
     type R
 
@@ -10,6 +12,13 @@ trait ToOption[T]:
 object ToOption:
     type Aux[T, O] = ToOption[T]:
         type R = O
+
+    given exprToOption[T, K <: GroupKind | DistinctKind | CompositeKind]: Aux[Expr[T, K], Expr[Wrap[T, Option], K]] =
+        new ToOption[Expr[T, K]]:
+            type R = Expr[Wrap[T, Option], K]
+
+            def toOption(x: Expr[T, K]): R =
+                Expr.Ref(x)
 
     given tableToOption[T]: Aux[Table[T], Table[Wrap[T, Option]]] = 
         new ToOption[Table[T]]:
@@ -45,3 +54,13 @@ object ToOption:
 
             def toOption(x: H *: EmptyTuple): R =
                 h.toOption(x.head) *: EmptyTuple
+
+    given namedTupleToOption[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+        new ToOption[NamedTuple[N, V]]:
+            type R = NamedTuple[N, tt.R]
+
+            def toOption(x: NamedTuple[N, V]): R =
+                tt.toTuple(t.toOption(x.toTuple))

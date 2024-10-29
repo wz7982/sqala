@@ -350,6 +350,9 @@ def createBinaryOperator[T](left: Expr[?, ?], op: String, right: Expr[?, ?]): Ex
 def createCastType[T](name: String): CastType[T] =
     CastType.Custom(name)
 
+def grouping[G](groupingValue: G)(using g: GroupingArg[G]): Expr[Int, AggOperationKind] =
+    Expr.Grouping(g.exprs(groupingValue))
+
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
 
 extension (n: Double)
