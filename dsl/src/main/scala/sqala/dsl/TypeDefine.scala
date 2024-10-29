@@ -36,3 +36,8 @@ type ResultKind[L <: ExprKind, R <: ExprKind] <: CompositeKind = (L, R) match
     case (AggKind | AggOperationKind | GroupKind, r) => AggOperationKind
     case (l, AggKind | AggOperationKind | GroupKind) => AggOperationKind
     case (l, r) => CommonKind
+
+type NumericResult[L, R] = (L, R) match
+    case (Option[_], _) => Option[BigDecimal]
+    case (_, Option[_]) => Option[BigDecimal]
+    case _ => BigDecimal
