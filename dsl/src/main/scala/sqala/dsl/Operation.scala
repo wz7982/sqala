@@ -71,23 +71,29 @@ object ResultOperation:
     type Aux[A, B, O] = ResultOperation[A, B]:
         type R = O
 
-    given result[A]: Aux[A, A, A] = new ResultOperation[A, A]:
-        type R = A
+    given result[A]: Aux[A, A, A] = 
+        new ResultOperation[A, A]:
+            type R = A
 
-    given optionResult[A: AsSqlExpr]: Aux[A, Option[A], Option[A]] = new ResultOperation[A, Option[A]]:
-        type R = Option[A]
+    given optionResult[A: AsSqlExpr]: Aux[A, Option[A], Option[A]] = 
+        new ResultOperation[A, Option[A]]:
+            type R = Option[A]
 
-    given valueResult[A: AsSqlExpr]: Aux[Option[A], A, Option[A]] = new ResultOperation[Option[A], A]:
-        type R = Option[A]
+    given valueResult[A: AsSqlExpr]: Aux[Option[A], A, Option[A]] = 
+        new ResultOperation[Option[A], A]:
+            type R = Option[A]
 
-    given numericResult[A: Number, B: Number]: Aux[A, B, Option[BigDecimal]] = new ResultOperation[A, B]:
-        type R = Option[BigDecimal]
+    given numericResult[A: Number, B: Number]: Aux[A, B, NumericResult[A, B]] = 
+        new ResultOperation[A, B]:
+            type R = NumericResult[A, B]
 
-    given timeResulte[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] = new ResultOperation[A, B]:
-        type R = Option[Date]
+    given timeResulte[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] = 
+        new ResultOperation[A, B]:
+            type R = Option[Date]
 
-    given nothingResult[B: AsSqlExpr]: Aux[Nothing, B, B] = new ResultOperation[Nothing, B]:
-        type R = B
+    given nothingResult[B: AsSqlExpr]: Aux[Nothing, B, B] = 
+        new ResultOperation[Nothing, B]:
+            type R = B
 
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait UnionOperation[A, B]:

@@ -10,6 +10,7 @@ import sqala.ast.statement.SqlQuery
 import sqala.dsl.statement.dml.UpdatePair
 import sqala.dsl.statement.query.*
 
+import java.util.Date
 import scala.annotation.targetName
 import scala.compiletime.{erasedValue, error}
 
@@ -412,7 +413,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Plus, that)
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
+    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date], ResultKind[K, ValueKind]] =
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
@@ -431,7 +432,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Minus, that)
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using DateTime[T]): Expr[Wrap[T, Option], ResultKind[K, ValueKind]] =
+    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date], ResultKind[K, ValueKind]] =
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
     @targetName("times")
