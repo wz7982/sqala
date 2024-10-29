@@ -332,6 +332,49 @@ class SelectQuery[T](
         val sqlGroupBy = a.asExprs(groupByItems).map(i => SqlGroupItem.Singleton(i.asSqlExpr))
         GroupByQuery((t.tansform(groupByItems), queryItems), ast.copy(groupBy = sqlGroupBy))
 
+    def groupByCube[G](f: QueryContext ?=> T => G)(using 
+        a: AsExpr[G], 
+        na: NotAgg[G], 
+        nw: NotWindow[G], 
+        nv: NotValue[G], 
+        c: CheckGroupByKind[na.R, nw.R, nv.R], 
+        t: TransformKind[G, GroupKind],
+        to: ToOption[t.R]
+    ): GroupByQuery[(to.R, T)] =
+        val groupByItems = f(queryItems)
+        val sqlGroupBy = SqlGroupItem.Cube(a.asExprs(groupByItems).map(_.asSqlExpr)) :: Nil
+        GroupByQuery((to.toOption(t.tansform(groupByItems)), queryItems), ast.copy(groupBy = sqlGroupBy))
+
+    def groupByRollup[G](f: QueryContext ?=> T => G)(using 
+        a: AsExpr[G], 
+        na: NotAgg[G], 
+        nw: NotWindow[G], 
+        nv: NotValue[G], 
+        c: CheckGroupByKind[na.R, nw.R, nv.R], 
+        t: TransformKind[G, GroupKind],
+        to: ToOption[t.R]
+    ): GroupByQuery[(to.R, T)] =
+        val groupByItems = f(queryItems)
+        val sqlGroupBy = SqlGroupItem.Rollup(a.asExprs(groupByItems).map(_.asSqlExpr)) :: Nil
+        GroupByQuery((to.toOption(t.tansform(groupByItems)), queryItems), ast.copy(groupBy = sqlGroupBy))
+
+    def groupByGroupingSets[G, S](f: QueryContext ?=> T => G)(using 
+        a: AsExpr[G], 
+        na: NotAgg[G], 
+        nw: NotWindow[G], 
+        nv: NotValue[G], 
+        c: CheckGroupByKind[na.R, nw.R, nv.R], 
+        t: TransformKind[G, GroupKind],
+        to: ToOption[t.R]
+    )(g: t.R => S)(using
+        gs: GroupingSets[S]
+    ): GroupByQuery[(to.R, T)] =
+        val groupByItems = t.tansform(f(queryItems))
+        val sqlGroupBy = SqlGroupItem.GroupingSets(
+            gs.asSqlExprs(g(groupByItems))
+        ) :: Nil
+        GroupByQuery((to.toOption(groupByItems), queryItems), ast.copy(groupBy = sqlGroupBy))
+
 class UnionQuery[T](
     private[sqala] override val queryItems: T,
     private[sqala] val left: SqlQuery,

@@ -1,5 +1,8 @@
 package sqala.dsl
 
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("Type ${T} cannot be converted to PARTITION BY expressions.")
 trait PartitionArg[T]:
     def exprs(x: T): List[Expr[?, ?]]
 
@@ -18,6 +21,7 @@ object PartitionArg:
         def exprs(x: Expr[X, K] *: EmptyTuple): List[Expr[?, ?]] =
             x.head :: Nil
 
+@implicitNotFound("Type ${T} cannot be converted to ORDER BY expressions.")
 trait OrderArg[T]:
     def orders(x: T): List[OrderBy[?, ?]]
 
@@ -34,4 +38,23 @@ object OrderArg:
 
     given tuple1[X, K <: ColumnKind | CommonKind]: OrderArg[OrderBy[X, K] *: EmptyTuple] with
         def orders(x: OrderBy[X, K] *: EmptyTuple): List[OrderBy[?, ?]] =
+            x.head :: Nil
+
+@implicitNotFound("Type ${T} cannot be converted to GROUPING expressions.")
+trait GroupingArg[T]:
+    def exprs(x: T): List[Expr[?, ?]]
+
+object GroupingArg:
+    given expr[T]: GroupingArg[Expr[T, GroupKind]] with
+        def exprs(x: Expr[T, GroupKind]): List[Expr[?, ?]] =
+            x :: Nil
+
+    given tuple[X, T <: Tuple](using 
+        t: GroupingArg[T]
+    ): GroupingArg[Expr[X, GroupKind] *: T] with
+        def exprs(x: Expr[X, GroupKind] *: T): List[Expr[?, ?]] =
+            x.head :: t.exprs(x.tail)
+
+    given tuple1[X]: GroupingArg[Expr[X, GroupKind] *: EmptyTuple] with
+        def exprs(x: Expr[X, GroupKind] *: EmptyTuple): List[Expr[?, ?]] =
             x.head :: Nil

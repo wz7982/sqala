@@ -66,6 +66,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
 
     case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
 
+    case Grouping(items: List[Expr[?, ?]]) extends Expr[Int, AggOperationKind]
+
     case Ref[T, K <: GroupKind | DistinctKind | CompositeKind](expr: Expr[?, ?]) extends Expr[T, K]
 
     @targetName("eq")
@@ -643,6 +645,8 @@ object Expr:
                 SqlExpr.Cast(expr.asSqlExpr, castType)
             case Extract(unit, expr) =>
                 SqlExpr.Extract(unit, expr.asSqlExpr)
+            case Grouping(items) =>
+                SqlExpr.Grouping(items.map(_.asSqlExpr))
             case Ref(e) => e.asSqlExpr
 
     extension [T](expr: Expr[T, ColumnKind])
