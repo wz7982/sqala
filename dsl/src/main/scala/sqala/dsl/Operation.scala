@@ -39,11 +39,11 @@ object CompareOperation:
             case _: EmptyTuple => Nil
             case _: (Expr[t, k] *: ts) => summonInline[CompareOperation[A, t]] :: summonInstances[A, ts]
 
-    given compare[A: AsSqlExpr]: CompareOperation[A, A]()
+    given compare[A]: CompareOperation[A, A]()
 
-    given optionCompare[A: AsSqlExpr]: CompareOperation[A, Option[A]]()
+    given optionCompare[A]: CompareOperation[A, Option[A]]()
 
-    given valueCompare[A: AsSqlExpr]: CompareOperation[Option[A], A]()
+    given valueCompare[A]: CompareOperation[Option[A], A]()
 
     given numericCompare[A: Number, B: Number]: CompareOperation[A, B]()
 
@@ -51,8 +51,6 @@ object CompareOperation:
 
     given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: CompareOperation[A, B]()
     
-    given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: CompareOperation[A, B]()
-
     given nothingCompare[B: AsSqlExpr]: CompareOperation[Nothing, B]()
 
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()
@@ -75,11 +73,11 @@ object ResultOperation:
         new ResultOperation[A, A]:
             type R = A
 
-    given optionResult[A: AsSqlExpr]: Aux[A, Option[A], Option[A]] = 
+    given optionResult[A]: Aux[A, Option[A], Option[A]] = 
         new ResultOperation[A, Option[A]]:
             type R = Option[A]
 
-    given valueResult[A: AsSqlExpr]: Aux[Option[A], A, Option[A]] = 
+    given valueResult[A]: Aux[Option[A], A, Option[A]] = 
         new ResultOperation[Option[A], A]:
             type R = Option[A]
 
