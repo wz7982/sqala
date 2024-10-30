@@ -51,7 +51,7 @@ object CompareOperation:
 
     given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: CompareOperation[A, B]()
     
-    given nothingCompare[B: AsSqlExpr]: CompareOperation[Nothing, B]()
+    given nothingCompare[B]: CompareOperation[Nothing, B]()
 
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()
 
@@ -89,7 +89,7 @@ object ResultOperation:
         new ResultOperation[A, B]:
             type R = Option[Date]
 
-    given nothingResult[B: AsSqlExpr]: Aux[Nothing, B, B] = 
+    given nothingResult[B]: Aux[Nothing, B, B] = 
         new ResultOperation[Nothing, B]:
             type R = B
 
@@ -163,6 +163,12 @@ object KindOperation:
 
     given value[B <: ExprKind]: KindOperation[ValueKind, B]()
 
-    given agg[A <: AggKind | AggOperationKind | GroupKind, B <: AggKind | AggOperationKind | GroupKind | ValueKind]: KindOperation[A, B]()
+    given agg[
+        A <: AggKind | AggOperationKind | GroupKind, 
+        B <: AggKind | AggOperationKind | GroupKind | ValueKind
+    ]: KindOperation[A, B]()
 
-    given nonAgg[A <: CommonKind | ColumnKind | WindowKind | DistinctKind, B <: CommonKind | ColumnKind | WindowKind | ValueKind | DistinctKind]: KindOperation[A, B]()
+    given nonAgg[
+        A <: CommonKind | ColumnKind | WindowKind | DistinctKind, 
+        B <: CommonKind | ColumnKind | WindowKind | ValueKind | DistinctKind
+    ]: KindOperation[A, B]()
