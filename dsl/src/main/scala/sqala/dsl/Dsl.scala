@@ -36,7 +36,7 @@ class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr
     ): Case[T, ResultKind[K, WK], CaseWhen] =
         new Case(exprs :+ expr)
 
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using 
+    infix def `then`[E: AsSqlExpr, TK <: ExprKind](expr: Expr[E, TK])(using 
         p: S =:= CaseWhen, 
         o: ResultOperation[T, E], 
         k: KindOperation[K, TK]
@@ -50,7 +50,7 @@ class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr
     ): Case[o.R, ResultKind[K, ValueKind], CaseInit] =
         new Case(exprs :+ Expr.Literal(value, a))
 
-    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using 
+    infix def `else`[E: AsSqlExpr, EK <: ExprKind](expr: Expr[E, EK])(using 
         p: S =:= CaseInit, 
         o: ResultOperation[T, E], 
         k: KindOperation[K, EK]
@@ -71,7 +71,7 @@ class Case[T, K <: ExprKind, S <: CaseState](private[sqala] val exprs: List[Expr
 def `case`: Case[Nothing, ValueKind, CaseInit] = new Case(Nil)
 
 class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[E, TK <: ExprKind](expr: Expr[E, TK])(using 
+    infix def `then`[E: AsSqlExpr, TK <: ExprKind](expr: Expr[E, TK])(using 
         o: ResultOperation[T, E], 
         k: KindOperation[K, TK]
     ): IfThen[o.R, ResultKind[K, TK]] =
@@ -84,7 +84,7 @@ class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
         new IfThen(exprs :+ Expr.Literal(value, a))
 
 class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `else`[E, EK <: ExprKind](expr: Expr[E, EK])(using 
+    infix def `else`[E: AsSqlExpr, EK <: ExprKind](expr: Expr[E, EK])(using 
         o: ResultOperation[T, E], 
         k: KindOperation[K, EK]
     ): Expr[o.R, ResultKind[K, EK]] =
