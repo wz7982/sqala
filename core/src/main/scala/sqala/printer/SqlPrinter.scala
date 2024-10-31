@@ -208,6 +208,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case f: SqlExpr.Func => printFuncExpr(f)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
+        case m: SqlExpr.Match => printMatchExpr(m)
         case c: SqlExpr.Cast => printCastExpr(c)
         case w: SqlExpr.Window => printWindowExpr(w)
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
@@ -333,6 +334,18 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
 
     def printCaseExpr(expr: SqlExpr.Case): Unit =
         sqlBuilder.append("CASE")
+        for branch <- expr.branches do
+            sqlBuilder.append(" WHEN ")
+            printExpr(branch.whenExpr)
+            sqlBuilder.append(" THEN ")
+            printExpr(branch.thenExpr)
+        sqlBuilder.append(" ELSE ")
+        printExpr(expr.default)
+        sqlBuilder.append(" END")
+
+    def printMatchExpr(expr: SqlExpr.Match): Unit =
+        sqlBuilder.append("CASE ")
+        printExpr(expr.expr)
         for branch <- expr.branches do
             sqlBuilder.append(" WHEN ")
             printExpr(branch.whenExpr)
