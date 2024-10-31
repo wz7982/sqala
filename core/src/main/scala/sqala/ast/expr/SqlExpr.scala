@@ -23,6 +23,7 @@ enum SqlExpr:
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlCase], default: SqlExpr)
+    case Match(expr: SqlExpr, branches: List[SqlCase], default: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlCastType)
     case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderBy], frame: Option[SqlWindowFrame])
     case SubQuery(query: SqlQuery)
