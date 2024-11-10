@@ -37,7 +37,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     ) extends Expr[T, K]
 
     case Case[T, K <: CompositeKind](
-        branches: List[(Expr[?, ?], Expr[?, ?])], 
+        branches: List[(Expr[?, ?], Expr[?, ?])],
         default: Expr[?, ?]
     ) extends Expr[T, K]
 
@@ -46,16 +46,16 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
 
     case Between[K <: CompositeKind](
-        expr: Expr[?, ?], 
-        start: Expr[?, ?], 
-        end: Expr[?, ?], 
+        expr: Expr[?, ?],
+        start: Expr[?, ?],
+        end: Expr[?, ?],
         not: Boolean
     ) extends Expr[Boolean, K]
 
     case Window[T](
-        expr: Expr[?, ?], 
-        partitionBy: List[Expr[?, ?]], 
-        orderBy: List[OrderBy[?, ?]], 
+        expr: Expr[?, ?],
+        partitionBy: List[Expr[?, ?]],
+        orderBy: List[OrderBy[?, ?]],
         frame: Option[SqlWindowFrame]
     ) extends Expr[T, WindowKind]
 
@@ -72,23 +72,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     case Ref[T, K <: GroupKind | DistinctKind | CompositeKind](expr: Expr[?, ?]) extends Expr[T, K]
 
     @targetName("eq")
-    def ==[R](value: R)(using 
-        a: ComparableValue[R], 
+    def ==[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, Equal, a.asExpr(value))
 
     @targetName("eq")
-    def ==[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def ==[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, Equal, that)
 
     @targetName("eq")
-    inline def ==[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
-        a: AsExpr[Q], 
+    inline def ==[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -114,23 +114,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
     @targetName("ne")
-    def !=[R](value: R)(using 
-        a: ComparableValue[R], 
+    def !=[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, NotEqual, a.asExpr(value))
 
     @targetName("ne")
-    def !=[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def !=[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, NotEqual, that)
 
     @targetName("ne")
-    inline def !=[Q, S <: ResultSize](query: Query[Q, S])(using 
+    inline def !=[Q, S <: ResultSize](query: Query[Q, S])(using
         m: Merge[Q],
-        a: AsExpr[Q], 
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -156,23 +156,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
     @targetName("gt")
-    def >[R](value: R)(using 
-        a: ComparableValue[R], 
+    def >[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThan, a.asExpr(value))
 
     @targetName("gt")
-    def >[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def >[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    inline def >[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
-        a: AsExpr[Q], 
+    inline def >[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -198,23 +198,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
     @targetName("ge")
-    def >=[R](value: R)(using 
-        a: ComparableValue[R], 
+    def >=[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, GreaterThanEqual, a.asExpr(value))
 
     @targetName("ge")
-    def >=[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def >=[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    inline def >=[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
-        a: AsExpr[Q], 
+    inline def >=[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -240,23 +240,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
-    def <[R](value: R)(using 
-        a: ComparableValue[R], 
+    def <[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThan, a.asExpr(value))
 
     @targetName("lt")
-    def <[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def <[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, LessThan, that)
 
     @targetName("lt")
-    inline def <[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
-        a: AsExpr[Q], 
+    inline def <[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -282,23 +282,23 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThan, SubLink(item.query, item.linkType))
 
     @targetName("le")
-    def <=[R](value: R)(using 
-        a: ComparableValue[R], 
+    def <=[R](value: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Binary(this, LessThanEqual, a.asExpr(value))
 
     @targetName("le")
-    def <=[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[T, R], 
+    def <=[R, RK <: ExprKind](that: Expr[R, RK])(using
+        CompareOperation[T, R],
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    inline def <=[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
-        a: AsExpr[Q], 
+    inline def <=[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
+        a: AsExpr[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -323,18 +323,18 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ =>
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
-    def in[R, I <: Iterable[R]](list: I)(using 
-        a: ComparableValue[R], 
+    def in[R, I <: Iterable[R]](list: I)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.toList.map(a.asExpr(_))), false)
 
-    inline def in[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    inline def in[R <: Tuple](expr: R)(using a: AsInExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         CompareOperation.summonInstances[T, R]
         KindOperation.summonInstances[K, R]
         In(this, Vector(a.asExprs(expr)), false)
 
-    inline def in[Q, S <: ResultSize](query: Query[Q, S])(using 
+    inline def in[Q, S <: ResultSize](query: Query[Q, S])(using
         m: Merge[Q], c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -345,19 +345,19 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ =>
         In(this, SubQuery(query.ast), false)
 
-    def notIn[R, I <: Iterable[R]](list: I)(using 
-        a: ComparableValue[R], 
+    def notIn[R, I <: Iterable[R]](list: I)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         In(this, Vector(list.toList.map(a.asExpr(_))), true)
 
-    inline def notIn[R <: Tuple](expr: R)(using a: AsExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
+    inline def notIn[R <: Tuple](expr: R)(using a: AsInExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
         CompareOperation.summonInstances[T, R]
         KindOperation.summonInstances[K, R]
         In(this, Vector(a.asExprs(expr)), true)
 
-    inline def notIn[Q, S <: ResultSize](query: Query[Q, S])(using 
-        m: Merge[Q], 
+    inline def notIn[Q, S <: ResultSize](query: Query[Q, S])(using
+        m: Merge[Q],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         inline erasedValue[K] match
@@ -368,45 +368,45 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ =>
         In(this, SubQuery(query.ast), true)
 
-    def between[R](start: R, end: R)(using 
-        a: ComparableValue[R], 
+    def between[R](start: R, end: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Between(this, a.asExpr(start), a.asExpr(end), false)
 
-    def between[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using 
-        CompareOperation[T, S], 
-        KindOperation[K, SK], 
-        CompareOperation[T, E], 
+    def between[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using
+        CompareOperation[T, S],
+        KindOperation[K, SK],
+        CompareOperation[T, E],
         KindOperation[K, EK]
     ): Expr[Boolean, ResultKind[K, SK]] =
         Between(this, start, end, false)
 
-    def notBetween[R](start: R, end: R)(using 
-        a: ComparableValue[R], 
+    def notBetween[R](start: R, end: R)(using
+        a: ComparableValue[R],
         o: CompareOperation[T, R]
     ): Expr[Boolean, ResultKind[K, ValueKind]] =
         Between(this, a.asExpr(start), a.asExpr(end), true)
 
-    def notBetween[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using 
-        CompareOperation[T, S], 
-        KindOperation[K, SK], 
-        CompareOperation[T, E], 
+    def notBetween[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using
+        CompareOperation[T, S],
+        KindOperation[K, SK],
+        CompareOperation[T, E],
         KindOperation[K, EK]
     ): Expr[Boolean, ResultKind[K, SK]] =
         Between(this, start, end, true)
 
     @targetName("plus")
-    def +[R: Number](value: R)(using 
-        n: Number[T], 
+    def +[R: Number](value: R)(using
+        n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
     ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Plus, Literal(value, a))
 
     @targetName("plus")
-    def +[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        n: Number[T], 
+    def +[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+        n: Number[T],
         o: KindOperation[K, RK],
         r: ResultOperation[T, R]
     ): Expr[r.R, ResultKind[K, RK]] =
@@ -417,16 +417,16 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
-    def -[R: Number](value: R)(using 
-        n: Number[T], 
+    def -[R: Number](value: R)(using
+        n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
     ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
-    def -[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        r: ResultOperation[T, R], 
+    def -[R, RK <: ExprKind](that: Expr[R, RK])(using
+        r: ResultOperation[T, R],
         k: KindOperation[K, RK]
     ): Expr[r.R, ResultKind[K, RK]] =
         Binary(this, Minus, that)
@@ -436,45 +436,45 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
     @targetName("times")
-    def *[R: Number](value: R)(using 
-        n: Number[T], 
+    def *[R: Number](value: R)(using
+        n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
     ): Expr[r.R, ResultKind[K, ValueKind]] =
         Binary(this, Times, Literal(value, a))
 
     @targetName("times")
-    def *[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        n: Number[T], 
+    def *[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+        n: Number[T],
         k: KindOperation[K, RK],
         r: ResultOperation[T, R]
     ): Expr[r.R, ResultKind[K, RK]] =
         Binary(this, Times, that)
 
     @targetName("div")
-    def /[R: Number](value: R)(using 
-        n: Number[T], 
+    def /[R: Number](value: R)(using
+        n: Number[T],
         a: AsSqlExpr[R]
     ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
         Binary(this, Div, Literal(value, a))
 
     @targetName("div")
-    def /[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        Number[T], 
+    def /[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+        Number[T],
         KindOperation[K, RK]
     ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Div, that)
 
     @targetName("mod")
-    def %[R: Number](value: R)(using 
-        n: Number[T], 
+    def %[R: Number](value: R)(using
+        n: Number[T],
         a: AsSqlExpr[R]
     ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
         Binary(this, Mod, Literal(value, a))
 
     @targetName("mod")
-    def %[R: Number, RK <: ExprKind](that: Expr[R, RK])(using 
-        Number[T], 
+    def %[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+        Number[T],
         KindOperation[K, RK]
     ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
         Binary(this, Mod, that)
@@ -486,7 +486,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
     def unary_-(using Number[T]): Expr[T, ResultKind[K, ValueKind]] = Unary(this, Negative)
 
     @targetName("and")
-    inline def &&[R, RK <: ExprKind](that: Expr[R, RK])(using 
+    inline def &&[R, RK <: ExprKind](that: Expr[R, RK])(using
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         inline (erasedValue[T], erasedValue[R]) match
@@ -495,7 +495,7 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, And, that)
 
     @targetName("or")
-    inline def ||[R, RK <: ExprKind](that: Expr[R, RK])(using 
+    inline def ||[R, RK <: ExprKind](that: Expr[R, RK])(using
         KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         inline (erasedValue[T], erasedValue[R]) match
@@ -517,8 +517,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ => error("The parameters for LIKE must be of String type.")
         Binary(this, Like, Literal(value, summon[AsSqlExpr[String]]))
 
-    inline def like[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[K, RK]
+    inline def like[R, RK <: ExprKind](that: Expr[R, RK])(using
+        KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         inline erasedValue[T] match
             case _: String =>
@@ -537,8 +537,8 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
             case _ => error("The parameters for LIKE must be of String type.")
         Binary(this, NotLike, Literal(value, summon[AsSqlExpr[String]]))
 
-    inline def notLike[R, RK <: ExprKind](that: Expr[R, RK])(using 
-        CompareOperation[K, RK]
+    inline def notLike[R, RK <: ExprKind](that: Expr[R, RK])(using
+        KindOperation[K, RK]
     ): Expr[Boolean, ResultKind[K, RK]] =
         inline erasedValue[T] match
             case _: String =>
@@ -604,8 +604,8 @@ object Expr:
                 SqlExpr.NullTest(left.asSqlExpr, true)
             case Binary(left, NotEqual, right@Literal(Some(_), _)) =>
                 SqlExpr.Binary(
-                    SqlExpr.Binary(left.asSqlExpr, NotEqual, right.asSqlExpr), 
-                    Or, 
+                    SqlExpr.Binary(left.asSqlExpr, NotEqual, right.asSqlExpr),
+                    Or,
                     SqlExpr.NullTest(left.asSqlExpr, false)
                 )
             case Binary(left, op, right) =>
@@ -615,11 +615,11 @@ object Expr:
             case SubQuery(query) => SqlExpr.SubQuery(query)
             case Func(name, args, distinct, orderBy, withinGroup, filter) =>
                 SqlExpr.Func(
-                    name, 
-                    args.map(_.asSqlExpr), 
-                    distinct, 
-                    orderBy.map(_.asSqlOrderBy), 
-                    withinGroup.map(_.asSqlOrderBy), 
+                    name,
+                    args.map(_.asSqlExpr),
+                    distinct,
+                    orderBy.map(_.asSqlOrderBy),
+                    withinGroup.map(_.asSqlOrderBy),
                     filter.map(_.asSqlExpr)
                 )
             case Case(branches, default) =>
@@ -655,8 +655,8 @@ object Expr:
                 UpdatePair(columnName, Literal(value, a))
 
         @targetName("to")
-        def :=[R, K <: ExprKind](updateExpr: Expr[R, K])(using 
-            CompareOperation[T, R], 
+        def :=[R, K <: ExprKind](updateExpr: Expr[R, K])(using
+            CompareOperation[T, R],
             KindOperation[ColumnKind, K]
         ): UpdatePair = expr match
             case Column(_, columnName) =>
@@ -690,8 +690,8 @@ object Expr:
         def descNullsLast: OrderBy[T, K] = OrderBy(expr, Desc, Some(Last))
 
 class OrderBy[T, K <: ExprKind](
-    private[sqala] val expr: Expr[?, ?], 
-    private[sqala] val order: SqlOrderByOption, 
+    private[sqala] val expr: Expr[?, ?],
+    private[sqala] val order: SqlOrderByOption,
     private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
 ):
     private[sqala] def asSqlOrderBy: SqlOrderBy = SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
@@ -701,7 +701,7 @@ class TimeInterval(private[sqala] val value: Double, private[sqala] val unit: Sq
 class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val linkType: SqlSubLinkType)
 
 case class OverValue(
-    private[sqala] val partitionBy: List[Expr[?, ?]] = Nil, 
+    private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
     private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
