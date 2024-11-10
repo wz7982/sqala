@@ -608,8 +608,6 @@ object Expr:
                     Or, 
                     SqlExpr.NullTest(left.asSqlExpr, false)
                 )
-            case Binary(_, _, Literal(None, _)) =>
-                SqlExpr.BooleanLiteral(false)
             case Binary(left, op, right) =>
                 SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
             case Unary(expr, op) =>
