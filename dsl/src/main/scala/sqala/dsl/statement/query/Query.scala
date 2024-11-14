@@ -252,7 +252,8 @@ class SelectQuery[T](
     private def joinQueryClause[N <: Tuple, V <: Tuple, SV <: Tuple, S <: ResultSize, R](
         joinType: SqlJoinType,
         query: QueryContext ?=> Query[NamedTuple[N, V], S],
-        f: SubQuery[N, SV] => R
+        f: SubQuery[N, SV] => R,
+        lateral: Boolean = false
     )(using s: SelectItem[R], sq: SelectItem[V]): JoinQuery[R] =
         qc.tableIndex += 1
         val aliasName = s"t${qc.tableIndex}"
@@ -263,7 +264,7 @@ class SelectQuery[T](
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(joinQuery.ast, false, SqlTableAlias(aliasName)),
+                SqlTable.SubQueryTable(joinQuery.ast, lateral, SqlTableAlias(aliasName)),
                 None
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
@@ -292,6 +293,21 @@ class SelectQuery[T](
             j => tt.toTuple(queryItems) :* j
         )
 
+    inline def joinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](
+        query: QueryContext ?=> T => Query[NamedTuple[N, V], S]
+    )(using
+        tt: ToTuple[T],
+        ts: ToTuple[V],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        ti: SelectItem[V]
+    ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
+        joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
+            SqlJoinType.InnerJoin,
+            query(queryItems),
+            j => tt.toTuple(queryItems) :* j,
+            true
+        )
+
     inline def leftJoin[J](using
         o: ToOption[Table[J]],
         m: Mirror.ProductOf[J],
@@ -313,8 +329,25 @@ class SelectQuery[T](
         st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.LeftJoin, query,
+            SqlJoinType.LeftJoin, 
+            query,
             j => tt.toTuple(queryItems) :* j
+        )
+
+    inline def leftJoinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](
+        query: QueryContext ?=> T => Query[NamedTuple[N, V], S]
+    )(using
+        o: ToOption[V],
+        tt: ToTuple[T],
+        ts: ToTuple[o.R],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        st: SelectItem[V]
+    ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
+        joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
+            SqlJoinType.LeftJoin, 
+            query(queryItems),
+            j => tt.toTuple(queryItems) :* j,
+            true
         )
 
     inline def rightJoin[J](using
