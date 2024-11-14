@@ -217,7 +217,8 @@ object AnalysisMacro:
     case class ExprInfo(
         expr: Expr[Any],
         hasAgg: Boolean, 
-        isAgg: Boolean, 
+        isAgg: Boolean,
+        isGroup: Boolean,
         hasWindow: Boolean, 
         isConst: Boolean, 
         columnRef: List[(String, String)], 
@@ -256,6 +257,7 @@ object AnalysisMacro:
                             term.asExpr, 
                             false, 
                             false, 
+                            false,
                             false, 
                             false, 
                             (objectName, valName) :: Nil, 
@@ -271,6 +273,7 @@ object AnalysisMacro:
                             term.asExpr, 
                             false, 
                             false, 
+                            false,
                             false, 
                             false, 
                             (objectName, valName) :: Nil, 
@@ -278,11 +281,25 @@ object AnalysisMacro:
                             (objectName, valName) :: Nil,
                             (objectName, valName) :: Nil
                         )
-                    case '[SortGroup[_, _]] =>
+                    case '[Sort[_, _]] =>
                         ExprInfo(
                             term.asExpr, 
                             false, 
                             false, 
+                            false,
+                            false, 
+                            false, 
+                            (objectName, valName) :: Nil, 
+                            Nil, 
+                            (objectName, valName) :: Nil, 
+                            Nil
+                        )
+                    case '[Group[_, _]] =>
+                        ExprInfo(
+                            term.asExpr, 
+                            false, 
+                            false, 
+                            true,
                             false, 
                             false, 
                             (objectName, valName) :: Nil, 
@@ -291,7 +308,7 @@ object AnalysisMacro:
                             Nil
                         )
                     case _ =>
-                        ExprInfo(term.asExpr, false, false, false, false, Nil, Nil, Nil, Nil)
+                        ExprInfo(term.asExpr, false, false, false, false, false, Nil, Nil, Nil, Nil)
             case TypeApply(
                 Select(
                     Inlined(
@@ -314,6 +331,7 @@ object AnalysisMacro:
                             term.asExpr, 
                             false, 
                             false, 
+                            false,
                             false, 
                             false, 
                             (objectName, valName) :: Nil, 
@@ -329,6 +347,7 @@ object AnalysisMacro:
                             term.asExpr, 
                             false, 
                             false, 
+                            false,
                             false, 
                             false, 
                             (objectName, valName) :: Nil, 
@@ -337,7 +356,7 @@ object AnalysisMacro:
                             (objectName, valName) :: Nil
                         )
                     case _ =>
-                        ExprInfo(term.asExpr, false, false, false, false, Nil, Nil, Nil, Nil)
+                        ExprInfo(term.asExpr, false, false, false, false, false, Nil, Nil, Nil, Nil)
             case Apply(Apply(TypeApply(Select(left, op), _), right :: Nil), _)
                 if operators.contains(op)
             =>
@@ -346,6 +365,7 @@ object AnalysisMacro:
                 ExprInfo(
                     term.asExpr, 
                     leftInfo.hasAgg || rightInfo.hasAgg,
+                    false,
                     false,
                     leftInfo.hasWindow || rightInfo.hasWindow,
                     false,
@@ -363,6 +383,7 @@ object AnalysisMacro:
                     term.asExpr, 
                     leftInfo.hasAgg || rightInfo.hasAgg,
                     false,
+                    false,
                     leftInfo.hasWindow || rightInfo.hasWindow,
                     false,
                     leftInfo.columnRef ++ rightInfo.columnRef,
@@ -379,6 +400,7 @@ object AnalysisMacro:
                     term.asExpr, 
                     leftInfo.hasAgg || rightInfo.hasAgg,
                     false,
+                    false,
                     leftInfo.hasWindow || rightInfo.hasWindow,
                     false,
                     leftInfo.columnRef ++ rightInfo.columnRef,
@@ -387,7 +409,7 @@ object AnalysisMacro:
                     leftInfo.ungroupedRef ++ rightInfo.ungroupedRef
                 )
             case Apply(Apply(TypeApply(Ident("asExpr"), _), _), _) =>
-                ExprInfo(term.asExpr, false, false, false, true, Nil, Nil, Nil, Nil)
+                ExprInfo(term.asExpr, false, false, false, false, true, Nil, Nil, Nil, Nil)
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
@@ -408,7 +430,7 @@ object AnalysisMacro:
                     argsInfo.flatMap(_.columnRef)
                 if !columnsRef.map(_._1).forall(args.map(_._1).contains) then
                     report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
-                ExprInfo(term.asExpr, true, true, false, false, columnsRef, columnsRef, Nil, argsInfo.flatMap(_.ungroupedRef))
+                ExprInfo(term.asExpr, true, true, false, false, false, columnsRef, columnsRef, Nil, argsInfo.flatMap(_.ungroupedRef))
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
@@ -426,6 +448,7 @@ object AnalysisMacro:
                 ExprInfo(
                     term.asExpr, 
                     argsInfo.map(_.hasAgg).fold(false)(_ || _),
+                    false,
                     false,
                     argsInfo.map(_.hasWindow).fold(false)(_ || _), 
                     false, 
@@ -447,6 +470,7 @@ object AnalysisMacro:
                     funcArgs.map(a => treeInfoMacro(args, a))
                 ExprInfo(
                     term.asExpr, 
+                    false,
                     false,
                     false,
                     false, 
@@ -517,6 +541,7 @@ object AnalysisMacro:
                     term.asExpr, 
                     false, 
                     false, 
+                    false,
                     true, 
                     false,
                     funcInfo.columnRef ++ windowInfo.flatMap(_.columnRef), 
@@ -545,6 +570,7 @@ object AnalysisMacro:
                     term.asExpr,
                     ifInfo.hasAgg || thenInfo.hasAgg,
                     false,
+                    false,
                     ifInfo.hasWindow || thenInfo.hasWindow,
                     false,
                     ifInfo.columnRef ++ thenInfo.columnRef,
@@ -559,6 +585,7 @@ object AnalysisMacro:
                     term.asExpr,
                     ifInfo.hasAgg || elseInfo.hasAgg,
                     false,
+                    false,
                     ifInfo.hasWindow || elseInfo.hasWindow,
                     false,
                     ifInfo.columnRef ++ elseInfo.columnRef,
@@ -572,6 +599,7 @@ object AnalysisMacro:
                 ExprInfo(
                     term.asExpr,
                     leftInfo.hasAgg || rightInfo.hasAgg,
+                    false,
                     false,
                     leftInfo.hasWindow || rightInfo.hasWindow,
                     false,
@@ -592,6 +620,7 @@ object AnalysisMacro:
                             term.asExpr,
                             exprInfo.map(_.hasAgg).fold(false)(_ || _),
                             false,
+                            false,
                             exprInfo.map(_.hasWindow).fold(false)(_ || _),
                             false,
                             exprInfo.flatMap(_.columnRef),
@@ -607,6 +636,7 @@ object AnalysisMacro:
                     term.asExpr,
                     info.map(_.hasAgg).fold(false)(_ || _),
                     false,
+                    false,
                     info.map(_.hasWindow).fold(false)(_ || _), 
                     false, 
                     info.flatMap(_.columnRef), 
@@ -614,13 +644,33 @@ object AnalysisMacro:
                     info.flatMap(_.nonAggRef),
                     info.flatMap(_.ungroupedRef)
                 )
+            case Apply(Ident("grouping"), Typed(Repeated(items, _), _) :: Nil) =>
+                val info = items.map(i => treeInfoMacro(args, i))
+                for i <- info do
+                    if !i.isGroup then
+                        report.error(
+                            "Arguments to GROUPING must be grouping expressions of the associated query level.",
+                            i.expr
+                        )
+                ExprInfo(
+                    term.asExpr,
+                    true,
+                    false,
+                    false,
+                    false, 
+                    false, 
+                    info.flatMap(_.columnRef), 
+                    info.flatMap(_.columnRef),
+                    Nil,
+                    Nil
+                )
             case _ =>
                 term.tpe.widen.asType match
                     case '[t] =>
                         if Expr.summon[AsSqlExpr[t]].isDefined then
-                            ExprInfo(term.asExpr, false, false, false, true, Nil, Nil, Nil, Nil)
+                            ExprInfo(term.asExpr, false, false, false, false, true, Nil, Nil, Nil, Nil)
                         else
-                            ExprInfo(term.asExpr, false, false, false, false, Nil, Nil, Nil, Nil)
+                            ExprInfo(term.asExpr, false, false, false, false, false, Nil, Nil, Nil, Nil)
 
     private def unwrapFuncMacro[T](
         value: Expr[T]
