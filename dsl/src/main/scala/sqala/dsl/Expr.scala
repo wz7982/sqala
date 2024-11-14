@@ -524,6 +524,8 @@ object Expr:
 
         def descNullsLast: OrderBy[T] = OrderBy(expr, Desc, Some(Last))
 
+    given exprToTuple1[T]: Conversion[Expr[T], Tuple1[Expr[T]]] = Tuple1(_)
+
 class OrderBy[T](
     private[sqala] val expr: Expr[?],
     private[sqala] val order: SqlOrderByOption,
