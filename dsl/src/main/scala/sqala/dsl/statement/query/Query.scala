@@ -128,10 +128,10 @@ class GroupedProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
     ): GroupedSortQuery[N, V, S] =
         AnalysisMacro.analysisGroupedOrder(f)
-        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
         val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         GroupedSortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
@@ -141,10 +141,10 @@ class GroupedSortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
     ): GroupedSortQuery[N, V, S] =
         AnalysisMacro.analysisGroupedOrder(f)
-        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
         val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         GroupedSortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
@@ -157,10 +157,10 @@ class ProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         DistinctQuery(queryItems, ast.copy(param = Some(SqlSelectParam.Distinct)))
 
     inline def sortBy[O](
-        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
     ): SortQuery[N, V, S] =
         AnalysisMacro.analysisOrder(f)
-        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
         val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         SortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
@@ -170,10 +170,10 @@ class SortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
     ): SortQuery[N, V, S] =
         AnalysisMacro.analysisOrder(f)
-        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
         val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         SortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
@@ -183,10 +183,10 @@ class DistinctQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
     ): DistinctQuery[N, V, S] =
         AnalysisMacro.analysisDistinctOrder(f)
-        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
         val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         DistinctQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
@@ -252,7 +252,8 @@ class SelectQuery[T](
     private def joinQueryClause[N <: Tuple, V <: Tuple, SV <: Tuple, S <: ResultSize, R](
         joinType: SqlJoinType,
         query: QueryContext ?=> Query[NamedTuple[N, V], S],
-        f: SubQuery[N, SV] => R
+        f: SubQuery[N, SV] => R,
+        lateral: Boolean = false
     )(using s: SelectItem[R], sq: SelectItem[V]): JoinQuery[R] =
         qc.tableIndex += 1
         val aliasName = s"t${qc.tableIndex}"
@@ -263,7 +264,7 @@ class SelectQuery[T](
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(joinQuery.ast, false, SqlTableAlias(aliasName)),
+                SqlTable.SubQueryTable(joinQuery.ast, lateral, SqlTableAlias(aliasName)),
                 None
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
@@ -292,6 +293,21 @@ class SelectQuery[T](
             j => tt.toTuple(queryItems) :* j
         )
 
+    inline def joinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](
+        query: QueryContext ?=> T => Query[NamedTuple[N, V], S]
+    )(using
+        tt: ToTuple[T],
+        ts: ToTuple[V],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        ti: SelectItem[V]
+    ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
+        joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
+            SqlJoinType.InnerJoin,
+            query(queryItems),
+            j => tt.toTuple(queryItems) :* j,
+            true
+        )
+
     inline def leftJoin[J](using
         o: ToOption[Table[J]],
         m: Mirror.ProductOf[J],
@@ -313,8 +329,25 @@ class SelectQuery[T](
         st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.LeftJoin, query,
+            SqlJoinType.LeftJoin, 
+            query,
             j => tt.toTuple(queryItems) :* j
+        )
+
+    inline def leftJoinLateral[N <: Tuple, V <: Tuple, S <: ResultSize](
+        query: QueryContext ?=> T => Query[NamedTuple[N, V], S]
+    )(using
+        o: ToOption[V],
+        tt: ToTuple[T],
+        ts: ToTuple[o.R],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        st: SelectItem[V]
+    ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
+        joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
+            SqlJoinType.LeftJoin, 
+            query(queryItems),
+            j => tt.toTuple(queryItems) :* j,
+            true
         )
 
     inline def rightJoin[J](using
@@ -350,12 +383,12 @@ class SelectQuery[T](
         a: AsExpr[V],
         tu: ToUngroup[T],
         tut: ToTuple[tu.R]
-    ): GroupByQuery[SortGroup[N, V] *: tut.R] =
+    ): GroupByQuery[Group[N, V] *: tut.R] =
         AnalysisMacro.analysisGroup(f)
         val func = t.tupled(f)
         val groupByItems = func(tt.toTuple(queryItems))
         val groupExprs = a.asExprs(groupByItems)
-        val group: SortGroup[N, V] = SortGroup(groupExprs)
+        val group: Group[N, V] = Group(groupExprs)
         val sqlGroupBy = groupExprs
             .map(i => SqlGroupItem.Singleton(i.asSqlExpr))
         GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
@@ -369,12 +402,12 @@ class SelectQuery[T](
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
-    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+    ): GroupByQuery[Group[N, tot.R] *: tut.R] =
         AnalysisMacro.analysisGroup(f)
         val func = t.tupled(f)
         val groupByItems = func(tt.toTuple(queryItems))
         val groupExprs = a.asExprs(groupByItems)
-        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil
         GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
@@ -388,12 +421,12 @@ class SelectQuery[T](
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
-    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+    ): GroupByQuery[Group[N, tot.R] *: tut.R] =
         AnalysisMacro.analysisGroup(f)
         val func = t.tupled(f)
         val groupByItems = func(tt.toTuple(queryItems))
         val groupExprs = a.asExprs(groupByItems)
-        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil
         GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
@@ -407,14 +440,14 @@ class SelectQuery[T](
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
-    )(g: SortGroup[N, tot.R] => S)(using
+    )(g: Group[N, tot.R] => S)(using
         gs: GroupingSets[S]
-    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+    ): GroupByQuery[Group[N, tot.R] *: tut.R] =
         AnalysisMacro.analysisGroup(f)
         val func = t.tupled(f)
         val groupByItems = func(tt.toTuple(queryItems))
         val groupExprs = a.asExprs(groupByItems)
-        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.GroupingSets(gs.asSqlExprs(g(group))) :: Nil
         GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
