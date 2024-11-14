@@ -83,50 +83,54 @@ object AnalysisMacro:
 
         val (args, body) = unwrapFuncMacro(f)
 
-        body.tpe.asType match
+        val terms = body.tpe.asType match
+            case '[type t <: Tuple; t] =>
+                body match
+                    case Apply(_, applyTerms) => applyTerms
             case '[type t <: scala.NamedTuple.AnyNamedTuple; t] =>
-                val terms = body match
+                body match
                     case Apply(_, Apply(_, applyTerms) :: Nil) =>
                         applyTerms
                     case _ => Nil
-                val info = terms.map(t => treeInfoMacro(args, t))
-                val hasAgg = info.map(_.hasAgg).fold(false)(_ || _)
-                    if hasAgg then
-                        for i <- info if i.nonAggRef.nonEmpty do
-                            val c = i.nonAggRef.head
-                            report.error(
-                                s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
-                                i.expr
-                            )
-                        
-                val isAgg = info.map(_.hasAgg).forall(i => i)
-                if isAgg then
-                    '{
-                        new ProjectionQuery[N, V, OneRow]($mappedItems, $ast)(using $qc)
-                    }
-                else 
-                    '{
-                        new ProjectionQuery[N, V, ManyRows]($mappedItems, $ast)(using $qc)
-                    }
+        val info = terms.map(t => treeInfoMacro(args, t))
+        val hasAgg = info.map(_.hasAgg).fold(false)(_ || _)
+            if hasAgg then
+                for i <- info if i.nonAggRef.nonEmpty do
+                    val c = i.nonAggRef.head
+                    report.error(
+                        s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                        i.expr
+                    )
+                
+        val isAgg = info.map(_.hasAgg).forall(i => i)
+        if isAgg then
+            '{
+                new ProjectionQuery[N, V, OneRow]($mappedItems, $ast)(using $qc)
+            }
+        else 
+            '{
+                new ProjectionQuery[N, V, ManyRows]($mappedItems, $ast)(using $qc)
+            }
 
     private def analysisGroupedSelectMacro[T: Type](f: Expr[T])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
         val (args, body) = unwrapFuncMacro(f)
 
-        body.tpe.asType match
+        val terms = body.tpe.asType match
             case '[type t <: Tuple; t] =>
-                val terms = body match
+                body match
                     case Inlined(Some(Apply(_, Apply(_, applyTerms) :: Nil)), _, _) =>
                         applyTerms
-                val info = terms.map(t => treeInfoMacro(args, t))
-                for i <- info do
-                    if i.nonAggRef.nonEmpty && i.ungroupedRef.nonEmpty && i.nonAggRef.exists(c => i.ungroupedRef.contains(c)) then
-                        val c = i.ungroupedRef.head
-                            report.error(
-                                s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
-                                i.expr
-                            )
+                    case Apply(_, applyTerms) => applyTerms
+        val info = terms.map(t => treeInfoMacro(args, t))
+        for i <- info do
+            if i.nonAggRef.nonEmpty && i.ungroupedRef.nonEmpty && i.nonAggRef.exists(c => i.ungroupedRef.contains(c)) then
+                val c = i.ungroupedRef.head
+                    report.error(
+                        s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                        i.expr
+                    )
 
         '{}
 

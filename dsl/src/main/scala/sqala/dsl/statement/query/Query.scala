@@ -73,6 +73,9 @@ sealed class Query[T, S <: ResultSize](
         Query(expr, outerQuery)
 
 object Query:
+    extension [N <: Tuple, V <: Tuple](query: Query[NamedTuple[N, V], OneRow])(using m: Merge[V])
+        def asExpr: Expr[m.R] = Expr.SubQuery(query.ast)
+
     extension [N <: Tuple, V <: Tuple, S <: ResultSize, UN <: Tuple, UV <: Tuple, US <: ResultSize](
         query: Query[NamedTuple[N, V], S]
     )
