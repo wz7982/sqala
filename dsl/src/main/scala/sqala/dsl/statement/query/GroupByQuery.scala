@@ -2,43 +2,31 @@ package sqala.dsl.statement.query
 
 import sqala.ast.statement.SqlQuery
 import sqala.dsl.*
+import sqala.dsl.macros.AnalysisMacro
 
-import scala.compiletime.{erasedValue, error}
+import scala.NamedTuple.NamedTuple
+import scala.util.TupledFunction
 
 class GroupByQuery[T](
-    private[sqala] val items: T,
+    private[sqala] val queryItems: T,
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    inline def having[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): GroupByQuery[T] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-            case _: AggOperationKind =>
-            case _: GroupKind =>
-            case _: WindowKind => error("Window functions are not allowed in HAVING.")
-            case _ =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-        val sqlCondition = f(items).asSqlExpr
-        GroupByQuery(items, ast.addHaving(sqlCondition))
+    inline def having[F](using
+        t: TupledFunction[F, T => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): GroupByQuery[T] =
+        AnalysisMacro.analysisHaving(f)
+        val func = t.tupled(f)
+        val sqlCondition = func(queryItems).asSqlExpr
+        GroupByQuery(queryItems, ast.addHaving(sqlCondition))
 
-    inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): GroupByQuery[T] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-            case _: AggOperationKind =>
-            case _: GroupKind =>
-            case _: ValueKind =>
-                error("Constants are not allowed in ORDER BY.")
-            case _ =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-        val orderBy = f(items)
-        val sqlOrderBy = orderBy.asSqlOrderBy
-        new GroupByQuery(items, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
-
-    def map[R](f: QueryContext ?=> T => R)(using 
-        s: SelectItem[R], 
-        a: AsExpr[R], 
-        i: IsAggOrGroup[R], 
-        ck: CheckGroupMapKind[i.R]
-    ): ProjectionQuery[R, ManyRows] =
-        val mappedItems = f(items)
+    inline def map[F, N <: Tuple, V <: Tuple](using
+        t: TupledFunction[F, T => NamedTuple[N, V]]
+    )(inline f: QueryContext ?=> F)(using
+        s: SelectItem[V],
+        a: SelectItemAsExpr[V]
+    ): GroupedProjectionQuery[N, a.R, ManyRows] =
+        AnalysisMacro.analysisGroupedSelect(f)
+        val func = t.tupled(f)
+        val mappedItems = func(queryItems)
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(mappedItems, ast.copy(select = selectItems))
+        GroupedProjectionQuery(a.asExpr(mappedItems), ast.copy(select = selectItems))

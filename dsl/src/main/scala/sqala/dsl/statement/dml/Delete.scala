@@ -3,13 +3,13 @@ package sqala.dsl.statement.dml
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 import sqala.dsl.macros.TableMacro
-import sqala.dsl.{Expr, SimpleKind, Table}
+import sqala.dsl.{Expr, Table}
 
 class Delete[T](
     private[sqala] val table: T,
     val ast: SqlStatement.Delete
 ):
-    inline def where[K <: SimpleKind](f: T => Expr[Boolean, K]): Delete[T] =
+    inline def where(f: T => Expr[Boolean]): Delete[T] =
         val condition = f(table).asSqlExpr
         new Delete(table, ast.addWhere(condition))
 

@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 import sqala.dsl.macros.TableMacro
-import sqala.dsl.{AsSqlExpr, Expr, SimpleKind, Table}
+import sqala.dsl.{AsSqlExpr, Expr, Table}
 
 import scala.deriving.Mirror
 
@@ -18,7 +18,7 @@ class Update[T, S <: UpdateState](
         val updateExpr = pair.updateExpr.asSqlExpr
         new Update(items, ast.copy(setList = ast.setList :+ (expr, updateExpr)))
 
-    inline def where[K <: SimpleKind](f: T => Expr[Boolean, K])(using S =:= UpdateTable): Update[T, UpdateTable] =
+    inline def where(f: T => Expr[Boolean])(using S =:= UpdateTable): Update[T, UpdateTable] =
         val condition = f(items)
         new Update(items, ast.addWhere(condition.asSqlExpr))
 
@@ -42,7 +42,7 @@ object Update:
             .map(i => (i._1._1._1, i._1._1._2, i._1._2, i._2))
         val updateColumns = updateMetaData
             .filterNot((c, _, _, _) => metaData.primaryKeyFields.contains(c))
-            .filter: (_, _, _, field) => 
+            .filter: (_, _, _, field) =>
                 (field, skipNone) match
                     case (None, true) => false
                     case _ => true

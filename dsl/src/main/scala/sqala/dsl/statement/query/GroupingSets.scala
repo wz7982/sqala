@@ -1,25 +1,24 @@
 package sqala.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
-import sqala.dsl.{Expr, ExprKind}
+import sqala.dsl.Expr
 
 import scala.annotation.implicitNotFound
-import sqala.dsl.GroupKind
 
 @implicitNotFound("Type ${T} cannot be converted to GROUPING SETS expressions.")
 trait GroupingSetsItem[T]:
     def asSqlExpr(x: T): SqlExpr
 
 object GroupingSetsItem:
-    given exprGrouping[T]: GroupingSetsItem[Expr[T, GroupKind]] with
-        override def asSqlExpr(x: Expr[T, GroupKind]): SqlExpr =
+    given exprGrouping[T]: GroupingSetsItem[Expr[T]] with
+        override def asSqlExpr(x: Expr[T]): SqlExpr =
             x.asSqlExpr
 
-    given tupleGrouping[T, Tail <: Tuple](using 
-        hi: GroupingSetsItem[Expr[T, GroupKind]], 
+    given tupleGrouping[T, Tail <: Tuple](using
+        hi: GroupingSetsItem[Expr[T]],
         ti: GroupingSetsItem[Tail]
-    ): GroupingSetsItem[Expr[T, GroupKind] *: Tail] with
-        override def asSqlExpr(x: Expr[T, GroupKind] *: Tail): SqlExpr =
+    ): GroupingSetsItem[Expr[T] *: Tail] with
+        override def asSqlExpr(x: Expr[T] *: Tail): SqlExpr =
             val tailExpr = ti.asSqlExpr(x.tail) match
                 case SqlExpr.Vector(list) => list
                 case i => i :: Nil
@@ -38,12 +37,12 @@ trait GroupingSets[T]:
     def asSqlExprs(x: T): List[SqlExpr]
 
 object GroupingSets:
-    given exprGrouping[T]: GroupingSets[Expr[T, GroupKind]] with
-        override def asSqlExprs(x: Expr[T, GroupKind]): List[SqlExpr] =
+    given exprGrouping[T]: GroupingSets[Expr[T]] with
+        override def asSqlExprs(x: Expr[T]): List[SqlExpr] =
             x.asSqlExpr :: Nil
 
-    given tupleGrouping[H, T <: Tuple](using 
-        hi: GroupingSetsItem[H], 
+    given tupleGrouping[H, T <: Tuple](using
+        hi: GroupingSetsItem[H],
         ti: GroupingSets[T]
     ): GroupingSets[H *: T] with
         override def asSqlExprs(x: H *: T): List[SqlExpr] =

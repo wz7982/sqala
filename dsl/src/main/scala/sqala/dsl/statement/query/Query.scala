@@ -7,17 +7,18 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
 import sqala.ast.table.{SqlJoinType, SqlTableAlias, SqlTable}
 import sqala.dsl.*
-import sqala.dsl.macros.TableMacro
+import sqala.dsl.macros.*
 import sqala.printer.Dialect
 import sqala.util.queryToString
 
 import scala.NamedTuple.NamedTuple
 import scala.Tuple.Append
-import scala.compiletime.{erasedValue, error}
+import scala.compiletime.summonInline
 import scala.deriving.Mirror
+import scala.util.TupledFunction
 
 sealed class Query[T, S <: ResultSize](
-    private[sqala] val queryItems: T, 
+    private[sqala] val queryItems: T,
     val ast: SqlQuery
 )(using val qc: QueryContext):
     def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
@@ -51,7 +52,7 @@ sealed class Query[T, S <: ResultSize](
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long, AggKind], OneRow] =
+    def size: Query[Expr[Long], OneRow] =
         val expr = count()
         ast match
             case s@SqlQuery.Select(_, _, _, _, Nil, _, _, _) =>
@@ -63,7 +64,7 @@ sealed class Query[T, S <: ResultSize](
                 )
                 Query(expr, outerQuery)
 
-    def exists: Query[Expr[Boolean, CommonKind], OneRow] =
+    def exists: Query[Expr[Boolean], OneRow] =
         val expr = sqala.dsl.exists(this)
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
@@ -72,139 +73,164 @@ sealed class Query[T, S <: ResultSize](
         Query(expr, outerQuery)
 
 object Query:
-    extension [Q](query: Query[Q, OneRow])(using m: Merge[Q])
-        def asExpr: Expr[m.R, CommonKind] = Expr.SubQuery(query.ast)
-
-    extension [T, S <: ResultSize, U, US <: ResultSize](query: Query[T, S])
-        infix def union(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+    extension [N <: Tuple, V <: Tuple, S <: ResultSize, UN <: Tuple, UV <: Tuple, US <: ResultSize](
+        query: Query[NamedTuple[N, V], S]
+    )
+        infix def union(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Union, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.Union, unionQuery.ast)
 
-        infix def unionAll(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+        infix def unionAll(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.UnionAll, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.UnionAll, unionQuery.ast)
 
-        def ++(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] = unionAll(unionQuery)
+        def ++(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] = unionAll(unionQuery)
 
-        infix def except(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+        infix def except(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Except, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.Except, unionQuery.ast)
 
-        infix def exceptAll(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+        infix def exceptAll(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.ExceptAll, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.ExceptAll, unionQuery.ast)
 
-        infix def intersect(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+        infix def intersect(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Intersect, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.Intersect, unionQuery.ast)
 
-        infix def intersectAll(unionQuery: QueryContext ?=> Query[U, US])(using 
-            u: UnionOperation[T, U]
-        ): Query[u.R, ManyRows] =
+        infix def intersectAll(unionQuery: QueryContext ?=> Query[NamedTuple[UN, UV], US])(using
+            u: UnionOperation[V, UV],
+            tt: ToTuple[u.R]
+        ): Query[NamedTuple[N, tt.R], ManyRows] =
             given QueryContext = query.qc
-            UnionQuery(u.unionQueryItems(query.queryItems), query.ast, SqlUnionType.Intersect, unionQuery.ast)
+            UnionQuery(tt.toTuple(u.unionQueryItems(query.queryItems)), query.ast, SqlUnionType.Intersect, unionQuery.ast)
 
-class ProjectionQuery[T, S <: ResultSize](
-    private[sqala] override val queryItems: T,
+class GroupedProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    private[sqala] override val queryItems: NamedTuple[N, V],
     override val ast: SqlQuery.Select
-)(using QueryContext) extends Query[T, S](queryItems, ast):
-    def distinct(using t: TransformKind[T, DistinctKind]): DistinctQuery[t.R, S] =
-        DistinctQuery(t.tansform(queryItems), ast.copy(param = Some(SqlSelectParam.Distinct)))
+)(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
+    inline def sortBy[O](
+        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+    ): GroupedSortQuery[N, V, S] =
+        AnalysisMacro.analysisGroupedOrder(f)
+        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val orderBy = f(sort)
+        val sqlOrderBy = orderBy.asSqlOrderBy
+        GroupedSortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-    inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): SortQuery[T, S] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: AggOperationKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: WindowKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: ValueKind =>
-                error("Constants are not allowed in ORDER BY.")
-            case _ =>
-        val orderBy = f(queryItems)
+class GroupedSortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    private[sqala] override val queryItems: NamedTuple[N, V],
+    override val ast: SqlQuery.Select
+)(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
+    inline def sortBy[O](
+        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+    ): GroupedSortQuery[N, V, S] =
+        AnalysisMacro.analysisGroupedOrder(f)
+        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val orderBy = f(sort)
+        val sqlOrderBy = orderBy.asSqlOrderBy
+        GroupedSortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
+
+class ProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    private[sqala] override val queryItems: NamedTuple[N, V],
+    override val ast: SqlQuery.Select
+)(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
+    def distinct: DistinctQuery[N, V, S] =
+        DistinctQuery(queryItems, ast.copy(param = Some(SqlSelectParam.Distinct)))
+
+    inline def sortBy[O](
+        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+    ): SortQuery[N, V, S] =
+        AnalysisMacro.analysisOrder(f)
+        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         SortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-class SortQuery[T, S <: ResultSize](
-    private[sqala] override val queryItems: T,
+class SortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    private[sqala] override val queryItems: NamedTuple[N, V],
     override val ast: SqlQuery.Select
-)(using QueryContext) extends Query[T, S](queryItems, ast):
-    inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): SortQuery[T, S] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: AggOperationKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: WindowKind =>
-                error("Column must appear in the GROUP BY clause or be used in an aggregate function.")
-            case _: ValueKind =>
-                error("Constants are not allowed in ORDER BY.")
-            case _ =>
-        val orderBy = f(queryItems)
+)(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
+    inline def sortBy[O](
+        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+    ): SortQuery[N, V, S] =
+        AnalysisMacro.analysisOrder(f)
+        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         SortQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
-class DistinctQuery[T, S <: ResultSize](
-    private[sqala] override val queryItems: T,
+class DistinctQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    private[sqala] override val queryItems: NamedTuple[N, V],
     override val ast: SqlQuery.Select
-)(using QueryContext) extends Query[T, S](queryItems, ast):
-    inline def sortBy[O, K <: ExprKind](f: QueryContext ?=> T => OrderBy[O, K]): DistinctQuery[T, S] =
-        inline erasedValue[K] match
-            case _: DistinctKind =>
-            case _: ValueKind =>
-                error("Constants are not allowed in ORDER BY.")
-            case _ =>
-                error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.")
-        val orderBy = f(queryItems)
+)(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
+    inline def sortBy[O](
+        inline f: QueryContext ?=> SortGroup[N, V] => OrderBy[O]
+    ): DistinctQuery[N, V, S] =
+        AnalysisMacro.analysisDistinctOrder(f)
+        val sort = SortGroup[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
+        val orderBy = f(sort)
         val sqlOrderBy = orderBy.asSqlOrderBy
         DistinctQuery(queryItems, ast.copy(orderBy = ast.orderBy :+ sqlOrderBy))
 
 class SelectQuery[T](
     private[sqala] override val queryItems: T,
     override val ast: SqlQuery.Select
-)(using QueryContext) extends Query[T, ManyRows](queryItems, ast):
-    inline def filter[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
-        inline erasedValue[K] match
-            case _: AggKind => error("Aggregate functions are not allowed in WHERE.")
-            case _: AggOperationKind => error("Aggregate functions are not allowed in WHERE.")
-            case _: WindowKind => error("Window functions are not allowed in WHERE.")
-            case _: SimpleKind =>
-        val condition = f(queryItems).asSqlExpr
+)(using override val qc: QueryContext) extends Query[T, ManyRows](queryItems, ast):
+    inline def filter[F](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): SelectQuery[T] =
+        AnalysisMacro.analysisFilter(f)
+        val func = t.tupled(f)
+        val condition = func(tt.toTuple(queryItems)).asSqlExpr
         SelectQuery(queryItems, ast.addWhere(condition))
 
-    inline def withFilter[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def withFilter[F](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): SelectQuery[T] =
         filter(f)
 
-    inline def filterIf[K <: ExprKind](test: Boolean)(f: T => Expr[Boolean, K]): SelectQuery[T] =
+    inline def filterIf[F](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => Expr[Boolean]]
+    )(test: Boolean)(inline f: QueryContext ?=> F): SelectQuery[T] =
         if test then filter(f) else this
 
-    inline def map[R](f: QueryContext ?=> T => R)(using 
-        s: SelectItem[R], 
-        a: AsExpr[R], 
-        h: HasAgg[R], 
-        n: NotAgg[R], 
-        c: CheckMapKind[h.R, n.R],
-        p: ProjectionSize[h.R]
-    ): ProjectionQuery[R, p.R] =
-        val mappedItems = f(queryItems)
+    transparent inline def map[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]],
+    )(inline f: QueryContext ?=> F)(using 
+        s: SelectItem[V],
+        a: SelectItemAsExpr[V]
+    ): ProjectionQuery[N, a.R, ?] =
+        val func = t.tupled(f)
+        val mappedItems = func(tt.toTuple(queryItems))
         val selectItems = s.selectItems(mappedItems, 0)
-        ProjectionQuery(mappedItems, ast.copy(select = selectItems))
+        val newAst: SqlQuery.Select = ast.copy(select = selectItems)
+        AnalysisMacro.analysisSelect(f, a.asExpr(mappedItems), newAst, qc)
 
     private inline def joinClause[J, R](
-        joinType: SqlJoinType, 
+        joinType: SqlJoinType,
         f: Table[J] => R
     )(using m: Mirror.ProductOf[J], s: SelectItem[R]): JoinQuery[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]
@@ -224,10 +250,10 @@ class SelectQuery[T](
         JoinQuery(tables, sqlTable, ast.copy(select = selectItems, from = sqlTable.toList))
 
     private def joinQueryClause[N <: Tuple, V <: Tuple, SV <: Tuple, S <: ResultSize, R](
-        joinType: SqlJoinType, 
-        query: QueryContext ?=> Query[NamedTuple[N, V], S], 
+        joinType: SqlJoinType,
+        query: QueryContext ?=> Query[NamedTuple[N, V], S],
         f: SubQuery[N, SV] => R
-    )(using s: SelectItem[R], sq: SelectItem[NamedTuple[N, V]]): JoinQuery[R] =
+    )(using s: SelectItem[R], sq: SelectItem[V]): JoinQuery[R] =
         qc.tableIndex += 1
         val aliasName = s"t${qc.tableIndex}"
         val joinQuery = query
@@ -242,143 +268,156 @@ class SelectQuery[T](
             )
         JoinQuery(tables, sqlTable, ast.copy(select = s.selectItems(tables, 0), from = sqlTable.toList))
 
-    inline def join[J](using 
-        m: Mirror.ProductOf[J], 
+    inline def join[J](using
+        m: Mirror.ProductOf[J],
         tt: ToTuple[T],
         s: SelectItem[Append[tt.R, Table[J]]]
     ): JoinQuery[Append[tt.R, Table[J]]] =
         joinClause[J, Append[tt.R, Table[J]]](
-            SqlJoinType.InnerJoin, 
+            SqlJoinType.InnerJoin,
             j => tt.toTuple(queryItems) :* j
         )
 
     inline def joinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         query: QueryContext ?=> Query[NamedTuple[N, V], S]
-    )(using 
-        tt: ToTuple[T], 
-        s: SubQueryKind[V], 
-        ts: ToTuple[s.R], 
-        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]], 
-        ti: SelectItem[NamedTuple[N, V]]
+    )(using
+        tt: ToTuple[T],
+        ts: ToTuple[V],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        ti: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.InnerJoin, 
-            query, 
+            SqlJoinType.InnerJoin,
+            query,
             j => tt.toTuple(queryItems) :* j
         )
 
-    inline def leftJoin[J](using 
-        o: ToOption[Table[J]], 
+    inline def leftJoin[J](using
+        o: ToOption[Table[J]],
         m: Mirror.ProductOf[J],
-        tt: ToTuple[T], 
+        tt: ToTuple[T],
         s: SelectItem[Append[tt.R, o.R]]
     ): JoinQuery[Append[tt.R, o.R]] =
         joinClause[J, Append[tt.R, o.R]](
-            SqlJoinType.LeftJoin, 
+            SqlJoinType.LeftJoin,
             j => tt.toTuple(queryItems) :* o.toOption(j)
         )
 
     inline def leftJoinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         query: QueryContext ?=> Query[NamedTuple[N, V], S]
-    )(using 
-        o: ToOption[V], 
-        tt: ToTuple[T], 
-        s: SubQueryKind[o.R], 
-        ts: ToTuple[s.R], 
-        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]], 
-        st: SelectItem[NamedTuple[N, V]]
+    )(using
+        o: ToOption[V],
+        tt: ToTuple[T],
+        ts: ToTuple[o.R],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.LeftJoin, query, 
+            SqlJoinType.LeftJoin, query,
             j => tt.toTuple(queryItems) :* j
         )
 
-    inline def rightJoin[J](using 
-        o: ToOption[T], 
-        m: Mirror.ProductOf[J], 
-        tt: ToTuple[o.R], 
+    inline def rightJoin[J](using
+        o: ToOption[T],
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[o.R],
         s: SelectItem[Append[tt.R, Table[J]]]
     ): JoinQuery[Append[tt.R, Table[J]]] =
         joinClause[J, Append[tt.R, Table[J]]](
-            SqlJoinType.RightJoin, 
+            SqlJoinType.RightJoin,
             j => tt.toTuple(o.toOption(queryItems)) :* j
         )
 
     inline def rightJoinQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         query: QueryContext ?=> Query[NamedTuple[N, V], S]
-    )(using 
-        o: ToOption[T], 
-        tt: ToTuple[o.R], 
-        s: SubQueryKind[V], 
-        ts: ToTuple[s.R], 
-        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]], 
-        st: SelectItem[NamedTuple[N, V]]
+    )(using
+        o: ToOption[T],
+        tt: ToTuple[o.R],
+        ts: ToTuple[V],
+        si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
+        st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.RightJoin, 
-            query, 
+            SqlJoinType.RightJoin,
+            query,
             j => tt.toTuple(o.toOption(queryItems)) :* j
         )
 
-    def groupBy[G](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind],
-        tt: ToTuple[T]
-    ): GroupByQuery[t.R *: tt.R] =
-        val groupByItems = f(queryItems)
-        val sqlGroupBy = a.asExprs(groupByItems)
+    inline def groupBy[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: QueryContext ?=> F)(using 
+        a: AsExpr[V],
+        tu: ToUngroup[T],
+        tut: ToTuple[tu.R]
+    ): GroupByQuery[SortGroup[N, V] *: tut.R] =
+        AnalysisMacro.analysisGroup(f)
+        val func = t.tupled(f)
+        val groupByItems = func(tt.toTuple(queryItems))
+        val groupExprs = a.asExprs(groupByItems)
+        val group: SortGroup[N, V] = SortGroup(groupExprs)
+        val sqlGroupBy = groupExprs
             .map(i => SqlGroupItem.Singleton(i.asSqlExpr))
-        GroupByQuery(t.tansform(groupByItems) *: tt.toTuple(queryItems), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByCube[G](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind],
-        to: ToOption[t.R],
-        tt: ToTuple[T]
-    ): GroupByQuery[to.R *: tt.R] =
-        val groupByItems = f(queryItems)
-        val sqlGroupBy = SqlGroupItem.Cube(a.asExprs(groupByItems).map(_.asSqlExpr)) :: Nil
-        GroupByQuery(to.toOption(t.tansform(groupByItems)) *: tt.toTuple(queryItems), ast.copy(groupBy = sqlGroupBy))
+    inline def groupByCube[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: QueryContext ?=> F)(using 
+        a: AsExpr[V],
+        tu: ToUngroup[T],
+        tut: ToTuple[tu.R],
+        to: ToOption[V],
+        tot: ToTuple[to.R]
+    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+        AnalysisMacro.analysisGroup(f)
+        val func = t.tupled(f)
+        val groupByItems = func(tt.toTuple(queryItems))
+        val groupExprs = a.asExprs(groupByItems)
+        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val sqlGroupBy =
+            SqlGroupItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil
+        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByRollup[G](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind],
-        to: ToOption[t.R],
-        tt: ToTuple[T]
-    ): GroupByQuery[to.R *: tt.R] =
-        val groupByItems = f(queryItems)
-        val sqlGroupBy = SqlGroupItem.Rollup(a.asExprs(groupByItems).map(_.asSqlExpr)) :: Nil
-        GroupByQuery(to.toOption(t.tansform(groupByItems)) *: tt.toTuple(queryItems), ast.copy(groupBy = sqlGroupBy))
+    inline def groupByRollup[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: QueryContext ?=> F)(using 
+        a: AsExpr[V],
+        tu: ToUngroup[T],
+        tut: ToTuple[tu.R],
+        to: ToOption[V],
+        tot: ToTuple[to.R]
+    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+        AnalysisMacro.analysisGroup(f)
+        val func = t.tupled(f)
+        val groupByItems = func(tt.toTuple(queryItems))
+        val groupExprs = a.asExprs(groupByItems)
+        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val sqlGroupBy =
+            SqlGroupItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil
+        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
-    def groupByGroupingSets[G, S](f: QueryContext ?=> T => G)(using 
-        a: AsExpr[G], 
-        na: NotAgg[G], 
-        nw: NotWindow[G], 
-        nv: NotValue[G], 
-        c: CheckGroupByKind[na.R, nw.R, nv.R], 
-        t: TransformKind[G, GroupKind],
-        to: ToOption[t.R],
-        tt: ToTuple[T]
-    )(g: t.R => S)(using
+    inline def groupByGroupingSets[F, N <: Tuple, V <: Tuple, S](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: QueryContext ?=> F)(using 
+        a: AsExpr[V],
+        tu: ToUngroup[T],
+        tut: ToTuple[tu.R],
+        to: ToOption[V],
+        tot: ToTuple[to.R]
+    )(g: SortGroup[N, tot.R] => S)(using
         gs: GroupingSets[S]
-    ): GroupByQuery[to.R *: tt.R] =
-        val groupByItems = t.tansform(f(queryItems))
-        val sqlGroupBy = SqlGroupItem.GroupingSets(
-            gs.asSqlExprs(g(groupByItems))
-        ) :: Nil
-        GroupByQuery(to.toOption(groupByItems) *: tt.toTuple(queryItems), ast.copy(groupBy = sqlGroupBy))
+    ): GroupByQuery[SortGroup[N, tot.R] *: tut.R] =
+        AnalysisMacro.analysisGroup(f)
+        val func = t.tupled(f)
+        val groupByItems = func(tt.toTuple(queryItems))
+        val groupExprs = a.asExprs(groupByItems)
+        val group: SortGroup[N, tot.R] = SortGroup(groupExprs)
+        val sqlGroupBy =
+            SqlGroupItem.GroupingSets(gs.asSqlExprs(g(group))) :: Nil
+        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
 class UnionQuery[T](
     private[sqala] override val queryItems: T,

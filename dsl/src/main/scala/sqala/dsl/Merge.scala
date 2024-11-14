@@ -1,63 +1,58 @@
 package sqala.dsl
 
-import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("The type ${T} cannot be merged into a SQL expression.")
 trait Merge[T]:
     type R
 
-    type K <: CompositeKind
+    def exprs(x: T): List[Expr[?]]
 
-    def exprs(x: T): List[Expr[?, ?]]
-
-    def asExpr(x: T): Expr[R, K] = 
+    def asExpr(x: T): Expr[R] =
         val exprList = exprs(x)
-        if exprList.size == 1 then Expr.Ref(exprList.head)
-        else Expr.Vector(exprList)
+        Expr.Vector(exprList)
 
 object Merge:
-    type Aux[T, OR, OK <: CompositeKind] = Merge[T]:
-        type R = OR
+    type Aux[T, O] = Merge[T]:
+        type R = O
 
-        type K = OK
+    given mergeTuple[H, T <: Tuple](using
+        h: MergeItem[H],
+        t: Merge[T],
+        tt: ToTuple[t.R]
+    ): Aux[H *: T, h.R *: tt.R] =
+        new Merge[H *: T]:
+            type R = h.R *: tt.R
 
-    given mergeExpr[T: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[T, EK], T, ResultKind[EK, ValueKind]] =
-        new Merge[Expr[T, EK]]:
+            def exprs(x: H *: T): List[Expr[?]] =
+                h.asExpr(x.head) :: t.exprs(x.tail)
+
+    given mergeTuple1[H](using h: MergeItem[H]): Aux[H *: EmptyTuple, h.R] =
+        new Merge[H *: EmptyTuple]:
+            type R = h.R
+
+            def exprs(x: H *: EmptyTuple): List[Expr[?]] =
+                h.asExpr(x.head) :: Nil
+
+@implicitNotFound("The type ${T} cannot be merged into a SQL expression.")
+trait MergeItem[T]:
+    type R
+
+    def asExpr(x: T): Expr[R]
+
+object MergeItem:
+    type Aux[T, O] = MergeItem[T]:
+        type R = O
+
+    given mergeValue[T: AsSqlExpr]: Aux[T, T] =
+        new MergeItem[T]:
             type R = T
 
-            type K = ResultKind[EK, ValueKind]
+            def asExpr(x: T): Expr[R] =
+                Expr.Literal(x, summon[AsSqlExpr[T]])
 
-            def exprs(x: Expr[T, EK]): List[Expr[?, ?]] =
-                x :: Nil
+    given mergeExpr[T: AsSqlExpr]: Aux[Expr[T], T] =
+        new MergeItem[Expr[T]]:
+            type R = T
 
-    given mergeTuple[H: AsSqlExpr, EK <: SimpleKind, T <: Tuple](using 
-        t: Merge[T], 
-        k: KindOperation[EK, t.K], 
-        tt: ToTuple[t.R]
-    ): Aux[Expr[H, EK] *: T, H *: tt.R, ResultKind[EK, ValueKind]] =
-        new Merge[Expr[H, EK] *: T]:
-            type R = H *: tt.R
-
-            type K = ResultKind[EK, ValueKind]
-
-            def exprs(x: Expr[H, EK] *: T): List[Expr[?, ?]] =
-                x.head :: t.exprs(x.tail)
-
-    given mergeTuple1[H: AsSqlExpr, EK <: SimpleKind]: Aux[Expr[H, EK] *: EmptyTuple, H, ResultKind[EK, ValueKind]] =
-        new Merge[Expr[H, EK] *: EmptyTuple]:
-            type R = H
-
-            type K = ResultKind[EK, ValueKind]
-
-            def exprs(x: Expr[H, EK] *: EmptyTuple): List[Expr[?, ?]] =
-                x.head :: Nil
-
-    given mergeNamedTuple[N <: Tuple, V <: Tuple](using m: Merge[V]): Aux[NamedTuple[N, V], m.R, m.K] =
-        new Merge[NamedTuple[N, V]]:
-            type R = m.R
-
-            type K = m.K
-
-            def exprs(x: NamedTuple[N, V]): List[Expr[?, ?]] =
-                m.exprs(x.toTuple)
+            def asExpr(x: Expr[T]): Expr[R] = x

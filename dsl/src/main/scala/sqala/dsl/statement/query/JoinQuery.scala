@@ -4,29 +4,24 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
 import sqala.dsl.*
+import sqala.dsl.macros.AnalysisMacro
 
-import scala.compiletime.{erasedValue, error}
+import scala.util.TupledFunction
 
 class JoinQuery[T](
     private[sqala] val tables: T,
     private[sqala] val table: Option[SqlTable.JoinTable],
     private[sqala] val ast: SqlQuery.Select
 )(using QueryContext):
-    inline def on[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] =
-        inline erasedValue[K] match
-            case _: AggKind => error("Aggregate functions are not allowed in ON.")
-            case _: AggOperationKind => error("Aggregate functions are not allowed in ON.")
-            case _: WindowKind => error("Window functions are not allowed in ON.")
-            case _: SimpleKind =>
-        val sqlCondition = f(tables).asSqlExpr
+    inline def on[F](using 
+        t: TupledFunction[F, T => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): SelectQuery[T] =
+        AnalysisMacro.analysisFilter(f)
+        val func = t.tupled(f)
+        val sqlCondition = func(tables).asSqlExpr
         val sqlTable = table.map(_.copy(condition = Some(SqlJoinCondition.On(sqlCondition))))
         SelectQuery(tables, ast.copy(from = sqlTable.toList))
 
-    inline def apply[K <: ExprKind](f: QueryContext ?=> T => Expr[Boolean, K]): SelectQuery[T] = on(f)
-
-    def using[E](f: QueryContext ?=> T => Expr[E, ColumnKind]): SelectQuery[T] =
-        val sqlCondition = f(tables) match
-            case Expr.Column(_, columnName) => SqlExpr.Column(None, columnName)
-        val sqlTable = table.map: 
-            _.copy(condition = Some(SqlJoinCondition.Using(sqlCondition :: Nil)))
-        SelectQuery(tables, ast.copy(from = sqlTable.toList))
+    inline def apply[F](using 
+        TupledFunction[F, T => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): SelectQuery[T] = on(f)
