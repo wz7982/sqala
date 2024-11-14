@@ -11,92 +11,86 @@ import sqala.dsl.statement.dml.UpdatePair
 import sqala.dsl.statement.query.*
 
 import java.util.Date
+import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.compiletime.{erasedValue, error}
 
-enum Expr[T, K <: ExprKind] derives CanEqual:
-    case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T, ValueKind]
+enum Expr[T] derives CanEqual:
+    case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
 
-    case Column[T](tableName: String, columnName: String) extends Expr[T, ColumnKind]
+    case Column[T](tableName: String, columnName: String) extends Expr[T]
 
-    case Null extends Expr[Nothing, ValueKind]
+    case Null extends Expr[Nothing]
 
-    case Binary[T, K <: CompositeKind](left: Expr[?, ?], op: SqlBinaryOperator, right: Expr[?, ?]) extends Expr[T, K]
+    case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
 
-    case Unary[T, K <: CompositeKind](expr: Expr[?, ?], op: SqlUnaryOperator) extends Expr[T, K]
+    case Unary[T](expr: Expr[?], op: SqlUnaryOperator) extends Expr[T]
 
-    case SubQuery[T](query: SqlQuery) extends Expr[T, CommonKind]
+    case SubQuery[T](query: SqlQuery) extends Expr[T]
 
-    case Func[T, K <: FuncKind](
+    case Func[T](
         name: String,
-        args: List[Expr[?, ?]],
+        args: List[Expr[?]],
         distinct: Boolean = false,
-        orderBy: List[OrderBy[?, ?]] = Nil,
-        withinGroup: List[OrderBy[?, ?]] = Nil,
-        filter: Option[Expr[?, ?]] = None
-    ) extends Expr[T, K]
+        orderBy: List[OrderBy[?]] = Nil,
+        withinGroup: List[OrderBy[?]] = Nil,
+        filter: Option[Expr[?]] = None
+    ) extends Expr[T]
 
-    case Case[T, K <: CompositeKind](
-        branches: List[(Expr[?, ?], Expr[?, ?])],
-        default: Expr[?, ?]
-    ) extends Expr[T, K]
+    case Case[T](
+        branches: List[(Expr[?], Expr[?])],
+        default: Expr[?]
+    ) extends Expr[T]
 
-    case Vector[T, K <: CompositeKind](items: List[Expr[?, ?]]) extends Expr[T, K]
+    case Vector[T](items: List[Expr[?]]) extends Expr[T]
 
-    case In[K <: CompositeKind](expr: Expr[?, ?], inExpr: Expr[?, ?], not: Boolean) extends Expr[Boolean, K]
+    case In(expr: Expr[?], inExpr: Expr[?], not: Boolean) extends Expr[Boolean]
 
-    case Between[K <: CompositeKind](
-        expr: Expr[?, ?],
-        start: Expr[?, ?],
-        end: Expr[?, ?],
+    case Between(
+        expr: Expr[?],
+        start: Expr[?],
+        end: Expr[?],
         not: Boolean
-    ) extends Expr[Boolean, K]
+    ) extends Expr[Boolean]
 
     case Window[T](
-        expr: Expr[?, ?],
-        partitionBy: List[Expr[?, ?]],
-        orderBy: List[OrderBy[?, ?]],
+        expr: Expr[?],
+        partitionBy: List[Expr[?]],
+        orderBy: List[OrderBy[?]],
         frame: Option[SqlWindowFrame]
-    ) extends Expr[T, WindowKind]
+    ) extends Expr[T]
 
-    case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T, CommonKind]
+    case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T]
 
-    case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T, ValueKind]
+    case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T]
 
-    case Cast[T, K <: CompositeKind](expr: Expr[?, ?], castType: SqlCastType) extends Expr[T, K]
+    case Cast[T](expr: Expr[?], castType: SqlCastType) extends Expr[T]
 
-    case Extract[T, K <: CompositeKind](unit: SqlTimeUnit, expr: Expr[?, ?]) extends Expr[T, K]
+    case Extract[T](unit: SqlTimeUnit, expr: Expr[?]) extends Expr[T]
 
-    case Grouping(items: List[Expr[?, ?]]) extends Expr[Int, AggOperationKind]
+    case Grouping(items: List[Expr[?]]) extends Expr[Int]
 
-    case Ref[T, K <: GroupKind | DistinctKind | CompositeKind](expr: Expr[?, ?]) extends Expr[T, K]
+    case Ref[T](expr: Expr[?]) extends Expr[T]
 
     @targetName("eq")
     def ==[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, Equal, a.asExpr(value))
 
     @targetName("eq")
-    def ==[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def ==[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, Equal, that)
 
     @targetName("eq")
-    inline def ==[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def ==[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -104,41 +98,28 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, Equal, SubQuery(query.ast))
 
     @targetName("eq")
-    inline def ==[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def ==[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
     @targetName("ne")
     def !=[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, NotEqual, a.asExpr(value))
 
     @targetName("ne")
-    def !=[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def !=[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, NotEqual, that)
 
     @targetName("ne")
-    inline def !=[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def !=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -146,41 +127,28 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("ne")
-    inline def !=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def !=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
     @targetName("gt")
     def >[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, GreaterThan, a.asExpr(value))
 
     @targetName("gt")
-    def >[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def >[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    inline def >[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -188,41 +156,28 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThan, SubQuery(query.ast))
 
     @targetName("gt")
-    inline def >[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def >[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
     @targetName("ge")
     def >=[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, a.asExpr(value))
 
     @targetName("ge")
-    def >=[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def >=[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    inline def >=[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -230,41 +185,28 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
     @targetName("ge")
-    inline def >=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def >=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
     def <[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, LessThan, a.asExpr(value))
 
     @targetName("lt")
-    def <[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def <[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, LessThan, that)
 
     @targetName("lt")
-    inline def <[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -272,41 +214,28 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThan, SubQuery(query.ast))
 
     @targetName("lt")
-    inline def <[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def <[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThan, SubLink(item.query, item.linkType))
 
     @targetName("le")
     def <=[R](value: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Binary(this, LessThanEqual, a.asExpr(value))
 
     @targetName("le")
-    def <=[R, RK <: ExprKind](that: Expr[R, RK])(using
-        CompareOperation[T, R],
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
+    def <=[R](that: Expr[R])(using
+        CompareOperation[T, R]
+    ): Expr[Boolean] =
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    inline def <=[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
-        a: AsExpr[Q],
+    inline def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         inline erasedValue[S] match
             case _: ManyRows =>
                 error("Subquery must return only one row.")
@@ -314,86 +243,57 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         Binary(this, LessThanEqual, SubQuery(query.ast))
 
     @targetName("le")
-    inline def <=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def <=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
     def in[R, I <: Iterable[R]](list: I)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         In(this, Vector(list.toList.map(a.asExpr(_))), false)
 
-    inline def in[R <: Tuple](expr: R)(using a: AsInExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        CompareOperation.summonInstances[T, R]
-        KindOperation.summonInstances[K, R]
-        In(this, Vector(a.asExprs(expr)), false)
-
-    inline def in[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q], c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    def in[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
+        c: CompareOperation[T, m.R]
+    ): Expr[Boolean] =
         In(this, SubQuery(query.ast), false)
 
     def notIn[R, I <: Iterable[R]](list: I)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         In(this, Vector(list.toList.map(a.asExpr(_))), true)
 
-    inline def notIn[R <: Tuple](expr: R)(using a: AsInExpr[R]): Expr[Boolean, ResultKind[K, ValueKind]] =
-        CompareOperation.summonInstances[T, R]
-        KindOperation.summonInstances[K, R]
-        In(this, Vector(a.asExprs(expr)), true)
-
-    inline def notIn[Q, S <: ResultSize](query: Query[Q, S])(using
-        m: Merge[Q],
+    def notIn[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        m: Merge[V],
+        a: AsExpr[V],
         c: CompareOperation[T, m.R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[K] match
-            case _: AggKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _: AggOperationKind =>
-                error("Aggregate function cannot be compared with subquery.")
-            case _ =>
+    ): Expr[Boolean] =
         In(this, SubQuery(query.ast), true)
 
     def between[R](start: R, end: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Between(this, a.asExpr(start), a.asExpr(end), false)
 
-    def between[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using
+    def between[S, E](start: Expr[S], end: Expr[E])(using
         CompareOperation[T, S],
-        KindOperation[K, SK],
-        CompareOperation[T, E],
-        KindOperation[K, EK]
-    ): Expr[Boolean, ResultKind[K, SK]] =
+        CompareOperation[T, E]
+    ): Expr[Boolean] =
         Between(this, start, end, false)
 
     def notBetween[R](start: R, end: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
-    ): Expr[Boolean, ResultKind[K, ValueKind]] =
+    ): Expr[Boolean] =
         Between(this, a.asExpr(start), a.asExpr(end), true)
 
-    def notBetween[S, SK <: ExprKind, E, EK <: ExprKind](start: Expr[S, SK], end: Expr[E, EK])(using
+    def notBetween[S, E](start: Expr[S], end: Expr[E])(using
         CompareOperation[T, S],
-        KindOperation[K, SK],
         CompareOperation[T, E],
-        KindOperation[K, EK]
-    ): Expr[Boolean, ResultKind[K, SK]] =
+    ): Expr[Boolean] =
         Between(this, start, end, true)
 
     @targetName("plus")
@@ -401,19 +301,18 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
-    ): Expr[r.R, ResultKind[K, ValueKind]] =
+    ): Expr[r.R] =
         Binary(this, Plus, Literal(value, a))
 
     @targetName("plus")
-    def +[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+    def +[R: Number](that: Expr[R])(using
         n: Number[T],
-        o: KindOperation[K, RK],
         r: ResultOperation[T, R]
-    ): Expr[r.R, ResultKind[K, RK]] =
+    ): Expr[r.R] =
         Binary(this, Plus, that)
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date], ResultKind[K, ValueKind]] =
+    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date]] =
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
@@ -421,18 +320,17 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
-    ): Expr[r.R, ResultKind[K, ValueKind]] =
+    ): Expr[r.R] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
-    def -[R, RK <: ExprKind](that: Expr[R, RK])(using
-        r: ResultOperation[T, R],
-        k: KindOperation[K, RK]
-    ): Expr[r.R, ResultKind[K, RK]] =
+    def -[R](that: Expr[R])(using
+        r: ResultOperation[T, R]
+    ): Expr[r.R] =
         Binary(this, Minus, that)
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date], ResultKind[K, ValueKind]] =
+    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date]] =
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
     @targetName("times")
@@ -440,159 +338,99 @@ enum Expr[T, K <: ExprKind] derives CanEqual:
         n: Number[T],
         a: AsSqlExpr[R],
         r: ResultOperation[T, R]
-    ): Expr[r.R, ResultKind[K, ValueKind]] =
+    ): Expr[r.R] =
         Binary(this, Times, Literal(value, a))
 
     @targetName("times")
-    def *[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
+    def *[R: Number](that: Expr[R])(using
         n: Number[T],
-        k: KindOperation[K, RK],
         r: ResultOperation[T, R]
-    ): Expr[r.R, ResultKind[K, RK]] =
+    ): Expr[r.R] =
         Binary(this, Times, that)
 
     @targetName("div")
     def /[R: Number](value: R)(using
         n: Number[T],
         a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+    ): Expr[Option[BigDecimal]] =
         Binary(this, Div, Literal(value, a))
 
     @targetName("div")
-    def /[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
-        Number[T],
-        KindOperation[K, RK]
-    ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
+    def /[R: Number](that: Expr[R])(using
+        Number[T]
+    ): Expr[Option[BigDecimal]] =
         Binary(this, Div, that)
 
     @targetName("mod")
     def %[R: Number](value: R)(using
         n: Number[T],
         a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal], ResultKind[K, ValueKind]] =
+    ): Expr[Option[BigDecimal]] =
         Binary(this, Mod, Literal(value, a))
 
     @targetName("mod")
-    def %[R: Number, RK <: ExprKind](that: Expr[R, RK])(using
-        Number[T],
-        KindOperation[K, RK]
-    ): Expr[Option[BigDecimal], ResultKind[K, RK]] =
+    def %[R: Number](that: Expr[R])(using
+        Number[T]
+    ): Expr[Option[BigDecimal]] =
         Binary(this, Mod, that)
 
     @targetName("positive")
-    def unary_+(using Number[T]): Expr[T, ResultKind[K, ValueKind]] = Unary(this, Positive)
+    def unary_+(using Number[T]): Expr[T] = Unary(this, Positive)
 
     @targetName("negative")
-    def unary_-(using Number[T]): Expr[T, ResultKind[K, ValueKind]] = Unary(this, Negative)
+    def unary_-(using Number[T]): Expr[T] = Unary(this, Negative)
 
     @targetName("and")
-    inline def &&[R, RK <: ExprKind](that: Expr[R, RK])(using
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
-        inline (erasedValue[T], erasedValue[R]) match
-            case (_: Boolean, _: Boolean) =>
-            case _ => error("The parameters for AND must be of Boolean type.")
+    def &&(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
         Binary(this, And, that)
 
     @targetName("or")
-    inline def ||[R, RK <: ExprKind](that: Expr[R, RK])(using
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
-        inline (erasedValue[T], erasedValue[R]) match
-            case (_: Boolean, _: Boolean) =>
-            case _ => error("The parameters for OR must be of Boolean type.")
+    def ||(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
         Binary(this, Or, that)
 
     @targetName("not")
-    inline def unary_! : Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: Boolean =>
-            case _ => error("The parameters for NOT must be of Boolean type.")
+    def unary_!(using T =:= Boolean): Expr[Boolean] =
         Unary(this, Not)
 
-    inline def like(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
+    def like(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         Binary(this, Like, Literal(value, summon[AsSqlExpr[String]]))
 
-    inline def like[R, RK <: ExprKind](that: Expr[R, RK])(using
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
-        inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
-        inline erasedValue[R] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
+    def like[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
         Binary(this, Like, that)
 
-    inline def notLike(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
+    def notLike(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         Binary(this, NotLike, Literal(value, summon[AsSqlExpr[String]]))
 
-    inline def notLike[R, RK <: ExprKind](that: Expr[R, RK])(using
-        KindOperation[K, RK]
-    ): Expr[Boolean, ResultKind[K, RK]] =
-        inline erasedValue[T] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
-        inline erasedValue[R] match
-            case _: String =>
-            case _: Option[String] =>
-            case _ => error("The parameters for LIKE must be of String type.")
+    def notLike[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
         Binary(this, NotLike, that)
 
-    inline def contains(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def contains(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         like("%" + value + "%")
 
-    inline def startsWith(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def startsWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         like(value + "%")
 
-    inline def endsWith(value: String): Expr[Boolean, ResultKind[K, ValueKind]] =
+    def endsWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         like("%" + value)
 
     @targetName("json")
-    inline def ->(n: Int): Expr[Option[Json], ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: Json =>
-            case _: Option[Json] =>
-            case _ => error("The first parameters for -> must be of Json type.")
+    def ->(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
         Binary(this, Json, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("json")
-    inline def ->(n: String): Expr[Option[Json], ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: Json =>
-            case _: Option[Json] =>
-            case _ => error("The first parameters for -> must be of Json type.")
+    def ->(n: String)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
         Binary(this, Json, Literal(n, summon[AsSqlExpr[String]]))
 
     @targetName("jsonText")
-    inline def ->>(n: Int): Expr[Option[String], ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: Json =>
-            case _: Option[Json] =>
-            case _ => error("The first parameters for -> must be of Json type.")
+    def ->>(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[Int]]))
 
     @targetName("jsonText")
-    inline def ->>(n: String): Expr[Option[String], ResultKind[K, ValueKind]] =
-        inline erasedValue[T] match
-            case _: Json =>
-            case _: Option[Json] =>
-            case _ => error("The first parameters for -> must be of Json type.")
+    def ->>(n: String)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
         Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
 
 object Expr:
-    extension [T](expr: Expr[T, ?])
+    extension [T](expr: Expr[T])
         private[sqala] def asSqlExpr: SqlExpr = expr match
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
@@ -646,51 +484,48 @@ object Expr:
                 SqlExpr.Extract(unit, expr.asSqlExpr)
             case Grouping(items) =>
                 SqlExpr.Grouping(items.map(_.asSqlExpr))
-            case Ref(e) => e.asSqlExpr
+            case Ref(expr) =>
+                expr.asSqlExpr
 
-    extension [T](expr: Expr[T, ColumnKind])
+    extension [T](expr: Expr[T])
         @targetName("to")
         def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match
             case Column(_, columnName) =>
                 UpdatePair(columnName, Literal(value, a))
+            case _ =>
+                UpdatePair("", Literal(value, a))
 
         @targetName("to")
-        def :=[R, K <: ExprKind](updateExpr: Expr[R, K])(using
-            CompareOperation[T, R],
-            KindOperation[ColumnKind, K]
+        def :=[R](updateExpr: Expr[R])(using
+            CompareOperation[T, R]
         ): UpdatePair = expr match
             case Column(_, columnName) =>
                 UpdatePair(columnName, updateExpr)
+            case _ =>
+                UpdatePair("", updateExpr)
 
-    extension [T](expr: Expr[T, AggKind])
-        inline infix def filter[RK <: ExprKind](cond: Expr[Boolean, RK]): Expr[T, AggKind] =
-            inline erasedValue[RK] match
-                case _: SimpleKind =>
-                case _ => error("The parameters for FILTER cannot contain aggregate functions or window functions.")
-            expr match
-                case f: Func[?, ?] => f.copy(filter = Some(cond))
-
-        infix def over(overValue: OverValue): Expr[T, WindowKind] =
+    extension [T](expr: Expr[T])
+        infix def over(overValue: OverValue): Expr[T] =
             Expr.Window(expr, overValue.partitionBy, overValue.orderBy, overValue.frame)
 
-        infix def over(overValue: Unit): Expr[T, WindowKind] =
+        infix def over(overValue: Unit): Expr[T] =
             Expr.Window(expr, Nil, Nil, None)
 
-    extension [T, K <: ExprKind](expr: Expr[T, K])
-        def asc: OrderBy[T, K] = OrderBy(expr, Asc, None)
+    extension [T](expr: Expr[T])
+        def asc: OrderBy[T] = OrderBy(expr, Asc, None)
 
-        def desc: OrderBy[T, K] = OrderBy(expr, Desc, None)
+        def desc: OrderBy[T] = OrderBy(expr, Desc, None)
 
-        def ascNullsFirst: OrderBy[T, K] = OrderBy(expr, Asc, Some(First))
+        def ascNullsFirst: OrderBy[T] = OrderBy(expr, Asc, Some(First))
 
-        def ascNullsLast: OrderBy[T, K] = OrderBy(expr, Asc, Some(Last))
+        def ascNullsLast: OrderBy[T] = OrderBy(expr, Asc, Some(Last))
 
-        def descNullsFirst: OrderBy[T, K] = OrderBy(expr, Desc, Some(First))
+        def descNullsFirst: OrderBy[T] = OrderBy(expr, Desc, Some(First))
 
-        def descNullsLast: OrderBy[T, K] = OrderBy(expr, Desc, Some(Last))
+        def descNullsLast: OrderBy[T] = OrderBy(expr, Desc, Some(Last))
 
-class OrderBy[T, K <: ExprKind](
-    private[sqala] val expr: Expr[?, ?],
+class OrderBy[T](
+    private[sqala] val expr: Expr[?],
     private[sqala] val order: SqlOrderByOption,
     private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
 ):
@@ -701,12 +536,12 @@ class TimeInterval(private[sqala] val value: Double, private[sqala] val unit: Sq
 class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val linkType: SqlSubLinkType)
 
 case class OverValue(
-    private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
-    private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil,
+    private[sqala] val partitionBy: List[Expr[?]] = Nil,
+    private[sqala] val orderBy: List[OrderBy[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    infix def orderBy[O](orderValue: O)(using a: OrderArg[O]): OverValue =
-        copy(orderBy = a.orders(orderValue))
+    infix def orderBy(orderValue: OrderBy[?]*): OverValue =
+        copy(orderBy = orderValue.toList)
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Rows(start, end)))
@@ -719,14 +554,17 @@ case class OverValue(
 
 class WindowFunc[T](
    private[sqala] val name: String,
-   private[sqala] val args: List[Expr[?, ?]],
+   private[sqala] val args: List[Expr[?]],
    private[sqala] val distinct: Boolean = false,
-   private[sqala] val orderBy: List[OrderBy[?, ?]] = Nil
-):
-    infix def over(overValue: OverValue): Expr[T, WindowKind] =
-        val func = Expr.Func(name, args, distinct, orderBy)
-        Expr.Window(func, overValue.partitionBy, overValue.orderBy, overValue.frame)
+   private[sqala] val orderBy: List[OrderBy[?]] = Nil
+)
 
-    infix def over(overValue: Unit): Expr[T, WindowKind] =
-        val func = Expr.Func(name, args, distinct, orderBy)
-        Expr.Window(func, Nil, Nil, None)
+object WindowFunc:
+    extension [T](expr: WindowFunc[T])
+        infix def over(overValue: OverValue): Expr[T] =
+            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.orderBy)
+            Expr.Window(func, overValue.partitionBy, overValue.orderBy, overValue.frame)
+
+        infix def over(overValue: Unit): Expr[T] =
+            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.orderBy)
+            Expr.Window(func, Nil, Nil, None)

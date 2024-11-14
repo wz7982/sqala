@@ -20,8 +20,8 @@ class Insert[T, S <: InsertState](
             case _ => SqlExpr.Null
         new Insert(insertItems, ast.copy(columns = columns))
 
-    inline infix def values(rows: List[InverseMap[T, [t] =>> Expr[t, ?]]])(using S =:= InsertTable): Insert[T, InsertValues] =
-        val instances = AsSqlExpr.summonInstances[InverseMap[T, [t] =>> Expr[t, ?]]]
+    inline infix def values(rows: List[InverseMap[T, Expr]])(using S =:= InsertTable): Insert[T, InsertValues] =
+        val instances = AsSqlExpr.summonInstances[InverseMap[T, Expr]]
         val insertValues = rows.map: row =>
             val data = inline row match
                 case t: Tuple => t.toList
@@ -30,7 +30,7 @@ class Insert[T, S <: InsertState](
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(items, ast.copy(values = insertValues))
 
-    inline infix def values(row: InverseMap[T, [t] =>> Expr[t, ?]])(using S =:= InsertTable): Insert[T, InsertValues] = values(row :: Nil)
+    inline infix def values(row: InverseMap[T, Expr])(using S =:= InsertTable): Insert[T, InsertValues] = values(row :: Nil)
 
     inline infix def select[V <: Tuple](query: Query[T, ?])(using S =:= InsertTable, V =:= T): Insert[T, InsertQuery] =
         new Insert(items, ast.copy(query = Some(query.ast)))
