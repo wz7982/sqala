@@ -13,7 +13,6 @@ import sqala.dsl.statement.query.*
 import java.util.Date
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
-import scala.compiletime.{erasedValue, error}
 
 enum Expr[T] derives CanEqual:
     case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
@@ -86,15 +85,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, Equal, that)
 
     @targetName("eq")
-    inline def ==[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def ==[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, Equal, SubQuery(query.ast))
 
     @targetName("eq")
@@ -115,15 +110,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, NotEqual, that)
 
     @targetName("ne")
-    inline def !=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def !=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("ne")
@@ -144,15 +135,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
-    inline def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, GreaterThan, SubQuery(query.ast))
 
     @targetName("gt")
@@ -173,15 +160,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
-    inline def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
     @targetName("ge")
@@ -202,15 +185,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, LessThan, that)
 
     @targetName("lt")
-    inline def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, LessThan, SubQuery(query.ast))
 
     @targetName("lt")
@@ -231,15 +210,11 @@ enum Expr[T] derives CanEqual:
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
-    inline def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
-        inline erasedValue[S] match
-            case _: ManyRows =>
-                error("Subquery must return only one row.")
-            case _ =>
         Binary(this, LessThanEqual, SubQuery(query.ast))
 
     @targetName("le")

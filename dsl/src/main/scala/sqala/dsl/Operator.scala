@@ -85,7 +85,7 @@ extension [T](x: T)(using m: Merge[T])
         m.asExpr(x) == mr.asExpr(that)
 
     @targetName("eq")
-    inline def ===[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def ===[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         mv: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[m.R, mv.R]
@@ -104,7 +104,7 @@ extension [T](x: T)(using m: Merge[T])
         m.asExpr(x) != mr.asExpr(that)
 
     @targetName("ne")
-    inline def <>[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def <>[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         mv: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[m.R, mv.R]
@@ -123,7 +123,7 @@ extension [T](x: T)(using m: Merge[T])
         m.asExpr(x) > mr.asExpr(that)
 
     @targetName("gt")
-    inline def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         mv: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[m.R, mv.R]
@@ -142,7 +142,7 @@ extension [T](x: T)(using m: Merge[T])
         m.asExpr(x) >= mr.asExpr(that)
 
     @targetName("ge")
-    inline def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         mv: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[m.R, mv.R]
@@ -161,7 +161,7 @@ extension [T](x: T)(using m: Merge[T])
         m.asExpr(x) < mr.asExpr(that)
 
     @targetName("lt")
-    inline def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+    def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         mv: Merge[V],
         a: AsExpr[V],
         c: CompareOperation[m.R, mv.R]
@@ -171,6 +171,25 @@ extension [T](x: T)(using m: Merge[T])
     @targetName("lt")
     def <[R](item: SubLinkItem[R])(using CompareOperation[m.R, R]): Expr[Boolean] =
         m.asExpr(x) < item
+
+    @targetName("le")
+    def <=[R](that: R)(using
+        mr: Merge[R],
+        c: CompareOperation[m.R, mr.R]
+    ): Expr[Boolean] =
+        m.asExpr(x) <= mr.asExpr(that)
+
+    @targetName("le")
+    def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
+        mv: Merge[V],
+        a: AsExpr[V],
+        c: CompareOperation[m.R, mv.R]
+    ): Expr[Boolean] =
+        m.asExpr(x) <= query
+
+    @targetName("le")
+    def <=[R](item: SubLinkItem[R])(using CompareOperation[m.R, R]): Expr[Boolean] =
+        m.asExpr(x) <= item
 
     def in[R, I <: Iterable[R]](list: I)(using
         a: ComparableValue[R],
