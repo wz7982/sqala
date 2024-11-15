@@ -92,6 +92,7 @@ object AnalysisMacro:
                     case Apply(_, Apply(_, applyTerms) :: Nil) =>
                         applyTerms
                     case _ => Nil
+            case _ => Nil
         val info = terms.map(t => treeInfoMacro(args, t))
         val hasAgg = info.map(_.hasAgg).fold(false)(_ || _)
             if hasAgg then
@@ -123,6 +124,8 @@ object AnalysisMacro:
                     case Inlined(Some(Apply(_, Apply(_, applyTerms) :: Nil)), _, _) =>
                         applyTerms
                     case Apply(_, applyTerms) => applyTerms
+                    case _ => Nil
+            case _ => Nil
         val info = terms.map(t => treeInfoMacro(args, t))
         for i <- info do
             if i.nonAggRef.nonEmpty && i.ungroupedRef.nonEmpty && i.nonAggRef.exists(c => i.ungroupedRef.contains(c)) then
@@ -144,6 +147,7 @@ object AnalysisMacro:
                 val terms = body match
                     case Inlined(Some(Apply(_, Apply(_, applyTerms) :: Nil)), _, _) =>
                         applyTerms
+                    case _ => Nil
                 val info = terms.map(t => treeInfoMacro(args, t))
                 for i <- info do
                     if i.hasAgg then
@@ -152,6 +156,8 @@ object AnalysisMacro:
                         report.error("Window function are not allowed in GROUP BY.", i.expr)
                     if i.isConst then
                         report.error("Constant are not allowed in GROUP BY.", i.expr)
+            case _ => Nil
+
         '{}
 
     private def analysisOrderMacro[T: Type](f: Expr[T])(using q: Quotes): Expr[Unit] =
@@ -162,16 +168,18 @@ object AnalysisMacro:
         val orderExpr =
             body match
                 case Apply(TypeApply(Select(Ident("Expr"), _), _), e :: Nil) =>
-                    treeInfoMacro(args, e)
+                    Some(treeInfoMacro(args, e))
+                case _ => None
 
-        if orderExpr.hasAgg then
-            report.error("Aggregate function are not allowed in ungrouped ORDER BY.", orderExpr.expr)
+        for e <- orderExpr do
+            if e.hasAgg then
+                report.error("Aggregate function are not allowed in ungrouped ORDER BY.", e.expr)
 
-        if orderExpr.hasWindow then
-            report.error("Window function are not allowed in ungrouped ORDER BY.", orderExpr.expr)
+            if e.hasWindow then
+                report.error("Window function are not allowed in ungrouped ORDER BY.", e.expr)
 
-        if orderExpr.isConst then
-            report.error("Constant are not allowed in ungrouped ORDER BY.", orderExpr.expr)
+            if e.isConst then
+                report.error("Constant are not allowed in ungrouped ORDER BY.", e.expr)
         
         '{}
 
@@ -183,10 +191,12 @@ object AnalysisMacro:
         val orderExpr =
             body match
                 case Apply(TypeApply(Select(Ident("Expr"), _), _), e :: Nil) =>
-                    treeInfoMacro(args, e)
+                    Some(treeInfoMacro(args, e))
+                case _ => None
 
-        if orderExpr.isConst then
-            report.error("Constant are not allowed in ungrouped ORDER BY.", orderExpr.expr)
+        for e <- orderExpr do
+            if e.isConst then
+                report.error("Constant are not allowed in ungrouped ORDER BY.", e.expr)
         
         '{}
 
@@ -198,23 +208,25 @@ object AnalysisMacro:
         val orderTerm =
             body match
                 case Apply(TypeApply(Select(Ident("Expr"), _), _), e :: Nil) =>
-                    e
+                    Some(e)
+                case _ => None
 
-        val validated = orderTerm match
-            case TypeApply(
-                Select(
-                    Apply(
-                        Select(_, "selectDynamic"),
-                        Literal(StringConstant(_)) :: Nil
+        for t <- orderTerm do
+            val validated = t match
+                case TypeApply(
+                    Select(
+                        Apply(
+                            Select(_, "selectDynamic"),
+                            Literal(StringConstant(_)) :: Nil
+                        ),
+                        "$asInstanceOf$"
                     ),
-                    "$asInstanceOf$"
-                ),
-                _
-            ) => true
-            case _ => false
+                    _
+                ) => true
+                case _ => false
 
-        if !validated then
-            report.error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.", orderTerm.asExpr)
+            if !validated then
+                report.error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.", t.asExpr)
         
         '{}
 
@@ -364,6 +376,10 @@ object AnalysisMacro:
             case Apply(Apply(TypeApply(Select(left, op), _), right :: Nil), _)
                 if operators.contains(op)
             =>
+                right.tpe.asType match
+                    case '[Query[t, ManyRows]] =>
+                        report.error("Subquery must return only one row.", right.asExpr)
+                    case _ =>
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
@@ -381,6 +397,10 @@ object AnalysisMacro:
             case Apply(Apply(Select(left, op), right :: Nil), _)
                 if operators.contains(op)
             =>
+                right.tpe.asType match
+                    case '[Query[t, ManyRows]] =>
+                        report.error("Subquery must return only one row.", right.asExpr)
+                    case _ =>
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
@@ -398,6 +418,10 @@ object AnalysisMacro:
             case Apply(Apply(TypeApply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), _), _), right :: Nil), _) 
                 if operators.contains(op)
             =>
+                right.tpe.asType match
+                    case '[Query[t, ManyRows]] =>
+                        report.error("Subquery must return only one row.", right.asExpr)
+                    case _ =>
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
@@ -423,6 +447,7 @@ object AnalysisMacro:
                 val funcArgs = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
+                    case _ => Nil
                 val argsInfo = 
                     funcArgs.map(a => treeInfoMacro(args, a))
                 for a <- argsInfo do
@@ -444,6 +469,7 @@ object AnalysisMacro:
                 val funcArgsRef = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
+                    case _ => Nil
                 val funcArgs = funcArgsRef match
                     case Typed(Repeated(a, _), _) :: Nil => a
                     case _ => funcArgsRef
@@ -470,6 +496,7 @@ object AnalysisMacro:
                 val funcArgs = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
+                    case _ => Nil
                 val argsInfo = 
                     funcArgs.map(a => treeInfoMacro(args, a))
                 ExprInfo(
@@ -500,11 +527,13 @@ object AnalysisMacro:
                     partitionTerm match
                         case Typed(Repeated(partition, _), _) =>
                             partition.map(t => treeInfoMacro(args, t))
+                        case _ => Nil
 
                 def orderInfo(orderTerm: Term): List[ExprInfo] =
                     orderTerm match
                         case Typed(Repeated(order, _), _) =>
                             order.map(treeInfoMacro(args, _))
+                        case _ => Nil
 
                 def removeFrame(window: Term): (term: Term, groupsBetween: Boolean) =
                     window match
@@ -517,7 +546,6 @@ object AnalysisMacro:
                 val window = removeFrame(windowArg)
 
                 val windowInfo: List[ExprInfo] = window.term match
-                    case Literal(x) => Nil
                     case Apply(Ident("partitionBy"), partition :: Nil) =>
                         if window.groupsBetween then
                             report.error("GROUPS mode requires an ORDER BY clause.", window.term.asExpr)
@@ -529,6 +557,7 @@ object AnalysisMacro:
                         order :: Nil
                     ) =>
                         partitionInfo(partition) ++ orderInfo(order)
+                    case _ => Nil
                 
                 for i <- windowInfo do
                     if i.hasAgg then
@@ -632,6 +661,19 @@ object AnalysisMacro:
                             exprInfo.flatMap(_.nonAggRef),
                             exprInfo.flatMap(_.ungroupedRef)
                         )
+                    case _ =>
+                        ExprInfo(
+                            term.asExpr,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            Nil,
+                            Nil,
+                            Nil,
+                            Nil
+                        )
             case Apply(Apply(TypeApply(Select(expr, "between" | "notBetween"), _), between), _) =>
                 val exprInfo = treeInfoMacro(args, expr)
                 val betweenInfo = between.map(b => treeInfoMacro(args, b))
@@ -696,15 +738,18 @@ object AnalysisMacro:
                 unwrapInlined(blockTerm) match
                     case Block(statement :: Nil, _) =>
                         statement
+            case _ => report.errorAndAbort("Unsupported usage.")
 
         val args = func match
             case DefDef(_, params :: Nil, _, _) =>
                 params.params.asInstanceOf[List[ValDef]].map:
                     case ValDef(argName, argType, argTerm) =>
                         argName -> argType.tpe
+            case _ => report.errorAndAbort("Unsupported usage.")
 
         val body = func match
             case DefDef(_, _, _, Some(funBody)) =>
                 funBody
+            case _ => report.errorAndAbort("Unsupported usage.")
 
         (args, body)
