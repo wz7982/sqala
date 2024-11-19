@@ -215,7 +215,6 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
-        case g: SqlExpr.Grouping => printGroupingExpr(g)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -420,11 +419,6 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
-        sqlBuilder.append(")")
-
-    def printGroupingExpr(expr: SqlExpr.Grouping): Unit =
-        sqlBuilder.append("GROUPING(")
-        printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
     def printTableAlias(alias: SqlTableAlias): Unit =
