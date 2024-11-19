@@ -59,6 +59,18 @@ class OraclePrinter(override val prepare: Boolean, override val indent: Int) ext
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
+    override def printFuncExpr(expr: SqlExpr.Func): Unit =
+        if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+            sqlBuilder.append("LISTAGG")
+            sqlBuilder.append("(")
+            printList(expr.args)(printExpr)
+            sqlBuilder.append(")")
+            if expr.orderBy.nonEmpty then
+                sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
+                printList(expr.orderBy)(printOrderBy)
+                sqlBuilder.append(")")
+        else super.printFuncExpr(expr)
+
     override def printCastType(castType: SqlCastType): Unit =
         val t = castType match
             case SqlCastType.Varchar => "VARCHAR"

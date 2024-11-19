@@ -444,10 +444,13 @@ object AnalysisMacro:
                     case _ => false
                 .isDefined
             =>
-                val funcArgs = term match
+                val funcArgsRef = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
                     case _ => Nil
+                val funcArgs = funcArgsRef.flatMap:
+                    case Typed(Repeated(a, _), _) => a
+                    case a => a :: Nil
                 val argsInfo = 
                     funcArgs.map(a => treeInfoMacro(args, a))
                 for a <- argsInfo do
@@ -470,9 +473,9 @@ object AnalysisMacro:
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
                     case _ => Nil
-                val funcArgs = funcArgsRef match
-                    case Typed(Repeated(a, _), _) :: Nil => a
-                    case _ => funcArgsRef
+                val funcArgs = funcArgsRef.flatMap:
+                    case Typed(Repeated(a, _), _) => a
+                    case a => a :: Nil
                 val argsInfo = 
                     funcArgs.map(a => treeInfoMacro(args, a))
                 ExprInfo(
@@ -523,16 +526,10 @@ object AnalysisMacro:
                         funcInfo.expr
                     )
 
-                def partitionInfo(partitionTerm: Term): List[ExprInfo] =
-                    partitionTerm match
-                        case Typed(Repeated(partition, _), _) =>
-                            partition.map(t => treeInfoMacro(args, t))
-                        case _ => Nil
-
-                def orderInfo(orderTerm: Term): List[ExprInfo] =
-                    orderTerm match
-                        case Typed(Repeated(order, _), _) =>
-                            order.map(treeInfoMacro(args, _))
+                def windowParamsInfo(paramTerm: Term): List[ExprInfo] =
+                    paramTerm match
+                        case Typed(Repeated(params, _), _) =>
+                            params.map(t => treeInfoMacro(args, t))
                         case _ => Nil
 
                 def removeFrame(window: Term): (term: Term, groupsBetween: Boolean) =
@@ -549,14 +546,14 @@ object AnalysisMacro:
                     case Apply(Ident("partitionBy"), partition :: Nil) =>
                         if window.groupsBetween then
                             report.error("GROUPS mode requires an ORDER BY clause.", window.term.asExpr)
-                        partitionInfo(partition)
+                        windowParamsInfo(partition)
                     case Apply(Ident("orderBy"), order :: Nil) =>
-                        orderInfo(order)
+                        windowParamsInfo(order)
                     case Apply(
                         Select(Apply(Ident("partitionBy"), partition :: Nil), "orderBy"), 
                         order :: Nil
                     ) =>
-                        partitionInfo(partition) ++ orderInfo(order)
+                        windowParamsInfo(partition) ++ windowParamsInfo(order)
                     case _ => Nil
                 
                 for i <- windowInfo do
