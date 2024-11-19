@@ -67,8 +67,6 @@ enum Expr[T] derives CanEqual:
 
     case Extract[T](unit: SqlTimeUnit, expr: Expr[?]) extends Expr[T]
 
-    case Grouping(items: List[Expr[?]]) extends Expr[Int]
-
     case Ref[T](expr: Expr[?]) extends Expr[T]
 
     @targetName("eq")
@@ -457,8 +455,6 @@ object Expr:
                 SqlExpr.Cast(expr.asSqlExpr, castType)
             case Extract(unit, expr) =>
                 SqlExpr.Extract(unit, expr.asSqlExpr)
-            case Grouping(items) =>
-                SqlExpr.Grouping(items.map(_.asSqlExpr))
             case Ref(expr) =>
                 expr.asSqlExpr
 

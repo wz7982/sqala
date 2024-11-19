@@ -462,7 +462,17 @@ object AnalysisMacro:
                     argsInfo.flatMap(_.columnRef)
                 if !columnsRef.map(_._1).forall(args.map(_._1).contains) then
                     report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
-                ExprInfo(term.asExpr, true, true, false, false, false, columnsRef, columnsRef, Nil, argsInfo.flatMap(_.ungroupedRef))
+                ExprInfo(
+                    term.asExpr, 
+                    true, 
+                    true, 
+                    false, 
+                    false, 
+                    false, 
+                    columnsRef, 
+                    columnsRef, Nil, 
+                    argsInfo.flatMap(_.ungroupedRef)
+                )
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
