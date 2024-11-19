@@ -64,7 +64,6 @@ def any[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], 
 ): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-@sqlAgg
 def grouping(items: Expr[?]*): Expr[Int] =
     Expr.Func("GROUPING", items.toList)
 
