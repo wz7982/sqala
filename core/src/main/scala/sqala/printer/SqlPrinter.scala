@@ -316,11 +316,11 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             printList(expr.orderBy)(printOrderBy)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" WITHIN GROUP(ORDER BY ")
+            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
             printList(expr.withinGroup)(printOrderBy)
             sqlBuilder.append(")")
         if expr.filter.nonEmpty then
-            sqlBuilder.append(" FILTER(WHERE ")
+            sqlBuilder.append(" FILTER (WHERE ")
             printExpr(expr.filter.get)
             sqlBuilder.append(")")
 

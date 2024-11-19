@@ -112,6 +112,14 @@ def percentileDisc[N: Number](
 ): Expr[Option[BigDecimal]] =
     Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
+@sqlAgg
+def stringAgg[T <: String | Option[String]](
+    expr: Expr[T],
+    separator: String,
+    orderBy: OrderBy[?]*
+): Expr[Option[String]] =
+    Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, orderBy.toList)
+
 @sqlWindow
 def rank(): WindowFunc[Long] = WindowFunc("RANK", Nil)
 
