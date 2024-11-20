@@ -11,6 +11,8 @@ import sqala.dsl.statement.query.*
 import java.util.Date
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
+import scala.compiletime.ops.boolean.*
+import scala.compiletime.ops.double.*
 
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Expr.Literal(value, summon[AsSqlExpr[T]])
@@ -102,14 +104,14 @@ def anyValue[T](expr: Expr[T]): Expr[Wrap[T, Option]] =
 def percentileCont[N: Number](
     n: Double,
     withinGroup: OrderBy[N]
-): Expr[Option[BigDecimal]] =
+)(using Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."]): Expr[Option[BigDecimal]] =
     Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
 @sqlAgg
 def percentileDisc[N: Number](
     n: Double,
     withinGroup: OrderBy[N]
-): Expr[Option[BigDecimal]] =
+)(using Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."]): Expr[Option[BigDecimal]] =
     Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
 @sqlAgg
