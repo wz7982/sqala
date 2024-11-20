@@ -50,6 +50,8 @@ object CompareOperation:
 
     given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: CompareOperation[A, B]()
 
+    given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: CompareOperation[A, B]()
+
     given nothingCompare[B]: CompareOperation[Nothing, B]()
 
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()

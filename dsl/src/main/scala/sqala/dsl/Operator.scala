@@ -76,6 +76,18 @@ extension [T](value: T)(using as: AsSqlExpr[T])
     ): Expr[Option[BigDecimal]] =
         Expr.Binary(Expr.Literal(value, as), Mod, that)
 
+    def between[S, E](start: Expr[S], end: Expr[E])(using
+        CompareOperation[T, S],
+        CompareOperation[T, E]
+    ): Expr[Boolean] =
+        Expr.Between(Expr.Literal(value, as), start, end, false)
+
+    def notBetween[S, E](start: Expr[S], end: Expr[E])(using
+        CompareOperation[T, S],
+        CompareOperation[T, E]
+    ): Expr[Boolean] =
+        Expr.Between(Expr.Literal(value, as), start, end, true)
+
 extension [T](x: T)(using m: Merge[T])
     @targetName("eq")
     def ===[R](that: R)(using
