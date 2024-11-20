@@ -256,6 +256,15 @@ object AnalysisMacro:
                 "like", "notLike", "startsWith", "endsWith", "contains"
             )
 
+        def validateDiv(v: Term): Unit =
+            val isZero = v match
+                case Literal(IntConstant(0)) => true
+                case Literal(LongConstant(0L)) => true
+                case Literal(FloatConstant(0F)) => true
+                case Literal(DoubleConstant(0D)) => true
+                case _ => false
+            if isZero then report.error("Division by zero.", v.asExpr)
+
         term match
             case TypeApply(
                 Select(
@@ -380,6 +389,8 @@ object AnalysisMacro:
                     case '[Query[t, ManyRows]] =>
                         report.error("Subquery must return only one row.", right.asExpr)
                     case _ =>
+                if op == "/" || op == "%" then
+                    validateDiv(right)
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
@@ -401,6 +412,8 @@ object AnalysisMacro:
                     case '[Query[t, ManyRows]] =>
                         report.error("Subquery must return only one row.", right.asExpr)
                     case _ =>
+                if op == "/" || op == "%" then
+                    validateDiv(right)
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
@@ -422,6 +435,8 @@ object AnalysisMacro:
                     case '[Query[t, ManyRows]] =>
                         report.error("Subquery must return only one row.", right.asExpr)
                     case _ =>
+                if op == "/" || op == "%" then
+                    validateDiv(right)
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
