@@ -51,3 +51,8 @@ project/plugins/project/
 project/**/metals.sbt
 
 **/test/
+
+## vitepress things
+node_modules
+/docs/.vitepress/dist/
+/docs/.vitepress/cache
