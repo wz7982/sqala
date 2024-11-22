@@ -159,6 +159,8 @@ object ExprMacro:
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
                 createCast(args, v, cast, containers)
             // TODO 函数、聚合函数、窗口函数、extract、interval、子查询、子连接、if、match
+            case Apply(Ident("interval"), interval :: Nil) =>
+                createInterval(interval)
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
@@ -508,6 +510,27 @@ object ExprMacro:
                     nonAggRef = info.nonAggRef,
                     ungroupedRef = info.ungroupedRef
                 )
+
+    private def createInterval(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
+        val sqlExpr = term.tpe.asType match
+            case '[Interval] =>
+                val expr = term.asExprOf[Interval]
+                '{
+                    SqlExpr.Interval($expr.n, $expr.unit)
+                }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = false,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = false,
+            isConst = false,
+            isColumn = false,
+            columnRef = Nil,
+            aggRef = Nil,
+            nonAggRef = Nil,
+            ungroupedRef = Nil
+        )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],

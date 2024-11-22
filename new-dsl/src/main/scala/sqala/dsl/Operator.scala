@@ -1,5 +1,9 @@
 package sqala.dsl
 
+import sqala.ast.expr.*
+
+import java.util.Date
+import java.time.{LocalDate, LocalDateTime}
 import scala.annotation.targetName
 
 // TODO query、subLink
@@ -118,3 +122,47 @@ extension (x: Option[String])
     def contains(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
 // TODO 与exists查询的&& || exists的!
+
+case class Interval(n: Double, unit: SqlTimeUnit)
+
+extension (n: Double)
+    def year: Interval = Interval(n, SqlTimeUnit.Year)
+
+    def month: Interval = Interval(n, SqlTimeUnit.Month)
+
+    def week: Interval = Interval(n, SqlTimeUnit.Week)
+
+    def day: Interval = Interval(n, SqlTimeUnit.Day)
+
+    def hour: Interval = Interval(n, SqlTimeUnit.Hour)
+
+    def minute: Interval = Interval(n, SqlTimeUnit.Minute)
+
+    def second: Interval = Interval(n, SqlTimeUnit.Second)
+
+def interval(value: Interval): Interval = value
+
+extension [X: DateTime](x: X)
+    @targetName("plus")
+    def +(inverval: Interval)(using QueryContext): X = compileTimeOnly
+
+    @targetName("minus")
+    def -(inverval: Interval)(using QueryContext): X = compileTimeOnly
+
+    @targetName("minus")
+    def -(y: Date)(using QueryContext): X = compileTimeOnly
+
+    @targetName("minusOptionDate")
+    def -(y: Option[Date])(using QueryContext): X = compileTimeOnly
+
+    @targetName("minus")
+    def -(y: LocalDate)(using QueryContext): X = compileTimeOnly
+
+    @targetName("minusOptionLocalDate")
+    def -(y: Option[LocalDate])(using QueryContext): X = compileTimeOnly
+
+    @targetName("minus")
+    def -(y: LocalDateTime)(using QueryContext): X = compileTimeOnly
+
+    @targetName("minusOptionLocalDateTime")
+    def -(y: Option[LocalDateTime])(using QueryContext): X = compileTimeOnly
