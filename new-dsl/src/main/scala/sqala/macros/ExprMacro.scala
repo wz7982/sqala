@@ -92,7 +92,6 @@ object ExprMacro:
         import q.reflect.*
 
         term match
-            // TODO some none 字面量
             case TypeApply(
                 Select(
                     Apply(
@@ -118,6 +117,7 @@ object ExprMacro:
                         subQueryColumnInfo(objectName, valName)
                     case '[UngroupedSubQuery[_, _]] =>
                         ungroupedSubQueryColumnInfo(objectName, valName)
+                    // TODO
                     case '[Sort[_, _]] => ???
                     case '[Group[_, _]] => ???
                     case _ => missMatch(term)
@@ -132,6 +132,10 @@ object ExprMacro:
                 if binaryOperators.contains(op)
             =>
                 createBinary(args, left, op, right, containers)
+            case Apply(Apply(TypeApply(Apply(TypeApply(Ident(op), _), left :: Nil), _), right :: Nil), _)
+                if binaryOperators.contains(op)
+            =>
+                createBinary(args, left, op, right, containers)
             case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
@@ -140,8 +144,18 @@ object ExprMacro:
                 createUnary(args, v, op, containers)
             case Apply(TypeApply(Select(ident@Ident(_), "contains"), _), e :: Nil) =>
                 createIn(args, e, ident, containers)
-            // TODO Iteratable的contains 和 !contains。优化IN空集合
-            // TODO 扩展方法运算符 between ...
+            case Apply(
+                Apply(
+                    TypeApply(Apply(TypeApply(Ident("between"), _), v :: Nil), _), 
+                    s :: e :: Nil
+                ), 
+                _
+            ) =>
+                createBetween(args, v, s, e, containers)
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+                if t.startsWith("Tuple")
+            =>
+                createVector(args, terms, containers)
             // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
@@ -385,9 +399,11 @@ object ExprMacro:
     ): (Expr[SqlExpr], ExprInfo) =
         inTerm.tpe.asType match
             case '[Iterable[t]] =>
-                val expr = inTerm.asExprOf[Iterable[t]]
-                val asSqlExpr = Expr.summon[AsSqlExpr[t]]
                 val (termExpr, termInfo) = treeInfoMacro(args, term, containers)
+                val expr = inTerm.asExprOf[Iterable[t]]
+
+                val asSqlExpr = Expr.summon[Merge[t]]
+                
                 asSqlExpr match
                     case None => missMatch(inTerm)
                     case Some(a) =>
@@ -411,6 +427,59 @@ object ExprMacro:
                             ungroupedRef = termInfo.ungroupedRef
                         )
             case _ => missMatch(inTerm)
+
+    private def createBetween(using q: Quotes)(
+        args: List[String],
+        term: q.reflect.Term,
+        startTerm: q.reflect.Term,
+        endTerm: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        val (betweenExpr, betweenInfo) = treeInfoMacro(args, term, containers)
+        val (startExpr, startInfo) = treeInfoMacro(args, startTerm, containers)
+        val (endExpr, endInfo) = treeInfoMacro(args, endTerm, containers)
+
+        val sqlExpr = '{
+            SqlExpr.Between($betweenExpr, $startExpr, $endExpr, false)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = betweenInfo.hasAgg || startInfo.hasAgg || endInfo.hasAgg,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = betweenInfo.hasWindow || startInfo.hasWindow || endInfo.hasWindow,
+            isConst = false,
+            isColumn = false,
+            columnRef = betweenInfo.columnRef ++ startInfo.columnRef ++ endInfo.columnRef,
+            aggRef = betweenInfo.aggRef ++ startInfo.aggRef ++ endInfo.aggRef,
+            nonAggRef = betweenInfo.nonAggRef ++ startInfo.nonAggRef ++ endInfo.nonAggRef,
+            ungroupedRef = betweenInfo.ungroupedRef ++ startInfo.ungroupedRef ++ endInfo.ungroupedRef
+        )
+
+    private def createVector(using q: Quotes)(
+        args: List[String],
+        terms: List[q.reflect.Term],
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        val treeInfo = terms.map(t => treeInfoMacro(args, t, containers))
+        val listExpr = Expr.ofList(treeInfo.map(_._1))
+        val sqlExpr = '{
+            SqlExpr.Vector($listExpr)
+        }
+        val info = treeInfo.map(_._2)
+
+        sqlExpr -> ExprInfo(
+            hasAgg = info.map(_.hasAgg).fold(false)(_ || _),
+            isAgg = false,
+            isGroup = false,
+            hasWindow = info.map(_.hasAgg).fold(false)(_ || _),
+            isConst = false,
+            isColumn = false,
+            columnRef = info.map(_.columnRef).fold(Nil)(_ ++ _),
+            aggRef = info.map(_.aggRef).fold(Nil)(_ ++ _),
+            nonAggRef = info.map(_.nonAggRef).fold(Nil)(_ ++ _),
+            ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
+        )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],
