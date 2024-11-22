@@ -138,7 +138,9 @@ object ExprMacro:
                 createBinary(args, left, op, right, containers)
             case Select(v, op) if unaryOperators.contains(op) =>
                 createUnary(args, v, op, containers)
-            // TODO 扩展的一元运算+ -
+            case Apply(TypeApply(Select(ident@Ident(_), "contains"), _), e :: Nil) =>
+                createIn(args, e, ident, containers)
+            // Apply(TypeApply(Select(Ident(list),contains),List(TypeTree[TypeRef(ThisType(TypeRef(NoPrefix,module class lang)),class String)])),List(TypeApply(Select(Apply(Select(Ident(a),selectDynamic),List(Literal(Constant(y)))),$asInstanceOf$),List(TypeTree[TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class scala)),object Predef),type String)]))))
             // TODO Iteratable的contains 和 !contains。优化IN空集合
             // TODO 扩展方法运算符 between ...
             // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
@@ -294,6 +296,8 @@ object ExprMacro:
                                 SqlBinaryOperator.Like,
                                 SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: Nil)
                             )
+                        case (l, SqlBinaryOperator.In, SqlExpr.Vector(Nil), _) =>
+                            SqlExpr.BooleanLiteral(false)
                         case (l, o, r, _) =>
                             SqlExpr.Binary(l, o, r)
                 }
@@ -331,6 +335,8 @@ object ExprMacro:
                 ($operatorExpr, $rightExpr) match
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
+                        SqlExpr.BooleanLiteral(true)
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
                     case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
@@ -365,6 +371,38 @@ object ExprMacro:
             nonAggRef = Nil,
             ungroupedRef = Nil
         )
+
+    private def createIn(using q: Quotes)(
+        args: List[String],
+        term: q.reflect.Term,
+        inTerm: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        inTerm.tpe.asType match
+            case '[Iterable[t]] =>
+                val expr = inTerm.asExprOf[Iterable[t]]
+                val asSqlExpr = Expr.summon[AsSqlExpr[t]]
+                val (termExpr, termInfo) = treeInfoMacro(args, term, containers)
+                asSqlExpr match
+                    case None => missMatch(inTerm)
+                    case Some(a) =>
+                        val sqlExpr = '{
+                            val inSqlExpr = $expr.map(i => $a.asSqlExpr(i)).toList
+                            SqlExpr.Binary($termExpr, SqlBinaryOperator.In, SqlExpr.Vector(inSqlExpr))
+                        }
+                        sqlExpr -> ExprInfo(
+                            hasAgg = termInfo.hasAgg,
+                            isAgg = false,
+                            isGroup = false,
+                            hasWindow = termInfo.hasWindow,
+                            isConst = false,
+                            isColumn = false,
+                            columnRef = termInfo.columnRef,
+                            aggRef = termInfo.aggRef,
+                            nonAggRef = termInfo.nonAggRef,
+                            ungroupedRef = termInfo.ungroupedRef
+                        )
+            case _ => missMatch(inTerm)
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],

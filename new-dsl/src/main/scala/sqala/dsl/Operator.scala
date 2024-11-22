@@ -96,12 +96,6 @@ extension [X: Numeric](x: X)
     @targetName("mod")
     def %[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
-    @targetName("positive")
-    def unary_+(using QueryContext): X = compileTimeOnly
-
-    @targetName("negative")
-    def unary_-(using QueryContext): X = compileTimeOnly
-
 extension (x: String)
     def like(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
