@@ -139,6 +139,7 @@ object ExprMacro:
             case Select(v, op) if unaryOperators.contains(op) =>
                 createUnary(args, v, op, containers)
             // TODO 扩展的一元运算+ -
+            // TODO Iteratable的contains 和 !contains。优化IN空集合
             // TODO 扩展方法运算符 between ...
             // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
             case ident@Ident(_) => createValue(ident)
