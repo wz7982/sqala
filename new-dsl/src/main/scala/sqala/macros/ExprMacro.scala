@@ -345,6 +345,10 @@ object ExprMacro:
                         SqlExpr.Between(x, s, e, true)
                     case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
                         SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
+                        SqlExpr.BooleanLiteral(true)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
+                        SqlExpr.BooleanLiteral(false)
                     case (o, x) =>
                         SqlExpr.Unary(x, o)
             }
@@ -390,7 +394,10 @@ object ExprMacro:
                     case Some(a) =>
                         val sqlExpr = '{
                             val inSqlExpr = $expr.map(i => $a.asSqlExpr(i)).toList
-                            SqlExpr.Binary($termExpr, SqlBinaryOperator.In, SqlExpr.Vector(inSqlExpr))
+                            if inSqlExpr.isEmpty then
+                                SqlExpr.BooleanLiteral(false)
+                            else
+                                SqlExpr.Binary($termExpr, SqlBinaryOperator.In, SqlExpr.Vector(inSqlExpr))
                         }
                         sqlExpr -> ExprInfo(
                             hasAgg = termInfo.hasAgg,
