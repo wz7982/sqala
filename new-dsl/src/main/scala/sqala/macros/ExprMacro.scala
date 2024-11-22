@@ -42,16 +42,17 @@ object ExprMacro:
     private def binaryOperators: List[String] =
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
-            "+", "-", "*", "/", "%", "->", "->>"
+            "+", "-", "*", "/", "%", "->", "->>",
+            "like", "contains", "startsWith", "endsWith", "in"
         )
 
     private def unaryOperators: List[String] =
-        List("+", "-", "!")
+        List("unary_+", "unary_-", "unary_!")
 
     private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
 
-        report.error(s"$term") // TODO 删掉
+        report.error(s"${term}") // TODO 删掉
         report.errorAndAbort(s"The expression \"${term.show}\" cannot be converted to SQL expression.", term.asExpr)
 
     private def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
@@ -83,13 +84,6 @@ object ExprMacro:
                 report.error("ALL subquery can only appear on the right side of binary operations.", term.asExpr)
             case _ =>
 
-    private def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
-        import q.reflect.*
-
-        term match
-            case Apply(a@Apply(_, _), _) => removeNestedApply(a)
-            case _ => term
-
     private def treeInfoMacro(using q: Quotes)(
         args: List[String],
         term: q.reflect.Term,
@@ -97,9 +91,7 @@ object ExprMacro:
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
-        val matchTerm = removeNestedApply(term)
-
-        matchTerm match
+        term match
             // TODO some none 字面量
             case TypeApply(
                 Select(
@@ -132,10 +124,26 @@ object ExprMacro:
                 sqlExpr -> info
             case Apply(Select(left, op), right :: Nil) if binaryOperators.contains(op) =>
                 createBinary(args, left, op, right, containers)
+            case Apply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), right :: Nil), _)
+                if binaryOperators.contains(op)
+            =>
+                createBinary(args, left, op, right, containers)
+            case Apply(Apply(TypeApply(Apply(Ident(op), left :: Nil), _), right :: Nil), _)
+                if binaryOperators.contains(op)
+            =>
+                createBinary(args, left, op, right, containers)
+            case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
+                if binaryOperators.contains(op)
+            =>
+                createBinary(args, left, op, right, containers)
+            case Select(v, "unary_!") =>
+                createUnary(args, v, "unary_!", containers)
+            // TODO 一元运算
             // TODO 扩展方法运算符 in between like ...
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
-            // TODO some none
+            case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
+                treeInfoMacro(args, v, containers)
             case _ => missMatch(term)
 
     private def tableColumnInfo(tableName: String, columnName: String)(using Quotes): ExprInfo =
@@ -236,24 +244,55 @@ object ExprMacro:
             case "%" => '{ SqlBinaryOperator.Mod }
             case "->" => '{ SqlBinaryOperator.Json }
             case "->>" => '{ SqlBinaryOperator.JsonText }
+            case "like" => '{ SqlBinaryOperator.Like }
+            case "contains" => '{ SqlBinaryOperator.Like }
+            case "startsWith" => '{ SqlBinaryOperator.Like }
+            case "endsWith" => '{ SqlBinaryOperator.Like }
+            case "in" => '{ SqlBinaryOperator.In }
+
+        val opNameExpr = Expr(op)
 
         val sqlExpr =
             if op == "+" && (leftHasString || rightHasString) then
                 '{ SqlExpr.Func("CONCAT", $leftExpr :: $rightExpr :: Nil) }
             else
                 '{
-                    ($leftExpr, $operatorExpr, $rightExpr) match
-                        case (l, SqlBinaryOperator.Equal, SqlExpr.Null) =>
+                    ($leftExpr, $operatorExpr, $rightExpr, $opNameExpr) match
+                        case (l, SqlBinaryOperator.Equal, SqlExpr.Null, _) =>
                             SqlExpr.NullTest(l, false)
-                        case (l, SqlBinaryOperator.NotEqual, SqlExpr.Null) =>
+                        case (l, SqlBinaryOperator.NotEqual, SqlExpr.Null, _) =>
                             SqlExpr.NullTest(l, true)
-                        case (l, SqlBinaryOperator.NotEqual, r) =>
+                        case (l, SqlBinaryOperator.NotEqual, r, _) =>
                             SqlExpr.Binary(
                                 SqlExpr.Binary(l, SqlBinaryOperator.NotEqual, r),
                                 SqlBinaryOperator.Or,
                                 SqlExpr.NullTest(l, false)
                             )
-                        case (l, o, r) =>
+                        case (l, SqlBinaryOperator.Like, SqlExpr.StringLiteral(s), "contains") =>
+                            SqlExpr.Binary(l, SqlBinaryOperator.Like, SqlExpr.StringLiteral("%" + s + "%"))
+                        case (l, SqlBinaryOperator.Like, r, "contains") =>
+                            SqlExpr.Binary(
+                                l,
+                                SqlBinaryOperator.Like,
+                                SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: SqlExpr.StringLiteral("%") :: Nil)
+                            )
+                        case (l, SqlBinaryOperator.Like, SqlExpr.StringLiteral(s), "startsWith") =>
+                            SqlExpr.Binary(l, SqlBinaryOperator.Like, SqlExpr.StringLiteral(s + "%"))
+                        case (l, SqlBinaryOperator.Like, r, "startsWith") =>
+                            SqlExpr.Binary(
+                                l,
+                                SqlBinaryOperator.Like,
+                                SqlExpr.Func("CONCAT", r :: SqlExpr.StringLiteral("%") :: Nil)
+                            )
+                        case (l, SqlBinaryOperator.Like, SqlExpr.StringLiteral(s), "endsWith") =>
+                            SqlExpr.Binary(l, SqlBinaryOperator.Like, SqlExpr.StringLiteral("%" + s))
+                        case (l, SqlBinaryOperator.Like, r, "endsWith") =>
+                            SqlExpr.Binary(
+                                l,
+                                SqlBinaryOperator.Like,
+                                SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: Nil)
+                            )
+                        case (l, o, r, _) =>
                             SqlExpr.Binary(l, o, r)
                 }
 
@@ -269,6 +308,38 @@ object ExprMacro:
             nonAggRef = leftInfo.nonAggRef ++ rightInfo.nonAggRef,
             ungroupedRef = leftInfo.ungroupedRef ++ rightInfo.ungroupedRef
         )
+
+    private def createUnary(using q: Quotes)(
+        args: List[String],
+        term: q.reflect.Term,
+        op: String,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        validateNotSubLink(term)
+
+        val (rightExpr, rightInfo) = treeInfoMacro(args, term, containers)
+
+        val operatorExpr = op match
+            case "unary_+" => '{ SqlUnaryOperator.Positive }
+            case "unary_-" => '{ SqlUnaryOperator.Negative }
+            case "unary_!" => '{ SqlUnaryOperator.Not }
+
+        val sqlExpr =
+            '{
+                ($operatorExpr, $rightExpr) match
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
+                        SqlExpr.Between(x, s, e, true)
+                    case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
+                        SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
+                    case (o, x) =>
+                        SqlExpr.Unary(x, o)
+            }
+
+        sqlExpr -> rightInfo
 
     private def createValue(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
         val sqlExpr = term.tpe.widen.asType match

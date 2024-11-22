@@ -30,106 +30,97 @@ given stringTimeEqual[L <: String | Option[String], R](using DateTime[R], QueryC
 given nothingEqual[L](using QueryContext): CanEqual[L, Nothing] =
     CanEqual.derived
 
-extension [X](x: X)(using AsSqlExpr[X], QueryContext)
-    def asc: SortOption[X] = compileTimeOnly
+extension [X](x: X)
+    def asc(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def ascNullsFirst: SortOption[X] = compileTimeOnly
+    def ascNullsFirst(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def ascNullsLast: SortOption[X] = compileTimeOnly
+    def ascNullsLast(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def desc: SortOption[X] = compileTimeOnly
+    def desc(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def descNullsFirst: SortOption[X] = compileTimeOnly
+    def descNullsFirst(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def descNullsLast: SortOption[X] = compileTimeOnly
+    def descNullsLast(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
 
-    def as[Y](using Cast[X, Y]): Option[Y] = compileTimeOnly
+    def as[Y](using AsSqlExpr[X], QueryContext, Cast[X, Y]): Option[Y] = compileTimeOnly
 
-extension [X](x: X)(using QueryContext)
+extension [X](x: X)
     @targetName("gt")
-    def >[Y](y: Y)(using CanEqual[X, Y]): Boolean =
+    def >[Y](y: Y)(using QueryContext, CanEqual[X, Y]): Boolean =
         compileTimeOnly
 
     @targetName("ge")
-    def >=[Y](y: Y)(using CanEqual[X, Y]): Boolean =
+    def >=[Y](y: Y)(using QueryContext, CanEqual[X, Y]): Boolean =
         compileTimeOnly
 
     @targetName("lt")
-    def <[Y](y: Y)(using CanEqual[X, Y]): Boolean =
+    def <[Y](y: Y)(using QueryContext, CanEqual[X, Y]): Boolean =
         compileTimeOnly
 
     @targetName("le")
-    def <=[Y](y: Y)(using CanEqual[X, Y]): Boolean =
+    def <=[Y](y: Y)(using QueryContext, CanEqual[X, Y]): Boolean =
         compileTimeOnly
 
-    def between[S, E](s: S, e: E)(using CanEqual[X, S], CanEqual[X, E]): Boolean =
+    def between[S, E](s: S, e: E)(using QueryContext, CanEqual[X, S], CanEqual[X, E]): Boolean =
         compileTimeOnly
 
-    def in[I <: Tuple](items: I)(using CanIn[X, I]): Boolean =
+    def in[I <: Tuple](items: I)(using QueryContext, CanIn[X, I]): Boolean =
         compileTimeOnly
 
-extension (x: Json | Option[Json])(using QueryContext)
-    def ->(n: Int): Option[Json] = compileTimeOnly
+extension (x: Json | Option[Json])
+    def ->(n: Int)(using QueryContext): Option[Json] = compileTimeOnly
 
-    def ->(k: String): Option[Json] = compileTimeOnly
+    def ->(k: String)(using QueryContext): Option[Json] = compileTimeOnly
 
-    def ->>(n: Int): Option[String] = compileTimeOnly
+    def ->>(n: Int)(using QueryContext): Option[String] = compileTimeOnly
 
-    def ->>(k: String): Option[String] = compileTimeOnly
+    def ->>(k: String)(using QueryContext): Option[String] = compileTimeOnly
 
-extension [X: Numeric](x: X)(using QueryContext)
+extension [X: Numeric](x: X)
     @targetName("plus")
-    def +[Y: Numeric](y: Y): NumericOperationResult[X, Y] = compileTimeOnly
+    def +[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
     @targetName("plus")
-    def +(y: String | Option[String]): Option[String] = compileTimeOnly
+    def +(y: String | Option[String])(using QueryContext): Option[String] = compileTimeOnly
 
     @targetName("minus")
-    def -[Y: Numeric](y: Y): NumericOperationResult[X, Y] = compileTimeOnly
+    def -[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
     @targetName("times")
-    def *[Y: Numeric](y: Y): NumericOperationResult[X, Y] = compileTimeOnly
+    def *[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
     @targetName("div")
-    def /[Y: Numeric](y: Y): NumericOperationResult[X, Y] = compileTimeOnly
+    def /[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
     @targetName("mod")
-    def %[Y: Numeric](y: Y): NumericOperationResult[X, Y] = compileTimeOnly
+    def %[Y: Numeric](y: Y)(using QueryContext): NumericOperationResult[X, Y] = compileTimeOnly
 
     @targetName("positive")
-    def unary_+ : X = compileTimeOnly
+    def unary_+(using QueryContext): X = compileTimeOnly
 
     @targetName("negative")
-    def unary_- : X = compileTimeOnly
+    def unary_-(using QueryContext): X = compileTimeOnly
 
-extension (x: String)(using QueryContext)
+extension (x: String)
+    def like(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
+
+    def startsWith(y: Option[String])(using QueryContext): Boolean = compileTimeOnly
+
+    def endsWith(y: Option[String])(using QueryContext): Boolean = compileTimeOnly
+
+    def contains(y: Option[String])(using QueryContext): Boolean = compileTimeOnly
+
+extension (x: Option[String])
     @targetName("plus")
-    def +(y: Option[String]): Option[String] = compileTimeOnly
+    def +[Y: AsSqlExpr](y: Y)(using QueryContext): Option[String] = compileTimeOnly
 
-    @targetName("plus")
-    def +[Y: Numeric](y: Y): Option[String] = compileTimeOnly
+    def like(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
-    def like(y: String | Option[String]): Boolean = compileTimeOnly
+    def startsWith(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
-    def startsWith(y: Option[String]): Boolean = compileTimeOnly
+    def endsWith(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
-    def endsWith(y: Option[String]): Boolean = compileTimeOnly
-
-    def contains(y: Option[String]): Boolean = compileTimeOnly
-
-extension (x: Option[String])(using QueryContext)
-    @targetName("plus")
-    def +(y: String | Option[String]): Option[String] = compileTimeOnly
-
-    @targetName("plus")
-    def +[Y: Numeric](y: Y): Option[String] = compileTimeOnly
-
-    def like(y: String | Option[String]): Boolean = compileTimeOnly
-
-    def startsWith(y: String | Option[String]): Boolean = compileTimeOnly
-
-    def endsWith(y: String | Option[String]): Boolean = compileTimeOnly
-
-    def contains(y: String | Option[String]): Boolean = compileTimeOnly
+    def contains(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
 // TODO 与exists查询的&& || exists的!
