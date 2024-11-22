@@ -148,6 +148,8 @@ object ExprMacro:
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
                 treeInfoMacro(args, v, containers)
+            case Apply(Ident(name), v :: Nil) if name.endsWith("2bigDecimal") =>
+                treeInfoMacro(args, v, containers)
             case _ => missMatch(term)
 
     private def tableColumnInfo(tableName: String, columnName: String)(using Quotes): ExprInfo =
