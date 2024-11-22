@@ -158,9 +158,20 @@ object ExprMacro:
                 createVector(args, terms, containers)
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
                 createCast(args, v, cast, containers)
-            // TODO 函数、聚合函数、窗口函数、extract、interval、子查询、子连接、if、match
+            // TODO 函数、聚合函数、窗口函数、extract、子查询、子连接、if、match
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
+            case Apply(
+                Apply(
+                    TypeApply(Ident("extract"), _), 
+                    Apply(
+                        TypeApply(Select(unit, "from"), _), 
+                        v :: Nil
+                    ) :: Nil
+                ), 
+                _
+            ) =>
+                createExtract(args, unit, v, containers)
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
@@ -531,6 +542,32 @@ object ExprMacro:
             nonAggRef = Nil,
             ungroupedRef = Nil
         )
+
+    private def createExtract(using q: Quotes)(
+        args: List[String],
+        unit: q.reflect.Term,
+        term: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        unit.tpe.asType match
+            case '[TimeUnit] =>
+                val unitExpr = unit.asExprOf[TimeUnit]
+                val (expr, info) = treeInfoMacro(args, term, containers)
+                val sqlExpr = '{
+                    SqlExpr.Extract($unitExpr.unit, $expr)
+                }
+                sqlExpr -> ExprInfo(
+                    hasAgg = info.hasAgg,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = info.hasWindow,
+                    isConst = false,
+                    isColumn = false,
+                    columnRef = info.columnRef,
+                    aggRef = info.aggRef,
+                    nonAggRef = info.nonAggRef,
+                    ungroupedRef = info.ungroupedRef
+                )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],

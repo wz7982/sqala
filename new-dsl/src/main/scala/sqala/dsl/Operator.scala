@@ -142,6 +142,37 @@ extension (n: Double)
 
 def interval(value: Interval): Interval = value
 
+case class ExtractValue[T](unit: SqlTimeUnit, expr: T)
+
+enum TimeUnit(val unit: SqlTimeUnit):
+    case Year extends TimeUnit(SqlTimeUnit.Year)
+    case Month extends TimeUnit(SqlTimeUnit.Month)
+    case Week extends TimeUnit(SqlTimeUnit.Week)
+    case Day extends TimeUnit(SqlTimeUnit.Day)
+    case Hour extends TimeUnit(SqlTimeUnit.Hour)
+    case Minute extends TimeUnit(SqlTimeUnit.Minute)
+    case Second extends TimeUnit(SqlTimeUnit.Second)
+
+    infix def from[T](expr: T): ExtractValue[T] =
+        ExtractValue(unit, expr)
+
+def year: TimeUnit = TimeUnit.Year
+
+def month: TimeUnit = TimeUnit.Month
+
+def week: TimeUnit = TimeUnit.Week
+
+def day: TimeUnit = TimeUnit.Day
+
+def hour: TimeUnit = TimeUnit.Hour
+
+def minute: TimeUnit = TimeUnit.Minute
+
+def second: TimeUnit = TimeUnit.Second
+
+def extract[T: DateTime](value: ExtractValue[T]): Option[BigDecimal] =
+    compileTimeOnly
+
 extension [X: DateTime](x: X)
     @targetName("plus")
     def +(inverval: Interval)(using QueryContext): X = compileTimeOnly
