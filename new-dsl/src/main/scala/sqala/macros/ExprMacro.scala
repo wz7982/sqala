@@ -156,7 +156,9 @@ object ExprMacro:
                 if t.startsWith("Tuple")
             =>
                 createVector(args, terms, containers)
-            // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
+            case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
+                createCast(args, v, cast, containers)
+            // TODO 函数、聚合函数、窗口函数、extract、interval、子查询、子连接、if、match
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
@@ -480,6 +482,32 @@ object ExprMacro:
             nonAggRef = info.map(_.nonAggRef).fold(Nil)(_ ++ _),
             ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
         )
+
+    private def createCast(using q: Quotes)(
+        args: List[String],
+        term: q.reflect.Term,
+        cast: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        cast.tpe.asType match
+            case '[Cast[_, _]] =>
+                val castExpr = cast.asExprOf[Cast[?, ?]]
+                val (expr, info) = treeInfoMacro(args, term, containers)
+                val sqlExpr = '{
+                    SqlExpr.Cast($expr, $castExpr.castType)
+                }
+                sqlExpr -> ExprInfo(
+                    hasAgg = info.hasAgg,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = info.hasWindow,
+                    isConst = false,
+                    isColumn = false,
+                    columnRef = info.columnRef,
+                    aggRef = info.aggRef,
+                    nonAggRef = info.nonAggRef,
+                    ungroupedRef = info.ungroupedRef
+                )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],
