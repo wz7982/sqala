@@ -136,10 +136,11 @@ object ExprMacro:
                 if binaryOperators.contains(op)
             =>
                 createBinary(args, left, op, right, containers)
-            case Select(v, "unary_!") =>
-                createUnary(args, v, "unary_!", containers)
-            // TODO 一元运算
-            // TODO 扩展方法运算符 in between like ...
+            case Select(v, op) if unaryOperators.contains(op) =>
+                createUnary(args, v, op, containers)
+            // TODO 扩展的一元运算+ -
+            // TODO 扩展方法运算符 between ...
+            // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
