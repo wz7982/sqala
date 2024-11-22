@@ -140,7 +140,6 @@ object ExprMacro:
                 createUnary(args, v, op, containers)
             case Apply(TypeApply(Select(ident@Ident(_), "contains"), _), e :: Nil) =>
                 createIn(args, e, ident, containers)
-            // Apply(TypeApply(Select(Ident(list),contains),List(TypeTree[TypeRef(ThisType(TypeRef(NoPrefix,module class lang)),class String)])),List(TypeApply(Select(Apply(Select(Ident(a),selectDynamic),List(Literal(Constant(y)))),$asInstanceOf$),List(TypeTree[TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class scala)),object Predef),type String)]))))
             // TODO Iteratable的contains 和 !contains。优化IN空集合
             // TODO 扩展方法运算符 between ...
             // TODO 元组、函数、聚合函数、窗口函数、cast、extract、interval、子查询、子连接、if、match
