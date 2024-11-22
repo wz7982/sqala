@@ -358,7 +358,7 @@ object ExprMacro:
             isAgg = false,
             isGroup = false,
             hasWindow = false,
-            isConst = false,
+            isConst = true,
             isColumn = false,
             columnRef = Nil,
             aggRef = Nil,
