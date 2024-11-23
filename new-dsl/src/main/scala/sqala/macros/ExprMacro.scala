@@ -202,16 +202,12 @@ object ExprMacro:
                         case _ => missMatch(term)
                 createFunction(args, containers, functionName, term, inOver, kind == "sqlWindow")
             // TODO 窗口函数、子查询、子连接、if、match
-            // TODO 窗口函数左边的聚合函数不支持within group、sort by、distinct
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(
                 Apply(
                     TypeApply(Ident("extract"), _), 
-                    Apply(
-                        TypeApply(Select(unit, "from"), _), 
-                        v :: Nil
-                    ) :: Nil
+                    Apply(Apply(TypeApply(Ident(unit), _), v :: Nil), _) :: Nil
                 ), 
                 _
             ) =>
@@ -591,28 +587,34 @@ object ExprMacro:
     private def createExtract(using q: Quotes)(
         args: List[String],
         containers: Expr[List[(String, Container)]],
-        unit: q.reflect.Term,
+        unit: String,
         term: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
-        unit.tpe.asType match
-            case '[TimeUnit] =>
-                val unitExpr = unit.asExprOf[TimeUnit]
-                val (expr, info) = treeInfoMacro(args, containers, term)
-                val sqlExpr = '{
-                    SqlExpr.Extract($unitExpr.unit, $expr)
-                }
-                sqlExpr -> ExprInfo(
-                    hasAgg = info.hasAgg,
-                    isAgg = false,
-                    isGroup = false,
-                    hasWindow = info.hasWindow,
-                    isConst = false,
-                    isColumn = false,
-                    columnRef = info.columnRef,
-                    aggRef = info.aggRef,
-                    nonAggRef = info.nonAggRef,
-                    ungroupedRef = info.ungroupedRef
-                )
+        val unitExpr = unit match
+            case "year" => '{ SqlTimeUnit.Year }
+            case "month" => '{ SqlTimeUnit.Month }
+            case "week" => '{ SqlTimeUnit.Week }
+            case "day" => '{ SqlTimeUnit.Day }
+            case "hour" => '{ SqlTimeUnit.Hour }
+            case "minute" => '{ SqlTimeUnit.Minute }
+            case "second" => '{ SqlTimeUnit.Second }
+            case _ => missMatch(term)
+        val (expr, info) = treeInfoMacro(args, containers, term)
+        val sqlExpr = '{
+            SqlExpr.Extract($unitExpr, $expr)
+        }
+        sqlExpr -> ExprInfo(
+            hasAgg = info.hasAgg,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = info.hasWindow,
+            isConst = false,
+            isColumn = false,
+            columnRef = info.columnRef,
+            aggRef = info.aggRef,
+            nonAggRef = info.nonAggRef,
+            ungroupedRef = info.ungroupedRef
+        )
 
     private def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
         import q.reflect.*

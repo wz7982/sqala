@@ -1,7 +1,5 @@
 package sqala.dsl
 
-import sqala.ast.expr.*
-
 import java.util.Date
 import java.time.{LocalDate, LocalDateTime}
 import scala.annotation.targetName
@@ -33,21 +31,6 @@ given stringTimeEqual[L <: String | Option[String], R](using DateTime[R], QueryC
 
 given nothingEqual[L](using QueryContext): CanEqual[L, Nothing] =
     CanEqual.derived
-
-extension [X](x: X)
-    def asc(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def ascNullsFirst(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def ascNullsLast(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def desc(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def descNullsFirst(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def descNullsLast(using AsSqlExpr[X], QueryContext): SortOption[X] = compileTimeOnly
-
-    def as[Y](using AsSqlExpr[X], QueryContext, Cast[X, Y]): Option[Y] = compileTimeOnly
 
 extension [X](x: X)
     @targetName("gt")
@@ -122,56 +105,6 @@ extension (x: Option[String])
     def contains(y: String | Option[String])(using QueryContext): Boolean = compileTimeOnly
 
 // TODO 与exists查询的&& || exists的!
-
-case class Interval(n: Double, unit: SqlTimeUnit)
-
-extension (n: Double)
-    def year: Interval = Interval(n, SqlTimeUnit.Year)
-
-    def month: Interval = Interval(n, SqlTimeUnit.Month)
-
-    def week: Interval = Interval(n, SqlTimeUnit.Week)
-
-    def day: Interval = Interval(n, SqlTimeUnit.Day)
-
-    def hour: Interval = Interval(n, SqlTimeUnit.Hour)
-
-    def minute: Interval = Interval(n, SqlTimeUnit.Minute)
-
-    def second: Interval = Interval(n, SqlTimeUnit.Second)
-
-def interval(value: Interval): Interval = value
-
-case class ExtractValue[T](unit: SqlTimeUnit, expr: T)
-
-enum TimeUnit(val unit: SqlTimeUnit):
-    case Year extends TimeUnit(SqlTimeUnit.Year)
-    case Month extends TimeUnit(SqlTimeUnit.Month)
-    case Week extends TimeUnit(SqlTimeUnit.Week)
-    case Day extends TimeUnit(SqlTimeUnit.Day)
-    case Hour extends TimeUnit(SqlTimeUnit.Hour)
-    case Minute extends TimeUnit(SqlTimeUnit.Minute)
-    case Second extends TimeUnit(SqlTimeUnit.Second)
-
-    infix def from[T](expr: T): ExtractValue[T] =
-        ExtractValue(unit, expr)
-
-def year: TimeUnit = TimeUnit.Year
-
-def month: TimeUnit = TimeUnit.Month
-
-def week: TimeUnit = TimeUnit.Week
-
-def day: TimeUnit = TimeUnit.Day
-
-def hour: TimeUnit = TimeUnit.Hour
-
-def minute: TimeUnit = TimeUnit.Minute
-
-def second: TimeUnit = TimeUnit.Second
-
-def extract[T: DateTime](value: ExtractValue[T]): Option[BigDecimal] =
-    compileTimeOnly
 
 extension [X: DateTime](x: X)
     @targetName("plus")
