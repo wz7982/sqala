@@ -175,10 +175,10 @@ def extract[T: DateTime](value: ExtractValue[T]): Option[BigDecimal] =
 
 extension [X: DateTime](x: X)
     @targetName("plus")
-    def +(inverval: Interval)(using QueryContext): X = compileTimeOnly
+    def +(interval: Interval)(using QueryContext): X = compileTimeOnly
 
     @targetName("minus")
-    def -(inverval: Interval)(using QueryContext): X = compileTimeOnly
+    def -(interval: Interval)(using QueryContext): X = compileTimeOnly
 
     @targetName("minus")
     def -(y: Date)(using QueryContext): X = compileTimeOnly

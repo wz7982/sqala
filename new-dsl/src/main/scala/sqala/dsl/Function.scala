@@ -15,7 +15,11 @@ def count()(using QueryContext): Long =
     compileTimeOnly
 
 @sqlAgg("COUNT")
-def count[T](x: T, distinct: Boolean = false)(using AsSqlExpr[T], QueryContext): Long =
+def count[T](x: T)(using AsSqlExpr[T], QueryContext): Long =
+    compileTimeOnly
+
+@sqlAgg("COUNT")
+def countDistinct[T](x: T)(using AsSqlExpr[T], QueryContext): Long =
     compileTimeOnly
 
 @sqlAgg("SUM")

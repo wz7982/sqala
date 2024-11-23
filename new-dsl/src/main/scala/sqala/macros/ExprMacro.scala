@@ -172,8 +172,8 @@ object ExprMacro:
                         case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
                         case _ => false
                     .get match
-                        case Apply(Select(New(TypeIdent("sqlFunction")), _), funcionArg :: Nil) =>
-                            funcionArg match
+                        case Apply(Select(New(TypeIdent("sqlFunction")), _), functionArg :: Nil) =>
+                            functionArg match
                                 case Literal(StringConstant(n)) => n
                                 case NamedArg(_, Literal(StringConstant(n))) => n
                                 case _ => missMatch(term)
@@ -190,8 +190,8 @@ object ExprMacro:
                         case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
                         case _ => false
                     .get match
-                        case Apply(Select(New(TypeIdent("sqlAgg")), _), funcionArg :: Nil) =>
-                            funcionArg match
+                        case Apply(Select(New(TypeIdent("sqlAgg")), _), functionArg :: Nil) =>
+                            functionArg match
                                 case Literal(StringConstant(n)) => n
                                 case NamedArg(_, Literal(StringConstant(n))) => n
                                 case _ => missMatch(term)
@@ -634,28 +634,21 @@ object ExprMacro:
                 case _ => true
 
         for p <- params do
-            if p.name == "distinct" then
-                p.info.asType match
-                    case '[Boolean] =>
-                    case _ => report.error(
-                        "The parameter \"distinct\" must be of Boolean type.", 
-                        term.asExpr
-                    )
             if p.name == "sortBy" || p.name == "withinGroup" then
                 p.info.asType match
                     case '[SortOption[?]] =>
                     case '[Seq[SortOption[?]]] =>
                     case _ => report.error(
-                        s"The paramter \"${p.name}\" must be of SortOption type."
+                        s"The parameter \"${p.name}\" must be of SortOption type."
                     )
             p.info.asType match
                 case '[SortOption[?]] => 
                     report.error(
-                        s"The paramter \"${p.name}\" cannot be of SortOption type."
+                        s"The parameter \"${p.name}\" cannot be of SortOption type."
                     )
                 case '[Seq[SortOption[?]]] =>
                     report.error(
-                        s"The paramter \"${p.name}\" cannot be of SortOption type."
+                        s"The parameter \"${p.name}\" cannot be of SortOption type."
                     )
                 case _ => 
         
@@ -667,23 +660,31 @@ object ExprMacro:
         .map:
             case NamedArg(n, p) => (n, p)
 
-        val unnamdParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
+        val unnamedParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
         val unnamedParams = paramTerms.filter:
             case NamedArg(n, p) => false
             case _ => true
 
-        val allParams = namedParams ++ (unnamdParamNames.zip(unnamedParams))
+        val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
 
         val valueParams = allParams
-            .filter(p => !List("distinct", "sortBy", "withinGroup").contains(p._1))
+            .filter(p => !List("sortBy", "withinGroup").contains(p._1))
             .map(_._2)
 
-        val distinctParam = allParams.find(_._1 == "distinct").map: p =>
-            p._2.asExprOf[Boolean].value
+        val distinct = symbol.name.endsWith("Distinct")
+
+        val sortByParam = allParams.find(_._1 == "sortBy")
+
+        val withinGroupParam = allParams.find(_._1 == "withinGroup")
+
+        if distinct && withinGroupParam.isDefined then
+            report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
+
+        // TODO sortBy最多只能有一个，并且表达式必须与第一个值参数相同
 
         // TODO 语义分析
 
-        report.errorAndAbort(s"${valueParams}")
+        report.errorAndAbort(s"${symbol.name}")
 
     private def createFunction(using q: Quotes)(
         args: List[String],
@@ -692,9 +693,9 @@ object ExprMacro:
         containers: Expr[List[(String, Container)]]
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
-        val funcionTerm = removeNestedApply(term)
+        val functionTerm = removeNestedApply(term)
 
-        report.errorAndAbort(s"$funcionTerm")
+        report.errorAndAbort(s"$functionTerm")
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],
