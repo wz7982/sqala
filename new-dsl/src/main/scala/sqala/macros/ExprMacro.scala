@@ -52,8 +52,11 @@ object ExprMacro:
     private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
 
-        report.error(s"${term}") // TODO 删掉
-        report.errorAndAbort(s"The expression \"${term.show}\" cannot be converted to SQL expression.", term.asExpr)
+        // TODO 改成show
+        report.errorAndAbort(
+            s"\"${term}\" cannot be converted to SQL expression.", 
+            term.asExpr
+        )
 
     private def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
         import q.reflect.*
@@ -158,7 +161,43 @@ object ExprMacro:
                 createVector(args, terms, containers)
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
                 createCast(args, v, cast, containers)
-            // TODO 函数、聚合函数、窗口函数、extract、子查询、子连接、if、match
+            case _ if
+                term.symbol.annotations.find:
+                    case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                    case _ => false
+                .isDefined
+            =>
+                val functionName = 
+                    term.symbol.annotations.find:
+                        case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                        case _ => false
+                    .get match
+                        case Apply(Select(New(TypeIdent("sqlFunction")), _), funcionArg :: Nil) =>
+                            funcionArg match
+                                case Literal(StringConstant(n)) => n
+                                case NamedArg(_, Literal(StringConstant(n))) => n
+                                case _ => missMatch(term)
+                        case _ => missMatch(term)
+                createFunction(args, functionName, term, containers)
+            case _ if
+                term.symbol.annotations.find:
+                    case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
+                    case _ => false
+                .isDefined
+            =>
+                val functionName = 
+                    term.symbol.annotations.find:
+                        case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
+                        case _ => false
+                    .get match
+                        case Apply(Select(New(TypeIdent("sqlAgg")), _), funcionArg :: Nil) =>
+                            funcionArg match
+                                case Literal(StringConstant(n)) => n
+                                case NamedArg(_, Literal(StringConstant(n))) => n
+                                case _ => missMatch(term)
+                        case _ => missMatch(term)
+                createAgg(args, functionName, term, containers)
+            // TODO 函数、聚合函数、窗口函数、子查询、子连接、if、match
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(
@@ -569,8 +608,101 @@ object ExprMacro:
                     ungroupedRef = info.ungroupedRef
                 )
 
+    private def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
+        import q.reflect.*
+
+        term match
+            case Apply(a@Apply(_, _), _) => a
+            case _ => term
+
+    private def createAgg(using q: Quotes)(
+        args: List[String],
+        name: String,
+        term: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        import q.reflect.*
+
+        val paramTerms = removeNestedApply(term) match
+            case Apply(TypeApply(_, _), p) => p
+            case Apply(_, p) => p
+
+        val symbol = term.symbol
+        val params = symbol.paramSymss.flatten.filter(p => p.isTerm).filter: p =>
+            p.flags match
+                case f if f.is(Flags.Given) => false
+                case _ => true
+
+        for p <- params do
+            if p.name == "distinct" then
+                p.info.asType match
+                    case '[Boolean] =>
+                    case _ => report.error(
+                        "The parameter \"distinct\" must be of Boolean type.", 
+                        term.asExpr
+                    )
+            if p.name == "sortBy" || p.name == "withinGroup" then
+                p.info.asType match
+                    case '[SortOption[?]] =>
+                    case '[Seq[SortOption[?]]] =>
+                    case _ => report.error(
+                        s"The paramter \"${p.name}\" must be of SortOption type."
+                    )
+            p.info.asType match
+                case '[SortOption[?]] => 
+                    report.error(
+                        s"The paramter \"${p.name}\" cannot be of SortOption type."
+                    )
+                case '[Seq[SortOption[?]]] =>
+                    report.error(
+                        s"The paramter \"${p.name}\" cannot be of SortOption type."
+                    )
+                case _ => 
+        
+        val paramNames = params.map(_.name)
+
+        val namedParams = paramTerms.filter:
+            case NamedArg(n, p) => true
+            case _ => false
+        .map:
+            case NamedArg(n, p) => (n, p)
+
+        val unnamdParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
+        val unnamedParams = paramTerms.filter:
+            case NamedArg(n, p) => false
+            case _ => true
+
+        val allParams = namedParams ++ (unnamdParamNames.zip(unnamedParams))
+
+        val valueParams = allParams
+            .filter(p => !List("distinct", "sortBy", "withinGroup").contains(p._1))
+            .map(_._2)
+
+        val distinctParam = allParams.find(_._1 == "distinct").map: p =>
+            p._2.asExprOf[Boolean].value
+
+        // TODO 语义分析
+
+        report.errorAndAbort(s"${valueParams}")
+
+    private def createFunction(using q: Quotes)(
+        args: List[String],
+        name: String,
+        term: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        import q.reflect.*
+        val funcionTerm = removeNestedApply(term)
+
+        report.errorAndAbort(s"$funcionTerm")
+
     private def sortInfoMacro(using q: Quotes)(
         args: List[(String, q.reflect.TypeRepr)],
-        term: q.reflect.Term
-    ): (ExprInfo, SqlOrderBy) =
-        ???
+        term: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlOrderBy], ExprInfo) =
+        import q.reflect.*
+        
+        term match
+            case Apply(x, y) =>
+                ???

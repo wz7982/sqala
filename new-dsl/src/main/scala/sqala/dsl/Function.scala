@@ -64,7 +64,7 @@ def percentileDisc[T](
 def stringAgg(
     x: String | Option[String],
     separator: String,
-    orderBy: SortOption[?]*
+    sortBy: SortOption[?]*
 )(using QueryContext): Option[String] =
     compileTimeOnly
 
@@ -72,7 +72,7 @@ def stringAgg(
 def groupConcat(
     x: String | Option[String],
     separator: String,
-    orderBy: SortOption[?]*
+    sortBy: SortOption[?]*
 )(using QueryContext): Option[String] =
     compileTimeOnly
 
@@ -93,7 +93,23 @@ def rowNumber()(using QueryContext): Long =
     compileTimeOnly
 
 @sqlWindow("LAG")
+def lag[T](x: T, offset: Int)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlWindow("LAG")
+def lag[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlWindow("LAG")
 def lag[T](x: T, offset: Int, default: Wrap[T, Option])(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlWindow("LEAD")
+def lead[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlWindow("LEAD")
+def lead[T](x: T, offset: Int)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
 @sqlWindow("LEAD")
