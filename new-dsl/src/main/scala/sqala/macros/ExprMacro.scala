@@ -163,24 +163,6 @@ object ExprMacro:
                 createCast(args, v, cast, containers)
             case _ if
                 term.symbol.annotations.find:
-                    case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
-                    case _ => false
-                .isDefined
-            =>
-                val functionName = 
-                    term.symbol.annotations.find:
-                        case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
-                        case _ => false
-                    .get match
-                        case Apply(Select(New(TypeIdent("sqlFunction")), _), functionArg :: Nil) =>
-                            functionArg match
-                                case Literal(StringConstant(n)) => n
-                                case NamedArg(_, Literal(StringConstant(n))) => n
-                                case _ => missMatch(term)
-                        case _ => missMatch(term)
-                createFunction(args, functionName, term, containers)
-            case _ if
-                term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
                     case _ => false
                 .isDefined
@@ -200,7 +182,26 @@ object ExprMacro:
                     createGrouping(args, term, containers)
                 else
                     createAgg(args, functionName, term, containers)
-            // TODO 函数、窗口函数、子查询、子连接、if、match
+            case _ if
+                term.symbol.annotations.find:
+                    case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                    case _ => false
+                .isDefined
+            =>
+                val functionName = 
+                    term.symbol.annotations.find:
+                        case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                        case _ => false
+                    .get match
+                        case Apply(Select(New(TypeIdent("sqlFunction")), _), functionArg :: Nil) =>
+                            functionArg match
+                                case Literal(StringConstant(n)) => n
+                                case NamedArg(_, Literal(StringConstant(n))) => n
+                                case _ => missMatch(term)
+                        case _ => missMatch(term)
+                createFunction(args, functionName, term, containers)
+            // TODO 窗口函数、子查询、子连接、if、match
+            // TODO 窗口函数左边的聚合函数不支持within group、sort by、distinct
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(
@@ -724,18 +725,18 @@ object ExprMacro:
             .map(s => sortInfoMacro(args, s, containers))
         val withinGroupExpr = Expr.ofList(withinGroupInfo.map(_._1))
 
-        val argsInfo = 
+        val paramsInfo = 
             valueParamInfo.map(_._2) ++ 
             sortByInfo.map(_._2) ++
             withinGroupInfo.map(_._2)
 
-        for a <- argsInfo do
-            if a.hasAgg then
+        for p <- paramsInfo do
+            if p.hasAgg then
                 report.error("Aggregate function calls cannot be nested.", term.asExpr)
-            if a.hasWindow then
+            if p.hasWindow then
                 report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
         val columnsRef = 
-            argsInfo.flatMap(_.columnRef)
+            paramsInfo.flatMap(_.columnRef)
         if !columnsRef.map(_._1).forall(args.contains) then
             report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
 
@@ -756,7 +757,7 @@ object ExprMacro:
             columnRef = columnsRef,
             aggRef = columnsRef,
             nonAggRef = Nil,
-            ungroupedRef = argsInfo.flatMap(_.ungroupedRef)
+            ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
         )
 
     private def createGrouping(using q: Quotes)(
@@ -801,9 +802,65 @@ object ExprMacro:
         containers: Expr[List[(String, Container)]]
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
-        val functionTerm = removeNestedApply(term)
 
-        report.errorAndAbort(s"$functionTerm")
+        val paramTerms = removeNestedApply(term) match
+            case Apply(TypeApply(_, _), p) => p
+            case Apply(_, p) => p
+
+        val symbol = term.symbol
+        val params = symbol.paramSymss.flatten.filter(p => p.isTerm).filter: p =>
+            p.flags match
+                case f if f.is(Flags.Given) => false
+                case _ => true
+
+        for p <- params do
+            if p.name == "sortBy" then
+                report.error(
+                    s"SORT BY specified, but %s is not an aggregate function."
+                )
+            if p.name == "withinGroup" then
+                report.error(
+                    s"WITHIN GROUP specified, but %s is not an aggregate function."
+                )
+        
+        val paramNames = params.map(_.name)
+
+        val namedParams = paramTerms.filter:
+            case NamedArg(n, p) => true
+            case _ => false
+        .map:
+            case NamedArg(n, p) => (n, p)
+
+        val unnamedParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
+        val unnamedParams = paramTerms.filter:
+            case NamedArg(n, p) => false
+            case _ => true
+
+        val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
+
+        val paramsData = allParams
+            .map(p => treeInfoMacro(args, p._2, containers))
+        val paramsInfo = paramsData.map(_._2)
+        val paramsExpr = Expr.ofList(paramsData.map(_._1))
+
+        val nameExpr = Expr(name)
+
+        val sqlExpr = '{
+            SqlExpr.Func($nameExpr, $paramsExpr)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
+            isAgg = false,
+            isGroup = false,
+            hasWindow = paramsInfo.map(_.hasWindow).fold(false)(_ || _),
+            isConst = false,
+            isColumn = false,
+            columnRef = paramsInfo.flatMap(_.columnRef),
+            aggRef = paramsInfo.flatMap(_.aggRef),
+            nonAggRef = paramsInfo.flatMap(_.nonAggRef),
+            ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+        )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[String],
