@@ -181,7 +181,7 @@ object ExprMacro:
                 if functionName == "GROUPING" then
                     createGrouping(args, term, containers)
                 else
-                    createAgg(args, functionName, term, containers)
+                    createAgg(args, functionName, term, false, containers)
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
@@ -623,6 +623,7 @@ object ExprMacro:
         args: List[String],
         name: String,
         term: q.reflect.Term,
+        inWindow: Boolean,
         containers: Expr[List[(String, Container)]]
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
@@ -639,21 +640,34 @@ object ExprMacro:
 
         for p <- params do
             if p.name == "sortBy" || p.name == "withinGroup" then
+                if inWindow && p.name == "sortBy" then
+                    report.error(
+                        "Aggregate SORT BY is not supported for window functions.",
+                        term.asExpr
+                    )
+                if inWindow && p.name == "withinGroup" then
+                    report.error(
+                        "Aggregate WITHIN GROUP is not supported for window functions.",
+                        term.asExpr
+                    )
                 p.info.asType match
                     case '[SortOption[?]] =>
                     case '[Seq[SortOption[?]]] =>
                     case _ => report.error(
-                        s"The parameter \"${p.name}\" must be of SortOption type."
+                        s"The parameter \"${p.name}\" must be of SortOption type.",
+                        term.asExpr
                     )
             else
                 p.info.asType match
                     case '[SortOption[?]] => 
                         report.error(
-                            s"The parameter \"${p.name}\" cannot be of SortOption type."
+                            s"The parameter \"${p.name}\" cannot be of SortOption type.",
+                            term.asExpr
                         )
                     case '[Seq[SortOption[?]]] =>
                         report.error(
-                            s"The parameter \"${p.name}\" cannot be of SortOption type."
+                            s"The parameter \"${p.name}\" cannot be of SortOption type.",
+                            term.asExpr
                         )
                     case _ => 
         
@@ -687,6 +701,9 @@ object ExprMacro:
 
         if distinct && withinGroupParam.isDefined then
             report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
+        
+        if distinct && inWindow then
+            report.error(s"DISTINCT is not implemented for window functions.", term.asExpr)
 
         if distinct && sortByParam.isDefined then
             val firstParam = valueParams.head
