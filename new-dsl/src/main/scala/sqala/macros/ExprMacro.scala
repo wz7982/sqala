@@ -90,7 +90,8 @@ object ExprMacro:
     private def treeInfoMacro(using q: Quotes)(
         args: List[String],
         containers: Expr[List[(String, Container)]],
-        term: q.reflect.Term
+        term: q.reflect.Term,
+        inOver: Boolean = false
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -181,25 +182,25 @@ object ExprMacro:
                 if functionName == "GROUPING" then
                     createGrouping(args, containers, term)
                 else
-                    createAgg(args, containers, functionName, term, false)
+                    createAgg(args, containers, functionName, term, inOver)
             case _ if
                 term.symbol.annotations.find:
-                    case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                    case Apply(Select(New(TypeIdent("sqlFunction" | "sqlWindow")), _), _) => true
                     case _ => false
                 .isDefined
             =>
-                val functionName = 
+                val (functionName, kind) = 
                     term.symbol.annotations.find:
-                        case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
+                        case Apply(Select(New(TypeIdent("sqlFunction" | "sqlWindow")), _), _) => true
                         case _ => false
                     .get match
-                        case Apply(Select(New(TypeIdent("sqlFunction")), _), functionArg :: Nil) =>
+                        case Apply(Select(New(TypeIdent(kind)), _), functionArg :: Nil) =>
                             functionArg match
-                                case Literal(StringConstant(n)) => n
-                                case NamedArg(_, Literal(StringConstant(n))) => n
+                                case Literal(StringConstant(n)) => n -> kind
+                                case NamedArg(_, Literal(StringConstant(n))) => n -> kind
                                 case _ => missMatch(term)
                         case _ => missMatch(term)
-                createFunction(args, containers, functionName, term)
+                createFunction(args, containers, functionName, term, inOver, kind == "sqlWindow")
             // TODO 窗口函数、子查询、子连接、if、match
             // TODO 窗口函数左边的聚合函数不支持within group、sort by、distinct
             case Apply(Ident("interval"), interval :: Nil) =>
@@ -625,7 +626,7 @@ object ExprMacro:
         containers: Expr[List[(String, Container)]],
         name: String,
         term: q.reflect.Term,
-        inWindow: Boolean
+        inOver: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -641,12 +642,12 @@ object ExprMacro:
 
         for p <- params do
             if p.name == "sortBy" || p.name == "withinGroup" then
-                if inWindow && p.name == "sortBy" then
+                if inOver && p.name == "sortBy" then
                     report.error(
                         "Aggregate SORT BY is not supported for window functions.",
                         term.asExpr
                     )
-                if inWindow && p.name == "withinGroup" then
+                if inOver && p.name == "withinGroup" then
                     report.error(
                         "Aggregate WITHIN GROUP is not supported for window functions.",
                         term.asExpr
@@ -703,7 +704,7 @@ object ExprMacro:
         if distinct && withinGroupParam.isDefined then
             report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
         
-        if distinct && inWindow then
+        if distinct && inOver then
             report.error(s"DISTINCT is not supported for window functions.", term.asExpr)
 
         if distinct && sortByParam.isDefined then
@@ -818,6 +819,8 @@ object ExprMacro:
         containers: Expr[List[(String, Container)]],
         name: String,
         term: q.reflect.Term,
+        inOver: Boolean,
+        isWindow: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -867,18 +870,36 @@ object ExprMacro:
             SqlExpr.Func($nameExpr, $paramsExpr)
         }
 
-        sqlExpr -> ExprInfo(
-            hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
-            isAgg = false,
-            isGroup = false,
-            hasWindow = paramsInfo.map(_.hasWindow).fold(false)(_ || _),
-            isConst = false,
-            isColumn = false,
-            columnRef = paramsInfo.flatMap(_.columnRef),
-            aggRef = paramsInfo.flatMap(_.aggRef),
-            nonAggRef = paramsInfo.flatMap(_.nonAggRef),
-            ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
-        )
+        val exprInfo = if isWindow then
+            if !inOver then
+                report.error("Window function requires an OVER clause.", term.asExpr)
+            ExprInfo(
+                hasAgg = false,
+                isAgg = false,
+                isGroup = false,
+                hasWindow = false,
+                isConst = false,
+                isColumn = false,
+                columnRef = paramsInfo.flatMap(_.columnRef),
+                aggRef = Nil,
+                nonAggRef = paramsInfo.flatMap(_.nonAggRef),
+                ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+            )
+        else 
+            ExprInfo(
+                hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
+                isAgg = false,
+                isGroup = false,
+                hasWindow = paramsInfo.map(_.hasWindow).fold(false)(_ || _),
+                isConst = false,
+                isColumn = false,
+                columnRef = paramsInfo.flatMap(_.columnRef),
+                aggRef = paramsInfo.flatMap(_.aggRef),
+                nonAggRef = paramsInfo.flatMap(_.nonAggRef),
+                ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+            )
+
+        sqlExpr -> exprInfo
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[String],
