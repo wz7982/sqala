@@ -1,4 +1,3 @@
 package sqala.dsl
 
-// TODO 加上容器列表
-case class QueryContext(val tableIndex: Int)
+case class QueryContext(val tableIndex: Int, val outerContainers: List[(String, Container)])

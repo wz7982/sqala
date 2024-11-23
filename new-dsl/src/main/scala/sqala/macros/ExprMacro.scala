@@ -20,25 +20,6 @@ object ExprMacro:
         ungroupedRef: List[(String, String)]
     )
 
-    inline def test[T](inline v: T, containers: List[(String, Container)]): SqlExpr =
-        ${ testMacro[T]('v, 'containers) }
-
-    def testMacro[T](v: Expr[T], containers: Expr[List[(String, Container)]])(using q: Quotes): Expr[SqlExpr] =
-        import q.reflect.*
-        val term = v.asTerm
-        val (args, body) = term match
-            case Inlined(_, _, Block(DefDef(_, params :: Nil, _, Some(body)) :: Nil, _)) =>
-                (
-                    params.params.asInstanceOf[List[ValDef]].map:
-                        case ValDef(argName, argType, argTerm) =>
-                            argName
-                    ,
-                    body
-                )
-            case _ => missMatch(term)
-        val (sqlExpr, info) = treeInfoMacro(args, containers, body)
-        sqlExpr
-
     private def binaryOperators: List[String] =
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
@@ -52,9 +33,8 @@ object ExprMacro:
     private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
 
-        // TODO 改成show
         report.errorAndAbort(
-            s"\"${term}\" cannot be converted to SQL expression.", 
+            s"\"${term.show}\" cannot be converted to SQL expression.", 
             term.asExpr
         )
 
@@ -87,7 +67,7 @@ object ExprMacro:
                 report.error("ALL subquery can only appear on the right side of binary operations.", term.asExpr)
             case _ =>
 
-    private def treeInfoMacro(using q: Quotes)(
+    private[sqala] def treeInfoMacro(using q: Quotes)(
         args: List[String],
         containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
@@ -206,7 +186,7 @@ object ExprMacro:
                 _
             ) =>
                 createOver(args, containers, function, overValue)
-            // TODO 窗口函数、子查询、子连接、if、match
+            // TODO 子查询、子连接、if、match
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(

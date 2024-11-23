@@ -1,6 +1,11 @@
 package sqala.dsl
 
 import sqala.ast.expr.*
+import sqala.ast.statement.*
+import sqala.ast.table.*
+import sqala.dsl.macros.TableMacro
+
+import scala.deriving.Mirror
 
 class SortOption[T]
 
@@ -91,3 +96,19 @@ class OverValue:
 
     infix def groupsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
         compileTimeOnly
+
+inline def query[T](using
+    qc: QueryContext = QueryContext(-1, Nil),
+    p: Mirror.ProductOf[T],
+    s: SelectItem[Table[T]]
+): TableQuery[Table[T]] =
+    AsSqlExpr.summonInstances[p.MirroredElemTypes]
+    val tableName = TableMacro.tableName[T]
+    val newContext = QueryContext(qc.tableIndex + 1, qc.outerContainers)
+    val aliasName = s"t${newContext.tableIndex}"
+    val table = Table[T](tableName, aliasName, TableMacro.tableMetaData[T])
+    val ast = SqlQuery.Select(
+        select = s.selectItems(table, 0),
+        from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(aliasName))) :: Nil
+    )
+    TableQuery(table :: Nil, ast)(using newContext)
