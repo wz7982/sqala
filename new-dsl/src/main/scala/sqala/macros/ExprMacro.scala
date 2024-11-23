@@ -196,8 +196,11 @@ object ExprMacro:
                                 case NamedArg(_, Literal(StringConstant(n))) => n
                                 case _ => missMatch(term)
                         case _ => missMatch(term)
-                createAgg(args, functionName, term, containers)
-            // TODO 函数、聚合函数、窗口函数、子查询、子连接、if、match
+                if functionName == "GROUPING" then
+                    createGrouping(args, term, containers)
+                else
+                    createAgg(args, functionName, term, containers)
+            // TODO 函数、窗口函数、子查询、子连接、if、match
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(
@@ -641,16 +644,17 @@ object ExprMacro:
                     case _ => report.error(
                         s"The parameter \"${p.name}\" must be of SortOption type."
                     )
-            p.info.asType match
-                case '[SortOption[?]] => 
-                    report.error(
-                        s"The parameter \"${p.name}\" cannot be of SortOption type."
-                    )
-                case '[Seq[SortOption[?]]] =>
-                    report.error(
-                        s"The parameter \"${p.name}\" cannot be of SortOption type."
-                    )
-                case _ => 
+            else
+                p.info.asType match
+                    case '[SortOption[?]] => 
+                        report.error(
+                            s"The parameter \"${p.name}\" cannot be of SortOption type."
+                        )
+                    case '[Seq[SortOption[?]]] =>
+                        report.error(
+                            s"The parameter \"${p.name}\" cannot be of SortOption type."
+                        )
+                    case _ => 
         
         val paramNames = params.map(_.name)
 
@@ -673,18 +677,122 @@ object ExprMacro:
 
         val distinct = symbol.name.endsWith("Distinct")
 
-        val sortByParam = allParams.find(_._1 == "sortBy")
+        val sortByParam = allParams.find(_._1 == "sortBy").map(_._2)
 
-        val withinGroupParam = allParams.find(_._1 == "withinGroup")
+        val withinGroupParam = allParams.find(_._1 == "withinGroup").map(_._2)
+
+        if distinct && valueParams.isEmpty then
+            report.error("Aggregates with DISTINCT must be able to sort their inputs.", term.asExpr)
 
         if distinct && withinGroupParam.isDefined then
             report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
 
-        // TODO sortBy最多只能有一个，并且表达式必须与第一个值参数相同
+        if distinct && sortByParam.isDefined then
+            val firstParam = valueParams.head
 
-        // TODO 语义分析
+            sortByParam.get match
+                case Typed(Repeated(Apply(Apply(_, Nil), _) :: Nil, _), _) =>
+                case Typed(Repeated(Apply(Apply(_, item :: Nil), _) :: Nil, _), _) 
+                    if item.show == firstParam.show
+                =>
+                case Apply(Apply(_, item :: Nil), _)
+                    if item.show == firstParam.show
+                =>
+                case _ =>
+                    report.error(
+                        "In an aggregate with DISTINCT, SORT BY expressions must appear in argument list.",
+                        term.asExpr
+                    )
 
-        report.errorAndAbort(s"${symbol.name}")
+        val valueParamInfo = valueParams
+            .map(p => treeInfoMacro(args, p, containers))
+        val valueParamExpr = Expr.ofList(valueParamInfo.map(_._1))
+
+        val sortByList = sortByParam.toList.map:
+            case Typed(Repeated(x, _), _) => x
+            case x => x :: Nil
+        .flatten
+        val sortByInfo = sortByList
+            .map(s => sortInfoMacro(args, s, containers))
+        val sortByExpr = Expr.ofList(sortByInfo.map(_._1))
+
+        val withinGroupList = withinGroupParam.toList.map:
+            case Typed(Repeated(x, _), _) => x
+            case x => x :: Nil
+        .flatten
+        val withinGroupInfo = withinGroupList
+            .map(s => sortInfoMacro(args, s, containers))
+        val withinGroupExpr = Expr.ofList(withinGroupInfo.map(_._1))
+
+        val argsInfo = 
+            valueParamInfo.map(_._2) ++ 
+            sortByInfo.map(_._2) ++
+            withinGroupInfo.map(_._2)
+
+        for a <- argsInfo do
+            if a.hasAgg then
+                report.error("Aggregate function calls cannot be nested.", term.asExpr)
+            if a.hasWindow then
+                report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
+        val columnsRef = 
+            argsInfo.flatMap(_.columnRef)
+        if !columnsRef.map(_._1).forall(args.contains) then
+            report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
+
+        val nameExpr = Expr(name)
+        val distinctExpr = Expr(distinct)
+
+        val sqlExpr = '{
+            SqlExpr.Func($nameExpr, $valueParamExpr, $distinctExpr, $sortByExpr, $withinGroupExpr, None)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = true,
+            isAgg = true,
+            isGroup = false,
+            hasWindow = false,
+            isConst = false,
+            isColumn = false,
+            columnRef = columnsRef,
+            aggRef = columnsRef,
+            nonAggRef = Nil,
+            ungroupedRef = argsInfo.flatMap(_.ungroupedRef)
+        )
+
+    private def createGrouping(using q: Quotes)(
+        args: List[String],
+        term: q.reflect.Term,
+        containers: Expr[List[(String, Container)]]
+    ): (Expr[SqlExpr], ExprInfo) =
+        import q.reflect.*
+
+        term match
+            case Apply(Apply(Ident("grouping"), Typed(Repeated(items, _), _) :: Nil), _) =>
+                val info = items
+                    .map(i => treeInfoMacro(args, i, containers))
+                for i <- info do
+                    if !i._2.isGroup then
+                        report.error(
+                            "Arguments to GROUPING must be grouping expressions of the associated query level.",
+                            term.asExpr
+                        )
+                val paramsExpr = Expr.ofList(info.map(_._1))
+                val sqlExpr = '{
+                    SqlExpr.Func("GROUPING", $paramsExpr)
+                }
+                sqlExpr -> ExprInfo(
+                    hasAgg = true,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    isColumn = false,
+                    columnRef = info.map(_._2).flatMap(_.columnRef),
+                    aggRef = info.map(_._2).flatMap(_.columnRef),
+                    nonAggRef = Nil,
+                    ungroupedRef = Nil
+                )
+            case _ => missMatch(term)
 
     private def createFunction(using q: Quotes)(
         args: List[String],
@@ -698,12 +806,34 @@ object ExprMacro:
         report.errorAndAbort(s"$functionTerm")
 
     private def sortInfoMacro(using q: Quotes)(
-        args: List[(String, q.reflect.TypeRepr)],
+        args: List[String],
         term: q.reflect.Term,
         containers: Expr[List[(String, Container)]]
     ): (Expr[SqlOrderBy], ExprInfo) =
         import q.reflect.*
         
         term match
-            case Apply(x, y) =>
-                ???
+            case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) =>
+                val (expr, info) = treeInfoMacro(args, v, containers)
+                val sqlOrderBy = op match
+                    case "asc" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None)
+                    }
+                    case "ascNullsFirst" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.First))
+                    }
+                    case "ascNullsLast" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.Last))
+                    }
+                    case "desc" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Desc), None)
+                    }
+                    case "descNullsFirst" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.First))
+                    }
+                    case "descNullsLast" => '{
+                        SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.Last))
+                    }
+                    case _ => missMatch(term)
+                sqlOrderBy -> info
+            case _ => missMatch(term)
