@@ -104,7 +104,7 @@ object JsonEncoder:
                                 case '[t] =>
                                     val showType = TypeRepr.of[t].show
                                     val summonExpr = Expr.summon[JsonEncoder[t]] match
-                                        case None => report.errorAndAbort(s"Couble not create a json encoder for field (${f.name}: $showType). It's possible to fix this by adding: given JsonEncoder[$showType].")
+                                        case None => report.errorAndAbort(s"Cannot create a json encoder for field (${f.name}: $showType). It's possible to fix this by adding: given JsonEncoder[$showType].")
                                         case Some(s) => s
                                     val expr = Select.unique(x.asTerm, f.name).asExprOf[t]
                                     '{ $n -> $summonExpr.encode($expr)(using $format) }

@@ -83,7 +83,7 @@ object DefaultValue:
                             val summonExpr = Expr.summon[DefaultValue[t]] match
                                 case None => 
                                     val showType = TypeRepr.of[t].show
-                                    report.errorAndAbort(s"Couble not create a default value for field ($n: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
+                                    report.errorAndAbort(s"Cannot create a default value for field ($n: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
                                 case Some(s) => s
                             '{ $summonExpr.defaultValue }
                 '{

@@ -3,13 +3,13 @@ package sqala.dynamic
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 
 sealed trait AnyTable:
-    infix def join(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.InnerJoin, table, None)
+    infix def join(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Inner, table, None)
 
-    infix def leftJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.LeftJoin, table, None)
+    infix def leftJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Left, table, None)
 
-    infix def rightJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.RightJoin, table, None)
+    infix def rightJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Right, table, None)
 
-    infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.FullJoin, table, None)
+    infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Full, table, None)
 
     def toSqlTable: SqlTable = this match
         case Table(name, alias) => SqlTable.IdentTable(name, alias.map(a => SqlTableAlias(a)))
