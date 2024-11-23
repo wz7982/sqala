@@ -201,6 +201,11 @@ object ExprMacro:
                                 case _ => missMatch(term)
                         case _ => missMatch(term)
                 createFunction(args, containers, functionName, term, inOver, kind == "sqlWindow")
+            case Apply(
+                Apply(Apply(TypeApply(Ident("over"), _), function :: Nil), overValue :: Nil),
+                _
+            ) =>
+                createOver(args, containers, function, overValue)
             // TODO 窗口函数、子查询、子连接、if、match
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
@@ -902,6 +907,121 @@ object ExprMacro:
             )
 
         sqlExpr -> exprInfo
+
+    private def createOver(using q: Quotes)(
+        args: List[String],
+        containers: Expr[List[(String, Container)]],
+        term: q.reflect.Term,
+        overValue: q.reflect.Term
+    ): (Expr[SqlExpr], ExprInfo) =
+        import q.reflect.*
+
+        val (functionExpr, functionInfo) = 
+            treeInfoMacro(args, containers, term, true)
+
+        val isWindow = term.symbol.annotations.find:
+            case Apply(Select(New(TypeIdent("sqlWindow")), _), _) => true
+            case _ => false
+        .isDefined
+
+        if !functionInfo.isAgg && !isWindow then
+            report.error(
+                "OVER specified, but expression is not a window function nor an aggregate function.", 
+                term.asExpr
+            )
+
+        def splitFrame(value: Term): (Term, Option[(String, Term, Term)]) =
+            value match
+                case Apply(
+                    Apply(
+                        Select(t, kind@("rowsBetween" | "rangeBetween" | "groupsBetween")), 
+                        s :: e :: Nil
+                    ), 
+                    _
+                ) =>
+                    (t, Some(kind, s, e))
+                case _ => (value, None)
+
+        def fetchFrameOption(value: Term): Expr[SqlWindowFrameOption] =
+            value match
+                case Ident("currentRow") => '{ SqlWindowFrameOption.CurrentRow }
+                case Ident("unboundedPreceding") => '{ SqlWindowFrameOption.UnboundedPreceding }
+                case Ident("unboundedFollowing") => '{ SqlWindowFrameOption.UnboundedFollowing }
+                case Apply(Ident("preceding"), n :: Nil) =>
+                    val nExpr = n.asExprOf[Int]
+                    '{ SqlWindowFrameOption.Preceding($nExpr) }
+                case Apply(Ident("following"), n :: Nil) =>
+                    val nExpr = n.asExprOf[Int]
+                    '{ SqlWindowFrameOption.Following($nExpr) }
+                case _ => missMatch(term)
+
+        val (value, frame) = splitFrame(overValue)
+
+        val frameExpr: Expr[Option[SqlWindowFrame]] =
+            frame match
+                case None => '{ None }
+                case Some(f) =>
+                    val startExpr = fetchFrameOption(f._2)
+                    val endExpr = fetchFrameOption(f._3)
+                    f._1 match
+                        case "rowsBetween" => '{ Some(SqlWindowFrame.Rows($startExpr, $endExpr)) }
+                        case "rangeBetween" => '{ Some(SqlWindowFrame.Range($startExpr, $endExpr)) }
+                        case "groupsBetween" => '{ Some(SqlWindowFrame.Groups($startExpr, $endExpr)) }
+
+        val (partition, sort) = value match 
+            case Apply(Apply(Ident("partitionBy"), Typed(Repeated(partitionBy, _), _) :: Nil), _) =>
+                partitionBy.map(p => treeInfoMacro(args, containers, p, false)) ->
+                Nil
+            case Apply(Apply(Ident("sortBy"), Typed(Repeated(sortBy, _), _) :: Nil), _) =>
+                Nil ->
+                sortBy.map(s => sortInfoMacro(args, containers, s))
+            case Apply(
+                Apply(
+                    Select(
+                        Apply(Apply(Ident("partitionBy"), Typed(Repeated(partitionBy, _), _) :: Nil), _),
+                        "sortBy"
+                    ),
+                    Typed(Repeated(sortBy, _), _) :: Nil
+                ),
+                _
+            ) =>
+                partitionBy.map(p => treeInfoMacro(args, containers, p, false)) ->
+                sortBy.map(s => sortInfoMacro(args, containers, s))
+            case _ => Nil -> Nil
+
+        val windowInfo = partition.map(_._2) ++ sort.map(_._2)
+
+        for i <- windowInfo do
+            if i.hasAgg then
+                report.error("Window function calls cannot contain aggregate function calls.", term.asExpr)
+            if i.hasWindow then
+                report.error("Window function calls cannot be nested.", term.asExpr)
+            if i.ungroupedRef.nonEmpty then
+                val c = i.ungroupedRef.head
+                report.error(
+                    s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                    term.asExpr
+                )
+
+        val partitionExpr = Expr.ofList(partition.map(_._1))
+        val sortExpr = Expr.ofList(sort.map(_._1))
+
+        val sqlExpr = '{
+            SqlExpr.Window($functionExpr, $partitionExpr, $sortExpr, $frameExpr)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = false,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = true,
+            isConst = false,
+            isColumn = false,
+            columnRef = functionInfo.columnRef ++ windowInfo.flatMap(_.columnRef),
+            aggRef = Nil,
+            nonAggRef = functionInfo.columnRef ++ windowInfo.flatMap(_.nonAggRef),
+            ungroupedRef = functionInfo.ungroupedRef ++ windowInfo.flatMap(_.ungroupedRef)
+        )
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[String],

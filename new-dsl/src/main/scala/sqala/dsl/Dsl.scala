@@ -19,9 +19,9 @@ extension [X](x: X)
 
     def as[Y](using AsSqlExpr[X], QueryContext, Cast[X, Y]): Option[Y] = compileTimeOnly
 
-    infix def over(value: OverValue): X = compileTimeOnly
+    infix def over(value: OverValue)(using QueryContext): X = compileTimeOnly
 
-    infix def over(value: Unit): X = compileTimeOnly
+    infix def over(value: Unit)(using QueryContext): X = compileTimeOnly
 
 case class Interval(n: Double, unit: SqlTimeUnit)
 
@@ -62,6 +62,32 @@ extension [X: DateTime](x: X)
 def extract[T: DateTime](value: ExtractValue[T])(using QueryContext): Option[BigDecimal] =
     compileTimeOnly
 
+def partitionBy(value: Any*)(using QueryContext): OverValue =
+    compileTimeOnly
+
+def sortBy(value: SortOption[?]*)(using QueryContext): OverValue =
+    compileTimeOnly
+
+def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
+
+def unboundedPreceding: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedPreceding
+
+def unboundedFollowing: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedFollowing
+
+extension (n: Int)
+    def preceding: SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
+
+    def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
+
 class OverValue:
-    infix def sortBy(sort: SortOption[?]*)(using QueryContext): OverValue =
+    infix def sortBy(value: SortOption[?]*)(using QueryContext): OverValue =
+        compileTimeOnly
+
+    infix def rowsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
+        compileTimeOnly
+
+    infix def rangeBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
+        compileTimeOnly
+
+    infix def groupsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
         compileTimeOnly
