@@ -278,7 +278,7 @@ class SelectQuery[T](
         s: SelectItem[Append[tt.R, Table[J]]]
     ): JoinQuery[Append[tt.R, Table[J]]] =
         joinClause[J, Append[tt.R, Table[J]]](
-            SqlJoinType.InnerJoin,
+            SqlJoinType.Inner,
             j => tt.toTuple(queryItems) :* j
         )
 
@@ -291,7 +291,7 @@ class SelectQuery[T](
         ti: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.InnerJoin,
+            SqlJoinType.Inner,
             query,
             j => tt.toTuple(queryItems) :* j
         )
@@ -305,7 +305,7 @@ class SelectQuery[T](
         ti: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.InnerJoin,
+            SqlJoinType.Inner,
             query(queryItems),
             j => tt.toTuple(queryItems) :* j,
             true
@@ -318,7 +318,7 @@ class SelectQuery[T](
         s: SelectItem[Append[tt.R, o.R]]
     ): JoinQuery[Append[tt.R, o.R]] =
         joinClause[J, Append[tt.R, o.R]](
-            SqlJoinType.LeftJoin,
+            SqlJoinType.Left,
             j => tt.toTuple(queryItems) :* o.toOption(j)
         )
 
@@ -332,7 +332,7 @@ class SelectQuery[T](
         st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.LeftJoin, 
+            SqlJoinType.Left, 
             query,
             j => tt.toTuple(queryItems) :* j
         )
@@ -347,7 +347,7 @@ class SelectQuery[T](
         st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.LeftJoin, 
+            SqlJoinType.Left, 
             query(queryItems),
             j => tt.toTuple(queryItems) :* j,
             true
@@ -360,7 +360,7 @@ class SelectQuery[T](
         s: SelectItem[Append[tt.R, Table[J]]]
     ): JoinQuery[Append[tt.R, Table[J]]] =
         joinClause[J, Append[tt.R, Table[J]]](
-            SqlJoinType.RightJoin,
+            SqlJoinType.Right,
             j => tt.toTuple(o.toOption(queryItems)) :* j
         )
 
@@ -374,7 +374,7 @@ class SelectQuery[T](
         st: SelectItem[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.RightJoin,
+            SqlJoinType.Right,
             query,
             j => tt.toTuple(o.toOption(queryItems)) :* j
         )
@@ -384,7 +384,7 @@ class SelectQuery[T](
         t: TupledFunction[F, tt.R => NamedTuple[N, V]]
     )(inline f: QueryContext ?=> F)(using 
         a: AsExpr[V],
-        tu: ToUngroup[T],
+        tu: ToUngrouped[T],
         tut: ToTuple[tu.R]
     ): GroupByQuery[Group[N, V] *: tut.R] =
         AnalysisMacro.analysisGroup(f)
@@ -394,14 +394,14 @@ class SelectQuery[T](
         val group: Group[N, V] = Group(groupExprs)
         val sqlGroupBy = groupExprs
             .map(i => SqlGroupItem.Singleton(i.asSqlExpr))
-        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery(group *: tut.toTuple(tu.toUngrouped(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
     inline def groupByCube[F, N <: Tuple, V <: Tuple](using
         tt: ToTuple[T],
         t: TupledFunction[F, tt.R => NamedTuple[N, V]]
     )(inline f: QueryContext ?=> F)(using 
         a: AsExpr[V],
-        tu: ToUngroup[T],
+        tu: ToUngrouped[T],
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
@@ -413,14 +413,14 @@ class SelectQuery[T](
         val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil
-        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery(group *: tut.toTuple(tu.toUngrouped(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
     inline def groupByRollup[F, N <: Tuple, V <: Tuple](using
         tt: ToTuple[T],
         t: TupledFunction[F, tt.R => NamedTuple[N, V]]
     )(inline f: QueryContext ?=> F)(using 
         a: AsExpr[V],
-        tu: ToUngroup[T],
+        tu: ToUngrouped[T],
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
@@ -432,14 +432,14 @@ class SelectQuery[T](
         val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil
-        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery(group *: tut.toTuple(tu.toUngrouped(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
     inline def groupByGroupingSets[F, N <: Tuple, V <: Tuple, S](using
         tt: ToTuple[T],
         t: TupledFunction[F, tt.R => NamedTuple[N, V]]
     )(inline f: QueryContext ?=> F)(using 
         a: AsExpr[V],
-        tu: ToUngroup[T],
+        tu: ToUngrouped[T],
         tut: ToTuple[tu.R],
         to: ToOption[V],
         tot: ToTuple[to.R]
@@ -453,7 +453,7 @@ class SelectQuery[T](
         val group: Group[N, tot.R] = Group(groupExprs)
         val sqlGroupBy =
             SqlGroupItem.GroupingSets(gs.asSqlExprs(g(group))) :: Nil
-        GroupByQuery(group *: tut.toTuple(tu.toUngroup(queryItems)), ast.copy(groupBy = sqlGroupBy))
+        GroupByQuery(group *: tut.toTuple(tu.toUngrouped(queryItems)), ast.copy(groupBy = sqlGroupBy))
 
 class UnionQuery[T](
     private[sqala] override val queryItems: T,

@@ -128,7 +128,7 @@ class SqlParser extends StandardTokenParsers:
         literal |
         caseWhen |
         cast |
-        windownFunction |
+        windowFunction |
         function |
         aggFunction |
         "(" ~> union <~ ")" |
@@ -161,7 +161,7 @@ class SqlParser extends StandardTokenParsers:
             (Nil, o)
         }
 
-    def windownFunction: Parser[SqlExpr] =
+    def windowFunction: Parser[SqlExpr] =
         aggFunction ~ "OVER" ~ over ^^ {
             case agg ~ _ ~ o => SqlExpr.Window(agg, o._1, o._2, None)
         }
@@ -271,12 +271,12 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def joinType: Parser[SqlJoinType] =
-        "LEFT" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.LeftJoin) |
-        "RIGHT" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.RightJoin) |
-        "FULL" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.FullJoin) |
-        "CROSS" ~ "JOIN" ^^ (_ => SqlJoinType.CrossJoin) |
-        "INNER" ~ "JOIN" ^^ (_ => SqlJoinType.InnerJoin) |
-        "JOIN" ^^ (_ => SqlJoinType.InnerJoin)
+        "LEFT" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.Left) |
+        "RIGHT" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.Right) |
+        "FULL" ~ opt("OUTER") ~ "JOIN" ^^ (_ => SqlJoinType.Full) |
+        "CROSS" ~ "JOIN" ^^ (_ => SqlJoinType.Cross) |
+        "INNER" ~ "JOIN" ^^ (_ => SqlJoinType.Inner) |
+        "JOIN" ^^ (_ => SqlJoinType.Inner)
 
     def table: Parser[SqlTable] =
         simpleTable |

@@ -106,7 +106,7 @@ object DataMapping:
                             case '[t] =>
                                 val showType = TypeRepr.of[t].show
                                 val defaultValueExpr = Expr.summon[DefaultValue[t]] match
-                                    case None => report.errorAndAbort(s"Couble not create a default value for field ($name: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
+                                    case None => report.errorAndAbort(s"Cannot create a default value for field ($name: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
                                     case Some(s) => s
                                 '{ $defaultValueExpr.defaultValue }
 

@@ -86,7 +86,7 @@ object ResultOperation:
         new ResultOperation[A, B]:
             type R = NumericResult[A, B]
 
-    given timeResulte[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] =
+    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] =
         new ResultOperation[A, B]:
             type R = Option[Date]
 

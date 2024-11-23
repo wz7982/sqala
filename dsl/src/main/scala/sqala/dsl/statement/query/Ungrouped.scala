@@ -30,41 +30,41 @@ class UngroupedSubQuery[N <: Tuple, V <: Tuple](
         val index = constValue[Index[N, name.type, 0]]
         Expr.Column(__alias__, s"c${index}")
 
-trait ToUngroup[T]:
+trait ToUngrouped[T]:
     type R
 
-    def toUngroup(x: T): R
+    def toUngrouped(x: T): R
 
-object ToUngroup:
-    type Aux[T, O] = ToUngroup[T]:
+object ToUngrouped:
+    type Aux[T, O] = ToUngrouped[T]:
         type R = O
 
-    given tableToUngroup[T]: Aux[Table[T], UngroupedTable[T]] = new ToUngroup[Table[T]]:
+    given tableToUngrouped[T]: Aux[Table[T], UngroupedTable[T]] = new ToUngrouped[Table[T]]:
         type R = UngroupedTable[T]
 
-        def toUngroup(x: Table[T]): R =
+        def toUngrouped(x: Table[T]): R =
             new UngroupedTable(x.__tableName__, x.__aliasName__, x.__metaData__)
 
-    given subQueryToUngroup[N <: Tuple, V <: Tuple]: Aux[SubQuery[N, V], UngroupedSubQuery[N, V]] =
-        new ToUngroup[SubQuery[N, V]]:
+    given subQueryToUngrouped[N <: Tuple, V <: Tuple]: Aux[SubQuery[N, V], UngroupedSubQuery[N, V]] =
+        new ToUngrouped[SubQuery[N, V]]:
             type R = UngroupedSubQuery[N, V]
 
-            def toUngroup(x: SubQuery[N, V]): R =
+            def toUngrouped(x: SubQuery[N, V]): R =
                 new UngroupedSubQuery(x.__alias__, x.__columnSize__)(using x.qc)
 
-    given tupleToUngroup[H, T <: Tuple](using 
-        h: ToUngroup[H],
-        t: ToUngroup[T],
+    given tupleToUngrouped[H, T <: Tuple](using 
+        h: ToUngrouped[H],
+        t: ToUngrouped[T],
         to: ToTuple[t.R]
     ): Aux[H *: T, h.R *: to.R] =
-        new ToUngroup[H *: T]:
+        new ToUngrouped[H *: T]:
             type R = h.R *: to.R
 
-            def toUngroup(x: H *: T): R =
-                h.toUngroup(x.head) *: to.toTuple(t.toUngroup(x.tail))
+            def toUngrouped(x: H *: T): R =
+                h.toUngrouped(x.head) *: to.toTuple(t.toUngrouped(x.tail))
 
-    given emptyTupleToUngroup: Aux[EmptyTuple, EmptyTuple] =
-        new ToUngroup[EmptyTuple]:
+    given emptyTupleToUngrouped: Aux[EmptyTuple, EmptyTuple] =
+        new ToUngrouped[EmptyTuple]:
             type R = EmptyTuple
 
-            def toUngroup(x: EmptyTuple): R = x
+            def toUngrouped(x: EmptyTuple): R = x
