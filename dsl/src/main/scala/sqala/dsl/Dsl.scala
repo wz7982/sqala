@@ -53,9 +53,6 @@ def `if`(expr: Expr[Boolean]): If[Nothing] = If(expr :: Nil)
 def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
 
-def notExists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean] =
-    Expr.SubLink(query.ast, SqlSubLinkType.NotExists)
-
 def all[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using 
     m: Merge[V]
 ): SubLinkItem[m.R] =
@@ -118,9 +115,9 @@ def percentileDisc[N: Number](
 def stringAgg[T <: String | Option[String]](
     expr: Expr[T],
     separator: String,
-    orderBy: OrderBy[?]*
+    sortBy: OrderBy[?]*
 ): Expr[Option[String]] =
-    Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, orderBy.toList)
+    Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, sortBy.toList)
 
 @sqlWindow
 def rank(): WindowFunc[Long] = WindowFunc("RANK", Nil)
@@ -264,17 +261,17 @@ def createFunc[T](
     name: String,
     args: List[Expr[?]],
     distinct: Boolean = false,
-    orderBy: List[OrderBy[?]] = Nil
+    sortBy: List[OrderBy[?]] = Nil
 ): Expr[T] =
-    Expr.Func(name, args, distinct, orderBy)
+    Expr.Func(name, args, distinct, sortBy)
 
 def createWindowFunc[T](
     name: String,
     args: List[Expr[?]],
     distinct: Boolean = false,
-    orderBy: List[OrderBy[?]] = Nil
+    sortBy: List[OrderBy[?]] = Nil
 ): WindowFunc[T] =
-    WindowFunc(name, args, distinct, orderBy)
+    WindowFunc(name, args, distinct, sortBy)
 
 def createBinaryOperator[T](left: Expr[?], op: String, right: Expr[?]): Expr[T] =
     Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
@@ -350,8 +347,8 @@ extension (n: Int)
 def partitionBy(partitionValue: Expr[?]*): OverValue =
     OverValue(partitionBy = partitionValue.toList)
 
-def orderBy(orderValue: OrderBy[?]*): OverValue =
-    OverValue(orderBy = orderValue.toList)
+def sortBy(sortValue: OrderBy[?]*): OverValue =
+    OverValue(sortBy = sortValue.toList)
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(-1)
