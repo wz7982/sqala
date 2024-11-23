@@ -31,7 +31,7 @@ enum Expr[T] derives CanEqual:
         name: String,
         args: List[Expr[?]],
         distinct: Boolean = false,
-        orderBy: List[OrderBy[?]] = Nil,
+        sortBy: List[OrderBy[?]] = Nil,
         withinGroup: List[OrderBy[?]] = Nil,
         filter: Option[Expr[?]] = None
     ) extends Expr[T]
@@ -55,7 +55,7 @@ enum Expr[T] derives CanEqual:
     case Window[T](
         expr: Expr[?],
         partitionBy: List[Expr[?]],
-        orderBy: List[OrderBy[?]],
+        sortBy: List[OrderBy[?]],
         frame: Option[SqlWindowFrame]
     ) extends Expr[T]
 
@@ -232,19 +232,6 @@ enum Expr[T] derives CanEqual:
     ): Expr[Boolean] =
         In(this, SubQuery(query.ast), false)
 
-    def notIn[R, I <: Iterable[R]](list: I)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        In(this, Vector(list.toList.map(a.asExpr(_))), true)
-
-    def notIn[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
-        m: Merge[V],
-        a: AsExpr[V],
-        c: CompareOperation[T, m.R]
-    ): Expr[Boolean] =
-        In(this, SubQuery(query.ast), true)
-
     def between[R](start: R, end: R)(using
         a: ComparableValue[R],
         o: CompareOperation[T, R]
@@ -256,18 +243,6 @@ enum Expr[T] derives CanEqual:
         CompareOperation[T, E]
     ): Expr[Boolean] =
         Between(this, start, end, false)
-
-    def notBetween[R](start: R, end: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Between(this, a.asExpr(start), a.asExpr(end), true)
-
-    def notBetween[S, E](start: Expr[S], end: Expr[E])(using
-        CompareOperation[T, S],
-        CompareOperation[T, E],
-    ): Expr[Boolean] =
-        Between(this, start, end, true)
 
     @targetName("plus")
     def +[R: Number](value: R)(using
@@ -371,12 +346,6 @@ enum Expr[T] derives CanEqual:
     def like[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
         Binary(this, Like, that)
 
-    def notLike(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
-        Binary(this, NotLike, Literal(value, summon[AsSqlExpr[String]]))
-
-    def notLike[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
-        Binary(this, NotLike, that)
-
     def contains(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
         like("%" + value + "%")
 
@@ -421,15 +390,29 @@ object Expr:
                 )
             case Binary(left, op, right) =>
                 SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
+            case Unary(expr, SqlUnaryOperator.Not) =>
+                val sqlExpr = expr.asSqlExpr
+                sqlExpr match
+                    case SqlExpr.BooleanLiteral(boolean) => 
+                        SqlExpr.BooleanLiteral(!boolean)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.Like, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.In, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.NotIn, right)
+                    case SqlExpr.SubLink(query, SqlSubLinkType.Exists) =>
+                        SqlExpr.SubLink(query, SqlSubLinkType.NotExists)
+                    case SqlExpr.Between(expr, s, e, false) =>
+                        SqlExpr.Between(expr, s, e, true)
+                    case _ => SqlExpr.Unary(sqlExpr, SqlUnaryOperator.Not)
             case Unary(expr, op) =>
                 SqlExpr.Unary(expr.asSqlExpr, op)
             case SubQuery(query) => SqlExpr.SubQuery(query)
-            case Func(name, args, distinct, orderBy, withinGroup, filter) =>
+            case Func(name, args, distinct, sortBy, withinGroup, filter) =>
                 SqlExpr.Func(
                     name,
                     args.map(_.asSqlExpr),
                     distinct,
-                    orderBy.map(_.asSqlOrderBy),
+                    sortBy.map(_.asSqlOrderBy),
                     withinGroup.map(_.asSqlOrderBy),
                     filter.map(_.asSqlExpr)
                 )
@@ -445,8 +428,8 @@ object Expr:
                 SqlExpr.Binary(expr.asSqlExpr, SqlBinaryOperator.NotIn, inExpr.asSqlExpr)
             case Between(expr, start, end, not) =>
                 SqlExpr.Between(expr.asSqlExpr, start.asSqlExpr, end.asSqlExpr, not)
-            case Window(expr, partitionBy, orderBy, frame) =>
-                SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), orderBy.map(_.asSqlOrderBy), frame)
+            case Window(expr, partitionBy, sortBy, frame) =>
+                SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), sortBy.map(_.asSqlOrderBy), frame)
             case SubLink(query, linkType) =>
                 SqlExpr.SubLink(query, linkType)
             case Interval(value, unit) =>
@@ -477,7 +460,7 @@ object Expr:
 
     extension [T](expr: Expr[T])
         infix def over(overValue: OverValue): Expr[T] =
-            Expr.Window(expr, overValue.partitionBy, overValue.orderBy, overValue.frame)
+            Expr.Window(expr, overValue.partitionBy, overValue.sortBy, overValue.frame)
 
         infix def over(overValue: Unit): Expr[T] =
             Expr.Window(expr, Nil, Nil, None)
@@ -510,11 +493,11 @@ class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val link
 
 case class OverValue(
     private[sqala] val partitionBy: List[Expr[?]] = Nil,
-    private[sqala] val orderBy: List[OrderBy[?]] = Nil,
+    private[sqala] val sortBy: List[OrderBy[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    infix def orderBy(orderValue: OrderBy[?]*): OverValue =
-        copy(orderBy = orderValue.toList)
+    infix def sortBy(sortValue: OrderBy[?]*): OverValue =
+        copy(sortBy = sortValue.toList)
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Rows(start, end)))
@@ -529,15 +512,15 @@ class WindowFunc[T](
    private[sqala] val name: String,
    private[sqala] val args: List[Expr[?]],
    private[sqala] val distinct: Boolean = false,
-   private[sqala] val orderBy: List[OrderBy[?]] = Nil
+   private[sqala] val sortBy: List[OrderBy[?]] = Nil
 )
 
 object WindowFunc:
     extension [T](expr: WindowFunc[T])
         infix def over(overValue: OverValue): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.orderBy)
-            Expr.Window(func, overValue.partitionBy, overValue.orderBy, overValue.frame)
+            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
+            Expr.Window(func, overValue.partitionBy, overValue.sortBy, overValue.frame)
 
         infix def over(overValue: Unit): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.orderBy)
+            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
             Expr.Window(func, Nil, Nil, None)

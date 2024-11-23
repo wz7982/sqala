@@ -82,12 +82,6 @@ extension [T](value: T)(using as: AsSqlExpr[T])
     ): Expr[Boolean] =
         Expr.Between(Expr.Literal(value, as), start, end, false)
 
-    def notBetween[S, E](start: Expr[S], end: Expr[E])(using
-        CompareOperation[T, S],
-        CompareOperation[T, E]
-    ): Expr[Boolean] =
-        Expr.Between(Expr.Literal(value, as), start, end, true)
-
 extension [T](x: T)(using m: Merge[T])
     @targetName("eq")
     def ===[R](that: R)(using
@@ -215,16 +209,3 @@ extension [T](x: T)(using m: Merge[T])
         c: CompareOperation[m.R, mv.R]
     ): Expr[Boolean] =
         m.asExpr(x).in(query)
-
-    def notIn[R, I <: Iterable[R]](list: I)(using
-        a: ComparableValue[R],
-        c: CompareOperation[m.R, R]
-    ): Expr[Boolean] =
-        m.asExpr(x).notIn(list)
-
-    def notIn[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
-        mv: Merge[V],
-        a: AsExpr[V],
-        c: CompareOperation[m.R, mv.R]
-    ): Expr[Boolean] =
-        m.asExpr(x).notIn(query)

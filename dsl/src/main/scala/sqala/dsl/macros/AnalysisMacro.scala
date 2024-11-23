@@ -572,10 +572,10 @@ object AnalysisMacro:
                         if window.groupsBetween then
                             report.error("GROUPS mode requires an ORDER BY clause.", window.term.asExpr)
                         windowParamsInfo(partition)
-                    case Apply(Ident("orderBy"), order :: Nil) =>
+                    case Apply(Ident("sortBy"), order :: Nil) =>
                         windowParamsInfo(order)
                     case Apply(
-                        Select(Apply(Ident("partitionBy"), partition :: Nil), "orderBy"), 
+                        Select(Apply(Ident("partitionBy"), partition :: Nil), "sortBy"), 
                         order :: Nil
                     ) =>
                         windowParamsInfo(partition) ++ windowParamsInfo(order)
