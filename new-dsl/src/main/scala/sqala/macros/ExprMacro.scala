@@ -703,7 +703,7 @@ object ExprMacro:
             report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
         
         if distinct && inWindow then
-            report.error(s"DISTINCT is not implemented for window functions.", term.asExpr)
+            report.error(s"DISTINCT is not supported for window functions.", term.asExpr)
 
         if distinct && sortByParam.isDefined then
             val firstParam = valueParams.head
