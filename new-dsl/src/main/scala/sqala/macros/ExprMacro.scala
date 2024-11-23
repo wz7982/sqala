@@ -36,7 +36,7 @@ object ExprMacro:
                     body
                 )
             case _ => missMatch(term)
-        val (sqlExpr, info) = treeInfoMacro(args, body, containers)
+        val (sqlExpr, info) = treeInfoMacro(args, containers, body)
         sqlExpr
 
     private def binaryOperators: List[String] =
@@ -89,8 +89,8 @@ object ExprMacro:
 
     private def treeInfoMacro(using q: Quotes)(
         args: List[String],
-        term: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        containers: Expr[List[(String, Container)]],
+        term: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -126,27 +126,27 @@ object ExprMacro:
                     case _ => missMatch(term)
                 sqlExpr -> info
             case Apply(Select(left, op), right :: Nil) if binaryOperators.contains(op) =>
-                createBinary(args, left, op, right, containers)
+                createBinary(args, containers, left, op, right)
             case Apply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, left, op, right, containers)
+                createBinary(args, containers, left, op, right)
             case Apply(Apply(TypeApply(Apply(Ident(op), left :: Nil), _), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, left, op, right, containers)
+                createBinary(args, containers, left, op, right)
             case Apply(Apply(TypeApply(Apply(TypeApply(Ident(op), _), left :: Nil), _), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, left, op, right, containers)
+                createBinary(args, containers, left, op, right)
             case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, left, op, right, containers)
+                createBinary(args, containers, left, op, right)
             case Select(v, op) if unaryOperators.contains(op) =>
-                createUnary(args, v, op, containers)
+                createUnary(args, containers, v, op)
             case Apply(TypeApply(Select(ident@Ident(_), "contains"), _), e :: Nil) =>
-                createIn(args, e, ident, containers)
+                createIn(args, containers, e, ident)
             case Apply(
                 Apply(
                     TypeApply(Apply(TypeApply(Ident("between"), _), v :: Nil), _), 
@@ -154,13 +154,13 @@ object ExprMacro:
                 ), 
                 _
             ) =>
-                createBetween(args, v, s, e, containers)
+                createBetween(args, containers, v, s, e)
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
                 if t.startsWith("Tuple")
             =>
-                createVector(args, terms, containers)
+                createVector(args, containers, terms)
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
-                createCast(args, v, cast, containers)
+                createCast(args, containers, v, cast)
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
@@ -179,9 +179,9 @@ object ExprMacro:
                                 case _ => missMatch(term)
                         case _ => missMatch(term)
                 if functionName == "GROUPING" then
-                    createGrouping(args, term, containers)
+                    createGrouping(args, containers, term)
                 else
-                    createAgg(args, functionName, term, false, containers)
+                    createAgg(args, containers, functionName, term, false)
             case _ if
                 term.symbol.annotations.find:
                     case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
@@ -199,7 +199,7 @@ object ExprMacro:
                                 case NamedArg(_, Literal(StringConstant(n))) => n
                                 case _ => missMatch(term)
                         case _ => missMatch(term)
-                createFunction(args, functionName, term, containers)
+                createFunction(args, containers, functionName, term)
             // TODO 窗口函数、子查询、子连接、if、match
             // TODO 窗口函数左边的聚合函数不支持within group、sort by、distinct
             case Apply(Ident("interval"), interval :: Nil) =>
@@ -214,13 +214,13 @@ object ExprMacro:
                 ), 
                 _
             ) =>
-                createExtract(args, unit, v, containers)
+                createExtract(args, containers, unit, v)
             case ident@Ident(_) => createValue(ident)
             case literal@Literal(_) => createValue(literal)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
-                treeInfoMacro(args, v, containers)
+                treeInfoMacro(args, containers, v)
             case Apply(Ident(name), v :: Nil) if name.endsWith("2bigDecimal") =>
-                treeInfoMacro(args, v, containers)
+                treeInfoMacro(args, containers, v)
             case _ => missMatch(term)
 
     private def tableColumnInfo(tableName: String, columnName: String)(using Quotes): ExprInfo =
@@ -281,10 +281,10 @@ object ExprMacro:
 
     private def createBinary(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         left: q.reflect.Term,
         op: String,
-        right: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        right: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         validateQuery(left)
         validateNotSubLink(left)
@@ -293,13 +293,13 @@ object ExprMacro:
         if op == "/" || op == "%" then
             validateDiv(right)
 
-        val (leftExpr, leftInfo) = treeInfoMacro(args, left, containers)
+        val (leftExpr, leftInfo) = treeInfoMacro(args, containers, left)
         val leftHasString = left.tpe.widen.asType match
             case '[String] => true
             case '[Option[String]] => true
             case _ => false
 
-        val (rightExpr, rightInfo) = treeInfoMacro(args, right, containers)
+        val (rightExpr, rightInfo) = treeInfoMacro(args, containers, right)
         val rightHasString = right.tpe.widen.asType match
             case '[String] => true
             case '[Option[String]] => true
@@ -390,13 +390,13 @@ object ExprMacro:
 
     private def createUnary(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
-        op: String,
-        containers: Expr[List[(String, Container)]]
+        op: String
     ): (Expr[SqlExpr], ExprInfo) =
         validateNotSubLink(term)
 
-        val (rightExpr, rightInfo) = treeInfoMacro(args, term, containers)
+        val (rightExpr, rightInfo) = treeInfoMacro(args, containers, term)
 
         val operatorExpr = op match
             case "unary_+" => '{ SqlUnaryOperator.Positive }
@@ -451,13 +451,13 @@ object ExprMacro:
 
     private def createIn(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
-        inTerm: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        inTerm: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         inTerm.tpe.asType match
             case '[Iterable[t]] =>
-                val (termExpr, termInfo) = treeInfoMacro(args, term, containers)
+                val (termExpr, termInfo) = treeInfoMacro(args, containers, term)
                 val expr = inTerm.asExprOf[Iterable[t]]
 
                 val asSqlExpr = Expr.summon[Merge[t]]
@@ -488,14 +488,14 @@ object ExprMacro:
 
     private def createBetween(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
         startTerm: q.reflect.Term,
-        endTerm: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        endTerm: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
-        val (betweenExpr, betweenInfo) = treeInfoMacro(args, term, containers)
-        val (startExpr, startInfo) = treeInfoMacro(args, startTerm, containers)
-        val (endExpr, endInfo) = treeInfoMacro(args, endTerm, containers)
+        val (betweenExpr, betweenInfo) = treeInfoMacro(args, containers, term)
+        val (startExpr, startInfo) = treeInfoMacro(args, containers, startTerm)
+        val (endExpr, endInfo) = treeInfoMacro(args, containers, endTerm)
 
         val sqlExpr = '{
             SqlExpr.Between($betweenExpr, $startExpr, $endExpr, false)
@@ -516,10 +516,11 @@ object ExprMacro:
 
     private def createVector(using q: Quotes)(
         args: List[String],
-        terms: List[q.reflect.Term],
-        containers: Expr[List[(String, Container)]]
+        containers: Expr[List[(String, Container)]],
+        terms: List[q.reflect.Term]
     ): (Expr[SqlExpr], ExprInfo) =
-        val treeInfo = terms.map(t => treeInfoMacro(args, t, containers))
+        val treeInfo = terms
+            .map(t => treeInfoMacro(args, containers, t))
         val listExpr = Expr.ofList(treeInfo.map(_._1))
         val sqlExpr = '{
             SqlExpr.Vector($listExpr)
@@ -541,14 +542,14 @@ object ExprMacro:
 
     private def createCast(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
-        cast: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        cast: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         cast.tpe.asType match
             case '[Cast[_, _]] =>
                 val castExpr = cast.asExprOf[Cast[?, ?]]
-                val (expr, info) = treeInfoMacro(args, term, containers)
+                val (expr, info) = treeInfoMacro(args, containers, term)
                 val sqlExpr = '{
                     SqlExpr.Cast($expr, $castExpr.castType)
                 }
@@ -588,14 +589,14 @@ object ExprMacro:
 
     private def createExtract(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         unit: q.reflect.Term,
-        term: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        term: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         unit.tpe.asType match
             case '[TimeUnit] =>
                 val unitExpr = unit.asExprOf[TimeUnit]
-                val (expr, info) = treeInfoMacro(args, term, containers)
+                val (expr, info) = treeInfoMacro(args, containers, term)
                 val sqlExpr = '{
                     SqlExpr.Extract($unitExpr.unit, $expr)
                 }
@@ -621,10 +622,10 @@ object ExprMacro:
 
     private def createAgg(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         name: String,
         term: q.reflect.Term,
-        inWindow: Boolean,
-        containers: Expr[List[(String, Container)]]
+        inWindow: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -723,7 +724,7 @@ object ExprMacro:
                     )
 
         val valueParamInfo = valueParams
-            .map(p => treeInfoMacro(args, p, containers))
+            .map(p => treeInfoMacro(args, containers, p))
         val valueParamExpr = Expr.ofList(valueParamInfo.map(_._1))
 
         val sortByList = sortByParam.toList.map:
@@ -731,7 +732,7 @@ object ExprMacro:
             case x => x :: Nil
         .flatten
         val sortByInfo = sortByList
-            .map(s => sortInfoMacro(args, s, containers))
+            .map(s => sortInfoMacro(args, containers, s))
         val sortByExpr = Expr.ofList(sortByInfo.map(_._1))
 
         val withinGroupList = withinGroupParam.toList.map:
@@ -739,7 +740,7 @@ object ExprMacro:
             case x => x :: Nil
         .flatten
         val withinGroupInfo = withinGroupList
-            .map(s => sortInfoMacro(args, s, containers))
+            .map(s => sortInfoMacro(args, containers, s))
         val withinGroupExpr = Expr.ofList(withinGroupInfo.map(_._1))
 
         val paramsInfo = 
@@ -779,15 +780,15 @@ object ExprMacro:
 
     private def createGrouping(using q: Quotes)(
         args: List[String],
-        term: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
+        containers: Expr[List[(String, Container)]],
+        term: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
         term match
             case Apply(Apply(Ident("grouping"), Typed(Repeated(items, _), _) :: Nil), _) =>
                 val info = items
-                    .map(i => treeInfoMacro(args, i, containers))
+                    .map(i => treeInfoMacro(args, containers, i))
                 for i <- info do
                     if !i._2.isGroup then
                         report.error(
@@ -814,9 +815,9 @@ object ExprMacro:
 
     private def createFunction(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         name: String,
         term: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -856,7 +857,7 @@ object ExprMacro:
         val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
 
         val paramsData = allParams
-            .map(p => treeInfoMacro(args, p._2, containers))
+            .map(p => treeInfoMacro(args, containers, p._2))
         val paramsInfo = paramsData.map(_._2)
         val paramsExpr = Expr.ofList(paramsData.map(_._1))
 
@@ -881,14 +882,14 @@ object ExprMacro:
 
     private def sortInfoMacro(using q: Quotes)(
         args: List[String],
+        containers: Expr[List[(String, Container)]],
         term: q.reflect.Term,
-        containers: Expr[List[(String, Container)]]
     ): (Expr[SqlOrderBy], ExprInfo) =
         import q.reflect.*
         
         term match
             case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) =>
-                val (expr, info) = treeInfoMacro(args, v, containers)
+                val (expr, info) = treeInfoMacro(args, containers, v)
                 val sqlOrderBy = op match
                     case "asc" => '{
                         SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None)
