@@ -147,6 +147,7 @@ object AnalysisMacro:
                 val terms = body match
                     case Inlined(Some(Apply(_, Apply(_, applyTerms) :: Nil)), _, _) =>
                         applyTerms
+                    case Apply(_, applyTerms) => applyTerms
                     case _ => Nil
                 val info = terms.map(t => treeInfoMacro(args, t))
                 for i <- info do
