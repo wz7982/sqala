@@ -7,8 +7,6 @@ import scala.compiletime.{constValue, erasedValue, summonInline}
 import scala.deriving.Mirror
 import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
-import java.text.SimpleDateFormat
-import java.util.Date
 
 trait JsonDecoder[T]:
     def decode(node: JsonNode)(using JsonDateFormat): T
@@ -59,14 +57,6 @@ object JsonDecoder:
         override def decode(node: JsonNode)(using JsonDateFormat): Boolean =
             node match
                 case JsonNode.Bool(boolean) => boolean
-                case _ => throw new JsonDecodeException
-
-    given dateDecoder: JsonDecoder[Date] with
-        override def decode(node: JsonNode)(using dateFormat: JsonDateFormat): Date =
-            node match
-                case JsonNode.Str(string) =>
-                    val formatter = new SimpleDateFormat(dateFormat.format)
-                    formatter.parse(string)
                 case _ => throw new JsonDecodeException
 
     given localDateDecoder: JsonDecoder[LocalDate] with

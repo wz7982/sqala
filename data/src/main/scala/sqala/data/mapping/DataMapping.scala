@@ -7,7 +7,6 @@ import scala.compiletime.summonInline
 import scala.deriving.Mirror
 import scala.quoted.*
 import java.time.{LocalDate, LocalDateTime}
-import java.util.Date
 
 trait DataMapping[A, B]:
     def map(x: A): B
@@ -33,9 +32,6 @@ object DataMapping:
 
     given booleanMapping: DataMapping[Boolean, Boolean] with
         override inline def map(x: Boolean): Boolean = x
-
-    given dateMapping: DataMapping[Date, Date] with
-        override inline def map(x: Date): Date = new Date(x.getTime)
 
     given localDateMapping: DataMapping[LocalDate, LocalDate] with
         override inline def map(x: LocalDate): LocalDate = LocalDate.from(x)

@@ -8,7 +8,7 @@ import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
-import java.util.Date
+import java.time.LocalDateTime
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
 import scala.compiletime.ops.boolean.*
@@ -17,11 +17,19 @@ import scala.compiletime.ops.double.*
 extension [T: AsSqlExpr](value: T)
     def asExpr: Expr[T] = Expr.Literal(value, summon[AsSqlExpr[T]])
 
+extension [T <: Tuple](exprs: T)(using m: Merge[T])
+    def asExpr: Expr[m.R] = m.asExpr(exprs)
+
 class If[T](private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[E: AsSqlExpr](expr: Expr[E])(using
         o: ResultOperation[T, E]
     ): IfThen[o.R] =
         IfThen(exprs :+ expr)
+
+    infix def `then`(value: T)(using 
+        a: AsSqlExpr[T]
+    ): IfThen[T] =
+        IfThen(exprs :+ Expr.Literal(value, a))
 
     infix def `then`[E](value: E)(using
         a: AsSqlExpr[E],
@@ -36,6 +44,13 @@ class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
+
+    infix def `else`(value: T)(using
+        a: AsSqlExpr[T]
+    ): Expr[T] =
+        val caseBranches =
+            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+        Expr.Case(caseBranches, Expr.Literal(value, a))
 
     infix def `else`[E](value: E)(using
         a: AsSqlExpr[E],
@@ -254,7 +269,7 @@ def lower[T <: String | Option[String]](expr: Expr[T]): Expr[T] =
     Expr.Func("LOWER", expr :: Nil)
 
 @sqlFunction
-def now(): Expr[Option[Date]] =
+def now(): Expr[Option[LocalDateTime]] =
     Expr.Func("NOW", Nil)
 
 def createFunc[T](

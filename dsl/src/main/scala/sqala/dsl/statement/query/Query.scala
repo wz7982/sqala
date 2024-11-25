@@ -55,7 +55,7 @@ sealed class Query[T, S <: ResultSize](
     def size: Query[Expr[Long], OneRow] =
         val expr = count()
         ast match
-            case s@SqlQuery.Select(None, _, _, _, Nil, _, _, _) =>
+            case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) if p != Some(SqlSelectParam.Distinct) =>
                 Query(expr, s.copy(select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil, limit = None))
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(

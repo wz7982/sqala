@@ -1,6 +1,6 @@
 package sqala.dsl
 
-import java.util.Date
+import java.time.LocalDateTime
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
@@ -33,11 +33,6 @@ object ComparableValue:
 trait CompareOperation[A, B]
 
 object CompareOperation:
-    inline def summonInstances[A, T]: List[CompareOperation[?, ?]] =
-        inline erasedValue[T] match
-            case _: EmptyTuple => Nil
-            case _: (Expr[t] *: ts) => summonInline[CompareOperation[A, t]] :: summonInstances[A, ts]
-
     given compare[A]: CompareOperation[A, A]()
 
     given optionCompare[A]: CompareOperation[A, Option[A]]()
@@ -52,15 +47,9 @@ object CompareOperation:
 
     given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: CompareOperation[A, B]()
 
-    given nothingCompare[B]: CompareOperation[Nothing, B]()
-
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()
 
     given tuple1Compare[LH, RH](using CompareOperation[LH, RH]): CompareOperation[LH *: EmptyTuple, RH *: EmptyTuple]()
-
-    given valueAndTuple1Compare[A, B](using CompareOperation[A, B]): CompareOperation[A, Tuple1[B]]()
-
-    given tuple1AndValueCompare[A, B](using CompareOperation[A, B]): CompareOperation[Tuple1[A], B]()
 
 @implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait ResultOperation[A, B]:
@@ -86,9 +75,9 @@ object ResultOperation:
         new ResultOperation[A, B]:
             type R = NumericResult[A, B]
 
-    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, Option[Date]] =
+    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, Option[LocalDateTime]] =
         new ResultOperation[A, B]:
-            type R = Option[Date]
+            type R = Option[LocalDateTime]
 
     given nothingResult[B]: Aux[Nothing, B, B] =
         new ResultOperation[Nothing, B]:

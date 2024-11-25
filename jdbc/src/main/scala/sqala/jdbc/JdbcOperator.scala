@@ -2,7 +2,6 @@ package sqala.jdbc
 
 import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
 import java.sql.Types.*
-import java.util.Date
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.unsafeNulls
@@ -23,7 +22,6 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
                 case n: Double => stmt.setDouble(i, n)
                 case b: Boolean => stmt.setBoolean(i, b)
                 case s: String => stmt.setString(i, s)
-                case d: Date => stmt.setDate(i, java.sql.Date(d.getTime))
                 case _ => stmt.setObject(i, arg)
         rs = stmt.executeQuery()
         while rs.next() do
@@ -49,7 +47,6 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
                 case n: Double => stmt.setDouble(i, n)
                 case b: Boolean => stmt.setBoolean(i, b)
                 case s: String => stmt.setString(i, s)
-                case d: Date => stmt.setDate(i, java.sql.Date(d.getTime))
                 case _ => stmt.setObject(i, arg)
         rs = stmt.executeQuery()
         val metaData = stmt.getMetaData()
@@ -100,7 +97,6 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): In
                 case n: Double => stmt.setDouble(i, n)
                 case b: Boolean => stmt.setBoolean(i, b)
                 case s: String => stmt.setString(i, s)
-                case d: Date => stmt.setDate(i, java.sql.Date(d.getTime))
                 case _ => stmt.setObject(i, arg)
         stmt.executeUpdate()
     finally
@@ -121,7 +117,6 @@ private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[
                 case n: Double => stmt.setDouble(i, n)
                 case b: Boolean => stmt.setBoolean(i, b)
                 case s: String => stmt.setString(i, s)
-                case d: Date => stmt.setDate(i, java.sql.Date(d.getTime))
                 case _ => stmt.setObject(i, arg)
         stmt.executeUpdate()
         val resultSet = stmt.getGeneratedKeys
