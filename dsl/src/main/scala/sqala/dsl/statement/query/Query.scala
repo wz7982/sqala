@@ -224,13 +224,13 @@ class SelectQuery[T](
         t: TupledFunction[F, tt.R => NamedTuple[N, V]],
     )(inline f: QueryContext ?=> F)(using 
         s: SelectItem[V],
-        a: SelectItemAsExpr[V]
-    ): ProjectionQuery[N, a.R, ?] =
+        a: AsExpr[V]
+    ): ProjectionQuery[N, V, ?] =
         val func = t.tupled(f)
         val mappedItems = func(tt.toTuple(queryItems))
         val selectItems = s.selectItems(mappedItems, 0)
         val newAst: SqlQuery.Select = ast.copy(select = selectItems)
-        AnalysisMacro.analysisSelect(f, a.asExpr(mappedItems), newAst, qc)
+        AnalysisMacro.analysisSelect(f, mappedItems, newAst, qc)
 
     private inline def joinClause[J, R](
         joinType: SqlJoinType,

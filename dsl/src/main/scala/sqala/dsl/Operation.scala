@@ -111,7 +111,7 @@ object UnionOperation:
             type R = Expr[r.R]
 
             def unionQueryItems(x: Expr[A]): R =
-                Expr.Ref(x)
+                Expr.Ref(x.asSqlExpr)
 
     given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using
         h: UnionOperation[LH, RH],

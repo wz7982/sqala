@@ -19,8 +19,6 @@ enum Expr[T] derives CanEqual:
 
     case Column[T](tableName: String, columnName: String) extends Expr[T]
 
-    case Null extends Expr[Nothing]
-
     case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
 
     case Unary[T](expr: Expr[?], op: SqlUnaryOperator) extends Expr[T]
@@ -67,7 +65,7 @@ enum Expr[T] derives CanEqual:
 
     case Extract[T](unit: SqlTimeUnit, expr: Expr[?]) extends Expr[T]
 
-    case Ref[T](expr: Expr[?]) extends Expr[T]
+    case Ref[T](expr: SqlExpr) extends Expr[T]
 
     @targetName("eq")
     def ==[R](value: R)(using
@@ -377,7 +375,6 @@ object Expr:
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
                 SqlExpr.Column(Some(tableName), columnName)
-            case Null => SqlExpr.Null
             case Binary(left, Equal, Literal(None, _)) =>
                 SqlExpr.NullTest(left.asSqlExpr, false)
             case Binary(left, NotEqual, Literal(None, _)) =>
@@ -438,9 +435,8 @@ object Expr:
                 SqlExpr.Cast(expr.asSqlExpr, castType)
             case Extract(unit, expr) =>
                 SqlExpr.Extract(unit, expr.asSqlExpr)
-            case Ref(expr) =>
-                expr.asSqlExpr
-
+            case Ref(expr) => expr
+            
     extension [T](expr: Expr[T])
         @targetName("to")
         def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match

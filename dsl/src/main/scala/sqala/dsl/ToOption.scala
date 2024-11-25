@@ -16,7 +16,7 @@ object ToOption:
             type R = Expr[Wrap[T, Option]]
 
             def toOption(x: Expr[T]): R =
-                Expr.Ref(x)
+                Expr.Ref(x.asSqlExpr)
 
     given tableToOption[T]: Aux[Table[T], Table[Wrap[T, Option]]] =
         new ToOption[Table[T]]:

@@ -1,86 +1,9 @@
 package sqala.dsl
 
-import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.dsl.statement.query.*
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
-
-extension [T](value: T)(using as: AsSqlExpr[T])
-    @targetName("eq")
-    def ===[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), Equal, that)
-
-    @targetName("ne")
-    def <>[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), NotEqual, that)
-
-    @targetName("gt")
-    def >[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), GreaterThan, that)
-
-    @targetName("ge")
-    def >=[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), GreaterThanEqual, that)
-
-    @targetName("lt")
-    def <[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), LessThan, that)
-
-    @targetName("le")
-    def <=[R](that: Expr[R])(using
-        c: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Expr.Binary(Expr.Literal(value, as), LessThanEqual, that)
-
-    @targetName("plus")
-    def +[R: Number](that: Expr[R])(using
-        n: Number[T],
-        r: ResultOperation[T, R]
-    ): Expr[r.R] =
-        Expr.Binary(Expr.Literal(value, as), Plus, that)
-
-    @targetName("minus")
-    def -[R](that: Expr[R])(using
-        n: Number[T],
-        r: ResultOperation[T, R]
-    ): Expr[r.R] =
-        Expr.Binary(Expr.Literal(value, as), Minus, that)
-
-    @targetName("times")
-    def *[R: Number](that: Expr[R])(using
-        n: Number[T],
-        r: ResultOperation[T, R]
-    ): Expr[r.R] =
-        Expr.Binary(Expr.Literal(value, as), Times, that)
-
-    @targetName("div")
-    def /[R: Number](that: Expr[R])(using
-        Number[T]
-    ): Expr[Option[BigDecimal]] =
-        Expr.Binary(Expr.Literal(value, as), Div, that)
-
-    @targetName("mod")
-    def %[R: Number](that: Expr[R])(using
-        Number[T]
-    ): Expr[Option[BigDecimal]] =
-        Expr.Binary(Expr.Literal(value, as), Mod, that)
-
-    def between[S, E](start: Expr[S], end: Expr[E])(using
-        CompareOperation[T, S],
-        CompareOperation[T, E]
-    ): Expr[Boolean] =
-        Expr.Between(Expr.Literal(value, as), start, end, false)
 
 extension [T](x: T)(using m: Merge[T])
     @targetName("eq")
