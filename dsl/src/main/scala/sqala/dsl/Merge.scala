@@ -3,7 +3,7 @@ package sqala.dsl
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("The type ${T} cannot be merged into a SQL expression.")
-trait Merge[T]:
+trait Merge[T <: Tuple]:
     type R
 
     def exprs(x: T): List[Expr[?]]
@@ -13,7 +13,7 @@ trait Merge[T]:
         Expr.Vector(exprList)
 
 object Merge:
-    type Aux[T, O] = Merge[T]:
+    type Aux[T <: Tuple, O] = Merge[T]:
         type R = O
 
     given mergeTuple[H, T <: Tuple](using
@@ -44,15 +44,27 @@ object MergeItem:
     type Aux[T, O] = MergeItem[T]:
         type R = O
 
-    given mergeValue[T: AsSqlExpr]: Aux[T, T] =
-        new MergeItem[T]:
-            type R = T
-
-            def asExpr(x: T): Expr[R] =
-                Expr.Literal(x, summon[AsSqlExpr[T]])
-
     given mergeExpr[T: AsSqlExpr]: Aux[Expr[T], T] =
         new MergeItem[Expr[T]]:
             type R = T
 
             def asExpr(x: Expr[T]): Expr[R] = x
+
+@implicitNotFound("The type ${R} cannot be merged into a SQL expression.")
+trait MergeIn[L, R]:
+    def exprs(x: R): List[Expr[?]]
+
+    def asExpr(x: R): Expr[?] =
+        val exprList = exprs(x)
+        Expr.Vector(exprList)
+
+object MergeIn:
+    given mergeTuple[L, H, T <: Tuple](using
+        t: MergeIn[L, T],
+        c: CompareOperation[L, H]
+    ): MergeIn[L, Expr[H] *: T] with
+        def exprs(x: Expr[H] *: T): List[Expr[?]] =
+            x.head :: t.exprs(x.tail)
+
+    given mergeEmptyTuple[L]: MergeIn[L, EmptyTuple] with
+        def exprs(x: EmptyTuple): List[Expr[?]] = Nil

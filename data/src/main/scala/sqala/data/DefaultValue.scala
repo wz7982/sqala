@@ -6,7 +6,6 @@ import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.quoted.*
 import java.time.{LocalDate, LocalDateTime}
-import java.util.Date
 
 trait DefaultValue[T]:
     def defaultValue: T
@@ -37,9 +36,6 @@ object DefaultValue:
 
     given booleanDefaultValue: DefaultValue[Boolean] with
         override def defaultValue: Boolean = false
-
-    given dateDefaultValue: DefaultValue[Date] with
-        override def defaultValue: Date = new Date
 
     given localDateDefaultValue: DefaultValue[LocalDate] with
         override def defaultValue: LocalDate = LocalDate.now()

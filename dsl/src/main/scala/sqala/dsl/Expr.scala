@@ -10,16 +10,14 @@ import sqala.ast.statement.SqlQuery
 import sqala.dsl.statement.dml.UpdatePair
 import sqala.dsl.statement.query.*
 
-import java.util.Date
+import java.time.LocalDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 
-enum Expr[T] derives CanEqual:
+enum Expr[T]:
     case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
 
     case Column[T](tableName: String, columnName: String) extends Expr[T]
-
-    case Null extends Expr[Nothing]
 
     case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
 
@@ -31,8 +29,8 @@ enum Expr[T] derives CanEqual:
         name: String,
         args: List[Expr[?]],
         distinct: Boolean = false,
-        sortBy: List[OrderBy[?]] = Nil,
-        withinGroup: List[OrderBy[?]] = Nil,
+        sortBy: List[SortBy[?]] = Nil,
+        withinGroup: List[SortBy[?]] = Nil,
         filter: Option[Expr[?]] = None
     ) extends Expr[T]
 
@@ -55,7 +53,7 @@ enum Expr[T] derives CanEqual:
     case Window[T](
         expr: Expr[?],
         partitionBy: List[Expr[?]],
-        sortBy: List[OrderBy[?]],
+        sortBy: List[SortBy[?]],
         frame: Option[SqlWindowFrame]
     ) extends Expr[T]
 
@@ -67,25 +65,23 @@ enum Expr[T] derives CanEqual:
 
     case Extract[T](unit: SqlTimeUnit, expr: Expr[?]) extends Expr[T]
 
-    case Ref[T](expr: Expr[?]) extends Expr[T]
+    case Ref[T](expr: SqlExpr) extends Expr[T]
 
     @targetName("eq")
-    def ==[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, Equal, a.asExpr(value))
+    def ==(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, Equal, v.asExpr(value))
 
     @targetName("eq")
-    def ==[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def ==[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, Equal, v.asExpr(value))
+
+    @targetName("eq")
+    def ==[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, Equal, that)
 
     @targetName("eq")
     def ==[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, Equal, SubQuery(query.ast))
@@ -95,22 +91,20 @@ enum Expr[T] derives CanEqual:
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
     @targetName("ne")
-    def !=[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, NotEqual, a.asExpr(value))
+    def !=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, NotEqual, v.asExpr(value))
 
     @targetName("ne")
-    def !=[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def !=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, NotEqual, v.asExpr(value))
+
+    @targetName("ne")
+    def !=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, NotEqual, that)
 
     @targetName("ne")
     def !=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubQuery(query.ast))
@@ -120,22 +114,20 @@ enum Expr[T] derives CanEqual:
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
     @targetName("gt")
-    def >[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThan, a.asExpr(value))
+    def >(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, GreaterThan, v.asExpr(value))
 
     @targetName("gt")
-    def >[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def >[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, GreaterThan, v.asExpr(value))
+
+    @targetName("gt")
+    def >[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
     def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, GreaterThan, SubQuery(query.ast))
@@ -145,22 +137,20 @@ enum Expr[T] derives CanEqual:
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
     @targetName("ge")
-    def >=[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, a.asExpr(value))
+    def >=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, v.asExpr(value))
 
     @targetName("ge")
-    def >=[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def >=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, v.asExpr(value))
+
+    @targetName("ge")
+    def >=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
     def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
@@ -170,22 +160,20 @@ enum Expr[T] derives CanEqual:
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
-    def <[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, LessThan, a.asExpr(value))
+    def <(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, LessThan, v.asExpr(value))
 
     @targetName("lt")
-    def <[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def <[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, LessThan, v.asExpr(value))
+
+    @targetName("lt")
+    def <[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThan, that)
 
     @targetName("lt")
     def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, LessThan, SubQuery(query.ast))
@@ -195,22 +183,20 @@ enum Expr[T] derives CanEqual:
         Binary(this, LessThan, SubLink(item.query, item.linkType))
 
     @targetName("le")
-    def <=[R](value: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
-    ): Expr[Boolean] =
-        Binary(this, LessThanEqual, a.asExpr(value))
+    def <=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
+        Binary(this, LessThanEqual, v.asExpr(value))
 
     @targetName("le")
-    def <=[R](that: Expr[R])(using
-        CompareOperation[T, R]
-    ): Expr[Boolean] =
+    def <=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+        Binary(this, LessThanEqual, v.asExpr(value))
+
+    @targetName("le")
+    def <=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
     def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        a: AsExpr[V],
         c: CompareOperation[T, m.R]
     ): Expr[Boolean] =
         Binary(this, LessThanEqual, SubQuery(query.ast))
@@ -224,6 +210,11 @@ enum Expr[T] derives CanEqual:
         o: CompareOperation[T, R]
     ): Expr[Boolean] =
         In(this, Vector(list.toList.map(a.asExpr(_))), false)
+
+    def in[R <: Tuple](exprs: R)(using
+        m: MergeIn[T, R]
+    ): Expr[Boolean] =
+        In(this, m.asExpr(exprs), false)
 
     def in[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
@@ -260,7 +251,7 @@ enum Expr[T] derives CanEqual:
         Binary(this, Plus, that)
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date]] =
+    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[LocalDateTime]] =
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
@@ -278,7 +269,7 @@ enum Expr[T] derives CanEqual:
         Binary(this, Minus, that)
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[Date]] =
+    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[LocalDateTime]] =
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
     @targetName("times")
@@ -377,7 +368,6 @@ object Expr:
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
                 SqlExpr.Column(Some(tableName), columnName)
-            case Null => SqlExpr.Null
             case Binary(left, Equal, Literal(None, _)) =>
                 SqlExpr.NullTest(left.asSqlExpr, false)
             case Binary(left, NotEqual, Literal(None, _)) =>
@@ -438,8 +428,7 @@ object Expr:
                 SqlExpr.Cast(expr.asSqlExpr, castType)
             case Extract(unit, expr) =>
                 SqlExpr.Extract(unit, expr.asSqlExpr)
-            case Ref(expr) =>
-                expr.asSqlExpr
+            case Ref(expr) => expr
 
     extension [T](expr: Expr[T])
         @targetName("to")
@@ -466,21 +455,21 @@ object Expr:
             Expr.Window(expr, Nil, Nil, None)
 
     extension [T](expr: Expr[T])
-        def asc: OrderBy[T] = OrderBy(expr, Asc, None)
+        def asc: SortBy[T] = SortBy(expr, Asc, None)
 
-        def desc: OrderBy[T] = OrderBy(expr, Desc, None)
+        def desc: SortBy[T] = SortBy(expr, Desc, None)
 
-        def ascNullsFirst: OrderBy[T] = OrderBy(expr, Asc, Some(First))
+        def ascNullsFirst: SortBy[T] = SortBy(expr, Asc, Some(First))
 
-        def ascNullsLast: OrderBy[T] = OrderBy(expr, Asc, Some(Last))
+        def ascNullsLast: SortBy[T] = SortBy(expr, Asc, Some(Last))
 
-        def descNullsFirst: OrderBy[T] = OrderBy(expr, Desc, Some(First))
+        def descNullsFirst: SortBy[T] = SortBy(expr, Desc, Some(First))
 
-        def descNullsLast: OrderBy[T] = OrderBy(expr, Desc, Some(Last))
+        def descNullsLast: SortBy[T] = SortBy(expr, Desc, Some(Last))
 
     given exprToTuple1[T]: Conversion[Expr[T], Tuple1[Expr[T]]] = Tuple1(_)
 
-class OrderBy[T](
+class SortBy[T](
     private[sqala] val expr: Expr[?],
     private[sqala] val order: SqlOrderByOption,
     private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
@@ -493,10 +482,10 @@ class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val link
 
 case class OverValue(
     private[sqala] val partitionBy: List[Expr[?]] = Nil,
-    private[sqala] val sortBy: List[OrderBy[?]] = Nil,
+    private[sqala] val sortBy: List[SortBy[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    infix def sortBy(sortValue: OrderBy[?]*): OverValue =
+    infix def sortBy(sortValue: SortBy[?]*): OverValue =
         copy(sortBy = sortValue.toList)
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
@@ -510,17 +499,15 @@ case class OverValue(
 
 class WindowFunc[T](
    private[sqala] val name: String,
-   private[sqala] val args: List[Expr[?]],
-   private[sqala] val distinct: Boolean = false,
-   private[sqala] val sortBy: List[OrderBy[?]] = Nil
+   private[sqala] val args: List[Expr[?]]
 )
 
 object WindowFunc:
     extension [T](expr: WindowFunc[T])
         infix def over(overValue: OverValue): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
+            val func = Expr.Func(expr.name, expr.args)
             Expr.Window(func, overValue.partitionBy, overValue.sortBy, overValue.frame)
 
         infix def over(overValue: Unit): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
+            val func = Expr.Func(expr.name, expr.args)
             Expr.Window(func, Nil, Nil, None)

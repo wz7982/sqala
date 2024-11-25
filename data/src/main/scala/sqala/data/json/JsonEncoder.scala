@@ -4,8 +4,6 @@ import sqala.util.*
 
 import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
-import java.text.SimpleDateFormat
-import java.util.Date
 import scala.compiletime.{constValue, erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.quoted.*
@@ -39,11 +37,6 @@ object JsonEncoder:
 
     given booleanEncoder: JsonEncoder[Boolean] with
         override inline def encode(x: Boolean)(using JsonDateFormat): JsonNode = JsonNode.Bool(x)
-
-    given dateEncoder: JsonEncoder[Date] with
-        override inline def encode(x: Date)(using dataFormat: JsonDateFormat): JsonNode =
-            val formatter = new SimpleDateFormat(dataFormat.format)
-            JsonNode.Str(formatter.format(x))
 
     given localDateEncoder: JsonEncoder[LocalDate] with
         override inline def encode(x: LocalDate)(using dateFormat: JsonDateFormat): JsonNode =

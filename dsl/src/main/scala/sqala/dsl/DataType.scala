@@ -1,36 +1,33 @@
 package sqala.dsl
 
 import java.time.{LocalDate, LocalDateTime}
-import java.util.Date
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("Expr must be a numeric type.")
 trait Number[T]
 
 object Number:
-    given intNumber: Number[Int]()
+    given int: Number[Int]()
 
-    given longNumber: Number[Long]()
+    given long: Number[Long]()
 
-    given floatNumber: Number[Float]()
+    given float: Number[Float]()
 
-    given doubleNumber: Number[Double]()
+    given double: Number[Double]()
 
-    given decimalNumber: Number[BigDecimal]()
+    given decimal: Number[BigDecimal]()
 
-    given optionNumber[T: Number]: Number[Option[T]]()
+    given option[T: Number]: Number[Option[T]]()
 
 @implicitNotFound("Expr must be a time type.")
 trait DateTime[T]
 
 object DateTime:
-    given dateDateTime: DateTime[Date]()
+    given localDate: DateTime[LocalDate]()
 
-    given localDateDateTime: DateTime[LocalDate]()
+    given localDateTime: DateTime[LocalDateTime]()
 
-    given localDateTimeDateTime: DateTime[LocalDateTime]()
-
-    given optionDateTime[T: DateTime]: DateTime[Option[T]]()
+    given option[T: DateTime]: DateTime[Option[T]]()
 
 opaque type Json = String
 

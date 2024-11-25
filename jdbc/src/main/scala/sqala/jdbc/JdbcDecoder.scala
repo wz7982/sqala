@@ -4,7 +4,6 @@ import sqala.dsl.{CustomField, Json}
 
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}
-import java.util.Date
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
@@ -55,11 +54,6 @@ object JdbcDecoder:
         override inline def offset: Int = 1
 
         override inline def decode(data: ResultSet, cursor: Int): String = data.getString(cursor)
-
-    given dateDecoder: JdbcDecoder[Date] with
-        override inline def offset: Int = 1
-
-        override inline def decode(data: ResultSet, cursor: Int): Date = data.getTimestamp(cursor)
 
     given localDateDecoder: JdbcDecoder[LocalDate] with
         override inline def offset: Int = 1

@@ -2,7 +2,6 @@ package sqala.jdbc
 
 import java.sql.PreparedStatement
 import java.time.{LocalDate, LocalDateTime}
-import java.util.Date
 
 trait SetDefaultValue[T]:
     def jdbcType: Int
@@ -51,12 +50,6 @@ object SetDefaultValue:
 
         override def setValue(stmt: PreparedStatement, n: Int): Unit =
             stmt.setString(n, "")
-
-    given setDate: SetDefaultValue[Date] with
-        override def jdbcType: Int = java.sql.Types.DATE
-
-        override def setValue(stmt: PreparedStatement, n: Int): Unit =
-            stmt.setDate(n, java.sql.Date.valueOf("1970-01-01"))
 
     given setLocalDate: SetDefaultValue[LocalDate] with
         override def jdbcType: Int = java.sql.Types.DATE

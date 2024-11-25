@@ -20,7 +20,6 @@ given [T](using Type[T]): FromExpr[SetDefaultValue[T]] with
         case '{ SetDefaultValue.setDecimal } => Some(SetDefaultValue.setDecimal.asInstanceOf[SetDefaultValue[T]])
         case '{ SetDefaultValue.setBoolean } => Some(SetDefaultValue.setBoolean.asInstanceOf[SetDefaultValue[T]])
         case '{ SetDefaultValue.setString } => Some(SetDefaultValue.setString.asInstanceOf[SetDefaultValue[T]])
-        case '{ SetDefaultValue.setDate } => Some(SetDefaultValue.setDate.asInstanceOf[SetDefaultValue[T]])
         case '{ SetDefaultValue.setLocalDate } => Some(SetDefaultValue.setLocalDate.asInstanceOf[SetDefaultValue[T]])
         case '{ SetDefaultValue.setLocalDateTime } => Some(SetDefaultValue.setLocalDateTime.asInstanceOf[SetDefaultValue[T]])
         case _ => None
