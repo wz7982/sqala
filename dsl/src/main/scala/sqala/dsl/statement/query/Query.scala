@@ -131,7 +131,7 @@ class GroupedProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => SortBy[O]
     ): GroupedSortQuery[N, V, S] =
         AnalysisMacro.analysisGroupedOrder(f)
         val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
@@ -144,7 +144,7 @@ class GroupedSortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => SortBy[O]
     ): GroupedSortQuery[N, V, S] =
         AnalysisMacro.analysisGroupedOrder(f)
         val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
@@ -160,7 +160,7 @@ class ProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
         DistinctQuery(queryItems, ast.copy(param = Some(SqlSelectParam.Distinct)))
 
     inline def sortBy[O](
-        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => SortBy[O]
     ): SortQuery[N, V, S] =
         AnalysisMacro.analysisOrder(f)
         val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
@@ -173,7 +173,7 @@ class SortQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => SortBy[O]
     ): SortQuery[N, V, S] =
         AnalysisMacro.analysisOrder(f)
         val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))
@@ -186,7 +186,7 @@ class DistinctQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using QueryContext) extends Query[NamedTuple[N, V], S](queryItems, ast):
     inline def sortBy[O](
-        inline f: QueryContext ?=> Sort[N, V] => OrderBy[O]
+        inline f: QueryContext ?=> Sort[N, V] => SortBy[O]
     ): DistinctQuery[N, V, S] =
         AnalysisMacro.analysisDistinctOrder(f)
         val sort = Sort[N, V](queryItems.toTuple.toList.map(_.asInstanceOf[Expr[?]]))

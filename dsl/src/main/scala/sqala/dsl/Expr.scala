@@ -29,8 +29,8 @@ enum Expr[T] derives CanEqual:
         name: String,
         args: List[Expr[?]],
         distinct: Boolean = false,
-        sortBy: List[OrderBy[?]] = Nil,
-        withinGroup: List[OrderBy[?]] = Nil,
+        sortBy: List[SortBy[?]] = Nil,
+        withinGroup: List[SortBy[?]] = Nil,
         filter: Option[Expr[?]] = None
     ) extends Expr[T]
 
@@ -53,7 +53,7 @@ enum Expr[T] derives CanEqual:
     case Window[T](
         expr: Expr[?],
         partitionBy: List[Expr[?]],
-        sortBy: List[OrderBy[?]],
+        sortBy: List[SortBy[?]],
         frame: Option[SqlWindowFrame]
     ) extends Expr[T]
 
@@ -436,7 +436,7 @@ object Expr:
             case Extract(unit, expr) =>
                 SqlExpr.Extract(unit, expr.asSqlExpr)
             case Ref(expr) => expr
-            
+
     extension [T](expr: Expr[T])
         @targetName("to")
         def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = expr match
@@ -462,21 +462,21 @@ object Expr:
             Expr.Window(expr, Nil, Nil, None)
 
     extension [T](expr: Expr[T])
-        def asc: OrderBy[T] = OrderBy(expr, Asc, None)
+        def asc: SortBy[T] = SortBy(expr, Asc, None)
 
-        def desc: OrderBy[T] = OrderBy(expr, Desc, None)
+        def desc: SortBy[T] = SortBy(expr, Desc, None)
 
-        def ascNullsFirst: OrderBy[T] = OrderBy(expr, Asc, Some(First))
+        def ascNullsFirst: SortBy[T] = SortBy(expr, Asc, Some(First))
 
-        def ascNullsLast: OrderBy[T] = OrderBy(expr, Asc, Some(Last))
+        def ascNullsLast: SortBy[T] = SortBy(expr, Asc, Some(Last))
 
-        def descNullsFirst: OrderBy[T] = OrderBy(expr, Desc, Some(First))
+        def descNullsFirst: SortBy[T] = SortBy(expr, Desc, Some(First))
 
-        def descNullsLast: OrderBy[T] = OrderBy(expr, Desc, Some(Last))
+        def descNullsLast: SortBy[T] = SortBy(expr, Desc, Some(Last))
 
     given exprToTuple1[T]: Conversion[Expr[T], Tuple1[Expr[T]]] = Tuple1(_)
 
-class OrderBy[T](
+class SortBy[T](
     private[sqala] val expr: Expr[?],
     private[sqala] val order: SqlOrderByOption,
     private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
@@ -489,10 +489,10 @@ class SubLinkItem[T](private[sqala] val query: SqlQuery, private[sqala] val link
 
 case class OverValue(
     private[sqala] val partitionBy: List[Expr[?]] = Nil,
-    private[sqala] val sortBy: List[OrderBy[?]] = Nil,
+    private[sqala] val sortBy: List[SortBy[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    infix def sortBy(sortValue: OrderBy[?]*): OverValue =
+    infix def sortBy(sortValue: SortBy[?]*): OverValue =
         copy(sortBy = sortValue.toList)
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
@@ -506,17 +506,15 @@ case class OverValue(
 
 class WindowFunc[T](
    private[sqala] val name: String,
-   private[sqala] val args: List[Expr[?]],
-   private[sqala] val distinct: Boolean = false,
-   private[sqala] val sortBy: List[OrderBy[?]] = Nil
+   private[sqala] val args: List[Expr[?]]
 )
 
 object WindowFunc:
     extension [T](expr: WindowFunc[T])
         infix def over(overValue: OverValue): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
+            val func = Expr.Func(expr.name, expr.args)
             Expr.Window(func, overValue.partitionBy, overValue.sortBy, overValue.frame)
 
         infix def over(overValue: Unit): Expr[T] =
-            val func = Expr.Func(expr.name, expr.args, expr.distinct, expr.sortBy)
+            val func = Expr.Func(expr.name, expr.args)
             Expr.Window(func, Nil, Nil, None)

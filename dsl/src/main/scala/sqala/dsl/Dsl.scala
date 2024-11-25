@@ -100,14 +100,14 @@ def anyValue[T](expr: Expr[T]): Expr[Wrap[T, Option]] =
 @sqlAgg
 def percentileCont[N: Number](
     n: Double,
-    withinGroup: OrderBy[N]
+    withinGroup: SortBy[N]
 )(using Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."]): Expr[Option[BigDecimal]] =
     Expr.Func("PERCENTILE_CONT", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
 @sqlAgg
 def percentileDisc[N: Number](
     n: Double,
-    withinGroup: OrderBy[N]
+    withinGroup: SortBy[N]
 )(using Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."]): Expr[Option[BigDecimal]] =
     Expr.Func("PERCENTILE_DISC", n.asExpr :: Nil, withinGroup = withinGroup :: Nil)
 
@@ -115,7 +115,7 @@ def percentileDisc[N: Number](
 def stringAgg[T <: String | Option[String]](
     expr: Expr[T],
     separator: String,
-    sortBy: OrderBy[?]*
+    sortBy: SortBy[?]*
 ): Expr[Option[String]] =
     Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, sortBy.toList)
 
@@ -261,17 +261,16 @@ def createFunc[T](
     name: String,
     args: List[Expr[?]],
     distinct: Boolean = false,
-    sortBy: List[OrderBy[?]] = Nil
+    sortBy: List[SortBy[?]] = Nil,
+    withinGroup: List[SortBy[?]] = Nil
 ): Expr[T] =
-    Expr.Func(name, args, distinct, sortBy)
+    Expr.Func(name, args, distinct, sortBy, withinGroup)
 
 def createWindowFunc[T](
     name: String,
-    args: List[Expr[?]],
-    distinct: Boolean = false,
-    sortBy: List[OrderBy[?]] = Nil
+    args: List[Expr[?]]
 ): WindowFunc[T] =
-    WindowFunc(name, args, distinct, sortBy)
+    WindowFunc(name, args)
 
 def createBinaryOperator[T](left: Expr[?], op: String, right: Expr[?]): Expr[T] =
     Expr.Binary(left, SqlBinaryOperator.Custom(op), right)
@@ -347,7 +346,7 @@ extension (n: Int)
 def partitionBy(partitionValue: Expr[?]*): OverValue =
     OverValue(partitionBy = partitionValue.toList)
 
-def sortBy(sortValue: OrderBy[?]*): OverValue =
+def sortBy(sortValue: SortBy[?]*): OverValue =
     OverValue(sortBy = sortValue.toList)
 
 def queryContext[T](v: QueryContext ?=> T): T =
