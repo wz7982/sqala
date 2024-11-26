@@ -20,24 +20,31 @@ extension [T: AsSqlExpr](value: T)
 extension [T <: Tuple](exprs: T)(using m: Merge[T])
     def asExpr: Expr[m.R] = m.asExpr(exprs)
 
-class If[T](private[sqala] val exprs: List[Expr[?]]):
+class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
+    infix def `then`[E: AsSqlExpr](expr: Expr[E]): IfThen[E] =
+        IfThen(exprs :+ expr)
+
+    infix def `then`[E](value: E)(using
+        a: AsSqlExpr[E]
+    ): IfThen[E] =
+        IfThen(exprs :+ Expr.Literal(value, a))
+
+    infix def `then`[E](value: Some[E])(using
+        a: AsSqlExpr[Option[E]]
+    ): IfThen[Option[E]] =
+        IfThen(exprs :+ Expr.Literal(value, a))
+
+class If[T: AsSqlExpr](private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[E: AsSqlExpr](expr: Expr[E])(using
-        o: ResultOperation[T, E]
+        o: ResultOperation[T, E],
+        a: AsSqlExpr[o.R]
     ): IfThen[o.R] =
         IfThen(exprs :+ expr)
 
-    infix def `then`(value: T)(using 
-        a: AsSqlExpr[T]
-    ): IfThen[T] =
-        IfThen(exprs :+ Expr.Literal(value, a))
+    infix def `then`(value: T): IfThen[T] =
+        IfThen(exprs :+ Expr.Literal(value, summon[AsSqlExpr[T]]))
 
-    infix def `then`[E](value: E)(using
-        a: AsSqlExpr[E],
-        o: ResultOperation[T, E]
-    ): IfThen[o.R] =
-        IfThen(exprs :+ Expr.Literal(value, a))
-
-class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
+class IfThen[T: AsSqlExpr](private[sqala] val exprs: List[Expr[?]]):
     infix def `else`[E: AsSqlExpr](expr: Expr[E])(using
         o: ResultOperation[T, E]
     ): Expr[o.R] =
@@ -45,25 +52,15 @@ class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`(value: T)(using
-        a: AsSqlExpr[T]
-    ): Expr[T] =
+    infix def `else`(value: T): Expr[T] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, Expr.Literal(value, a))
-
-    infix def `else`[E](value: E)(using
-        a: AsSqlExpr[E],
-        o: ResultOperation[T, E]
-    ): Expr[o.R] =
-        val caseBranches =
-            exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, Expr.Literal(value, a))
+        Expr.Case(caseBranches, Expr.Literal(value, summon[AsSqlExpr[T]]))
 
     infix def `else if`(expr: Expr[Boolean]): If[T] =
         If(exprs :+ expr)
 
-def `if`(expr: Expr[Boolean]): If[Nothing] = If(expr :: Nil)
+def `if`(expr: Expr[Boolean]): EmptyIf = EmptyIf(expr :: Nil)
 
 def exists[T, S <: ResultSize](query: Query[T, S]): Expr[Boolean] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
