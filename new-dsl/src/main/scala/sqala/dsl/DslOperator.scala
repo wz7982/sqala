@@ -2,6 +2,7 @@ package sqala.dsl
 
 import java.util.Date
 import java.time.{LocalDate, LocalDateTime}
+import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 
 // TODO query、subLink
@@ -30,6 +31,12 @@ given stringTimeEqual[L <: String | Option[String], R](using DateTime[R], QueryC
     CanEqual.derived
 
 given nothingEqual[L](using QueryContext): CanEqual[L, Nothing] =
+    CanEqual.derived
+
+given valueAndQueryEqual[L, N <: Tuple, V <: Tuple, S <: ResultSize](using 
+    CanEqual[L, V], 
+    QueryContext
+): CanEqual[L, Query[NamedTuple[N, V], S]] =
     CanEqual.derived
 
 extension [X](x: X)

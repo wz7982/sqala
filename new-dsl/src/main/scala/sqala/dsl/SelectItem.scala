@@ -14,12 +14,6 @@ trait SelectItem[T]:
     def selectItems(item: T, cursor: Int): List[SqlSelectItem.Item]
 
 object SelectItem:
-    given valueSelectItem[T: AsSqlExpr]: SelectItem[T] with
-        def offset(item: T): Int = 1
-
-        def selectItems(item: T, cursor: Int): List[Item] =
-            SqlSelectItem.Item(summon[AsSqlExpr[T]].asSqlExpr(item), Some(s"c${cursor}")) :: Nil
-
     given tableSelectItem[T]: SelectItem[Table[T]] with
         override def offset(item: Table[T]): Int = item.__metaData__.fieldNames.size
 

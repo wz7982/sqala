@@ -89,6 +89,11 @@ class Query[T, S <: ResultSize](
         )
         Query(outerQuery)
 
+class ProjectionQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    override val ast: SqlQuery.Select
+)(using override val qc: QueryContext) extends Query[NamedTuple[N, V], S](ast)
+    // TODO
+
 class TableQuery[T](
     private[sqala] val containers: List[Container],
     override val ast: SqlQuery.Select
@@ -98,7 +103,28 @@ class TableQuery[T](
         t: TupledFunction[F, tt.R => Boolean]
     )(inline f: QueryContext ?=> F): TableQuery[T] =
         val args = ClauseMacro.fetchArgNames(f(using qc))
-        val outerContainers = args.zip(containers)
-        given newContext: QueryContext = QueryContext(qc.tableIndex, outerContainers ++ qc.outerContainers)
+        val currentContainers = args.zip(containers)
+        given newContext: QueryContext = QueryContext(qc.tableIndex, currentContainers ++ qc.outerContainers)
         val condition = ClauseMacro.analysisFilter(f, newContext.outerContainers)
         TableQuery(containers, ast.addWhere(condition))
+
+    inline def withFilter[F](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => Boolean]
+    )(inline f: QueryContext ?=> F): TableQuery[T] =
+        filter(f)
+
+    inline def filterIf[F](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => Boolean]
+    )(test: Boolean)(inline f: QueryContext ?=> F): TableQuery[T] =
+        if test then filter(f) else this
+
+    transparent inline def map[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        t: TupledFunction[F, tt.R => NamedTuple[N, V]],
+    )(inline f: QueryContext ?=> F): ProjectionQuery[N, V, ?] =
+        val args = ClauseMacro.fetchArgNames(f(using qc))
+        val currentContainers = args.zip(containers)
+        given newContext: QueryContext = QueryContext(qc.tableIndex, currentContainers ++ qc.outerContainers)
+        ClauseMacro.analysisSelect[F, N, V](f, newContext.outerContainers, ast, newContext)

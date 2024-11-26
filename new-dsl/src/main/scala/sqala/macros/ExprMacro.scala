@@ -203,7 +203,28 @@ object ExprMacro:
                 treeInfoMacro(args, containers, v)
             case Apply(Ident(name), v :: Nil) if name.endsWith("2bigDecimal") =>
                 treeInfoMacro(args, containers, v)
-            case _ => missMatch(term)
+            case _ =>
+                term.tpe.asType match
+                    case '[Query[_, _]] =>
+                        validateQuery(term)
+                        val expr = term.asExprOf[Query[?, ?]]
+                        val sqlExpr = '{
+                            SqlExpr.SubQuery($expr.ast)
+                        }
+                        // report.error(s"${sqlExpr.asTerm.show}")
+                        sqlExpr -> ExprInfo(
+                            hasAgg = false,
+                            isAgg = false,
+                            isGroup = false,
+                            hasWindow = false,
+                            isConst = false,
+                            isColumn = false,
+                            columnRef = Nil,
+                            aggRef = Nil,
+                            nonAggRef = Nil,
+                            ungroupedRef = Nil
+                        )
+                    case _ => missMatch(term)
 
     private def tableColumnInfo(tableName: String, columnName: String)(using Quotes): ExprInfo =
         ExprInfo(
@@ -268,9 +289,8 @@ object ExprMacro:
         op: String,
         right: q.reflect.Term
     ): (Expr[SqlExpr], ExprInfo) =
-        validateQuery(left)
+        // TODO 修改子连接检查
         validateNotSubLink(left)
-        validateQuery(right)
 
         if op == "/" || op == "%" then
             validateDiv(right)
@@ -615,6 +635,7 @@ object ExprMacro:
         term: q.reflect.Term,
         inOver: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
+        // TODO 聚合函数不能引用外层列
         import q.reflect.*
 
         val paramTerms = removeNestedApply(term) match

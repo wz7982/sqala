@@ -1,6 +1,7 @@
 package sqala.macros
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.*
+import sqala.ast.statement.*
 import sqala.dsl.*
 
 import scala.quoted.* 
@@ -11,6 +12,14 @@ object ClauseMacro:
 
     inline def analysisFilter[T](inline f: T, containers: List[(String, Container)]): SqlExpr =
         ${ analysisFilterMacro[T]('f, 'containers) }
+
+    transparent inline def analysisSelect[T, N <: Tuple, V <: Tuple](
+        inline f: T, 
+        containers: List[(String, Container)],
+        ast: SqlQuery.Select,
+        qc: QueryContext
+    ): ProjectionQuery[N, V, ?] =
+        ${ analysisSelectMacro[T, N, V]('f, 'containers, 'ast, 'qc) }
 
     private def fetchArgNamesMacro[T](f: Expr[T])(using Quotes): Expr[List[String]] =
         val (args, _) = unwrapFuncMacro(f)
@@ -33,6 +42,60 @@ object ClauseMacro:
             report.error("Window functions are not allowed in WHERE/ON.", body.asExpr)
 
         expr
+
+    private def analysisSelectMacro[T, N <: Tuple : Type, V <: Tuple : Type](
+        f: Expr[T], 
+        containers: Expr[List[(String, Container)]],
+        ast: Expr[SqlQuery.Select],
+        qc: Expr[QueryContext]
+    )(using q: Quotes): Expr[ProjectionQuery[N, V, ?]] =
+        import q.reflect.*
+
+        val (args, body) = unwrapFuncMacro(f)
+
+        val terms = body.tpe.asType match
+            case '[type t <: Tuple; t] =>
+                body match
+                    case Apply(_, applyTerms) => applyTerms
+            case '[type t <: scala.NamedTuple.AnyNamedTuple; t] =>
+                body match
+                    case Apply(_, Apply(_, applyTerms) :: Nil) =>
+                        applyTerms
+                    case _ => Nil
+            case _ => Nil
+
+        val exprInfo = terms
+            .map(t => ExprMacro.treeInfoMacro(args, containers, t, false))
+
+        val info = exprInfo.map(_._2)
+
+        val hasAgg = info.map(_.hasAgg).fold(false)(_ || _)
+            if hasAgg then
+                for i <- info if i.nonAggRef.nonEmpty do
+                    val c = i.nonAggRef.head
+                    report.error(
+                        s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                        body.asExpr
+                    )
+                
+        val isAgg = info.map(_.hasAgg).forall(i => i)
+
+        val selectExpr = Expr.ofList(exprInfo.map(_._1))
+
+        val newAstExpr = '{
+            val selectItems = $selectExpr.zipWithIndex.map: (e, i) =>
+                SqlSelectItem.Item(e, Some(s"c$i"))
+            $ast.copy(select = selectItems)
+        }
+
+        if isAgg then
+            '{
+                new ProjectionQuery[N, V, OneRow]($newAstExpr)(using $qc)
+            }
+        else 
+            '{
+                new ProjectionQuery[N, V, ManyRows]($newAstExpr)(using $qc)
+            }
 
     private def unwrapFuncMacro[T](
         value: Expr[T]
