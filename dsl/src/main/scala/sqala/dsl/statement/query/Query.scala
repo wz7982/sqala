@@ -219,6 +219,18 @@ class SelectQuery[T](
     )(test: Boolean)(inline f: QueryContext ?=> F): SelectQuery[T] =
         if test then filter(f) else this
 
+    inline def filterOpt[F, O](value: Option[O])(using
+        tt: ToTuple[T],
+        t: TupledFunction[F, O *: tt.R => Expr[Boolean]]
+    )(inline f: QueryContext ?=> F): SelectQuery[T] =
+        AnalysisMacro.analysisFilter(f)
+        val func = t.tupled(f)
+        value match
+            case None => this
+            case Some(v) => 
+                val condition = func(v *: tt.toTuple(queryItems)).asSqlExpr
+                SelectQuery(queryItems, ast.addWhere(condition))
+
     transparent inline def map[F, N <: Tuple, V <: Tuple](using
         tt: ToTuple[T],
         t: TupledFunction[F, tt.R => NamedTuple[N, V]],
