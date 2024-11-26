@@ -21,6 +21,8 @@ enum Expr[T]:
 
     case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
 
+    case NullTest(expr: Expr[?], not: Boolean) extends Expr[Boolean]
+
     case Unary[T](expr: Expr[?], op: SqlUnaryOperator) extends Expr[T]
 
     case SubQuery[T](query: SqlQuery) extends Expr[T]
@@ -67,9 +69,8 @@ enum Expr[T]:
 
     case Ref[T](expr: SqlExpr) extends Expr[T]
 
-    @targetName("eq")
-    def ==(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, Equal, v.asExpr(value))
+    def isEmpty: Expr[Boolean] =
+        NullTest(this, false)
 
     @targetName("eq")
     def ==[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
@@ -91,10 +92,6 @@ enum Expr[T]:
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
     @targetName("ne")
-    def !=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, NotEqual, v.asExpr(value))
-
-    @targetName("ne")
     def !=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, NotEqual, v.asExpr(value))
 
@@ -112,10 +109,6 @@ enum Expr[T]:
     @targetName("ne")
     def !=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
-
-    @targetName("gt")
-    def >(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, GreaterThan, v.asExpr(value))
 
     @targetName("gt")
     def >[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
@@ -137,10 +130,6 @@ enum Expr[T]:
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
     @targetName("ge")
-    def >=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, v.asExpr(value))
-
-    @targetName("ge")
     def >=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, GreaterThanEqual, v.asExpr(value))
 
@@ -160,10 +149,6 @@ enum Expr[T]:
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
-    def <(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, LessThan, v.asExpr(value))
-
-    @targetName("lt")
     def <[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThan, v.asExpr(value))
 
@@ -181,10 +166,6 @@ enum Expr[T]:
     @targetName("lt")
     def <[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
         Binary(this, LessThan, SubLink(item.query, item.linkType))
-
-    @targetName("le")
-    def <=(value: T)(using v: ComparableValue[T]): Expr[Boolean] =
-        Binary(this, LessThanEqual, v.asExpr(value))
 
     @targetName("le")
     def <=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
@@ -368,18 +349,10 @@ object Expr:
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
                 SqlExpr.Column(Some(tableName), columnName)
-            case Binary(left, Equal, Literal(None, _)) =>
-                SqlExpr.NullTest(left.asSqlExpr, false)
-            case Binary(left, NotEqual, Literal(None, _)) =>
-                SqlExpr.NullTest(left.asSqlExpr, true)
-            case Binary(left, NotEqual, right@Literal(Some(_), _)) =>
-                SqlExpr.Binary(
-                    SqlExpr.Binary(left.asSqlExpr, NotEqual, right.asSqlExpr),
-                    Or,
-                    SqlExpr.NullTest(left.asSqlExpr, false)
-                )
             case Binary(left, op, right) =>
                 SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
+            case NullTest(expr, not) =>
+                SqlExpr.NullTest(expr.asSqlExpr, not)
             case Unary(expr, SqlUnaryOperator.Not) =>
                 val sqlExpr = expr.asSqlExpr
                 sqlExpr match
@@ -387,12 +360,20 @@ object Expr:
                         SqlExpr.BooleanLiteral(!boolean)
                     case SqlExpr.Binary(left, SqlBinaryOperator.Like, right) =>
                         SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.Like, right)
                     case SqlExpr.Binary(left, SqlBinaryOperator.In, right) =>
                         SqlExpr.Binary(left, SqlBinaryOperator.NotIn, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.NotIn, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.In, right)
                     case SqlExpr.SubLink(query, SqlSubLinkType.Exists) =>
                         SqlExpr.SubLink(query, SqlSubLinkType.NotExists)
-                    case SqlExpr.Between(expr, s, e, false) =>
-                        SqlExpr.Between(expr, s, e, true)
+                    case SqlExpr.SubLink(query, SqlSubLinkType.NotExists) =>
+                        SqlExpr.SubLink(query, SqlSubLinkType.Exists)
+                    case SqlExpr.NullTest(query, n) =>
+                        SqlExpr.NullTest(query, !n)
+                    case SqlExpr.Between(expr, s, e, n) =>
+                        SqlExpr.Between(expr, s, e, !n)
                     case _ => SqlExpr.Unary(sqlExpr, SqlUnaryOperator.Not)
             case Unary(expr, op) =>
                 SqlExpr.Unary(expr.asSqlExpr, op)
@@ -444,8 +425,7 @@ object Expr:
         ): UpdatePair = expr match
             case Column(_, columnName) =>
                 UpdatePair(columnName, updateExpr)
-            case _ =>
-                UpdatePair("", updateExpr)
+            case _ => throw new MatchError(expr)
 
     extension [T](expr: Expr[T])
         infix def over(overValue: OverValue): Expr[T] =
