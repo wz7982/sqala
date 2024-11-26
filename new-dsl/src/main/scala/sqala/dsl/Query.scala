@@ -105,7 +105,7 @@ class TableQuery[T](
         val args = ClauseMacro.fetchArgNames(f(using qc))
         val currentContainers = args.zip(containers)
         given newContext: QueryContext = QueryContext(qc.tableIndex, currentContainers ++ qc.outerContainers)
-        val condition = ClauseMacro.analysisFilter(f, newContext.outerContainers)
+        val condition = ClauseMacro.analysisFilter(f, newContext)
         TableQuery(containers, ast.addWhere(condition))
 
     inline def withFilter[F](using
@@ -127,4 +127,4 @@ class TableQuery[T](
         val args = ClauseMacro.fetchArgNames(f(using qc))
         val currentContainers = args.zip(containers)
         given newContext: QueryContext = QueryContext(qc.tableIndex, currentContainers ++ qc.outerContainers)
-        ClauseMacro.analysisSelect[F, N, V](f, newContext.outerContainers, ast, newContext)
+        ClauseMacro.analysisSelect[F, N, V](f, newContext, ast, newContext)

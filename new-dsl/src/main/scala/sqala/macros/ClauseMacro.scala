@@ -10,16 +10,16 @@ object ClauseMacro:
     inline def fetchArgNames[T](inline f: T): List[String] =
         ${ fetchArgNamesMacro[T]('f) }
 
-    inline def analysisFilter[T](inline f: T, containers: List[(String, Container)]): SqlExpr =
-        ${ analysisFilterMacro[T]('f, 'containers) }
+    inline def analysisFilter[T](inline f: T, context: QueryContext): SqlExpr =
+        ${ analysisFilterMacro[T]('f, 'context) }
 
     transparent inline def analysisSelect[T, N <: Tuple, V <: Tuple](
         inline f: T, 
-        containers: List[(String, Container)],
+        context: QueryContext,
         ast: SqlQuery.Select,
         qc: QueryContext
     ): ProjectionQuery[N, V, ?] =
-        ${ analysisSelectMacro[T, N, V]('f, 'containers, 'ast, 'qc) }
+        ${ analysisSelectMacro[T, N, V]('f, 'context, 'ast, 'qc) }
 
     private def fetchArgNamesMacro[T](f: Expr[T])(using Quotes): Expr[List[String]] =
         val (args, _) = unwrapFuncMacro(f)
@@ -28,12 +28,12 @@ object ClauseMacro:
 
     private def analysisFilterMacro[T](
         f: Expr[T], 
-        containers: Expr[List[(String, Container)]]
+        context: Expr[QueryContext]
     )(using q: Quotes): Expr[SqlExpr] =
         import q.reflect.*
 
         val (args, body) = unwrapFuncMacro(f)
-        val (expr, info) = ExprMacro.treeInfoMacro(args, containers, body)
+        val (expr, info) = ExprMacro.treeInfoMacro(args, context, body)
 
         if info.hasAgg then
             report.error("Aggregate functions are not allowed in WHERE/ON.", body.asExpr)
@@ -45,7 +45,7 @@ object ClauseMacro:
 
     private def analysisSelectMacro[T, N <: Tuple : Type, V <: Tuple : Type](
         f: Expr[T], 
-        containers: Expr[List[(String, Container)]],
+        context: Expr[QueryContext],
         ast: Expr[SqlQuery.Select],
         qc: Expr[QueryContext]
     )(using q: Quotes): Expr[ProjectionQuery[N, V, ?]] =
@@ -65,7 +65,7 @@ object ClauseMacro:
             case _ => Nil
 
         val exprInfo = terms
-            .map(t => ExprMacro.treeInfoMacro(args, containers, t, false))
+            .map(t => ExprMacro.treeInfoMacro(args, context, t, false))
 
         val info = exprInfo.map(_._2)
 
