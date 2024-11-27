@@ -22,13 +22,11 @@ type Index[T <: Tuple, X, N <: Int] <: Int = T match
     case X *: xs => N
     case x *: xs => Index[xs, X, S[N]]
 
-type HasOption[L, R] = (L, R) match
-    case (Option[l], Option[r]) => (l, r, true)
-    case (Option[l], _) => (l, R, true)
-    case (_, Option[r]) => (L, r, true)
-    case _ => (L, R, false)
+type IsOption[T] <: Boolean = T match
+    case Option[t] => true
+    case _ => false
 
-type NumericResult[L, R] = HasOption[L, R] match
+type NumericResult[L, R, N <: Boolean] = (L, R, N) match
     case (BigDecimal, _, true) => Option[BigDecimal]
     case (BigDecimal, _, false) => BigDecimal
     case (_, BigDecimal, true) => Option[BigDecimal]

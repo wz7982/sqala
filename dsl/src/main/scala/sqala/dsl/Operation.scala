@@ -1,9 +1,9 @@
 package sqala.dsl
 
 import java.time.LocalDateTime
-import scala.util.NotGiven
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
+import scala.compiletime.ops.boolean.*
 
 @implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait ComparableValue[T]:
@@ -15,7 +15,7 @@ trait ComparableValue[T]:
         else Expr.Vector(exprList)
 
 object ComparableValue:
-    given valueAsExpr[T](using a: AsSqlExpr[T], n: NotGiven[T <:< Option[?]]): ComparableValue[T] with
+    given valueAsExpr[T](using a: AsSqlExpr[T]): ComparableValue[T] with
         def exprs(x: T): List[Expr[?]] =
             Expr.Literal(x, a) :: Nil
 
@@ -37,50 +37,63 @@ object ComparableValue:
 trait CompareOperation[A, B]
 
 object CompareOperation:
-    given compare[A]: CompareOperation[A, A]()
+    given idCompare[A]: CompareOperation[A, A]()
 
-    given optionCompare[A]: CompareOperation[A, Option[A]]()
+    given valueAndNothingCompare[A]: CompareOperation[A, Nothing]()
 
-    given valueCompare[A]: CompareOperation[Option[A], A]()
+    given nothingAndValueCompare[A]: CompareOperation[Nothing, A]()
 
     given numericCompare[A: Number, B: Number]: CompareOperation[A, B]()
 
     given timeCompare[A: DateTime, B: DateTime]: CompareOperation[A, B]()
 
-    given timeAndStringCompare[A: DateTime, B <: String | Option[String]]: CompareOperation[A, B]()
+    given timeAndStringCompare[A: DateTime, B <: String]: CompareOperation[A, B]()
 
-    given stringAndTimeCompare[A <: String | Option[String], B: DateTime]: CompareOperation[A, B]()
+    given stringAndTimeCompare[A <: String, B: DateTime]: CompareOperation[A, B]()
 
-    given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using CompareOperation[LH, RH], CompareOperation[LT, RT]): CompareOperation[LH *: LT, RH *: RT]()
+    given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using 
+        CompareOperation[Unwrap[LH, Option], Unwrap[RH, Option]], 
+        CompareOperation[LT, RT]
+    ): CompareOperation[LH *: LT, RH *: RT]()
 
-    given tuple1Compare[LH, RH](using CompareOperation[LH, RH]): CompareOperation[LH *: EmptyTuple, RH *: EmptyTuple]()
+    given tuple1Compare[LH, RH](using 
+        CompareOperation[LH, RH]
+    ): CompareOperation[LH *: EmptyTuple, RH *: EmptyTuple]()
 
 @implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
-trait ResultOperation[A, B]:
+trait ResultOperation[A, B, Nullable <: Boolean]:
     type R
 
 object ResultOperation:
-    type Aux[A, B, O] = ResultOperation[A, B]:
+    type Aux[A, B, N <: Boolean, O] = ResultOperation[A, B, N]:
         type R = O
 
-    given result[A]: Aux[A, A, A] =
-        new ResultOperation[A, A]:
+    given result[A]: Aux[A, A, false, A] =
+        new ResultOperation[A, A, false]:
             type R = A
 
-    given optionResult[A]: Aux[A, Option[A], Option[A]] =
-        new ResultOperation[A, Option[A]]:
+    given optionResult[A]: Aux[A, A, true, Option[A]] =
+        new ResultOperation[A, A, true]:
             type R = Option[A]
 
-    given valueResult[A]: Aux[Option[A], A, Option[A]] =
-        new ResultOperation[Option[A], A]:
+    given leftNothingResult[A, N <: Boolean]: Aux[Nothing, A, N, Option[A]] =
+        new ResultOperation[Nothing, A, N]:
             type R = Option[A]
 
-    given numericResult[A: Number, B: Number]: Aux[A, B, NumericResult[A, B]] =
-        new ResultOperation[A, B]:
-            type R = NumericResult[A, B]
+    given rightNothingResult[A, N <: Boolean]: Aux[A, Nothing, N, Option[A]] =
+        new ResultOperation[A, Nothing, N]:
+            type R = Option[A]
 
-    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, Option[LocalDateTime]] =
-        new ResultOperation[A, B]:
+    given numericResult[A: Number, B: Number, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
+        new ResultOperation[A, B, N]:
+            type R = NumericResult[A, B, N]
+
+    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, false, LocalDateTime] =
+        new ResultOperation[A, B, false]:
+            type R = LocalDateTime
+
+    given optionTimeResult[A: DateTime, B: DateTime]: Aux[A, B, true, Option[LocalDateTime]] =
+        new ResultOperation[A, B, true]:
             type R = Option[LocalDateTime]
 
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
@@ -94,7 +107,7 @@ object UnionOperation:
         type R = O
 
     given union[A, B](using
-        r: ResultOperation[A, B]
+        r: ResultOperation[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
     ): Aux[Expr[A], Expr[B], Expr[r.R]] =
         new UnionOperation[Expr[A], Expr[B]]:
             type R = Expr[r.R]

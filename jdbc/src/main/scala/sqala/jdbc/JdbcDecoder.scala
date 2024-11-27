@@ -81,6 +81,18 @@ object JdbcDecoder:
                 data.getObject(i)
             if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
 
+    given someDecoder[T](using d: JdbcDecoder[T]): JdbcDecoder[Some[T]] with
+        override inline def offset: Int = d.offset
+
+        override inline def decode(data: ResultSet, cursor: Int): Some[T] =
+            Some(d.decode(data, cursor))
+
+    given noneDecoder[T]: JdbcDecoder[None.type] with
+        override inline def offset: Int = 1
+
+        override inline def decode(data: ResultSet, cursor: Int): None.type =
+            None
+
     given customFieldDecoder[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
         override inline def offset: Int = d.offset
 

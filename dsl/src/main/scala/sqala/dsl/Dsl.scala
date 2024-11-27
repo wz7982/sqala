@@ -29,33 +29,31 @@ class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
     ): IfThen[E] =
         IfThen(exprs :+ Expr.Literal(value, a))
 
-    infix def `then`[E](value: Some[E])(using
-        a: AsSqlExpr[Option[E]]
-    ): IfThen[Option[E]] =
-        IfThen(exprs :+ Expr.Literal(value, a))
-
-class If[T: AsSqlExpr](private[sqala] val exprs: List[Expr[?]]):
-    infix def `then`[E: AsSqlExpr](expr: Expr[E])(using
-        o: ResultOperation[T, E],
-        a: AsSqlExpr[o.R]
+class If[T](private[sqala] val exprs: List[Expr[?]]):
+    infix def `then`[R: AsSqlExpr](expr: Expr[R])(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): IfThen[o.R] =
         IfThen(exprs :+ expr)
 
-    infix def `then`(value: T): IfThen[T] =
-        IfThen(exprs :+ Expr.Literal(value, summon[AsSqlExpr[T]]))
+    infix def `then`[R: AsSqlExpr](value: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): IfThen[o.R] =
+        IfThen(exprs :+ Expr.Literal(value, summon[AsSqlExpr[R]]))
 
-class IfThen[T: AsSqlExpr](private[sqala] val exprs: List[Expr[?]]):
-    infix def `else`[E: AsSqlExpr](expr: Expr[E])(using
-        o: ResultOperation[T, E]
+class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
+    infix def `else`[R: AsSqlExpr](expr: Expr[R])(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[o.R] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr.Case(caseBranches, expr)
 
-    infix def `else`(value: T): Expr[T] =
+    infix def `else`[R: AsSqlExpr](value: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[o.R] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, Expr.Literal(value, summon[AsSqlExpr[T]]))
+        Expr.Case(caseBranches, Expr.Literal(value, summon[AsSqlExpr[R]]))
 
     infix def `else if`(expr: Expr[Boolean]): If[T] =
         If(exprs :+ expr)

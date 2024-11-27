@@ -13,6 +13,7 @@ import sqala.dsl.statement.query.*
 import java.time.LocalDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
+import scala.compiletime.ops.boolean.*
 
 enum Expr[T]:
     case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
@@ -20,8 +21,6 @@ enum Expr[T]:
     case Column[T](tableName: String, columnName: String) extends Expr[T]
 
     case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
-
-    case NullTest(expr: Expr[?], not: Boolean) extends Expr[Boolean]
 
     case Unary[T](expr: Expr[?], op: SqlUnaryOperator) extends Expr[T]
 
@@ -69,126 +68,141 @@ enum Expr[T]:
 
     case Ref[T](expr: SqlExpr) extends Expr[T]
 
-    def isEmpty: Expr[Boolean] =
-        NullTest(this, false)
-
     @targetName("eq")
-    def ==[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def ==[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, Equal, v.asExpr(value))
 
     @targetName("eq")
-    def ==[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def ==[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, Equal, that)
 
     @targetName("eq")
     def ==[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, Equal, SubQuery(query.ast))
 
     @targetName("eq")
-    def ==[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def ==[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
     @targetName("ne")
-    def !=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def !=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, NotEqual, v.asExpr(value))
 
     @targetName("ne")
-    def !=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def !=[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, NotEqual, that)
 
     @targetName("ne")
     def !=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("ne")
-    def !=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def !=[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
     @targetName("gt")
-    def >[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def >[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, GreaterThan, v.asExpr(value))
 
     @targetName("gt")
-    def >[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def >[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, GreaterThan, that)
 
     @targetName("gt")
     def >[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThan, SubQuery(query.ast))
 
     @targetName("gt")
-    def >[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def >[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
     @targetName("ge")
-    def >=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def >=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, v.asExpr(value))
 
     @targetName("ge")
-    def >=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def >=[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, GreaterThanEqual, that)
 
     @targetName("ge")
     def >=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
     @targetName("ge")
-    def >=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def >=[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
     @targetName("lt")
-    def <[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def <[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, LessThan, v.asExpr(value))
 
     @targetName("lt")
-    def <[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def <[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, LessThan, that)
 
     @targetName("lt")
     def <[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThan, SubQuery(query.ast))
 
     @targetName("lt")
-    def <[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def <[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, LessThan, SubLink(item.query, item.linkType))
 
     @targetName("le")
-    def <=[R](value: R)(using v: ComparableValue[R], c: CompareOperation[T, R]): Expr[Boolean] =
+    def <=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
         Binary(this, LessThanEqual, v.asExpr(value))
 
     @targetName("le")
-    def <=[R](that: Expr[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def <=[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, LessThanEqual, that)
 
     @targetName("le")
     def <=[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThanEqual, SubQuery(query.ast))
 
     @targetName("le")
-    def <=[R](item: SubLinkItem[R])(using CompareOperation[T, R]): Expr[Boolean] =
+    def <=[R](item: SubLinkItem[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
     def in[R, I <: Iterable[R]](list: I)(using
         a: ComparableValue[R],
-        o: CompareOperation[T, R]
+        o: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         In(this, Vector(list.toList.map(a.asExpr(_))), false)
 
@@ -200,19 +214,21 @@ enum Expr[T]:
     def in[N <: Tuple, V <: Tuple, S <: ResultSize](query: Query[NamedTuple[N, V], S])(using
         m: Merge[V],
         a: AsExpr[V],
-        c: CompareOperation[T, m.R]
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         In(this, SubQuery(query.ast), false)
 
-    def between[R](start: R, end: R)(using
-        a: ComparableValue[R],
-        o: CompareOperation[T, R]
+    def between[S, E](start: S, end: E)(using
+        as: ComparableValue[S],
+        ae: ComparableValue[E],
+        cs: CompareOperation[Unwrap[T, Option], Unwrap[S, Option]],
+        ce: CompareOperation[Unwrap[T, Option], Unwrap[E, Option]]
     ): Expr[Boolean] =
-        Between(this, a.asExpr(start), a.asExpr(end), false)
+        Between(this, as.asExpr(start), ae.asExpr(end), false)
 
     def between[S, E](start: Expr[S], end: Expr[E])(using
-        CompareOperation[T, S],
-        CompareOperation[T, E]
+        CompareOperation[Unwrap[T, Option], Unwrap[S, Option]],
+        CompareOperation[Unwrap[T, Option], Unwrap[E, Option]]
     ): Expr[Boolean] =
         Between(this, start, end, false)
 
@@ -220,51 +236,57 @@ enum Expr[T]:
     def +[R: Number](value: R)(using
         n: Number[T],
         a: AsSqlExpr[R],
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Plus, Literal(value, a))
 
     @targetName("plus")
     def +[R: Number](that: Expr[R])(using
         n: Number[T],
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Plus, that)
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using DateTime[T]): Expr[Option[LocalDateTime]] =
+    def +(interval: TimeInterval)(using 
+        d: DateTime[T],
+        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
+    ): Expr[r.R] =
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
     def -[R: Number](value: R)(using
         n: Number[T],
         a: AsSqlExpr[R],
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
     def -[R](that: Expr[R])(using
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Minus, that)
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using DateTime[T]): Expr[Option[LocalDateTime]] =
+    def -(interval: TimeInterval)(using 
+        d: DateTime[T],
+        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
+    ): Expr[r.R] =
         Binary(this, Minus, Interval(interval.value, interval.unit))
 
     @targetName("times")
     def *[R: Number](value: R)(using
         n: Number[T],
         a: AsSqlExpr[R],
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Times, Literal(value, a))
 
     @targetName("times")
     def *[R: Number](that: Expr[R])(using
         n: Number[T],
-        r: ResultOperation[T, R]
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Times, that)
 
@@ -349,10 +371,18 @@ object Expr:
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
                 SqlExpr.Column(Some(tableName), columnName)
+            case Binary(left, SqlBinaryOperator.Equal, Literal(None, _)) =>
+                SqlExpr.NullTest(left.asSqlExpr, false)
+            case Binary(left, SqlBinaryOperator.NotEqual, Literal(None, _)) =>
+                SqlExpr.NullTest(left.asSqlExpr, true)
+            case Binary(left, SqlBinaryOperator.NotEqual, right@Literal(Some(v), _)) =>
+                SqlExpr.Binary(
+                    SqlExpr.Binary(left.asSqlExpr, SqlBinaryOperator.NotEqual, right.asSqlExpr),
+                    SqlBinaryOperator.Or,
+                    SqlExpr.NullTest(left.asSqlExpr, false)
+                )
             case Binary(left, op, right) =>
                 SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
-            case NullTest(expr, not) =>
-                SqlExpr.NullTest(expr.asSqlExpr, not)
             case Unary(expr, SqlUnaryOperator.Not) =>
                 val sqlExpr = expr.asSqlExpr
                 sqlExpr match
