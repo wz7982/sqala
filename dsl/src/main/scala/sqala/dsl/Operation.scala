@@ -38,15 +38,25 @@ object ComparableValue:
 trait CompareOperation[A, B]
 
 object CompareOperation:
-    given idCompare[A]: CompareOperation[A, A]()
+    given idCompare[A: AsSqlExpr]: CompareOperation[A, A]()
 
-    given valueAndNothingCompare[A]: CompareOperation[A, Nothing]()
+    given nothingCompare: CompareOperation[Nothing, Nothing]()
 
-    given nothingAndValueCompare[A]: CompareOperation[Nothing, A]()
+    given valueAndNothingCompare[A](using
+        NotGiven[A =:= Nothing]
+    ): CompareOperation[A, Nothing]()
 
-    given numericCompare[A: Number, B: Number]: CompareOperation[A, B]()
+    given nothingAndValueCompare[A](using
+        NotGiven[A =:= Nothing]
+    ): CompareOperation[Nothing, A]()
 
-    given timeCompare[A: DateTime, B: DateTime]: CompareOperation[A, B]()
+    given numericCompare[A: Number, B: Number](using
+        NotGiven[A =:= B]
+    ): CompareOperation[A, B]()
+
+    given timeCompare[A: DateTime, B: DateTime](using
+        NotGiven[A =:= B]
+    ): CompareOperation[A, B]()
 
     given timeAndStringCompare[A: DateTime, B <: String]: CompareOperation[A, B]()
 
@@ -69,11 +79,11 @@ object ResultOperation:
     type Aux[A, B, N <: Boolean, O] = ResultOperation[A, B, N]:
         type R = O
 
-    given result[A]: Aux[A, A, false, A] =
+    given result[A: AsSqlExpr]: Aux[A, A, false, A] =
         new ResultOperation[A, A, false]:
             type R = A
 
-    given optionResult[A](using NotGiven[A =:= Nothing]): Aux[A, A, true, Option[A]] =
+    given optionResult[A: AsSqlExpr](using NotGiven[A =:= Nothing]): Aux[A, A, true, Option[A]] =
         new ResultOperation[A, A, true]:
             type R = Option[A]
 
@@ -101,7 +111,9 @@ object ResultOperation:
         new ResultOperation[A, B, false]:
             type R = LocalDateTime
 
-    given optionTimeResult[A: DateTime, B: DateTime]: Aux[A, B, true, Option[LocalDateTime]] =
+    given optionTimeResult[A: DateTime, B: DateTime](using
+        NotGiven[A =:= B]
+    ): Aux[A, B, true, Option[LocalDateTime]] =
         new ResultOperation[A, B, true]:
             type R = Option[LocalDateTime]
 
