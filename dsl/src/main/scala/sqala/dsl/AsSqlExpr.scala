@@ -56,3 +56,11 @@ object AsSqlExpr:
         override def asSqlExpr(x: Option[T]): SqlExpr = x match
             case None => SqlExpr.Null
             case Some(v) => a.asSqlExpr(v)
+
+    given someAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Some[T]] with
+        override def asSqlExpr(x: Some[T]): SqlExpr = 
+            a.asSqlExpr(x.value)
+
+    given noneAsSqlExpr: AsSqlExpr[None.type] with
+        override def asSqlExpr(x: None.type): SqlExpr =
+            SqlExpr.Null

@@ -19,6 +19,10 @@ object Number:
 
     given option[T: Number]: Number[Option[T]]()
 
+    given some[T: Number]: Number[Some[T]]()
+
+    given none: Number[None.type]()
+
 @implicitNotFound("Expr must be a time type.")
 trait DateTime[T]
 
@@ -28,6 +32,10 @@ object DateTime:
     given localDateTime: DateTime[LocalDateTime]()
 
     given option[T: DateTime]: DateTime[Option[T]]()
+
+    given some[T: DateTime]: DateTime[Some[T]]()
+
+    given none: DateTime[None.type]()
 
 opaque type Json = String
 

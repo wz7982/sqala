@@ -61,7 +61,7 @@ trait MergeIn[L, R]:
 object MergeIn:
     given mergeTuple[L, H, T <: Tuple](using
         t: MergeIn[L, T],
-        c: CompareOperation[L, H]
+        c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
     ): MergeIn[L, Expr[H] *: T] with
         def exprs(x: Expr[H] *: T): List[Expr[?]] =
             x.head :: t.exprs(x.tail)
