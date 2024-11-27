@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 import scala.compiletime.ops.boolean.*
+import scala.util.NotGiven
 
 @implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait ComparableValue[T]:
@@ -72,23 +73,31 @@ object ResultOperation:
         new ResultOperation[A, A, false]:
             type R = A
 
-    given optionResult[A]: Aux[A, A, true, Option[A]] =
+    given optionResult[A](using NotGiven[A =:= Nothing]): Aux[A, A, true, Option[A]] =
         new ResultOperation[A, A, true]:
             type R = Option[A]
 
-    given leftNothingResult[A, N <: Boolean]: Aux[Nothing, A, N, Option[A]] =
+    given nothingResult[N <: Boolean]: Aux[Nothing, Nothing, N, None.type] =
+        new ResultOperation[Nothing, Nothing, N]:
+            type R = None.type
+
+    given leftNothingResult[A, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[Nothing, A, N, Option[A]] =
         new ResultOperation[Nothing, A, N]:
             type R = Option[A]
 
-    given rightNothingResult[A, N <: Boolean]: Aux[A, Nothing, N, Option[A]] =
+    given rightNothingResult[A, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[A, Nothing, N, Option[A]] =
         new ResultOperation[A, Nothing, N]:
             type R = Option[A]
 
-    given numericResult[A: Number, B: Number, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
+    given numericResult[A: Number, B: Number, N <: Boolean](using 
+        NotGiven[A =:= B]
+    ): Aux[A, B, N, NumericResult[A, B, N]] =
         new ResultOperation[A, B, N]:
             type R = NumericResult[A, B, N]
 
-    given timeResult[A: DateTime, B: DateTime]: Aux[A, B, false, LocalDateTime] =
+    given timeResult[A: DateTime, B: DateTime](using
+        NotGiven[A =:= B]
+    ): Aux[A, B, false, LocalDateTime] =
         new ResultOperation[A, B, false]:
             type R = LocalDateTime
 
