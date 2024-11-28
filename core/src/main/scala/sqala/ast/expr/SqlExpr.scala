@@ -9,6 +9,7 @@ enum SqlExpr:
     case StringLiteral(string: String)
     case NumberLiteral(number: Number)
     case BooleanLiteral(boolean: Boolean)
+    case TimeLiteral(unit: SqlTimeLiteralUnit, time: String)
     case Vector(items: List[SqlExpr])
     case Unary(expr: SqlExpr, op: SqlUnaryOperator)
     case Binary(left: SqlExpr, op: SqlBinaryOperator, right: SqlExpr)

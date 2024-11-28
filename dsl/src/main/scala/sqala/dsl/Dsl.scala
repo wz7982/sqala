@@ -8,7 +8,7 @@ import sqala.dsl.macros.TableMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 
-import java.time.LocalDateTime
+import java.time.{LocalDate, LocalDateTime}
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
 import scala.compiletime.ops.boolean.*
@@ -19,6 +19,13 @@ extension [T: AsSqlExpr](value: T)
 
 extension [T <: Tuple](exprs: T)(using m: Merge[T])
     def asExpr: Expr[m.R] = m.asExpr(exprs)
+
+extension (s: StringContext)
+    def timestamp(): Expr[LocalDateTime] =
+        Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s.parts.head))
+
+    def date(): Expr[LocalDate] =
+        Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s.parts.head))
 
 class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[E: AsSqlExpr](expr: Expr[E]): IfThen[E] =

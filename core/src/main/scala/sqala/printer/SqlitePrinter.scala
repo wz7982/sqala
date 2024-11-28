@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCase, SqlCastType, SqlExpr}
+import sqala.ast.expr.*
 import sqala.ast.expr.SqlExpr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
@@ -57,6 +57,16 @@ class SqlitePrinter(override val prepare: Boolean, override val indent: Int) ext
             sqlBuilder.append(", ")
             sqlBuilder.append(s"'$printValue ${unit.unit.toLowerCase + "s"}')")
         case _ => super.printBinaryExpr(expr)
+
+    override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit = 
+        val name = expr.unit match
+            case SqlTimeLiteralUnit.Timestamp => "DATETIME"
+            case SqlTimeLiteralUnit.Date => "DATE"
+            case SqlTimeLiteralUnit.Time => "TIME"
+        sqlBuilder.append(name)
+        sqlBuilder.append("(")
+        printStringLiteralExpr(SqlExpr.StringLiteral(expr.time))
+        sqlBuilder.append(")")
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
         if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then

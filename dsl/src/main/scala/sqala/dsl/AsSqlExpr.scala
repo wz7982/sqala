@@ -1,6 +1,6 @@
 package sqala.dsl
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.*
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime}
@@ -41,13 +41,13 @@ object AsSqlExpr:
 
     given localDateAsSqlExpr: AsSqlExpr[LocalDate] with
         override def asSqlExpr(x: LocalDate): SqlExpr =
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            SqlExpr.StringLiteral(formatter.format(x))
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, formatter.format(x))
 
     given localDateTimeAsSqlExpr: AsSqlExpr[LocalDateTime] with
         override def asSqlExpr(x: LocalDateTime): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            SqlExpr.StringLiteral(formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, formatter.format(x))
 
     given jsonAsSqlExpr: AsSqlExpr[Json] with
         override def asSqlExpr(x: Json): SqlExpr = SqlExpr.StringLiteral(x.toString)
