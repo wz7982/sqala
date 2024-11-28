@@ -248,7 +248,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
                 sqlBuilder.append("FALSE")
 
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        sqlBuilder.append(expr.unit)
+        sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" ")
         if prepare then
             sqlBuilder.append("?")
