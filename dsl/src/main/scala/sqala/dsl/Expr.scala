@@ -255,16 +255,15 @@ enum Expr[T]:
         Binary(this, Plus, Interval(interval.value, interval.unit))
 
     @targetName("minus")
-    def -[R: Number](value: R)(using
-        n: Number[T],
+    def -[R](value: R)(using
         a: AsSqlExpr[R],
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Minus, Literal(value, a))
 
     @targetName("minus")
     def -[R](that: Expr[R])(using
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
     ): Expr[r.R] =
         Binary(this, Minus, that)
 

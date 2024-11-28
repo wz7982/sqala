@@ -201,6 +201,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
+        case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
         case v: SqlExpr.Vector => printVectorExpr(v)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
@@ -245,6 +246,15 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
                 sqlBuilder.append("TRUE")
             else
                 sqlBuilder.append("FALSE")
+
+    def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+        sqlBuilder.append(expr.unit.unit)
+        sqlBuilder.append(" ")
+        if prepare then
+            sqlBuilder.append("?")
+            args.append(expr.time)
+        else
+            sqlBuilder.append(s"'${expr.time}'")
 
     def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("(")

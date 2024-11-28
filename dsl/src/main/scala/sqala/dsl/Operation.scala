@@ -71,6 +71,22 @@ object CompareOperation:
         CompareOperation[LH, RH]
     ): CompareOperation[LH *: EmptyTuple, RH *: EmptyTuple]()
 
+@implicitNotFound("Types ${A} and ${B} cannot be subtract.")
+trait MinusOperation[A, B, Nullable <: Boolean]:
+    type R
+
+object MinusOperation:
+    type Aux[A, B, N <: Boolean, O] = MinusOperation[A, B, N]:
+        type R = O
+
+    given numberMinusNumber[A: Number, B: Number, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
+        new MinusOperation[A, B, N]:
+            type R = NumericResult[A, B, N]
+
+    given timeMinusTime[A: DateTime, B: DateTime, N <: Boolean]: Aux[A, B, N, Interval] =
+        new MinusOperation[A, B, N]:
+            type R = Interval
+
 @implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait ResultOperation[A, B, Nullable <: Boolean]:
     type R
