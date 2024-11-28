@@ -44,3 +44,5 @@ object Json:
 
     extension (x: Json)
         def toString: String = x
+
+opaque type Interval = Long

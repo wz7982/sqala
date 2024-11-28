@@ -345,6 +345,11 @@ def extract[T: DateTime](
 ): Expr[Option[BigDecimal]] =
     Expr.Extract(value.unit, value.expr)
 
+def extract[T <: Interval](
+    value: ExtractValue[T]
+): Expr[Option[BigDecimal]] =
+    Expr.Extract(value.unit, value.expr)
+
 extension [T](expr: Expr[T])
     infix def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
         Expr.Cast(expr, cast.castType)
