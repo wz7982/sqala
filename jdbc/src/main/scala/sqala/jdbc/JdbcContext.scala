@@ -1,7 +1,8 @@
 package sqala.jdbc
 
 import sqala.dsl.Result
-import sqala.dsl.statement.dml.{Delete, Insert, Save, Update}
+import sqala.dsl.macros.DmlMacro
+import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
@@ -9,6 +10,7 @@ import sqala.util.{queryToString, statementToString}
 import java.sql.Connection
 import javax.sql.DataSource
 import scala.util.NotGiven
+import scala.deriving.Mirror
 
 class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val logger: Logger):
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
@@ -25,11 +27,6 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val (sql, args) = statementToString(insert.ast, dialect, true)
         executeDml(sql, args)
 
-    def executeReturnKey(insert: Insert[?, ?])(using NotGiven[JdbcTransactionContext]): List[Long] =
-        val (sql, args) = statementToString(insert.ast, dialect, true)
-        logger(sql, args)
-        execute(c => jdbcExecReturnKey(c, sql, args))
-
     def execute(update: Update[?, ?])(using NotGiven[JdbcTransactionContext]): Int =
         val (sql, args) = statementToString(update.ast, dialect, true)
         executeDml(sql, args)
@@ -38,12 +35,57 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val (sql, args) = statementToString(delete.ast, dialect, true)
         executeDml(sql, args)
 
-    def execute(save: Save)(using NotGiven[JdbcTransactionContext]): Int =
-        val (sql, args) = statementToString(save.ast, dialect, true)
-        executeDml(sql, args)
-
     def execute(nativeSql: NativeSql)(using NotGiven[JdbcTransactionContext]): Int =
         val NativeSql(sql, args) = nativeSql
+        executeDml(sql, args)
+
+    inline def insert[A <: Product](entity: A)(using 
+        Mirror.ProductOf[A], 
+        NotGiven[JdbcTransactionContext]
+    ): Int =
+        val i = sqala.dsl.insert[A](entity)
+        val (sql, args) = statementToString(i.ast, dialect, true)
+        executeDml(sql, args)
+
+    inline def insertBatch[A <: Product](entities: List[A])(using 
+        Mirror.ProductOf[A], 
+        NotGiven[JdbcTransactionContext]
+    ): Int =
+        val i = sqala.dsl.insert[A](entities)
+        val (sql, args) = statementToString(i.ast, dialect, true)
+        executeDml(sql, args)
+
+    inline def insertAndReturn[A <: Product](entity: A)(using 
+        Mirror.ProductOf[A], 
+        NotGiven[JdbcTransactionContext]
+    ): A =
+        val i = sqala.dsl.insert[A](entity)
+        val (sql, args) = statementToString(i.ast, dialect, true)
+        val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
+        DmlMacro.bindGeneratedPrimaryKey[A](id, entity)
+
+    inline def update[A <: Product](
+        entity: A, 
+        skipNone: Boolean = false
+    )(using 
+        Mirror.ProductOf[A], 
+        NotGiven[JdbcTransactionContext]
+    ): Int =
+        val u = sqala.dsl.update(entity, skipNone)
+        if u.ast.setList.isEmpty then
+            0
+        else
+            val (sql, args) = statementToString(u.ast, dialect, true)
+            executeDml(sql, args)
+
+    inline def save[A <: Product](
+        entity: A
+    )(using 
+        Mirror.ProductOf[A], 
+        NotGiven[JdbcTransactionContext]
+    ): Int =
+        val s = sqala.dsl.save(entity)
+        val (sql, args) = statementToString(s.ast, dialect, true)
         executeDml(sql, args)
 
     def fetchTo[T](query: Query[?, ?])(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[T] =

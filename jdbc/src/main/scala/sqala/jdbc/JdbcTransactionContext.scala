@@ -1,12 +1,14 @@
 package sqala.jdbc
 
 import sqala.dsl.Result
+import sqala.dsl.macros.DmlMacro
 import sqala.dsl.statement.dml.*
 import sqala.dsl.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
+import scala.deriving.Mirror
 
 class JdbcTransactionContext(val connection: Connection, val dialect: Dialect)
 
@@ -14,11 +16,6 @@ def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): I
     val (sql, args) = statementToString(insert.ast, t.dialect, true)
     l(sql, args)
     jdbcExec(t.connection, sql, args)
-
-def executeReturnKey(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): List[Long] =
-    val (sql, args) = statementToString(insert.ast, t.dialect, true)
-    l(sql, args)
-    jdbcExecReturnKey(t.connection, sql, args)
 
 def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
     val (sql, args) = statementToString(update.ast, t.dialect, true)
@@ -30,14 +27,63 @@ def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int 
     l(sql, args)
     jdbcExec(t.connection, sql, args)
 
-def execute(save: Save)(using t: JdbcTransactionContext, l: Logger): Int =
-    val (sql, args) = statementToString(save.ast, t.dialect, true)
-    l(sql, args)
-    jdbcExec(t.connection, sql, args)
-
 def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int =
     val NativeSql(sql, args) = nativeSql
     l(sql, args)
+    jdbcExec(t.connection, sql, args)
+
+inline def insert[A <: Product](entity: A)(using 
+    m: Mirror.ProductOf[A],
+    t: JdbcTransactionContext, 
+    l: Logger
+): Int =
+    val i = sqala.dsl.insert[A](entity)
+    val (sql, args) = statementToString(i.ast, t.dialect, true)
+    jdbcExec(t.connection, sql, args)
+
+inline def insertBatch[A <: Product](entities: List[A])(using 
+    m: Mirror.ProductOf[A],
+    t: JdbcTransactionContext, 
+    l: Logger
+): Int =
+    val i = sqala.dsl.insert[A](entities)
+    val (sql, args) = statementToString(i.ast, t.dialect, true)
+    jdbcExec(t.connection, sql, args)
+
+inline def insertAndReturn[A <: Product](entity: A)(using 
+    m: Mirror.ProductOf[A],
+    t: JdbcTransactionContext, 
+    l: Logger
+): A =
+    val i = sqala.dsl.insert[A](entity)
+    val (sql, args) = statementToString(i.ast, t.dialect, true)
+    val id = jdbcExecReturnKey(t.connection, sql, args).head
+    DmlMacro.bindGeneratedPrimaryKey[A](id, entity)
+
+inline def update[A <: Product](
+    entity: A, 
+    skipNone: Boolean = false
+)(using 
+    m: Mirror.ProductOf[A],
+    t: JdbcTransactionContext, 
+    l: Logger
+): Int =
+    val u = sqala.dsl.update(entity, skipNone)
+    if u.ast.setList.isEmpty then
+        0
+    else
+        val (sql, args) = statementToString(u.ast, t.dialect, true)
+        jdbcExec(t.connection, sql, args)
+
+inline def save[A <: Product](
+    entity: A
+)(using 
+    m: Mirror.ProductOf[A],
+    t: JdbcTransactionContext, 
+    l: Logger
+): Int =
+    val s = sqala.dsl.save(entity)
+    val (sql, args) = statementToString(s.ast, t.dialect, true)
     jdbcExec(t.connection, sql, args)
 
 def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
