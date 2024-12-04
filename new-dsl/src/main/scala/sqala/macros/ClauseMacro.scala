@@ -10,16 +10,15 @@ object ClauseMacro:
     inline def fetchArgNames[T](inline f: T): List[String] =
         ${ fetchArgNamesMacro[T]('f) }
 
-    inline def analysisFilter[T](inline f: T, context: QueryContext): SqlExpr =
-        ${ analysisFilterMacro[T]('f, 'context) }
+    inline def analysisFilter[T](inline f: T): QueryContext => SqlExpr =
+        ${ analysisFilterMacro[T]('f) }
 
     transparent inline def analysisSelect[T, N <: Tuple, V <: Tuple](
         inline f: T, 
-        context: QueryContext,
         ast: SqlQuery.Select,
         qc: QueryContext
     ): ProjectionQuery[N, V, ?] =
-        ${ analysisSelectMacro[T, N, V]('f, 'context, 'ast, 'qc) }
+        ${ analysisSelectMacro[T, N, V]('f, 'ast, 'qc) }
 
     private def fetchArgNamesMacro[T](f: Expr[T])(using Quotes): Expr[List[String]] =
         val (args, _) = unwrapFuncMacro(f)
@@ -27,13 +26,12 @@ object ClauseMacro:
         Expr(args)
 
     private def analysisFilterMacro[T](
-        f: Expr[T], 
-        context: Expr[QueryContext]
-    )(using q: Quotes): Expr[SqlExpr] =
+        f: Expr[T]
+    )(using q: Quotes): Expr[QueryContext => SqlExpr] =
         import q.reflect.*
 
         val (args, body) = unwrapFuncMacro(f)
-        val (expr, info) = ExprMacro.treeInfoMacro(args, context, body)
+        val (expr, info) = ExprMacro.treeInfoMacro(args, body)
 
         if info.hasAgg then
             report.error("Aggregate functions are not allowed in WHERE/ON.", body.asExpr)
@@ -45,7 +43,6 @@ object ClauseMacro:
 
     private def analysisSelectMacro[T, N <: Tuple : Type, V <: Tuple : Type](
         f: Expr[T], 
-        context: Expr[QueryContext],
         ast: Expr[SqlQuery.Select],
         qc: Expr[QueryContext]
     )(using q: Quotes): Expr[ProjectionQuery[N, V, ?]] =
@@ -65,7 +62,7 @@ object ClauseMacro:
             case _ => Nil
 
         val exprInfo = terms
-            .map(t => ExprMacro.treeInfoMacro(args, context, t, false))
+            .map(t => ExprMacro.treeInfoMacro(args, t, false))
 
         val info = exprInfo.map(_._2)
 
@@ -82,19 +79,19 @@ object ClauseMacro:
 
         val selectExpr = Expr.ofList(exprInfo.map(_._1))
 
-        val newAstExpr = '{
+        val newAstExpr = '{ (context: QueryContext) =>
             val selectItems = $selectExpr.zipWithIndex.map: (e, i) =>
-                SqlSelectItem.Item(e, Some(s"c$i"))
+                SqlSelectItem.Item(e(context), Some(s"c$i"))
             $ast.copy(select = selectItems)
         }
 
         if isAgg then
             '{
-                new ProjectionQuery[N, V, OneRow]($newAstExpr)(using $qc)
+                new ProjectionQuery[N, V, OneRow]($newAstExpr($qc))(using $qc)
             }
         else 
             '{
-                new ProjectionQuery[N, V, ManyRows]($newAstExpr)(using $qc)
+                new ProjectionQuery[N, V, ManyRows]($newAstExpr($qc))(using $qc)
             }
 
     private def unwrapFuncMacro[T](
