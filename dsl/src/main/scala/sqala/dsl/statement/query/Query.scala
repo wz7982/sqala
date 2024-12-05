@@ -52,7 +52,7 @@ sealed class Query[T, S <: ResultSize](
             case _ => ast
         Query(queryItems, newAst)
 
-    def size: Query[Expr[Long], OneRow] =
+    private[sqala] def size: Query[Expr[Long], OneRow] =
         val expr = count()
         ast match
             case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) if p != Some(SqlSelectParam.Distinct) =>
@@ -64,7 +64,7 @@ sealed class Query[T, S <: ResultSize](
                 )
                 Query(expr, outerQuery)
 
-    def exists: Query[Expr[Boolean], OneRow] =
+    private[sqala] def exists: Query[Expr[Boolean], OneRow] =
         val expr = sqala.dsl.exists(this)
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
