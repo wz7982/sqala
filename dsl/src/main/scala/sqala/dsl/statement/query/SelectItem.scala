@@ -4,6 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
 import sqala.dsl.*
 
+import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
 import sqala.ast.statement.SqlSelectItem.Item
@@ -22,9 +23,9 @@ object SelectItem:
             SqlSelectItem.Item(item.asSqlExpr, Some(s"c${cursor}")) :: Nil
 
     given tableSelectItem[T]: SelectItem[Table[T]] with
-        override def offset(item: Table[T]): Int = item.__metaData__.fieldNames.size
+        def offset(item: Table[T]): Int = item.__metaData__.fieldNames.size
 
-        override def selectItems(item: Table[T], cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(item: Table[T], cursor: Int): List[SqlSelectItem.Item] =
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for field <- item.__metaData__.columnNames do
@@ -35,14 +36,27 @@ object SelectItem:
             items.toList
 
     given subQuerySelectItem[N <: Tuple, V <: Tuple]: SelectItem[SubQuery[N, V]] with
-        override def offset(item: SubQuery[N, V]): Int = item.__columnSize__
+        def offset(item: SubQuery[N, V]): Int = item.__columnSize__
 
-        override def selectItems(item: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(item: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Item] =
             var tmpCursor = cursor
             val items = ListBuffer[SqlSelectItem.Item]()
             for index <- (0 until offset(item)) do
                 items.addOne(
                     SqlSelectItem.Item(SqlExpr.Column(Some(item.__alias__), s"c${index}"), Some(s"c${tmpCursor}"))
+                )
+                tmpCursor += 1
+            items.toList
+
+    given groupSelectItem[N <: Tuple, V <: Tuple]: SelectItem[Group[N, V]] with
+        def offset(item: Group[N, V]): Int = item.__values__.size
+
+        def selectItems(item: Group[N, V], cursor: Int): List[SqlSelectItem.Item] =
+            var tmpCursor = cursor
+            val items = ListBuffer[SqlSelectItem.Item]()
+            for index <- (0 until offset(item)) do
+                items.addOne(
+                    SqlSelectItem.Item(item.__values__(index).asSqlExpr, Some(s"c${tmpCursor}"))
                 )
                 tmpCursor += 1
             items.toList
@@ -58,3 +72,11 @@ object SelectItem:
 
         def selectItems(item: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
             sh.selectItems(item.head, cursor)
+
+    given namedTupleSelectItem[N <: Tuple, V <: Tuple](using
+        s: SelectItem[V]
+    ): SelectItem[NamedTuple[N, V]] with
+        def offset(item: NamedTuple[N, V]): Int = s.offset(item.toTuple)
+
+        def selectItems(item: NamedTuple[N, V], cursor: Int): List[Item] =
+            s.selectItems(item.toTuple, cursor)

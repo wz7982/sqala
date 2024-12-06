@@ -235,8 +235,7 @@ class SelectQuery[T](
         tt: ToTuple[T],
         t: TupledFunction[F, tt.R => NamedTuple[N, V]],
     )(inline f: QueryContext ?=> F)(using 
-        s: SelectItem[V],
-        a: AsExpr[V]
+        s: SelectItem[V]
     ): ProjectionQuery[N, V, ?] =
         val func = t.tupled(f)
         val mappedItems = func(tt.toTuple(queryItems))

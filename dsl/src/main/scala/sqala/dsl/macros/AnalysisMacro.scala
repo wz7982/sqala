@@ -733,6 +733,17 @@ object AnalysisMacro:
                     Nil,
                     Nil
                 )
+            case Ident(n) =>
+                term.tpe.widen.asType match
+                    case '[Table[_]] =>
+                        ExprInfo(term.asExpr, false, false, false, false, true, Nil, Nil, (n, "*") :: Nil, Nil)
+                    case '[SubQuery[_, _]] =>
+                        ExprInfo(term.asExpr, false, false, false, false, true, Nil, Nil, (n, "*") :: Nil, Nil)
+                    case '[t] =>
+                        if Expr.summon[AsSqlExpr[t]].isDefined then
+                            ExprInfo(term.asExpr, false, false, false, false, true, Nil, Nil, Nil, Nil)
+                        else
+                            ExprInfo(term.asExpr, false, false, false, false, false, Nil, Nil, Nil, Nil)
             case _ =>
                 term.tpe.widen.asType match
                     case '[t] =>

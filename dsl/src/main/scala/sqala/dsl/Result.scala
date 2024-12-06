@@ -3,6 +3,7 @@ package sqala.dsl
 import sqala.dsl.statement.query.SubQuery
 
 import scala.NamedTuple.NamedTuple
+import sqala.dsl.statement.query.Group
 
 trait Result[T]:
     type R
@@ -21,6 +22,12 @@ object Result:
         r: Result[NamedTuple[N, V]]
     ): Aux[SubQuery[N, V], r.R] =
         new Result[SubQuery[N, V]]:
+            type R = r.R
+
+    given groupResult[N <: Tuple, V <: Tuple](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[Group[N, V], r.R] =
+        new Result[Group[N, V]]:
             type R = r.R
 
     given tupleResult[H, T <: Tuple](using
