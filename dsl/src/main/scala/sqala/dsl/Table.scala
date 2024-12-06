@@ -18,6 +18,9 @@ class Table[T](
         Expr.Column(__aliasName__, columnMap(name))
 
 object Table:
+    given tableToTuple1[T]: Conversion[Table[T], Tuple1[Table[T]]] =
+        Tuple1(_)
+
     extension [T](table: Table[T])
         def * : table.Fields =
             val columns = table.__metaData__.columnNames

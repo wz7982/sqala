@@ -7,18 +7,18 @@ import scala.compiletime.{constValueTuple, erasedValue}
 
 class Sort[N <: Tuple, V <: Tuple](
     private[sqala] val __names__ : List[String],
-    private[sqala] val __values__ : List[Expr[?]]
+    private[sqala] val __values__ : List[Any]
 ) extends Selectable:
     type Fields = NamedTuple[N, V]
 
-    def selectDynamic(name: String): Expr[?] =
+    def selectDynamic(name: String): Any =
         __names__.zip(__values__).find(_._1 == name).map(_._2).get
 
     def apply(n: Int): Tuple.Elem[V, n.type] =
         __values__(n).asInstanceOf[Tuple.Elem[V, n.type]]
 
 object Sort:
-    inline def apply[N <: Tuple, V <: Tuple](values: List[Expr[?]]): Sort[N, V] =
+    inline def apply[N <: Tuple, V <: Tuple](values: List[Any]): Sort[N, V] =
         val names = inline erasedValue[N] match 
             case _: NonEmptyTuple => 
                 constValueTuple[N].toList.map(_.asInstanceOf[String])
