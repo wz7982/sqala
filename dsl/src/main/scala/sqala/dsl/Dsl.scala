@@ -396,7 +396,8 @@ inline def subquery[N <: Tuple, V <: Tuple, S <: ResultSize](
 )(using
     qc: QueryContext = QueryContext(-1),
     s: SelectItem[SubQuery[N, V]],
-    sq: SelectItem[V]
+    sq: SelectItem[V],
+    a: AsExpr[V]
 ): SelectQuery[SubQuery[N, V]] =
     qc.tableIndex += 1
     val aliasName = s"t${qc.tableIndex}"
