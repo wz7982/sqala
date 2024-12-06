@@ -299,7 +299,8 @@ class SelectQuery[T](
         tt: ToTuple[T],
         ts: ToTuple[V],
         si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
-        ti: SelectItem[V]
+        ti: SelectItem[V],
+        a: AsExpr[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
             SqlJoinType.Inner,
@@ -313,7 +314,8 @@ class SelectQuery[T](
         tt: ToTuple[T],
         ts: ToTuple[V],
         si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
-        ti: SelectItem[V]
+        ti: SelectItem[V],
+        a: AsExpr[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
             SqlJoinType.Inner,
@@ -340,7 +342,8 @@ class SelectQuery[T](
         tt: ToTuple[T],
         ts: ToTuple[o.R],
         si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
-        st: SelectItem[V]
+        st: SelectItem[V],
+        a: AsExpr[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
             SqlJoinType.Left, 
@@ -355,7 +358,8 @@ class SelectQuery[T](
         tt: ToTuple[T],
         ts: ToTuple[o.R],
         si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
-        st: SelectItem[V]
+        st: SelectItem[V],
+        a: AsExpr[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
             SqlJoinType.Left, 
@@ -382,7 +386,8 @@ class SelectQuery[T](
         tt: ToTuple[o.R],
         ts: ToTuple[V],
         si: SelectItem[Append[tt.R, SubQuery[N, ts.R]]],
-        st: SelectItem[V]
+        st: SelectItem[V],
+        a: AsExpr[V]
     ): JoinQuery[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, S, Append[tt.R, SubQuery[N, ts.R]]](
             SqlJoinType.Right,
