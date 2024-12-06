@@ -1,9 +1,8 @@
 package sqala.dsl
 
-import sqala.dsl.statement.query.SubQuery
+import sqala.dsl.statement.query.{Group, SubQuery}
 
 import scala.NamedTuple.NamedTuple
-import sqala.dsl.statement.query.Group
 
 trait Result[T]:
     type R
