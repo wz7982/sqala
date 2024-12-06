@@ -20,3 +20,7 @@ class SubQuery[N <: Tuple, V <: Tuple](
             Expr.Column(__alias__, s"c${i}")
         val columnTuple = Tuple.fromArray(columns.toArray)
         NamedTuple(columnTuple).asInstanceOf[Fields]
+
+object SubQuery:
+    given subQueryToTuple1[N <: Tuple, V <: Tuple]: Conversion[SubQuery[N, V], Tuple1[SubQuery[N, V]]] =
+        Tuple1(_)

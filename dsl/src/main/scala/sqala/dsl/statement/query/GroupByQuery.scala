@@ -22,8 +22,7 @@ class GroupByQuery[T](
     inline def map[F, N <: Tuple, V <: Tuple](using
         t: TupledFunction[F, T => NamedTuple[N, V]]
     )(inline f: QueryContext ?=> F)(using
-        s: SelectItem[V],
-        a: AsExpr[V]
+        s: SelectItem[V]
     ): GroupedProjectionQuery[N, V, ManyRows] =
         AnalysisMacro.analysisGroupedSelect(f)
         val func = t.tupled(f)
