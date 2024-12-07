@@ -23,7 +23,7 @@ object ExprMacro:
         import q.reflect.*
 
         report.errorAndAbort(
-            s"\"${term}\" cannot be converted to SQL expression.", 
+            s"\"${term.show}\" cannot be converted to SQL expression.", 
             term.asExpr
         )
 
@@ -613,7 +613,7 @@ object ExprMacro:
                         val valueExpr = term.asExprOf[t]
                         '{ $e.asSqlExpr($valueExpr) }
 
-    private def sortInfoMacro(using q: Quotes)(
+    private[sqala] def sortInfoMacro(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
