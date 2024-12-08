@@ -27,7 +27,7 @@ sealed class Query[T](val ast: SqlQuery):
 class TableQuery[T](
     private val tableName: Option[String],
     override val ast: SqlQuery.Select
-) extends Query[Table[T]](ast):
+)(using val queryContext: QueryContext) extends Query[Table[T]](ast):
     private inline def replaceTableName(tableName: String): SqlQuery.Select =
         ast.from.head match
             case SqlTable.IdentTable(t, a) =>

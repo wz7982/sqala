@@ -14,7 +14,8 @@ def queryContext[T](f: QueryContext ?=> T): T =
     f
 
 inline def query[T](using
-    p: Mirror.ProductOf[T]
+    p: Mirror.ProductOf[T],
+    c: QueryContext
 ): TableQuery[T] =
     AsSqlExpr.summonInstances[p.MirroredElemTypes]
     val tableName = TableMacro.tableName[T]
