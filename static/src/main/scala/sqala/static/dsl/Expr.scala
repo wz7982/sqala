@@ -122,5 +122,3 @@ class OverValue:
 
     infix def groupsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
         compileTimeOnly
-
-// TODO 两个字符串插值器

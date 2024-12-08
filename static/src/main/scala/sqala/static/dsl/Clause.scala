@@ -9,6 +9,10 @@ import sqala.static.statement.query.*
 
 import scala.deriving.Mirror
 
+def queryContext[T](f: QueryContext ?=> T): T =
+    given QueryContext = new QueryContext
+    f
+
 inline def query[T](using
     p: Mirror.ProductOf[T]
 ): TableQuery[T] =
