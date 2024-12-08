@@ -31,8 +31,8 @@ class GroupByQuery[T](
     private[sqala] val groups: List[SqlExpr],
     override val ast: SqlQuery.Select,
 )(using val queryContext: QueryContext) extends Query[T](ast):
-    inline def sortBy[F](using
-        TupledFunction[F, T => Any]
+    inline def sortBy[F, S: AsSort](using
+        TupledFunction[F, T => S]
     )(inline f: F): GroupByQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
         queryContext.groups.prepend((args.head, groups))
@@ -73,16 +73,15 @@ class TableQuery[T](
         val cond = ClauseMacro.fetchExpr(f, newParam :: Nil, queryContext)
         TableQuery(Some(newParam), if test then newAst.addWhere(cond) else newAst)
 
-    // TODO sortBy 改成trait约束
-    inline def sortBy(inline f: Table[T] => Any): TableQuery[T] =
+    inline def sortBy[S: AsSort](inline f: Table[T] => S): TableQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)
         val newAst = replaceTableName(newParam)
         val sortBy = ClauseMacro.fetchSortBy(f, newParam :: Nil, queryContext)
         TableQuery(Some(newParam), newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
-    inline def groupBy[N <: Tuple, V <: Tuple](inline 
-        f: Table[T] => NamedTuple[N, V]
+    inline def groupBy[N <: Tuple, V <: Tuple : AsExpr](
+        inline f: Table[T] => NamedTuple[N, V]
     ): GroupByQuery[(Group[N, V], Table[T])] =
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)
@@ -92,3 +91,10 @@ class TableQuery[T](
             groupBy,
             newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
         )
+
+    inline def map[M: AsSelectItem](inline f: Table[T] => M): Query[M] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = tableName.getOrElse(args.head)
+        val newAst = replaceTableName(newParam)
+        val selectItems = ClauseMacro.fetchMap(f, newParam :: Nil, queryContext)
+        Query(newAst.copy(select = selectItems))

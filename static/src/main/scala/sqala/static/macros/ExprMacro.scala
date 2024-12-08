@@ -27,6 +27,7 @@ object ExprMacro:
             term.asExpr
         )
 
+    // TODO 语义分析
     private[sqala] def treeInfoMacro(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],

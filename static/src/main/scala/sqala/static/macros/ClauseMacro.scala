@@ -2,9 +2,10 @@ package sqala.static.macros
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderBy
+import sqala.ast.statement.SqlSelectItem
+import sqala.static.common.QueryContext
 
 import scala.quoted.*
-import sqala.static.common.QueryContext
 
 object ClauseMacro:
     inline def fetchArgNames[T](inline f: T): List[String] =
@@ -18,6 +19,13 @@ object ClauseMacro:
 
     inline def fetchGroupBy[T](inline f: T, tableNames: List[String], queryContext: QueryContext): List[SqlExpr] =
         ${ fetchGroupByMacro[T]('f, 'tableNames, 'queryContext) }
+
+    inline def fetchMap[T](
+        inline f: T, 
+        tableNames: List[String], 
+        queryContext: QueryContext
+    ): List[SqlSelectItem] =
+        ${ fetchMapMacro[T]('f, 'tableNames, 'queryContext) }
 
     def fetchArgNamesMacro[T](f: Expr[T])(using q: Quotes): Expr[List[String]] =
         val (args, _) = unwrapFuncMacro(f)
@@ -73,6 +81,40 @@ object ClauseMacro:
                 )
 
         Expr.ofList(group)
+
+    def fetchMapMacro[T](
+        f: Expr[T], 
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[List[SqlSelectItem]] =
+        import q.reflect.*
+        
+        val (args, body) = unwrapFuncMacro(f)
+
+        val items = body match
+            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
+                if t.startsWith("Tuple")
+            =>
+                val names = n match
+                    case TypeApply(Apply(TypeApply(_, Applied(_, ns) :: Nil), _), _) =>
+                        ns.map:
+                            case Singleton(Literal(StringConstant(s))) => Expr(s)
+                val items = terms
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                items.zip(names).map: (i, n) =>
+                    '{ SqlSelectItem.Item($i, Some($n)) }
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+                if t.startsWith("Tuple")
+            => 
+                val items = terms
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                items.map: i =>
+                    '{ SqlSelectItem.Item($i, None) }
+            case _ =>
+                val i = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
+                '{ SqlSelectItem.Item($i, None) } :: Nil
+
+        Expr.ofList(items)
 
     private def unwrapFuncMacro[T](
         value: Expr[T]
