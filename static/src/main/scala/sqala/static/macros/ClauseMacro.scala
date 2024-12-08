@@ -4,28 +4,40 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderBy
 
 import scala.quoted.*
+import sqala.static.common.QueryContext
 
 object ClauseMacro:
     inline def fetchArgNames[T](inline f: T): List[String] =
         ${ fetchArgNamesMacro[T]('f) }
 
-    inline def fetchExpr[T](inline f: T, tableNames: List[String]): SqlExpr =
-        ${ fetchExprMacro[T]('f, 'tableNames) }
+    inline def fetchExpr[T](inline f: T, tableNames: List[String], queryContext: QueryContext): SqlExpr =
+        ${ fetchExprMacro[T]('f, 'tableNames, 'queryContext) }
 
-    inline def fetchSortBy[T](inline f: T, tableNames: List[String]): List[SqlOrderBy] =
-        ${ fetchSortByMacro[T]('f, 'tableNames) }
+    inline def fetchSortBy[T](inline f: T, tableNames: List[String], queryContext: QueryContext): List[SqlOrderBy] =
+        ${ fetchSortByMacro[T]('f, 'tableNames, 'queryContext) }
+
+    inline def fetchGroupBy[T](inline f: T, tableNames: List[String], queryContext: QueryContext): List[SqlExpr] =
+        ${ fetchGroupByMacro[T]('f, 'tableNames, 'queryContext) }
 
     def fetchArgNamesMacro[T](f: Expr[T])(using q: Quotes): Expr[List[String]] =
         val (args, _) = unwrapFuncMacro(f)
 
         Expr(args)
 
-    def fetchExprMacro[T](f: Expr[T], tableNames: Expr[List[String]])(using q: Quotes): Expr[SqlExpr] =
+    def fetchExprMacro[T](
+        f: Expr[T], 
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[SqlExpr] =
         val (args, body) = unwrapFuncMacro(f)
 
-        ExprMacro.treeInfoMacro(args, tableNames, body)
+        ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
 
-    def fetchSortByMacro[T](f: Expr[T], tableNames: Expr[List[String]])(using q: Quotes): Expr[List[SqlOrderBy]] =
+    def fetchSortByMacro[T](
+        f: Expr[T], 
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[List[SqlOrderBy]] =
         import q.reflect.*
         
         val (args, body) = unwrapFuncMacro(f)
@@ -34,11 +46,33 @@ object ClauseMacro:
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
                 if t.startsWith("Tuple")
             => 
-                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t))
+                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext))
             case _ =>
-                ExprMacro.sortInfoMacro(args, tableNames, body) :: Nil
+                ExprMacro.sortInfoMacro(args, tableNames, body, queryContext) :: Nil
 
         Expr.ofList(sort)
+
+    def fetchGroupByMacro[T](
+        f: Expr[T], 
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[List[SqlExpr]] =
+        import q.reflect.*
+        
+        val (args, body) = unwrapFuncMacro(f)
+
+        val group = body match
+            case Inlined(Some(Apply(_, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
+                if t.startsWith("Tuple")
+            => 
+                terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+            case _ =>
+                report.errorAndAbort(
+                    s"\"${body.show}\" cannot be converted to SQL expression.", 
+                    body.asExpr
+                )
+
+        Expr.ofList(group)
 
     private def unwrapFuncMacro[T](
         value: Expr[T]

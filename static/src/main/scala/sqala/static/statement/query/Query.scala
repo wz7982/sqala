@@ -1,6 +1,7 @@
 package sqala.static.statement.query
 
 import sqala.ast.expr.*
+import sqala.ast.group.SqlGroupItem
 import sqala.ast.statement.*
 import sqala.ast.table.SqlTable
 import sqala.printer.Dialect
@@ -8,6 +9,7 @@ import sqala.static.common.*
 import sqala.static.macros.*
 import sqala.util.queryToString
 
+import scala.NamedTuple.NamedTuple
 import scala.util.TupledFunction
 
 sealed class Query[T](val ast: SqlQuery):
@@ -24,8 +26,21 @@ sealed class Query[T](val ast: SqlQuery):
 
 // Table query 和 join query 继承 Select query
 
+// TODO 暂时继承Query
+class GroupByQuery[T](
+    private[sqala] val groups: List[SqlExpr],
+    override val ast: SqlQuery.Select,
+)(using val queryContext: QueryContext) extends Query[T](ast):
+    inline def sortBy[F](using
+        TupledFunction[F, T => Any]
+    )(inline f: F): GroupByQuery[T] =
+        val args = ClauseMacro.fetchArgNames(f)
+        queryContext.groups.prepend((args.head, groups))
+        val sortBy = ClauseMacro.fetchSortBy(f, args, queryContext)
+        GroupByQuery(groups, ast.copy(orderBy = ast.orderBy ++ sortBy))
+
 class TableQuery[T](
-    private val tableName: Option[String],
+    private[sqala] val tableName: Option[String],
     override val ast: SqlQuery.Select
 )(using val queryContext: QueryContext) extends Query[Table[T]](ast):
     private inline def replaceTableName(tableName: String): SqlQuery.Select =
@@ -45,7 +60,7 @@ class TableQuery[T](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)
         val newAst = replaceTableName(newParam)
-        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil)
+        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil, queryContext)
         TableQuery(Some(newParam), newAst.addWhere(cond))
 
     inline def withFilter(inline f: Table[T] => Boolean): TableQuery[T] =
@@ -55,12 +70,25 @@ class TableQuery[T](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)
         val newAst = replaceTableName(newParam)
-        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil)
+        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil, queryContext)
         TableQuery(Some(newParam), if test then newAst.addWhere(cond) else newAst)
 
+    // TODO sortBy 改成trait约束
     inline def sortBy(inline f: Table[T] => Any): TableQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)
         val newAst = replaceTableName(newParam)
-        val sortBy = ClauseMacro.fetchSortBy(f, newParam :: Nil)
+        val sortBy = ClauseMacro.fetchSortBy(f, newParam :: Nil, queryContext)
         TableQuery(Some(newParam), newAst.copy(orderBy = newAst.orderBy ++ sortBy))
+
+    inline def groupBy[N <: Tuple, V <: Tuple](inline 
+        f: Table[T] => NamedTuple[N, V]
+    ): GroupByQuery[(Group[N, V], Table[T])] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = tableName.getOrElse(args.head)
+        val newAst = replaceTableName(newParam)
+        val groupBy = ClauseMacro.fetchGroupBy(f, newParam :: Nil, queryContext)
+        GroupByQuery(
+            groupBy,
+            newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
+        )
