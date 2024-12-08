@@ -2,7 +2,7 @@ package sqala.static.common
 
 import scala.NamedTuple.*
 
-class Table[T] extends Selectable:
+class Table[T](private[sqala] val __metaData__ : TableMetaData) extends Selectable:
     type Fields =
         NamedTuple[
             Names[From[Unwrap[T, Option]]],

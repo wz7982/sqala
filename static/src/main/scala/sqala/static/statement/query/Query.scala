@@ -10,21 +10,14 @@ import sqala.static.macros.*
 import sqala.util.queryToString
 
 import scala.NamedTuple.NamedTuple
+import scala.compiletime.summonInline
 import scala.util.TupledFunction
 
 sealed class Query[T](val ast: SqlQuery):
     def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
         queryToString(ast, dialect, prepare, indent)
 
-// 加一个select query
-// 加一个join query，join query调用filter 和 sortBy也变成select query
-// join query 的join 每次只添加on里最后一个表的别名
-// 只有table query和join query 有join方法
-// 其他查询调用groupBy 变成group query
-// 加一个group query 有having sort map
-// map后变成Query
-
-// Table query 和 join query 继承 Select query
+// TODO union
 
 class GroupByQuery[T](
     private[sqala] val groups: List[SqlExpr],
@@ -54,62 +47,88 @@ class GroupByQuery[T](
         val selectItems = ClauseMacro.fetchMap(f, args, queryContext)
         Query(ast.copy(select = selectItems))
 
-class TableQuery[T](
-    private[sqala] val tableName: Option[String],
+class SelectQuery[T <: Tuple : SelectItem](
+    private[sqala] val tables: T,
+    private[sqala] val tableNames: List[String],
     override val ast: SqlQuery.Select
 )(using val queryContext: QueryContext) extends Query[Table[T]](ast):
-    private inline def replaceTableName(tableName: String): SqlQuery.Select =
-        ast.from.head match
-            case SqlTable.IdentTable(t, a) =>
-                val newTable = SqlTable.IdentTable(
-                    t, 
-                    a.map(_.copy(tableAlias = tableName))
+    private inline def replaceTableName(tableNames: List[String]): SqlQuery.Select =
+        // TODO 测试values查询
+        def from(tableNames: List[String], table: SqlTable): SqlTable = (tableNames, table) match
+            case (x :: _, SqlTable.IdentTable(t, a)) =>
+                SqlTable.IdentTable(
+                    t,
+                    a.map(_.copy(tableAlias = x))
                 )
-                val metaData = TableMacro.tableMetaData[T]
-                val selectItems = metaData.fieldNames.map: n =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some(tableName), n), None)
-                ast.copy(select = selectItems, from = newTable :: Nil)
-            case _ => ast
+            case (x :: _, SqlTable.SubQueryTable(q, l, a)) =>
+                SqlTable.SubQueryTable(q, l, a.copy(tableAlias = x))
+            case (x :: xs, SqlTable.JoinTable(l, j, r, c)) =>
+                ???
+                // SqlTable.JoinTable(from(x :: Nil, l), j, )
+                // TODO
+            case _ => table
+            
+        val select = summon[SelectItem[T]].selectItems(tables, tableNames)
 
-    inline def filter(inline f: Table[T] => Boolean): TableQuery[T] =
+        ast.copy(select = select, from = from(tableNames, ast.from.head) :: Nil)
+
+    inline def filter[F](using
+        TupledFunction[F, T => Boolean]
+    )(inline f: F): SelectQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
-        val newParam = tableName.getOrElse(args.head)
+        val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(newParam)
-        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil, queryContext)
-        TableQuery(Some(newParam), newAst.addWhere(cond))
+        val cond = ClauseMacro.fetchExpr(f, newParam, queryContext)
+        SelectQuery(tables, newParam, newAst.addWhere(cond))
 
-    inline def withFilter(inline f: Table[T] => Boolean): TableQuery[T] =
+    inline def withFilter[F](using
+        TupledFunction[F, T => Boolean]
+    )(inline f: F): SelectQuery[T] =
         filter(f)
 
-    inline def filterIf(test: => Boolean)(inline f: Table[T] => Boolean): TableQuery[T] =
+    inline def filterIf[F](test: => Boolean)(using
+        TupledFunction[F, T => Boolean]
+    )(inline f: F): SelectQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
-        val newParam = tableName.getOrElse(args.head)
+        val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(newParam)
-        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil, queryContext)
-        TableQuery(Some(newParam), if test then newAst.addWhere(cond) else newAst)
+        val cond = ClauseMacro.fetchExpr(f, newParam, queryContext)
+        SelectQuery(tables, newParam, if test then newAst.addWhere(cond) else newAst)
 
-    inline def sortBy[S: AsSort](inline f: Table[T] => S): TableQuery[T] =
+    inline def sortBy[F, S: AsSort](using 
+        TupledFunction[F, T => S]
+    )(inline f: F): SelectQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
-        val newParam = tableName.getOrElse(args.head)
+        val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(newParam)
-        val sortBy = ClauseMacro.fetchSortBy(f, newParam :: Nil, queryContext)
-        TableQuery(Some(newParam), newAst.copy(orderBy = newAst.orderBy ++ sortBy))
+        val sortBy = ClauseMacro.fetchSortBy(f, newParam, queryContext)
+        SelectQuery(tables, newParam, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
-    inline def groupBy[N <: Tuple, V <: Tuple : AsExpr](
-        inline f: Table[T] => NamedTuple[N, V]
-    ): GroupByQuery[(Group[N, V], Table[T])] =
+    inline def groupBy[F, N <: Tuple, V <: Tuple : AsExpr](using
+        TupledFunction[F, T => NamedTuple[N, V]]
+    )(inline f: F): GroupByQuery[Group[N, V] *: T] =
         val args = ClauseMacro.fetchArgNames(f)
-        val newParam = tableName.getOrElse(args.head)
+        val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(newParam)
-        val groupBy = ClauseMacro.fetchGroupBy(f, newParam :: Nil, queryContext)
+        val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
         GroupByQuery(
             groupBy,
             newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
         )
 
-    inline def map[M: AsSelectItem](inline f: Table[T] => M): Query[M] =
+    inline def map[F, M: AsSelectItem](using
+        TupledFunction[F, T => M]
+    )(inline f: F): Query[M] =
         val args = ClauseMacro.fetchArgNames(f)
-        val newParam = tableName.getOrElse(args.head)
+        val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(newParam)
-        val selectItems = ClauseMacro.fetchMap(f, newParam :: Nil, queryContext)
+        val selectItems = ClauseMacro.fetchMap(f, newParam, queryContext)
         Query(newAst.copy(select = selectItems))
+
+class TableQuery[T](
+    private[sqala] val table: Table[T],
+    override val ast: SqlQuery.Select
+)(using 
+    override val queryContext: QueryContext
+) extends SelectQuery[Tuple1[Table[T]]](Tuple1(table), Nil, ast)
+// TODO join query 的join 除了第一次两表join，每次只添加on里最后一个表的别名
