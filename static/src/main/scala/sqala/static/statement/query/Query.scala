@@ -26,11 +26,18 @@ sealed class Query[T](val ast: SqlQuery):
 
 // Table query 和 join query 继承 Select query
 
-// TODO 暂时继承Query
 class GroupByQuery[T](
     private[sqala] val groups: List[SqlExpr],
-    override val ast: SqlQuery.Select,
-)(using val queryContext: QueryContext) extends Query[T](ast):
+    val ast: SqlQuery.Select,
+)(using val queryContext: QueryContext):
+    inline def having[F](using
+        TupledFunction[F, T => Boolean]
+    )(inline f: F): GroupByQuery[T] =
+        val args = ClauseMacro.fetchArgNames(f)
+        queryContext.groups.prepend((args.head, groups))
+        val having = ClauseMacro.fetchExpr(f, args, queryContext)
+        GroupByQuery(groups, ast.addHaving(having))
+
     inline def sortBy[F, S: AsSort](using
         TupledFunction[F, T => S]
     )(inline f: F): GroupByQuery[T] =
@@ -38,6 +45,14 @@ class GroupByQuery[T](
         queryContext.groups.prepend((args.head, groups))
         val sortBy = ClauseMacro.fetchSortBy(f, args, queryContext)
         GroupByQuery(groups, ast.copy(orderBy = ast.orderBy ++ sortBy))
+
+    inline def map[F, M: AsSelectItem](using
+        TupledFunction[F, T => M]
+    )(inline f: F): Query[M] =
+        val args = ClauseMacro.fetchArgNames(f)
+        queryContext.groups.prepend((args.head, groups))
+        val selectItems = ClauseMacro.fetchMap(f, args, queryContext)
+        Query(ast.copy(select = selectItems))
 
 class TableQuery[T](
     private[sqala] val tableName: Option[String],
