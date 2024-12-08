@@ -2,4 +2,4 @@ package sqala.static.dsl
 
 class QueryContext
 
-given queryContext: QueryContext = new QueryContext
+given context: QueryContext = new QueryContext

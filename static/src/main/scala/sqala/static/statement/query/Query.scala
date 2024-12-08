@@ -38,6 +38,16 @@ class TableQuery[T](
         val cond = ClauseMacro.fetchExpr(f, newParam :: Nil)
         TableQuery(Some(newParam), newAst.addWhere(cond))
 
+    inline def withFilter(inline f: Table[T] => Boolean): TableQuery[T] =
+        filter(f)
+
+    inline def filterIf(test: => Boolean)(inline f: Table[T] => Boolean): TableQuery[T] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = tableName.getOrElse(args.head)
+        val newAst = replaceTableName(newParam)
+        val cond = ClauseMacro.fetchExpr(f, newParam :: Nil)
+        TableQuery(Some(newParam), if test then newAst.addWhere(cond) else newAst)
+
     inline def sortBy(inline f: Table[T] => Any): TableQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = tableName.getOrElse(args.head)

@@ -10,7 +10,3 @@ class Table[T] extends Selectable:
         ]
 
     def selectDynamic(name: String): Any = compileTimeOnly
-
-object Table:
-    extension [T](table: Table[T])
-        def * : table.Fields = compileTimeOnly
