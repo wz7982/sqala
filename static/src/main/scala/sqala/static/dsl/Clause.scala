@@ -70,6 +70,14 @@ inline def query[T <: Product](
     )
     SelectQuery(table, Nil, ast)
 
+inline def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
+    query: Query[NamedTuple[N, V], ?]
+)(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
+    SelectItem[SubQuery[N, V]],
+    QueryContext
+): WithRecursive[NamedTuple[N, V]] =
+    WithRecursive(query)(f)
+
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]
 
 inline def insert[T <: Product]: Insert[Table[T], InsertNew] = Insert[T]

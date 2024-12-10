@@ -174,6 +174,18 @@ object ClauseMacro:
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
+            case Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)
+                if t.startsWith("Tuple")
+            =>
+                val names = n match
+                    case TypeApply(Apply(TypeApply(_, Applied(_, ns) :: Nil), _), _) =>
+                        ns.map:
+                            case Singleton(Literal(StringConstant(s))) => Expr(s)
+                val items = terms
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                val exprs = items.map(_._1).zip(names).map: (i, n) =>
+                    '{ SqlSelectItem.Item($i, Some($n)) }
+                exprs -> items.map(_._2)
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
                 if t.startsWith("Tuple")
             => 
@@ -219,6 +231,16 @@ object ClauseMacro:
             case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
                 if t.startsWith("Tuple")
             =>
+                val names = n match
+                    case TypeApply(Apply(TypeApply(_, Applied(_, ns) :: Nil), _), _) =>
+                        ns.map:
+                            case Singleton(Literal(StringConstant(s))) => Expr(s)
+                val items = terms
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                val exprs = items.map(_._1).zip(names).map: (i, n) =>
+                    '{ SqlSelectItem.Item($i, Some($n)) }
+                exprs -> items.map(_._2)
+            case Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil) =>
                 val names = n match
                     case TypeApply(Apply(TypeApply(_, Applied(_, ns) :: Nil), _), _) =>
                         ns.map:
