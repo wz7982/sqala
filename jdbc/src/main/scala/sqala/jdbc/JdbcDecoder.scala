@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.dsl.{CustomField, Json}
+import sqala.static.common.{CustomField, Json}
 
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}

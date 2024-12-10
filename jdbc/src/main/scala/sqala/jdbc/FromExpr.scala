@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.dsl.TableMetaData
+import sqala.static.common.TableMetaData
 import sqala.printer.*
 
 import scala.quoted.{Expr, FromExpr, Quotes, Type}

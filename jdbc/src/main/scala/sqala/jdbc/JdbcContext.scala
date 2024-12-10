@@ -1,9 +1,8 @@
 package sqala.jdbc
 
-import sqala.dsl.Result
-import sqala.dsl.macros.DmlMacro
-import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.query.*
+import sqala.static.macros.*
+import sqala.static.statement.dml.*
+import sqala.static.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
@@ -43,7 +42,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         Mirror.ProductOf[A], 
         NotGiven[JdbcTransactionContext]
     ): Int =
-        val i = sqala.dsl.insert[A](entity)
+        val i = sqala.static.dsl.insert[A](entity)
         val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
@@ -51,7 +50,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         Mirror.ProductOf[A], 
         NotGiven[JdbcTransactionContext]
     ): Int =
-        val i = sqala.dsl.insert[A](entities)
+        val i = sqala.static.dsl.insert[A](entities)
         val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
@@ -59,10 +58,10 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         Mirror.ProductOf[A], 
         NotGiven[JdbcTransactionContext]
     ): A =
-        val i = sqala.dsl.insert[A](entity)
+        val i = sqala.static.dsl.insert[A](entity)
         val (sql, args) = statementToString(i.ast, dialect, true)
         val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
-        DmlMacro.bindGeneratedPrimaryKey[A](id, entity)
+        ClauseMacro.bindGeneratedPrimaryKey[A](id, entity)
 
     inline def update[A <: Product](
         entity: A, 
@@ -71,7 +70,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         Mirror.ProductOf[A], 
         NotGiven[JdbcTransactionContext]
     ): Int =
-        val u = sqala.dsl.update(entity, skipNone)
+        val u = sqala.static.dsl.update(entity, skipNone)
         if u.ast.setList.isEmpty then
             0
         else
@@ -84,7 +83,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         Mirror.ProductOf[A], 
         NotGiven[JdbcTransactionContext]
     ): Int =
-        val s = sqala.dsl.save(entity)
+        val s = sqala.static.dsl.save(entity)
         val (sql, args) = statementToString(s.ast, dialect, true)
         executeDml(sql, args)
 
@@ -133,8 +132,8 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
             else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
         val count = if returnCount then fetch(query.size).head else 0L
         val total = if count == 0 || pageSize == 0 then 0
-            else if count % pageSize == 0 then count / pageSize
-            else count / pageSize + 1
+            else if count % pageSize == 0 then (count / pageSize).toInt
+            else (count / pageSize + 1).toInt
         Page(total, count, pageNo, pageSize, data)
 
     def page[T](query: Query[T, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using r: Result[T], d: JdbcDecoder[r.R], n: NotGiven[JdbcTransactionContext]): Page[r.R] =
@@ -150,7 +149,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    def fetchExists[T](query: Query[T, ?])(using NotGiven[JdbcTransactionContext]): Boolean =
+    def fetchExists(query: Query[?, ?])(using NotGiven[JdbcTransactionContext]): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
