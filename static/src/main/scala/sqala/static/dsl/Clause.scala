@@ -24,7 +24,7 @@ inline def query[T](using
     val tableName = TableMacro.tableName[T]
     val metaData = TableMacro.tableMetaData[T]
     val table = Table[T](metaData)
-    val selectItems = metaData.fieldNames.map: n =>
+    val selectItems = metaData.columnNames.map: n =>
         SqlSelectItem.Item(SqlExpr.Column(Some(metaData.tableName), n), None)
     val ast = SqlQuery.Select(
         select = selectItems,
