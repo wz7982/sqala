@@ -30,7 +30,8 @@ export sqala.static.common.compileTimeOnly
 
 export sqala.static.common.{
     CustomField, 
-    QueryContext, 
+    QueryContext,
+    Sort,
     Table, 
     Validate
 }
