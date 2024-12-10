@@ -24,7 +24,7 @@ def countDistinct[T](x: T)(using AsSqlExpr[T], QueryContext): Long =
     compileTimeOnly
 
 @sqlAgg("SUM")
-def sum[T](x: T)(using Number[T], QueryContext): Option[BigDecimal] =
+def sum[T](x: T)(using Number[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
 @sqlAgg("AVG")
