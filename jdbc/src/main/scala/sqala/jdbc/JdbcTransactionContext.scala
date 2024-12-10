@@ -1,9 +1,8 @@
 package sqala.jdbc
 
-import sqala.dsl.Result
-import sqala.dsl.macros.DmlMacro
-import sqala.dsl.statement.dml.*
-import sqala.dsl.statement.query.*
+import sqala.static.macros.*
+import sqala.static.statement.dml.*
+import sqala.static.statement.query.*
 import sqala.printer.Dialect
 import sqala.util.{queryToString, statementToString}
 
@@ -37,7 +36,7 @@ inline def insert[A <: Product](entity: A)(using
     t: JdbcTransactionContext, 
     l: Logger
 ): Int =
-    val i = sqala.dsl.insert[A](entity)
+    val i = sqala.static.dsl.insert[A](entity)
     val (sql, args) = statementToString(i.ast, t.dialect, true)
     jdbcExec(t.connection, sql, args)
 
@@ -46,7 +45,7 @@ inline def insertBatch[A <: Product](entities: List[A])(using
     t: JdbcTransactionContext, 
     l: Logger
 ): Int =
-    val i = sqala.dsl.insert[A](entities)
+    val i = sqala.static.dsl.insert[A](entities)
     val (sql, args) = statementToString(i.ast, t.dialect, true)
     jdbcExec(t.connection, sql, args)
 
@@ -55,10 +54,10 @@ inline def insertAndReturn[A <: Product](entity: A)(using
     t: JdbcTransactionContext, 
     l: Logger
 ): A =
-    val i = sqala.dsl.insert[A](entity)
+    val i = sqala.static.dsl.insert[A](entity)
     val (sql, args) = statementToString(i.ast, t.dialect, true)
     val id = jdbcExecReturnKey(t.connection, sql, args).head
-    DmlMacro.bindGeneratedPrimaryKey[A](id, entity)
+    ClauseMacro.bindGeneratedPrimaryKey[A](id, entity)
 
 inline def update[A <: Product](
     entity: A, 
@@ -68,7 +67,7 @@ inline def update[A <: Product](
     t: JdbcTransactionContext, 
     l: Logger
 ): Int =
-    val u = sqala.dsl.update(entity, skipNone)
+    val u = sqala.static.dsl.update(entity, skipNone)
     if u.ast.setList.isEmpty then
         0
     else
@@ -82,7 +81,7 @@ inline def save[A <: Product](
     t: JdbcTransactionContext, 
     l: Logger
 ): Int =
-    val s = sqala.dsl.save(entity)
+    val s = sqala.static.dsl.save(entity)
     val (sql, args) = statementToString(s.ast, t.dialect, true)
     jdbcExec(t.connection, sql, args)
 
@@ -139,8 +138,8 @@ def pageTo[T](
         else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
     val count = if returnCount then fetch(query.size).head else 0L
     val total = if count == 0 || pageSize == 0 then 0
-        else if count % pageSize == 0 then count / pageSize
-        else count / pageSize + 1
+        else if count % pageSize == 0 then (count / pageSize).toInt
+        else (count / pageSize + 1).toInt
     Page(total, count, pageNo, pageSize, data)
 
 def page[T](
