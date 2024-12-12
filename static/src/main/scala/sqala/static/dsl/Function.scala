@@ -97,7 +97,6 @@ def percentRank()(using QueryContext): Window[BigDecimal] =
 def rowNumber()(using QueryContext): Window[Long] =
     compileTimeOnly
 
-
 @sqlWindow("LAG")
 def lag[T](x: T)(using AsSqlExpr[T], QueryContext): Window[Wrap[T, Option]] =
     compileTimeOnly
