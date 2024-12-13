@@ -11,22 +11,25 @@ object Result:
     type Aux[T, O] = Result[T]:
         type R = O
 
-    given tableResult[T]: Aux[Table[T], T] = new Result[Table[T]]:
+    given table[T]: Aux[Table[T], T] = new Result[Table[T]]:
         type R = T
 
-    given exprResult[T: AsSqlExpr]: Aux[T, T] = new Result[T]:
+    given expr[T: AsSqlExpr]: Aux[T, T] = new Result[T]:
         type R = T
 
-    given subQueryResult[N <: Tuple, V <: Tuple](using
+    given scalarQuery[T: AsSqlExpr]: Aux[Query[T, OneRow], T] = new Result[Query[T, OneRow]]:
+        type R = T
+
+    given subQuery[N <: Tuple, V <: Tuple](using
         r: Result[NamedTuple[N, V]]
     ): Aux[SubQuery[N, V], r.R] =
         new Result[SubQuery[N, V]]:
             type R = r.R
 
-    given tableSubQueryResult[T]: Aux[TableSubQuery[T], T] = new Result[TableSubQuery[T]]:
+    given tableSubQuery[T]: Aux[TableSubQuery[T], T] = new Result[TableSubQuery[T]]:
         type R = T
 
-    given tupleResult[H, T <: Tuple](using
+    given tuple[H, T <: Tuple](using
         hr: Result[H],
         tr: Result[T],
         tt: ToTuple[tr.R]
@@ -34,11 +37,11 @@ object Result:
         new Result[H *: T]:
             type R = hr.R *: tt.R
 
-    given tuple1Result[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
+    given tuple1[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
-    given namedTupleResult[N <: Tuple, V <: Tuple](using
+    given namedTuple[N <: Tuple, V <: Tuple](using
         r: Result[V],
         tt: ToTuple[r.R]
     ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
