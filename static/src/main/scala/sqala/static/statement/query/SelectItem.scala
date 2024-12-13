@@ -6,7 +6,7 @@ import sqala.static.common.*
 
 import scala.annotation.implicitNotFound
 
-@implicitNotFound("Type ${T} cannot be converted to SELECT items.")
+@implicitNotFound("Type ${T} cannot be converted to SELECT clause.")
 trait SelectItem[T]:
     def selectItems(item: T, tableNames: List[String]): List[SqlSelectItem.Item]
 
