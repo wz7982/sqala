@@ -1,4 +1,4 @@
-package sqala.util
+package sqala.data.util
 
 import scala.compiletime.{constValue, erasedValue}
 import scala.quoted.*
