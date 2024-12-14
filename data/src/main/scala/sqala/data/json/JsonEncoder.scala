@@ -1,6 +1,6 @@
 package sqala.data.json
 
-import sqala.util.*
+import sqala.data.util.{fetchNames, fetchTypes}
 
 import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
@@ -54,7 +54,7 @@ object JsonEncoder:
             case Some(value) => e.encode(value)
 
     given listEncoder[T](using e: JsonEncoder[T]): JsonEncoder[List[T]] with
-        override inline def encode(x: List[T])(using JsonDateFormat): JsonNode = 
+        override inline def encode(x: List[T])(using JsonDateFormat): JsonNode =
             JsonNode.Array(x.map(e.encode))
 
     inline given derived[T](using m: Mirror.Of[T]): JsonEncoder[T] =

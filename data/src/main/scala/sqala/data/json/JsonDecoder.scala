@@ -1,7 +1,7 @@
 package sqala.data.json
 
 import sqala.data.DefaultValue
-import sqala.util.fetchNames
+import sqala.data.util.fetchNames
 
 import scala.compiletime.{constValue, erasedValue, summonInline}
 import scala.deriving.Mirror

@@ -1,7 +1,7 @@
 package sqala.data.mapping
 
 import sqala.data.DefaultValue
-import sqala.util.fetchTypes
+import sqala.data.util.fetchTypes
 
 import scala.compiletime.summonInline
 import scala.deriving.Mirror

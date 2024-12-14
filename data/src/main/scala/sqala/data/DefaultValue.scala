@@ -1,6 +1,6 @@
 package sqala.data
 
-import sqala.util.fetchTypes
+import sqala.data.util.fetchTypes
 
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
@@ -61,7 +61,7 @@ object DefaultValue:
             case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = EmptyTuple } } =>
                 '{
                     new DefaultValue[T]:
-                        override def defaultValue: T = 
+                        override def defaultValue: T =
                             $m.fromProduct(EmptyTuple)
                 }
             case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = elementTypes } } =>
@@ -77,14 +77,14 @@ object DefaultValue:
                     typ match
                         case '[t] =>
                             val summonExpr = Expr.summon[DefaultValue[t]] match
-                                case None => 
+                                case None =>
                                     val showType = TypeRepr.of[t].show
                                     report.errorAndAbort(s"Cannot create a default value for field ($n: $showType). It's possible to fix this by adding: given DefaultValue[$showType].")
                                 case Some(s) => s
                             '{ $summonExpr.defaultValue }
                 '{
                     new DefaultValue[T]:
-                        override def defaultValue: T = 
+                        override def defaultValue: T =
                             ${
                                 if types.isEmpty then
                                     New(Inferred(tpr)).select(ctor).appliedToArgs(exprs.map(_.asTerm)).asExprOf[T]
@@ -95,7 +95,7 @@ object DefaultValue:
             case '{ $m: Mirror.SumOf[T] { type MirroredElemTypes = elementTypes } } =>
                 val typ = fetchTypes[elementTypes].head
                 val expr = typ match
-                    case '[t] => 
+                    case '[t] =>
                         val summonExpr = Expr.summon[DefaultValue[t]].get
                         '{ $summonExpr.defaultValue }.asExprOf[T]
                 '{
