@@ -5,6 +5,7 @@ import sqala.dsl.{AsSqlExpr, Table}
 import sqala.dsl.statement.query.*
 
 import scala.NamedTuple.NamedTuple
+import scala.language.experimental.namedTuples
 import scala.quoted.*
 
 object AnalysisMacro:
@@ -102,13 +103,13 @@ object AnalysisMacro:
                         s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
                         i.expr
                     )
-                
+
         val isAgg = info.map(_.hasAgg).forall(i => i)
         if isAgg then
             '{
                 new ProjectionQuery[N, V, OneRow]($mappedItems, $ast)(using $qc)
             }
-        else 
+        else
             '{
                 new ProjectionQuery[N, V, ManyRows]($mappedItems, $ast)(using $qc)
             }
@@ -181,7 +182,7 @@ object AnalysisMacro:
 
             if e.isConst then
                 report.error("Constant are not allowed in ungrouped ORDER BY.", e.expr)
-        
+
         '{}
 
     private def analysisGroupedOrderMacro[T: Type](f: Expr[T])(using q: Quotes): Expr[Unit] =
@@ -198,7 +199,7 @@ object AnalysisMacro:
         for e <- orderExpr do
             if e.isConst then
                 report.error("Constant are not allowed in ungrouped ORDER BY.", e.expr)
-        
+
         '{}
 
     private def analysisDistinctOrderMacro[T: Type](f: Expr[T])(using q: Quotes): Expr[Unit] =
@@ -228,17 +229,17 @@ object AnalysisMacro:
 
             if !validated then
                 report.error("For SELECT DISTINCT, ORDER BY expressions must appear in select list.", t.asExpr)
-        
+
         '{}
 
     case class ExprInfo(
         expr: Expr[Any],
-        hasAgg: Boolean, 
+        hasAgg: Boolean,
         isAgg: Boolean,
         isGroup: Boolean,
-        hasWindow: Boolean, 
-        isConst: Boolean, 
-        columnRef: List[(String, String)], 
+        hasWindow: Boolean,
+        isConst: Boolean,
+        columnRef: List[(String, String)],
         aggRef: List[(String, String)],
         nonAggRef: List[(String, String)],
         ungroupedRef: List[(String, String)]
@@ -252,7 +253,7 @@ object AnalysisMacro:
 
         def operators: List[String] =
             List(
-                "==", "===", "!=", "<>", ">", ">=", "<", "<=", 
+                "==", "===", "!=", "<>", ">", ">=", "<", "<=",
                 "&&", "||", "+", "-", "*", "/", "%", "->", "->>",
                 "like", "notLike", "startsWith", "endsWith", "contains"
             )
@@ -280,15 +281,15 @@ object AnalysisMacro:
                 ident.tpe.asType match
                     case '[Table[_]] =>
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
                             false,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
-                            Nil, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
+                            Nil,
+                            (objectName, valName) :: Nil,
                             Nil
                         )
                     case '[UngroupedTable[_]] =>
@@ -296,41 +297,41 @@ object AnalysisMacro:
                             report.error:
                                 s"Subquery uses ungrouped column \"$objectName.$valName\" from outer query."
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
                             false,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
                             Nil,
                             (objectName, valName) :: Nil,
                             (objectName, valName) :: Nil
                         )
                     case '[Sort[_, _]] =>
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
                             false,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
-                            Nil, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
+                            Nil,
+                            (objectName, valName) :: Nil,
                             Nil
                         )
                     case '[Group[_, _]] =>
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
+                            false,
+                            false,
                             true,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
-                            Nil, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
+                            Nil,
+                            (objectName, valName) :: Nil,
                             Nil
                         )
                     case _ =>
@@ -354,13 +355,13 @@ object AnalysisMacro:
                 ident.tpe.asType match
                     case '[SubQuery[_, _]] =>
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
                             false,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
                             Nil,
                             (objectName, valName) :: Nil,
                             Nil
@@ -370,13 +371,13 @@ object AnalysisMacro:
                             report.error:
                                 s"Subquery uses ungrouped column \"$objectName.$valName\" from outer query."
                         ExprInfo(
-                            term.asExpr, 
-                            false, 
-                            false, 
+                            term.asExpr,
                             false,
-                            false, 
-                            false, 
-                            (objectName, valName) :: Nil, 
+                            false,
+                            false,
+                            false,
+                            false,
+                            (objectName, valName) :: Nil,
                             Nil,
                             (objectName, valName) :: Nil,
                             (objectName, valName) :: Nil
@@ -395,7 +396,7 @@ object AnalysisMacro:
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
-                    term.asExpr, 
+                    term.asExpr,
                     leftInfo.hasAgg || rightInfo.hasAgg,
                     false,
                     false,
@@ -418,7 +419,7 @@ object AnalysisMacro:
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
-                    term.asExpr, 
+                    term.asExpr,
                     leftInfo.hasAgg || rightInfo.hasAgg,
                     false,
                     false,
@@ -429,7 +430,7 @@ object AnalysisMacro:
                     leftInfo.nonAggRef ++ rightInfo.nonAggRef,
                     leftInfo.ungroupedRef ++ rightInfo.ungroupedRef
                 )
-            case Apply(Apply(TypeApply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), _), _), right :: Nil), _) 
+            case Apply(Apply(TypeApply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), _), _), right :: Nil), _)
                 if operators.contains(op)
             =>
                 right.tpe.asType match
@@ -441,7 +442,7 @@ object AnalysisMacro:
                 val leftInfo = treeInfoMacro(args, left)
                 val rightInfo = treeInfoMacro(args, right)
                 ExprInfo(
-                    term.asExpr, 
+                    term.asExpr,
                     leftInfo.hasAgg || rightInfo.hasAgg,
                     false,
                     false,
@@ -467,26 +468,26 @@ object AnalysisMacro:
                 val funcArgs = funcArgsRef.flatMap:
                     case Typed(Repeated(a, _), _) => a
                     case a => a :: Nil
-                val argsInfo = 
+                val argsInfo =
                     funcArgs.map(a => treeInfoMacro(args, a))
                 for a <- argsInfo do
                     if a.hasAgg then
                         report.error("Aggregate function calls cannot be nested.", a.expr)
                     if a.hasWindow then
                         report.error("Aggregate function calls cannot contain window function calls.", a.expr)
-                val columnsRef = 
+                val columnsRef =
                     argsInfo.flatMap(_.columnRef)
                 if !columnsRef.map(_._1).forall(args.map(_._1).contains) then
                     report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
                 ExprInfo(
-                    term.asExpr, 
-                    true, 
-                    true, 
-                    false, 
-                    false, 
-                    false, 
-                    columnsRef, 
-                    columnsRef, Nil, 
+                    term.asExpr,
+                    true,
+                    true,
+                    false,
+                    false,
+                    false,
+                    columnsRef,
+                    columnsRef, Nil,
                     argsInfo.flatMap(_.ungroupedRef)
                 )
             case _ if
@@ -502,16 +503,16 @@ object AnalysisMacro:
                 val funcArgs = funcArgsRef.flatMap:
                     case Typed(Repeated(a, _), _) => a
                     case a => a :: Nil
-                val argsInfo = 
+                val argsInfo =
                     funcArgs.map(a => treeInfoMacro(args, a))
                 ExprInfo(
-                    term.asExpr, 
+                    term.asExpr,
                     argsInfo.map(_.hasAgg).fold(false)(_ || _),
                     false,
                     false,
-                    argsInfo.map(_.hasWindow).fold(false)(_ || _), 
-                    false, 
-                    argsInfo.flatMap(_.columnRef), 
+                    argsInfo.map(_.hasWindow).fold(false)(_ || _),
+                    false,
+                    argsInfo.flatMap(_.columnRef),
                     argsInfo.flatMap(_.aggRef),
                     argsInfo.flatMap(_.nonAggRef),
                     argsInfo.flatMap(_.ungroupedRef)
@@ -526,16 +527,16 @@ object AnalysisMacro:
                     case Apply(Apply(_, funcArgs), _) => funcArgs
                     case Apply(_, funcArgs) => funcArgs
                     case _ => Nil
-                val argsInfo = 
+                val argsInfo =
                     funcArgs.map(a => treeInfoMacro(args, a))
                 ExprInfo(
-                    term.asExpr, 
+                    term.asExpr,
                     false,
                     false,
                     false,
-                    false, 
-                    false, 
-                    argsInfo.flatMap(_.columnRef), 
+                    false,
+                    false,
+                    argsInfo.flatMap(_.columnRef),
                     Nil,
                     argsInfo.flatMap(_.nonAggRef),
                     argsInfo.flatMap(_.ungroupedRef)
@@ -548,7 +549,7 @@ object AnalysisMacro:
                 .isDefined
                 if !funcInfo.isAgg && !isWindow then
                     report.error(
-                        "OVER specified, but expression is not a window function nor an aggregate function.", 
+                        "OVER specified, but expression is not a window function nor an aggregate function.",
                         funcInfo.expr
                     )
 
@@ -576,12 +577,12 @@ object AnalysisMacro:
                     case Apply(Ident("sortBy"), order :: Nil) =>
                         windowParamsInfo(order)
                     case Apply(
-                        Select(Apply(Ident("partitionBy"), partition :: Nil), "sortBy"), 
+                        Select(Apply(Ident("partitionBy"), partition :: Nil), "sortBy"),
                         order :: Nil
                     ) =>
                         windowParamsInfo(partition) ++ windowParamsInfo(order)
                     case _ => Nil
-                
+
                 for i <- windowInfo do
                     if i.hasAgg then
                         report.error("Window function calls cannot contain aggregate function calls.", i.expr)
@@ -594,16 +595,16 @@ object AnalysisMacro:
                             i.expr
                         )
                 ExprInfo(
-                    term.asExpr, 
-                    false, 
-                    false, 
+                    term.asExpr,
                     false,
-                    true, 
                     false,
-                    funcInfo.columnRef ++ windowInfo.flatMap(_.columnRef), 
+                    false,
+                    true,
+                    false,
+                    funcInfo.columnRef ++ windowInfo.flatMap(_.columnRef),
                     Nil,
-                    funcInfo.columnRef ++ windowInfo.flatMap(_.nonAggRef), 
-                    funcInfo.ungroupedRef ++ windowInfo.flatMap(_.ungroupedRef), 
+                    funcInfo.columnRef ++ windowInfo.flatMap(_.nonAggRef),
+                    funcInfo.ungroupedRef ++ windowInfo.flatMap(_.ungroupedRef),
                 )
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), expr :: Nil), _), _) =>
                 treeInfoMacro(args, expr)
@@ -664,7 +665,7 @@ object AnalysisMacro:
                     leftInfo.nonAggRef ++ rightInfo.nonAggRef,
                     leftInfo.ungroupedRef ++ rightInfo.ungroupedRef,
                 )
-            case _ 
+            case _
                 if term.tpe.asType match
                     case '[Tuple] => true
                     case _ => false
@@ -706,9 +707,9 @@ object AnalysisMacro:
                     info.map(_.hasAgg).fold(false)(_ || _),
                     false,
                     false,
-                    info.map(_.hasWindow).fold(false)(_ || _), 
-                    false, 
-                    info.flatMap(_.columnRef), 
+                    info.map(_.hasWindow).fold(false)(_ || _),
+                    false,
+                    info.flatMap(_.columnRef),
                     info.flatMap(_.aggRef),
                     info.flatMap(_.nonAggRef),
                     info.flatMap(_.ungroupedRef)
@@ -726,9 +727,9 @@ object AnalysisMacro:
                     true,
                     false,
                     false,
-                    false, 
-                    false, 
-                    info.flatMap(_.columnRef), 
+                    false,
+                    false,
+                    info.flatMap(_.columnRef),
                     info.flatMap(_.columnRef),
                     Nil,
                     Nil
