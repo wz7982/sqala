@@ -106,8 +106,6 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
     ): Query[u.R, ManyRows] =
         UnionQuery(ast, SqlUnionType.ExceptAll, query.ast)
 
-// TODO 加一个SortQuery GroupedProjectionQuery SortedProjectionQuery ProjectionQuery DistinctQuery
-
 class SortQuery[T](
     private[sqala] val tables: T,
     override val ast: SqlQuery.Select
