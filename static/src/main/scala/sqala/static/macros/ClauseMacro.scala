@@ -1,7 +1,7 @@
 package sqala.static.macros
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.order.SqlOrderBy
+import sqala.ast.order.*
 import sqala.ast.statement.*
 import sqala.static.common.*
 import sqala.static.statement.query.*
@@ -13,52 +13,59 @@ object ClauseMacro:
         ${ fetchArgNamesMacro[T]('f) }
 
     inline def fetchFilter[T](
-        inline f: T, 
+        inline f: T,
         inline inGroup: Boolean,
-        tableNames: List[String], 
+        tableNames: List[String],
         queryContext: QueryContext
     ): SqlExpr =
         ${ fetchFilterMacro[T]('f, 'inGroup, 'tableNames, 'queryContext) }
 
     inline def fetchSortBy[T](
-        inline f: T, 
-        tableNames: List[String], 
+        inline f: T,
+        tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlOrderBy] =
         ${ fetchSortByMacro[T]('f, 'tableNames, 'queryContext) }
 
     transparent inline def fetchMap[F, T](
-        inline f: F, 
+        inline f: F,
+        inline inSort: Boolean,
         tableNames: List[String],
         ast: SqlQuery.Select,
         queryContext: QueryContext
     ): Query[T, ?] =
-        ${ fetchMapMacro[F, T]('f, 'tableNames, 'ast, 'queryContext) }
+        ${ fetchMapMacro[F, T]('f, 'inSort, 'tableNames, 'ast, 'queryContext) }
 
     inline def fetchGroupBy[T](
-        inline f: T, 
-        tableNames: List[String], 
+        inline f: T,
+        tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlExpr] =
         ${ fetchGroupByMacro[T]('f, 'tableNames, 'queryContext) }
 
     inline def fetchGroupedMap[T](
-        inline f: T, 
-        tableNames: List[String], 
+        inline f: T,
+        tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlSelectItem] =
         ${ fetchGroupedMapMacro[T]('f, 'tableNames, 'queryContext) }
 
+    inline def fetchDistinctSortBy[T](
+        inline f: T,
+        ast: SqlQuery.Select
+    ): List[SqlOrderBy] =
+        ${ fetchDistinctSortByMacro[T]('f, 'ast) }
+
     inline def fetchSet[T](
-        inline f: T, 
-        tableNames: List[String], 
+        inline f: T,
+        tableNames: List[String],
         queryContext: QueryContext
     ): (SqlExpr, SqlExpr) =
         ${ fetchSetMacro[T]('f, 'tableNames, 'queryContext) }
 
     inline def fetchInsert[T](
-        inline f: T, 
-        tableNames: List[String] 
+        inline f: T,
+        tableNames: List[String]
     ): List[SqlExpr] =
         ${ fetchInsertMacro[T]('f, 'tableNames) }
 
@@ -71,7 +78,7 @@ object ClauseMacro:
         Expr(args)
 
     def fetchFilterMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         inGroup: Expr[Boolean],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
@@ -106,18 +113,18 @@ object ClauseMacro:
         expr
 
     def fetchSortByMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[List[SqlOrderBy]] =
         import q.reflect.*
-        
+
         val (args, body) = unwrapFuncMacro(f)
 
         val sort = body match
-            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
-            => 
+            =>
                 terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext))
             case _ =>
                 ExprMacro.sortInfoMacro(args, tableNames, body, queryContext) :: Nil
@@ -131,41 +138,42 @@ object ClauseMacro:
         Expr.ofList(sort.map(_._1))
 
     def fetchGroupByMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[List[SqlExpr]] =
         import q.reflect.*
-        
+
         val (args, body) = unwrapFuncMacro(f)
 
         val group = body match
-            case Inlined(Some(Apply(_, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
+            case Inlined(Some(Apply(_, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
                 if t.startsWith("Tuple")
-            => 
+            =>
                 terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) =>
                 terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
             case _ =>
                 report.errorAndAbort(
-                    s"\"${body.show}\" cannot be converted to SQL expression.", 
+                    s"\"${body.show}\" cannot be converted to SQL expression.",
                     body.asExpr
                 )
 
         Expr.ofList(group.map(_._1))
 
     def fetchMapMacro[F, T: Type](
-        f: Expr[F], 
+        f: Expr[F],
+        inSort: Expr[Boolean],
         tableNames: Expr[List[String]],
         ast: Expr[SqlQuery.Select],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[Query[T, ?]] =
         import q.reflect.*
-        
+
         val (args, body) = unwrapFuncMacro(f)
 
         val (items, info) = body match
-            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
+            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
                 if t.startsWith("Tuple")
             =>
                 val names = n match
@@ -189,9 +197,9 @@ object ClauseMacro:
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
-            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
-            => 
+            =>
                 val items = terms
                     .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
                 val exprs = items.map(_._1).map: i =>
@@ -212,26 +220,37 @@ object ClauseMacro:
                     body.asExpr
                 )
 
-        if hasAgg then
-            '{
-                Query[T, OneRow]($ast.copy(select = $itemsExpr))
-            }
-        else 
-            '{
-                Query[T, ManyRows]($ast.copy(select = $itemsExpr))
-            }
+        val inSortValue = inSort.value.get
+
+        (inSortValue, hasAgg) match
+            case (true, true) =>
+                '{
+                    SortedProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
+                }
+            case (false, true) =>
+                '{
+                    ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
+                }
+            case (true, false) =>
+                '{
+                    SortedProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
+                }
+            case (false, false) =>
+                '{
+                    ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
+                }
 
     def fetchGroupedMapMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[List[SqlSelectItem]] =
         import q.reflect.*
-        
+
         val (args, body) = unwrapFuncMacro(f)
 
         val (items, info) = body match
-            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) 
+            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
                 if t.startsWith("Tuple")
             =>
                 val names = n match
@@ -253,9 +272,9 @@ object ClauseMacro:
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
-            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
-            => 
+            =>
                 val items = terms
                     .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
                 val exprs = items.map(_._1).map: i =>
@@ -275,8 +294,86 @@ object ClauseMacro:
 
         Expr.ofList(items)
 
+    def fetchDistinctSortByMacro[T](
+        f: Expr[T],
+        ast: Expr[SqlQuery.Select]
+    )(using q: Quotes): Expr[List[SqlOrderBy]] =
+        import q.reflect.*
+
+        val (args, body) = unwrapFuncMacro(f)
+
+        def collect(term: Term): List[Expr[SqlOrderBy]] =
+            term match
+                case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
+                    if t.startsWith("Tuple")
+                =>
+                    terms.flatMap(t => collect(t))
+                case TypeApply(
+                    Select(
+                        Apply(
+                            Select(Ident(objectName), "selectDynamic"),
+                            Literal(StringConstant(valName)) :: Nil
+                        ),
+                        "$asInstanceOf$"
+                    ),
+                    _
+                ) if objectName == args.head =>
+                    val valNameExpr = Expr(valName)
+                    '{
+                        val expr = $ast.select.collect:
+                            case SqlSelectItem.Item(e, Some(n)) if n == $valNameExpr => e
+                        .head
+                        SqlOrderBy(expr, Some(SqlOrderByOption.Asc), None)
+                    } :: Nil
+                case Apply(
+                    Apply(
+                        TypeApply(Ident(op), _),
+                        TypeApply(
+                            Select(
+                                Apply(
+                                    Select(Ident(objectName), "selectDynamic"),
+                                    Literal(StringConstant(valName)) :: Nil
+                                ),
+                                "$asInstanceOf$"
+                            ),
+                            _
+                        ) :: Nil
+                    ),
+                    _
+                ) if objectName == args.head =>
+                    val valNameExpr = Expr(valName)
+                    val expr = '{
+                        $ast.select.collect:
+                            case SqlSelectItem.Item(e, Some(n)) if n == $valNameExpr => e
+                        .head
+                    }
+                    val orderBy = op match
+                        case "ascNullsFirst" => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.First))
+                        }
+                        case "ascNullsLast" => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.Last))
+                        }
+                        case "desc" => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), None)
+                        }
+                        case "descNullsFirst" => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.First))
+                        }
+                        case "descNullsLast" => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.Last))
+                        }
+                        case _ => '{
+                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None)
+                        }
+                    orderBy :: Nil
+                case _ =>
+                    report.errorAndAbort("For SELECT DISTINCT, ORDER BY expressions must appear in select list.", body.asExpr)
+
+        Expr.ofList(collect(body))
+
     def fetchSetMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[(SqlExpr, SqlExpr)] =
@@ -289,7 +386,7 @@ object ClauseMacro:
                 Apply(
                     TypeApply(
                         Apply(
-                            TypeApply(Ident(":="), _), 
+                            TypeApply(Ident(":="), _),
                             TypeApply(
                                 Select(
                                     Apply(
@@ -299,21 +396,21 @@ object ClauseMacro:
                                     "$asInstanceOf$"
                                 ),
                                 _
-                            ) 
+                            )
                             :: Nil
-                        ), 
+                        ),
                         _
-                    ), 
+                    ),
                     value :: Nil
-                ), 
+                ),
                 _
             ) =>
                 val columnExpr = ident.tpe.asType match
                     case '[Table[t]] =>
                         val metaDataExpr = TableMacro.tableMetaDataMacro[t]
-                        val valueNameExpr = Expr(valName)                  
+                        val valueNameExpr = Expr(valName)
                         '{
-                            val columnName = 
+                            val columnName =
                                 $metaDataExpr.fieldNames
                                     .zip($metaDataExpr.columnNames)
                                     .find(_._1 == $valueNameExpr)
@@ -321,17 +418,17 @@ object ClauseMacro:
                                     .get
                             SqlExpr.Column(None, columnName)
                         }
-                val (valueExpr, _) = 
+                val (valueExpr, _) =
                     ExprMacro.treeInfoMacro(args, tableNames, value, queryContext)
                 Expr.ofTuple(columnExpr, valueExpr)
             case _ =>
                 report.errorAndAbort(
-                    s"\"${body.show}\" cannot be converted to SET clause.", 
+                    s"\"${body.show}\" cannot be converted to SET clause.",
                     body.asExpr
                 )
 
     def fetchInsertMacro[T](
-        f: Expr[T], 
+        f: Expr[T],
         tableNames: Expr[List[String]]
     )(using q: Quotes): Expr[List[SqlExpr]] =
         import q.reflect.*
@@ -353,9 +450,9 @@ object ClauseMacro:
                     ident.tpe.asType match
                         case '[Table[t]] =>
                             val metaDataExpr = TableMacro.tableMetaDataMacro[t]
-                            val valueNameExpr = Expr(valName)                  
+                            val valueNameExpr = Expr(valName)
                             '{
-                                val columnName = 
+                                val columnName =
                                     $metaDataExpr.fieldNames
                                         .zip($metaDataExpr.columnNames)
                                         .find(_._1 == $valueNameExpr)
@@ -365,12 +462,12 @@ object ClauseMacro:
                             }
                 case _ =>
                     report.errorAndAbort(
-                        s"\"${body.show}\" cannot be converted to INTO clause.", 
+                        s"\"${body.show}\" cannot be converted to INTO clause.",
                         body.asExpr
                     )
 
         body match
-            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
                 Expr.ofList(terms.map(t => column(t)))
@@ -386,9 +483,9 @@ object ClauseMacro:
         val tpr = TypeRepr.of[A]
         val fields = tpr.typeSymbol.declaredFields
         val ctor = tpr.typeSymbol.primaryConstructor
-        
+
         val terms = fields.map: f =>
-            val autoInc = f.annotations.find: 
+            val autoInc = f.annotations.find:
                 case Apply(Select(New(TypeIdent("autoInc")), _), _) => true
                 case _ => false
             if autoInc.isDefined then
@@ -422,7 +519,7 @@ object ClauseMacro:
                 blockTerm
             case _ =>
                 report.errorAndAbort(
-                    s"\"${term.show}\" cannot be converted to SQL expression.", 
+                    s"\"${term.show}\" cannot be converted to SQL expression.",
                     term.asExpr
                 )
 
@@ -433,7 +530,7 @@ object ClauseMacro:
                         argName
             case _ =>
                 report.errorAndAbort(
-                    s"\"${term.show}\" cannot be converted to SQL expression.", 
+                    s"\"${term.show}\" cannot be converted to SQL expression.",
                     term.asExpr
                 )
 
@@ -442,7 +539,7 @@ object ClauseMacro:
                 funBody
             case _ =>
                 report.errorAndAbort(
-                    s"\"${term.show}\" cannot be converted to SQL expression.", 
+                    s"\"${term.show}\" cannot be converted to SQL expression.",
                     term.asExpr
                 )
 
