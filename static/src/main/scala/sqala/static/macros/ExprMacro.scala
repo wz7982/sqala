@@ -861,7 +861,7 @@ object ExprMacro:
             columnRef = columnsRef,
             aggRef = columnsRef,
             nonAggRef = Nil,
-            ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+            ungroupedRef = Nil
         )
 
     private def createFunction(using q: Quotes)(
