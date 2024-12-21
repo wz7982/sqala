@@ -108,48 +108,32 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
 
 class SortQuery[T](
     private[sqala] val tables: T,
+    private[sqala] val tableNames: List[String],
     override val ast: SqlQuery.Select
 )(using val queryContext: QueryContext) extends Query[T, ManyRows](ast):
     inline def sortBy[F, S: AsSort](using
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => S]
     )(inline f: F): SortQuery[T] =
-        val args = ClauseMacro.fetchArgNames(f)
-        val sortBy = ClauseMacro.fetchSortBy(f, args, queryContext)
-        SortQuery(tables, ast.copy(orderBy = ast.orderBy ++ sortBy))
+        val sortBy = ClauseMacro.fetchSortBy(f, tableNames, queryContext)
+        SortQuery(tables, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     transparent inline def map[F, M: AsSelectItem](using
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => M]
     )(inline f: F): Query[M, ?] =
-        val args = ClauseMacro.fetchArgNames(f)
-        ClauseMacro.fetchMap(f, true, args, ast, queryContext)
-
-class SortedProjectionQuery[T, S <: ResultSize](
-    override val ast: SqlQuery
-) extends Query[T, S](ast)
-
-class GroupedProjectionQuery[T](
-    override val ast: SqlQuery
-) extends Query[T, ManyRows](ast)
+        ClauseMacro.fetchMap(f, tableNames, ast, queryContext)
 
 class ProjectionQuery[T, S <: ResultSize](
     override val ast: SqlQuery.Select
 ) extends Query[T, S](ast):
-    def distinct: DistinctQuery[T, S] =
-        DistinctQuery(ast)
-
-class DistinctQuery[T, S <: ResultSize](
-    override val ast: SqlQuery.Select
-) extends Query[T, S](ast)
-
-object DistinctQuery:
-    extension [N <: NonEmptyTuple, V <: NonEmptyTuple, R <: ResultSize](query: DistinctQuery[NamedTuple[N, V], R])
-        inline def sortBy[S: AsSort](
-            inline f: Projection[N, V] => S
-        ): DistinctQuery[NamedTuple[N, V], R] =
-            val sort = ClauseMacro.fetchDistinctSortBy(f, query.ast)
-            DistinctQuery(query.ast.copy(orderBy = query.ast.orderBy ++ sort))
+    def distinct: Query[T, S] =
+        val newSortBy = ast.orderBy.filter: o =>
+            val expr = o.expr
+            ast.select.exists:
+                case SqlSelectItem.Item(e, _) if e == expr => true
+                case _ => false
+        Query(ast.copy(param = Some(SqlSelectParam.Distinct), orderBy =  newSortBy))
 
 class SelectQuery[T: SelectItem](
     private[sqala] val tables: T,
@@ -190,7 +174,7 @@ class SelectQuery[T: SelectItem](
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
         val sortBy = ClauseMacro.fetchSortBy(f, newParam, queryContext)
-        SortQuery(tables, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
+        SortQuery(tables, newParam, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
     inline def groupBy[F, N <: Tuple, V <: Tuple : AsExpr](using
         tt: ToTuple[T],
@@ -204,6 +188,7 @@ class SelectQuery[T: SelectItem](
         val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
         GroupByQuery(
             groupBy,
+            newParam,
             newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
         )
 
@@ -222,6 +207,7 @@ class SelectQuery[T: SelectItem](
         val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
         GroupByQuery(
             groupBy,
+            newParam,
             newAst.copy(groupBy = SqlGroupItem.Cube(groupBy) :: Nil)
         )
 
@@ -240,6 +226,7 @@ class SelectQuery[T: SelectItem](
         val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
         GroupByQuery(
             groupBy,
+            newParam,
             newAst.copy(groupBy = SqlGroupItem.Rollup(groupBy) :: Nil)
         )
 
@@ -263,6 +250,7 @@ class SelectQuery[T: SelectItem](
         val groupingSets = ClauseMacro.fetchGroupBy(g, groupingArgs, queryContext)
         GroupByQuery(
             groupBy,
+            newParam,
             newAst.copy(groupBy = SqlGroupItem.GroupingSets(groupingSets) :: Nil)
         )
 
@@ -273,7 +261,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        ClauseMacro.fetchMap(f, false, newParam, newAst, queryContext)
+        ClauseMacro.fetchMap(f, newParam, newAst, queryContext)
 
 class JoinQuery[T: SelectItem](
     private[sqala] override val tables: T,

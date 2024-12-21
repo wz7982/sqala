@@ -29,12 +29,11 @@ object ClauseMacro:
 
     transparent inline def fetchMap[F, T](
         inline f: F,
-        inline inSort: Boolean,
         tableNames: List[String],
         ast: SqlQuery.Select,
         queryContext: QueryContext
     ): Query[T, ?] =
-        ${ fetchMapMacro[F, T]('f, 'inSort, 'tableNames, 'ast, 'queryContext) }
+        ${ fetchMapMacro[F, T]('f, 'tableNames, 'ast, 'queryContext) }
 
     inline def fetchGroupBy[T](
         inline f: T,
@@ -49,12 +48,6 @@ object ClauseMacro:
         queryContext: QueryContext
     ): List[SqlSelectItem] =
         ${ fetchGroupedMapMacro[T]('f, 'tableNames, 'queryContext) }
-
-    inline def fetchDistinctSortBy[T](
-        inline f: T,
-        ast: SqlQuery.Select
-    ): List[SqlOrderBy] =
-        ${ fetchDistinctSortByMacro[T]('f, 'ast) }
 
     inline def fetchSet[T](
         inline f: T,
@@ -91,18 +84,18 @@ object ClauseMacro:
 
         val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
 
+        val ungrouped = info.ungroupedRef
+
+        if ungrouped.nonEmpty then
+            val c = ungrouped.head
+                report.error(
+                    s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                    body.asExpr
+                )
+
         if inGroupValue then
             if info.hasWindow then
                 report.error("Window functions are not allowed in HAVING.", body.asExpr)
-
-            val ungrouped = info.ungroupedRef
-
-            if ungrouped.nonEmpty then
-                val c = ungrouped.head
-                    report.error(
-                        s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
-                        body.asExpr
-                    )
         else
             if info.hasAgg then
                 report.error("Aggregate functions are not allowed in WHERE/ON.", body.asExpr)
@@ -130,6 +123,15 @@ object ClauseMacro:
                 ExprMacro.sortInfoMacro(args, tableNames, body, queryContext) :: Nil
 
         val info = sort.map(_._2)
+
+        val ungrouped = info.flatMap(_.ungroupedRef)
+
+        if ungrouped.nonEmpty then
+            val c = ungrouped.head
+                report.error(
+                    s"Column \"${c._1}.${c._2}\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                    body.asExpr
+                )
 
         for e <- info do
             if e.isConst then
@@ -163,7 +165,6 @@ object ClauseMacro:
 
     def fetchMapMacro[F, T: Type](
         f: Expr[F],
-        inSort: Expr[Boolean],
         tableNames: Expr[List[String]],
         ast: Expr[SqlQuery.Select],
         queryContext: Expr[QueryContext]
@@ -220,25 +221,14 @@ object ClauseMacro:
                     body.asExpr
                 )
 
-        val inSortValue = inSort.value.get
-
-        (inSortValue, hasAgg) match
-            case (true, true) =>
-                '{
-                    SortedProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
-                }
-            case (false, true) =>
-                '{
-                    ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
-                }
-            case (true, false) =>
-                '{
-                    SortedProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
-                }
-            case (false, false) =>
-                '{
-                    ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
-                }
+        if hasAgg then
+            '{
+                ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
+            }
+        else
+            '{
+                ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
+            }
 
     def fetchGroupedMapMacro[T](
         f: Expr[T],
@@ -293,84 +283,6 @@ object ClauseMacro:
                     )
 
         Expr.ofList(items)
-
-    def fetchDistinctSortByMacro[T](
-        f: Expr[T],
-        ast: Expr[SqlQuery.Select]
-    )(using q: Quotes): Expr[List[SqlOrderBy]] =
-        import q.reflect.*
-
-        val (args, body) = unwrapFuncMacro(f)
-
-        def collect(term: Term): List[Expr[SqlOrderBy]] =
-            term match
-                case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
-                    if t.startsWith("Tuple")
-                =>
-                    terms.flatMap(t => collect(t))
-                case TypeApply(
-                    Select(
-                        Apply(
-                            Select(Ident(objectName), "selectDynamic"),
-                            Literal(StringConstant(valName)) :: Nil
-                        ),
-                        "$asInstanceOf$"
-                    ),
-                    _
-                ) if objectName == args.head =>
-                    val valNameExpr = Expr(valName)
-                    '{
-                        val expr = $ast.select.collect:
-                            case SqlSelectItem.Item(e, Some(n)) if n == $valNameExpr => e
-                        .head
-                        SqlOrderBy(expr, Some(SqlOrderByOption.Asc), None)
-                    } :: Nil
-                case Apply(
-                    Apply(
-                        TypeApply(Ident(op), _),
-                        TypeApply(
-                            Select(
-                                Apply(
-                                    Select(Ident(objectName), "selectDynamic"),
-                                    Literal(StringConstant(valName)) :: Nil
-                                ),
-                                "$asInstanceOf$"
-                            ),
-                            _
-                        ) :: Nil
-                    ),
-                    _
-                ) if objectName == args.head =>
-                    val valNameExpr = Expr(valName)
-                    val expr = '{
-                        $ast.select.collect:
-                            case SqlSelectItem.Item(e, Some(n)) if n == $valNameExpr => e
-                        .head
-                    }
-                    val orderBy = op match
-                        case "ascNullsFirst" => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.First))
-                        }
-                        case "ascNullsLast" => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), Some(SqlOrderByNullsOption.Last))
-                        }
-                        case "desc" => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), None)
-                        }
-                        case "descNullsFirst" => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.First))
-                        }
-                        case "descNullsLast" => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Desc), Some(SqlOrderByNullsOption.Last))
-                        }
-                        case _ => '{
-                            SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None)
-                        }
-                    orderBy :: Nil
-                case _ =>
-                    report.errorAndAbort("For SELECT DISTINCT, ORDER BY expressions must appear in select list.", body.asExpr)
-
-        Expr.ofList(collect(body))
 
     def fetchSetMacro[T](
         f: Expr[T],

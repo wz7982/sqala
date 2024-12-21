@@ -487,8 +487,9 @@ object AnalysisMacro:
                     false,
                     false,
                     columnsRef,
-                    columnsRef, Nil,
-                    argsInfo.flatMap(_.ungroupedRef)
+                    columnsRef, 
+                    Nil,
+                    Nil
                 )
             case _ if
                 term.symbol.annotations.find:

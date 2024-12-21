@@ -861,7 +861,7 @@ object ExprMacro:
             columnRef = columnsRef,
             aggRef = columnsRef,
             nonAggRef = Nil,
-            ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+            ungroupedRef = Nil
         )
 
     private def createFunction(using q: Quotes)(
@@ -1207,7 +1207,16 @@ object ExprMacro:
         import q.reflect.*
         
         term match
-            case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) =>
+            case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) 
+                if List(
+                    "asc", 
+                    "ascNullsFirst", 
+                    "ascNullsLast",
+                    "desc",
+                    "descNullsFirst",
+                    "descNullsLast"
+                ).contains(op)
+            =>
                 val (expr, info) = treeInfoMacro(args, tableNames, v, queryContext)
                 val sqlExpr = op match
                     case "asc" => '{
