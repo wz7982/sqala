@@ -32,9 +32,9 @@ class GroupByQuery[T](
 
     inline def map[F, M: AsSelectItem](using
         TupledFunction[F, T => M]
-    )(inline f: F): ProjectionQuery[M, ManyRows] =
+    )(inline f: F): Query[M, ManyRows] =
         val args = ClauseMacro.fetchArgNames(f)
         queryContext.groups.prepend((args.head, groups))
         val selectItems = 
             ClauseMacro.fetchGroupedMap(f, tableNames.prepended(args.head), queryContext)
-        ProjectionQuery(ast.copy(select = selectItems))
+        Query(ast.copy(select = selectItems))
