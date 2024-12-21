@@ -133,7 +133,7 @@ class ProjectionQuery[T, S <: ResultSize](
             ast.select.exists:
                 case SqlSelectItem.Item(e, _) if e == expr => true
                 case _ => false
-        Query(ast.copy(orderBy =  newSortBy))
+        Query(ast.copy(param = Some(SqlSelectParam.Distinct), orderBy =  newSortBy))
 
 class SelectQuery[T: SelectItem](
     private[sqala] val tables: T,
