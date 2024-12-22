@@ -263,6 +263,24 @@ class SelectQuery[T: SelectItem](
         val newAst = replaceTableName(tables, newParam, ast)
         ClauseMacro.fetchMap(f, newParam, newAst, queryContext)
 
+object SelectQuery:
+    extension [T](query: SelectQuery[Table[T]])
+        inline def connectBy(inline f: Table[T] => Boolean): ConnectByQuery[T] =
+            val args = ClauseMacro.fetchArgNames(f)
+            val newParam = if query.tableNames.isEmpty then args else query.tableNames
+            val newAst = replaceTableName(query.tables, newParam, query.ast)
+            val cond = ClauseMacro.fetchFilter(f, false, newParam, query.queryContext)
+            val joinAst = newAst
+                .copy(
+                    from = SqlTable.JoinTable(
+                        newAst.from.head,
+                        SqlJoinType.Inner,
+                        SqlTable.IdentTable("__cte__", None),
+                        Some(SqlJoinCondition.On(cond))
+                    ) :: Nil
+                )
+            ConnectByQuery(query.tables, newParam.head, newAst, joinAst, newAst)(using query.queryContext)
+
 class JoinQuery[T: SelectItem](
     private[sqala] override val tables: T,
     private[sqala] override val tableNames: List[String],

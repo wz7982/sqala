@@ -17,22 +17,22 @@ export sqala.printer.{
 }
 
 export sqala.static.annotation.{
-    autoInc, 
-    column, 
-    primaryKey, 
-    sqlAgg, 
-    sqlFunction, 
-    sqlWindow, 
+    autoInc,
+    column,
+    primaryKey,
+    sqlAgg,
+    sqlFunction,
+    sqlWindow,
     table
 }
 
 export sqala.static.common.compileTimeOnly
 
 export sqala.static.common.{
-    CustomField, 
+    CustomField,
     QueryContext,
     Sort,
-    Table, 
+    Table,
     Validate
 }
 
@@ -68,6 +68,8 @@ extension [X](x: X)
     infix def over(value: OverValue)(using QueryContext): OverResult[X] = compileTimeOnly
 
     infix def over(value: Unit)(using QueryContext): OverResult[X] = compileTimeOnly
+
+def prior[X: AsSqlExpr](x: X)(using QueryContext): X = compileTimeOnly
 
 case class TimeInterval(n: Double, unit: SqlTimeUnit)
 

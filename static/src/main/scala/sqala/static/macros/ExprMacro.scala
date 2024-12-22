@@ -29,7 +29,7 @@ object ExprMacro:
         )
 
     private def unaryOperators: List[String] =
-        List("unary_+", "unary_-", "unary_!")
+        List("unary_+", "unary_-", "unary_!", "prior")
 
     private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
@@ -508,34 +508,97 @@ object ExprMacro:
         op: String,
         queryContext: Expr[QueryContext]
     ): (Expr[SqlExpr], ExprInfo) =
-        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
+        import q.reflect.*
 
-        val operatorExpr = op match
-            case "unary_+" => '{ SqlUnaryOperator.Positive }
-            case "unary_-" => '{ SqlUnaryOperator.Negative }
-            case "unary_!" => '{ SqlUnaryOperator.Not }
+        if op == "prior" then
+            term match
+                case TypeApply(
+                    Select(
+                        Apply(
+                            Select(ident@Ident(objectName), "selectDynamic"),
+                            Literal(StringConstant(valName)) :: Nil
+                        ),
+                        "$asInstanceOf$"
+                    ),
+                    _
+                ) =>
+                    ident.tpe.asType match
+                        case '[Table[_]] =>
+                            val metaDataExpr = ident.tpe.asType match
+                                case '[Table[Option[t]]] => TableMacro.tableMetaDataMacro[t]
+                                case '[Table[t]] => TableMacro.tableMetaDataMacro[t]
+                            val valueNameExpr = Expr(valName)
+                            val tableNameExpr = Expr("__cte__")
+                            val sqlExpr = '{
+                                val columnName =
+                                    $metaDataExpr.fieldNames
+                                        .zip($metaDataExpr.columnNames)
+                                        .find(_._1 == $valueNameExpr)
+                                        .map(_._2)
+                                        .get
+                                SqlExpr.Column(Some($tableNameExpr), columnName)
+                            }
+                            val info = ExprInfo(
+                                hasAgg = false,
+                                isAgg = false,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = Nil,
+                                nonAggRef = (objectName, valName) :: Nil,
+                                ungroupedRef = Nil
+                            )
+                            sqlExpr -> info
+                        case '[SubQuery[_, _]] =>
+                            val valueNameExpr = Expr(valName)
+                            val tableNameExpr = Expr("__cte__")
+                            val sqlExpr = '{ SqlExpr.Column(Some($tableNameExpr), $valueNameExpr) }
+                            val info = ExprInfo(
+                                hasAgg = false,
+                                isAgg = false,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = Nil,
+                                nonAggRef = (objectName, valName) :: Nil,
+                                ungroupedRef = Nil
+                            )
+                            sqlExpr -> info
+                        case _ =>
+                            report.errorAndAbort("The parameter of PRIOR must be a column expression.", term.asExpr)
+                case _ =>
+                    report.errorAndAbort("The parameter of PRIOR must be a column expression.", term.asExpr)
+        else
+            val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
 
-        val sqlExpr = '{
-            ($operatorExpr, $expr) match
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
-                    SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
-                    SqlExpr.BooleanLiteral(true)
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
-                    SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
-                case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
-                    SqlExpr.Between(x, s, e, true)
-                case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
-                    SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
-                case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
-                    SqlExpr.BooleanLiteral(true)
-                case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
-                    SqlExpr.BooleanLiteral(false)
-                case (o, x) =>
-                    SqlExpr.Unary(x, o)
-        }
+            val operatorExpr = op match
+                case "unary_+" => '{ SqlUnaryOperator.Positive }
+                case "unary_-" => '{ SqlUnaryOperator.Negative }
+                case "unary_!" => '{ SqlUnaryOperator.Not }
 
-        sqlExpr -> info
+            val sqlExpr = '{
+                ($operatorExpr, $expr) match
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
+                        SqlExpr.BooleanLiteral(true)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
+                        SqlExpr.Between(x, s, e, true)
+                    case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
+                        SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
+                        SqlExpr.BooleanLiteral(true)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
+                        SqlExpr.BooleanLiteral(false)
+                    case (o, x) =>
+                        SqlExpr.Unary(x, o)
+            }
+
+            sqlExpr -> info
 
     private def createBetween(using q: Quotes)(
         args: List[String],
