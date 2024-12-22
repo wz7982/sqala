@@ -34,13 +34,6 @@ object ToOption:
             def toOption(x: SubQuery[N, V]): R =
                 new SubQuery(x.__columns__)
 
-    given tableSubQueryToOption[T]: Aux[TableSubQuery[T], TableSubQuery[Wrap[T, Option]]] =
-        new ToOption[TableSubQuery[T]]:
-            type R = TableSubQuery[Wrap[T, Option]]
-
-            def toOption(x: TableSubQuery[T]): R =
-                new TableSubQuery(x.__metaData__)
-
     given tupleToOption[H, T <: Tuple](using
         h: ToOption[H],
         t: ToOption[T],
