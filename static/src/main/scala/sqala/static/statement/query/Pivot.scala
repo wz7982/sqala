@@ -10,6 +10,25 @@ import scala.compiletime.constValueTuple
 import scala.compiletime.ops.any.ToString
 import scala.compiletime.ops.int.S
 import scala.compiletime.ops.string.+
+import scala.util.TupledFunction
+
+private def fetchItem(leftExpr: SqlExpr, rightExpr: SqlExpr): SqlExpr =
+    rightExpr match
+        case SqlExpr.Null => SqlExpr.NullTest(leftExpr, false)
+        case _ => SqlExpr.Binary(leftExpr, SqlBinaryOperator.Equal, rightExpr)
+
+private def combine(lists: List[(SqlExpr, List[SqlExpr])]): List[SqlExpr] =
+    lists match
+        case Nil => Nil
+        case x :: Nil =>
+            x._2.map: e =>
+                fetchItem(x._1, e)
+        case x :: xs =>
+            val item =
+                x._2.map: e =>
+                    fetchItem(x._1, e)
+            item.flatMap: e =>
+                combine(xs).map(i => SqlExpr.Binary(e, SqlBinaryOperator.And, i))
 
 class PivotQuery[T, N <: Tuple, V <: Tuple](
     private[sqala] val tables: T,
@@ -17,29 +36,14 @@ class PivotQuery[T, N <: Tuple, V <: Tuple](
     private[sqala] val aggs: List[SqlExpr.Func],
     private[sqala] val ast: SqlQuery.Select
 )(using val queryContext: QueryContext):
-    inline def `for`[I](
-        inline f: T => I
+    inline def `for`[I, F](using
+        tt: ToTuple[T],
+        tf: TupledFunction[F, tt.R => I]
+    )(
+        inline f: F
     )(using
         r: PivotResult[I, N, V]
     ): Query[r.R, OneRow] =
-        def fetchItem(leftExpr: SqlExpr, rightExpr: SqlExpr): SqlExpr =
-            rightExpr match
-                case SqlExpr.Null => SqlExpr.NullTest(leftExpr, false)
-                case _ => SqlExpr.Binary(leftExpr, SqlBinaryOperator.Equal, rightExpr)
-
-        def combine(lists: List[(SqlExpr, List[SqlExpr])]): List[SqlExpr] =
-            lists match
-                case Nil => Nil
-                case x :: Nil =>
-                    x._2.map: e =>
-                        fetchItem(x._1, e)
-                case x :: xs =>
-                    val item =
-                        x._2.map: e =>
-                            fetchItem(x._1, e)
-                    item.flatMap: e =>
-                        combine(xs).map(i => SqlExpr.Binary(e, SqlBinaryOperator.And, i))
-
         val forList = ClauseMacro.fetchPivotFor(f, tableNames, queryContext)
         val conditions = combine(forList)
 
@@ -60,6 +64,43 @@ class PivotQuery[T, N <: Tuple, V <: Tuple](
 
         Query(ast.copy(select = selectItems))
 
+class GroupedPivotQuery[GN <: Tuple, GV <: Tuple, T, N <: Tuple, V <: Tuple](
+    private[sqala] val groups: List[SqlExpr],
+    private[sqala] val tableNames: List[String],
+    private[sqala] val aggs: List[SqlExpr.Func],
+    private[sqala] val ast: SqlQuery.Select
+)(using val queryContext: QueryContext):
+    inline def `for`[I, F](using
+        TupledFunction[F, T => I]
+    )(
+        inline f: F
+    )(using
+        r: GroupedPivotResult[GN, GV, I, N, V]
+    ): Query[r.R, ManyRows] =
+        val args = ClauseMacro.fetchArgNames(f)
+        queryContext.groups.prepend((args.head, groups))
+
+        val forList = ClauseMacro.fetchPivotFor(f, tableNames.prepended(args.head), queryContext)
+        val conditions = combine(forList)
+
+        val groupAliasList = constValueTuple[GN].toList.map(_.asInstanceOf[String])
+        val aliasList = constValueTuple[Names[r.R]].toList.map(_.asInstanceOf[String])
+
+        val projectionList =
+            for
+                a <- aggs
+                c <- conditions
+            yield
+                val firstArg = a.args.headOption.getOrElse(SqlExpr.NumberLiteral(1))
+                val replacedArg = SqlExpr.Case(SqlCase(c, firstArg) :: Nil, SqlExpr.Null)
+                val args = if a.args.isEmpty then replacedArg :: Nil else replacedArg :: a.args.tail
+                a.copy(args = args)
+
+        val selectItems = (groups ++ projectionList).zip(groupAliasList ++ aliasList).map: (p, a) =>
+            SqlSelectItem.Item(p, Some(a))
+
+        Query(ast.copy(select = selectItems))
+
 trait PivotResult[I, N <: Tuple, V <: Tuple]:
     type R <: AnyNamedTuple
 
@@ -73,7 +114,19 @@ object PivotResult:
         new PivotResult[I, N, V]:
             type R = NamedTuple[FlatPivotNames[N, c.R], FlatPivotTypes[V, c.R]]
 
-class GroupedPivotQuery
+trait GroupedPivotResult[GN <: Tuple, GV <: Tuple, I, N <: Tuple, V <: Tuple]:
+    type R <: AnyNamedTuple
+
+object GroupedPivotResult:
+    type Aux[GN <: Tuple, GV <: Tuple, I, N <: Tuple, V <: Tuple, O <: AnyNamedTuple] =
+        GroupedPivotResult[GN, GV, I, N, V]:
+            type R = O
+
+    given [GN <: Tuple, GV <: Tuple, I, N <: Tuple, V <: Tuple](using
+        c: CollectPivotNames[I]
+    ): Aux[GN, GV, I, N, V, NamedTuple[Tuple.Concat[GN, FlatPivotNames[N, c.R]], Tuple.Concat[GV, FlatPivotTypes[V, c.R]]]] =
+        new GroupedPivotResult[GN, GV, I, N, V]:
+            type R = NamedTuple[Tuple.Concat[GN, FlatPivotNames[N, c.R]], Tuple.Concat[GV, FlatPivotTypes[V, c.R]]]
 
 type CombineNames[Names <: Tuple] <: Tuple =
     Names match

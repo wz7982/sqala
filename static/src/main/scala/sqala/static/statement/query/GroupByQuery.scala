@@ -5,12 +5,13 @@ import sqala.ast.statement.*
 import sqala.static.common.*
 import sqala.static.macros.*
 
+import scala.NamedTuple.NamedTuple
 import scala.util.TupledFunction
 
 class GroupByQuery[T](
     private[sqala] val groups: List[SqlExpr],
     private[sqala] val tableNames: List[String],
-    private[sqala] val ast: SqlQuery.Select,
+    private[sqala] val ast: SqlQuery.Select
 )(using val queryContext: QueryContext):
     inline def having[F](using
         TupledFunction[F, T => Boolean]
@@ -38,3 +39,13 @@ class GroupByQuery[T](
         val selectItems =
             ClauseMacro.fetchGroupedMap(f, false, tableNames.prepended(args.head), queryContext)
         Query(ast.copy(select = selectItems))
+
+object GroupByQuery:
+    extension [GN <: Tuple, GV <: Tuple, T <: Tuple](query: GroupByQuery[Group[GN, GV] *: T])
+        inline def pivot[F, N <: Tuple, V <: Tuple](using
+            tf: TupledFunction[F, Group[GN, GV] *: T => NamedTuple[N, V]]
+        )(inline f: F): GroupedPivotQuery[GN, GV, Group[GN, GV] *: T, N, V] =
+            val args = ClauseMacro.fetchArgNames(f)
+            query.queryContext.groups.prepend((args.head, query.groups))
+            val functions = ClauseMacro.fetchPivot(f, query.tableNames.prepended(args.head), query.queryContext)
+            GroupedPivotQuery(query.groups, query.tableNames, functions, query.ast)(using query.queryContext)
