@@ -97,8 +97,7 @@ class OraclePrinter(override val prepare: Boolean, override val indent: Int) ext
                 sqlBuilder.append(s"$functionName")
                 sqlBuilder.append("(")
                 printList(args)(printExpr)
-                sqlBuilder.append(")")
+                sqlBuilder.append("))")
                 for a <- alias do
                     printTableAlias(a)
-                sqlBuilder.append(")")
             case _ => super.printTable(table)
