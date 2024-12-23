@@ -3,6 +3,7 @@ package sqala.printer
 import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
+import sqala.ast.table.SqlTable
 
 class OraclePrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
     override def printLimit(limit: SqlLimit): Unit =
@@ -88,3 +89,16 @@ class OraclePrinter(override val prepare: Boolean, override val indent: Int) ext
         sqlBuilder.append(expr.value)
         sqlBuilder.append("' ")
         sqlBuilder.append(expr.unit.unit)
+
+    override def printTable(table: SqlTable): Unit =
+        table match
+            case SqlTable.FuncTable(functionName, args, alias) =>
+                sqlBuilder.append("TABLE(")
+                sqlBuilder.append(s"$functionName")
+                sqlBuilder.append("(")
+                printList(args)(printExpr)
+                sqlBuilder.append(")")
+                for a <- alias do
+                    printTableAlias(a)
+                sqlBuilder.append(")")
+            case _ => super.printTable(table)

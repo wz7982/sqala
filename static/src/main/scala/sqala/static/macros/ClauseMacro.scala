@@ -3,6 +3,7 @@ package sqala.static.macros
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.*
 import sqala.ast.statement.*
+import sqala.ast.table.*
 import sqala.static.common.*
 import sqala.static.statement.query.*
 
@@ -48,6 +49,12 @@ object ClauseMacro:
         queryContext: QueryContext
     ): List[SqlSelectItem] =
         ${ fetchGroupedMapMacro[T]('f, 'tableNames, 'queryContext) }
+
+    inline def fetchFunctionTable[T](
+        inline f: T,
+        queryContext: QueryContext
+    ): SqlTable =
+        ${ fetchFunctionTableMacro[T]('f, 'queryContext) }
 
     inline def fetchSet[T](
         inline f: T,
@@ -283,6 +290,41 @@ object ClauseMacro:
                     )
 
         Expr.ofList(items)
+
+    def fetchFunctionTableMacro[T: Type](
+        f: Expr[T],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[SqlTable] =
+        import q.reflect.*
+
+        def unwrapInlined(term: Term): Term =
+            term match
+                case Inlined(_, _, inlinedTerm) =>
+                    unwrapInlined(inlinedTerm)
+                case _ => term
+
+        val term = unwrapInlined(f.asTerm)
+
+        term match
+            case _ if
+                term.symbol.annotations.find:
+                    case Apply(Select(New(TypeIdent("sqlFunctionTable")), _), _) => true
+                    case _ => false
+                .isDefined
+            =>
+                val functionName = TableMacro.tableNameMacro[T]
+                val metaData = TableMacro.tableMetaDataMacro[T]
+                val (functionExpr, _) = ExprMacro.createFunction(Nil, '{ Nil }, functionName.value.get, term, false, queryContext)
+                '{
+                    val function = $functionExpr.asInstanceOf[SqlExpr.Func]
+                    val columns = $metaData.columnNames
+                    SqlTable.FuncTable($functionName, function.args, Some(SqlTableAlias($functionName, columns)))
+                }
+            case _ =>
+                report.errorAndAbort(
+                    s"The function table must have the @sqlFunctionTable annotation.",
+                    f
+                )
 
     def fetchSetMacro[T](
         f: Expr[T],

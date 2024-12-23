@@ -17,11 +17,18 @@ private[sqala] inline def replaceTableName[T: SelectItem](
                 a.map(_.copy(tableAlias = iterator.next()))
             )
             newTable
+        case SqlTable.FuncTable(n, args, a) =>
+            val newTable = SqlTable.FuncTable(
+                n,
+                args,
+                a.map(_.copy(tableAlias = iterator.next()))
+            )
+            newTable
         case SqlTable.SubQueryTable(q, l, a) =>
             SqlTable.SubQueryTable(q, l, a.copy(tableAlias = iterator.next()))
         case SqlTable.JoinTable(l, j, r, c) =>
             SqlTable.JoinTable(from(l), j, from(r), c)
-        
+
     val select = summon[SelectItem[T]].selectItems(tables, tableNames)
 
     ast.copy(select = select, from = from(ast.from.head) :: Nil)

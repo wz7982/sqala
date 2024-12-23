@@ -21,17 +21,17 @@ object ExprMacro:
         ungroupedRef: List[(String, String)]
     )
 
-    private def binaryOperators: List[String] =
+    private[sqala] def binaryOperators: List[String] =
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
             "+", "-", "*", "/", "%", "->", "->>",
             "like", "contains", "startsWith", "endsWith", "in"
         )
 
-    private def unaryOperators: List[String] =
+    private[sqala] def unaryOperators: List[String] =
         List("unary_+", "unary_-", "unary_!", "prior")
 
-    private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
+    private[sqala] def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
 
         report.errorAndAbort(
@@ -39,7 +39,7 @@ object ExprMacro:
             term.asExpr
         )
 
-    private def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
+    private[sqala] def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
         import q.reflect.*
 
         val isZero = term match
@@ -50,7 +50,7 @@ object ExprMacro:
             case _ => false
         if isZero then report.error("Division by zero.", term.asExpr)
 
-    private def validateQuery(using q: Quotes)(term: q.reflect.Term): Unit =
+    private[sqala] def validateQuery(using q: Quotes)(term: q.reflect.Term): Unit =
         import q.reflect.*
 
         term.tpe.asType match
@@ -395,7 +395,7 @@ object ExprMacro:
                         )
                     case _ => createValue(term)
 
-    private def createBinary(using q: Quotes)(
+    private[sqala] def createBinary(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         left: q.reflect.Term,
@@ -501,7 +501,7 @@ object ExprMacro:
             ungroupedRef = leftInfo.ungroupedRef ++ rightInfo.ungroupedRef
         )
 
-    private def createUnary(using q: Quotes)(
+    private[sqala] def createUnary(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -600,7 +600,7 @@ object ExprMacro:
 
             sqlExpr -> info
 
-    private def createBetween(using q: Quotes)(
+    private[sqala] def createBetween(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -628,7 +628,7 @@ object ExprMacro:
             ungroupedRef = betweenInfo.ungroupedRef ++ startInfo.ungroupedRef ++ endInfo.ungroupedRef
         )
 
-    private def createTuple(using q: Quotes)(
+    private[sqala] def createTuple(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         terms: List[q.reflect.Term],
@@ -653,7 +653,7 @@ object ExprMacro:
             ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
         )
 
-    private def createCast(using q: Quotes)(
+    private[sqala] def createCast(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -669,7 +669,7 @@ object ExprMacro:
                 }
                 sqlExpr -> info.copy(isConst = false)
 
-    private def createInterval(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
+    private[sqala] def createInterval(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
         term.tpe.asType match
             case '[TimeInterval] =>
                 val expr = term.asExprOf[TimeInterval]
@@ -688,7 +688,7 @@ object ExprMacro:
                     ungroupedRef = Nil
                 )
 
-    private def createExtract(using q: Quotes)(
+    private[sqala] def createExtract(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         unit: String,
@@ -710,14 +710,14 @@ object ExprMacro:
         }
         sqlExpr -> info.copy(isConst = false)
 
-    private def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
+    private[sqala] def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
         import q.reflect.*
 
         term match
             case Apply(a@Apply(_, _), _) => a
             case _ => term
 
-    private def createGrouping(using q: Quotes)(
+    private[sqala] def createGrouping(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -752,7 +752,7 @@ object ExprMacro:
                 )
             case _ => missMatch(term)
 
-    private def createAgg(using q: Quotes)(
+    private[sqala] def createAgg(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         name: String,
@@ -863,7 +863,7 @@ object ExprMacro:
             ungroupedRef = Nil
         )
 
-    private def createFunction(using q: Quotes)(
+    private[sqala] def createFunction(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         name: String,
@@ -946,7 +946,7 @@ object ExprMacro:
 
         sqlExpr -> exprInfo
 
-    private def createOver(using q: Quotes)(
+    private[sqala] def createOver(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -1065,7 +1065,7 @@ object ExprMacro:
             ungroupedRef = functionInfo.ungroupedRef ++ windowInfo.flatMap(_.ungroupedRef)
         )
 
-    private def createIf(using q: Quotes)(
+    private[sqala] def createIf(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -1109,7 +1109,7 @@ object ExprMacro:
             ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
         )
 
-    private def createMatch(using q: Quotes)(
+    private[sqala] def createMatch(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
@@ -1166,7 +1166,7 @@ object ExprMacro:
                     ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
                 )
 
-    private def createValue(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
+    private[sqala] def createValue(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
         val sqlExpr = term.tpe.widen.asType match
             case '[Seq[t]] =>
                 val asSqlExpr = Expr.summon[Merge[t]]

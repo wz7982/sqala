@@ -11,10 +11,10 @@ case class column(columnName: String) extends StaticAnnotation
 
 @scala.annotation.meta.field
 class primaryKey extends MacroAnnotation:
-    def transform(using 
+    def transform(using
         q: Quotes
     )(
-        definition: q.reflect.Definition, 
+        definition: q.reflect.Definition,
         companion: Option[q.reflect.Definition]
     ): List[q.reflect.Definition] =
         import q.reflect.*
@@ -31,10 +31,10 @@ class primaryKey extends MacroAnnotation:
 
 @scala.annotation.meta.field
 class autoInc extends MacroAnnotation:
-    def transform(using 
+    def transform(using
         q: Quotes
     )(
-        definition: q.reflect.Definition, 
+        definition: q.reflect.Definition,
         companion: Option[q.reflect.Definition]
     ): List[q.reflect.Definition] =
         import q.reflect.*
@@ -44,13 +44,13 @@ class autoInc extends MacroAnnotation:
         t match
             case '[Int] =>
             case '[Long] =>
-            case _ => 
+            case _ =>
                 report.error:
                     "Auto-increment primary key must be of type Int or Long."
 
         val owner = definition.symbol.owner
         val fields = owner.declaredFields
-        
+
         for f <- fields if f.name != definition.name do
             f.annotations.foreach:
                 case Apply(Select(New(TypeIdent("autoInc")), _), _) =>
@@ -67,3 +67,6 @@ case class sqlAgg(functionName: String) extends StaticAnnotation
 
 @scala.annotation.meta.field
 case class sqlWindow(functionName: String) extends StaticAnnotation
+
+@scala.annotation.meta.field
+class sqlFunctionTable extends StaticAnnotation

@@ -22,6 +22,7 @@ export sqala.static.annotation.{
     primaryKey,
     sqlAgg,
     sqlFunction,
+    sqlFunctionTable,
     sqlWindow,
     table
 }

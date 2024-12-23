@@ -324,6 +324,26 @@ class JoinQuery[T: SelectItem](
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
 
+    private inline def joinFunctionClause[J, R](
+        joinType: SqlJoinType,
+        inline function: J,
+        f: Table[J] => R
+    )(using
+        m: Mirror.ProductOf[J]
+    ): JoinPart[R] =
+        AsSqlExpr.summonInstances[m.MirroredElemTypes]
+        val joinTable = Table[J](TableMacro.tableMetaData[J])
+        val functionTable = ClauseMacro.fetchFunctionTable(function, queryContext)
+        val tables = f(joinTable)
+        val sqlTable = ast.from.headOption.map: i =>
+            SqlTable.JoinTable(
+                i,
+                joinType,
+                functionTable,
+                None
+            )
+        JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
+
     inline def join[J](using
         m: Mirror.ProductOf[J],
         tt: ToTuple[T]
@@ -350,6 +370,16 @@ class JoinQuery[T: SelectItem](
             joinQuery(tables),
             j => tt.toTuple(tables) :* j,
             true
+        )
+
+    inline def join[J](inline function: J)(using
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[T]
+    ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, Table[J]]](
+            SqlJoinType.Inner,
+            function,
+            j => tt.toTuple(tables) :* j
         )
 
     inline def leftJoin[J](using
@@ -383,13 +413,24 @@ class JoinQuery[T: SelectItem](
             true
         )
 
+    inline def leftJoin[J](inline function: J)(using
+        o: ToOption[Table[J]],
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[T]
+    ): JoinPart[Tuple.Append[tt.R, o.R]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, o.R]](
+            SqlJoinType.Left,
+            function,
+            j => tt.toTuple(tables) :* o.toOption(j)
+        )
+
     inline def rightJoin[J](using
         o: ToOption[T],
         m: Mirror.ProductOf[J],
         tt: ToTuple[o.R]
     ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
         joinClause[J, Tuple.Append[tt.R, Table[J]]](
-            SqlJoinType.Left,
+            SqlJoinType.Right,
             j => tt.toTuple(o.toOption(tables)) :* j
         )
 
@@ -400,6 +441,17 @@ class JoinQuery[T: SelectItem](
         joinQueryClause[N, V, S, Tuple.Append[tt.R, SubQuery[N, V]]](
             SqlJoinType.Right,
             joinQuery,
+            j => tt.toTuple(o.toOption(tables)) :* j
+        )
+
+    inline def rightJoin[J](inline function: J)(using
+        o: ToOption[T],
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[o.R]
+    ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, Table[J]]](
+            SqlJoinType.Right,
+            function,
             j => tt.toTuple(o.toOption(tables)) :* j
         )
 
