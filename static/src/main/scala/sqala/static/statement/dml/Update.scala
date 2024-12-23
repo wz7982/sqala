@@ -17,7 +17,7 @@ class Update[T, S <: UpdateState](
         new Update(tableName, ast.copy(setList = ast.setList :+ setExpr))
 
     inline def where(inline f: T => Boolean)(using S =:= UpdateTable): Update[T, UpdateTable] =
-        val condition = ClauseMacro.fetchFilter(f, false, tableName :: Nil, new QueryContext)
+        val condition = ClauseMacro.fetchFilter(f, false, false, tableName :: Nil, new QueryContext)
         new Update(tableName, ast.addWhere(condition))
 
 object Update:

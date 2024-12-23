@@ -15,18 +15,20 @@ object ClauseMacro:
 
     inline def fetchFilter[T](
         inline f: T,
-        inline inGroup: Boolean,
+        inline inGroupBy: Boolean,
+        inline inConnectBy: Boolean,
         tableNames: List[String],
         queryContext: QueryContext
     ): SqlExpr =
-        ${ fetchFilterMacro[T]('f, 'inGroup, 'tableNames, 'queryContext) }
+        ${ fetchFilterMacro[T]('f, 'inGroupBy, 'inConnectBy, 'tableNames, 'queryContext) }
 
     inline def fetchSortBy[T](
         inline f: T,
+        inline inDistinctOn: Boolean,
         tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlOrderBy] =
-        ${ fetchSortByMacro[T]('f, 'tableNames, 'queryContext) }
+        ${ fetchSortByMacro[T]('f, 'inDistinctOn, 'tableNames, 'queryContext) }
 
     transparent inline def fetchMap[F, T](
         inline f: F,
@@ -45,10 +47,11 @@ object ClauseMacro:
 
     inline def fetchGroupedMap[T](
         inline f: T,
+        inline inDistinctOn: Boolean,
         tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlSelectItem] =
-        ${ fetchGroupedMapMacro[T]('f, 'tableNames, 'queryContext) }
+        ${ fetchGroupedMapMacro[T]('f, 'inDistinctOn, 'tableNames, 'queryContext) }
 
     inline def fetchFunctionTable[T](
         inline f: T,
@@ -79,7 +82,8 @@ object ClauseMacro:
 
     def fetchFilterMacro[T](
         f: Expr[T],
-        inGroup: Expr[Boolean],
+        inGroupBy: Expr[Boolean],
+        inConnectBy: Expr[Boolean],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[SqlExpr] =
@@ -87,9 +91,9 @@ object ClauseMacro:
 
         val (args, body) = unwrapFuncMacro(f)
 
-        val inGroupValue = inGroup.value.get
+        val inGroupValue = inGroupBy.value.get
 
-        val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
+        val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext, inConnectBy.value.get, false, false)
 
         val ungrouped = info.ungroupedRef
 
@@ -114,6 +118,7 @@ object ClauseMacro:
 
     def fetchSortByMacro[T](
         f: Expr[T],
+        inDistinctOn: Expr[Boolean],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[List[SqlOrderBy]] =
@@ -125,9 +130,9 @@ object ClauseMacro:
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
-                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext))
+                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext, false, false, inDistinctOn.value.get))
             case _ =>
-                ExprMacro.sortInfoMacro(args, tableNames, body, queryContext) :: Nil
+                ExprMacro.sortInfoMacro(args, tableNames, body, queryContext, false, false, inDistinctOn.value.get) :: Nil
 
         val info = sort.map(_._2)
 
@@ -159,9 +164,9 @@ object ClauseMacro:
             case Inlined(Some(Apply(_, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
                 if t.startsWith("Tuple")
             =>
-                terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) =>
-                terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                terms.map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
             case _ =>
                 report.errorAndAbort(
                     s"\"${body.show}\" cannot be converted to SQL expression.",
@@ -189,7 +194,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -201,7 +206,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -209,12 +214,12 @@ object ClauseMacro:
                 if t.startsWith("Tuple")
             =>
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
                 val exprs = items.map(_._1).map: i =>
                     '{ SqlSelectItem.Item($i, None) }
                 exprs -> items.map(_._2)
             case _ =>
-                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
+                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext, false, false, false)
                 ('{ SqlSelectItem.Item($expr, None) } :: Nil) -> (info :: Nil)
 
         val itemsExpr = Expr.ofList(items)
@@ -239,6 +244,7 @@ object ClauseMacro:
 
     def fetchGroupedMapMacro[T](
         f: Expr[T],
+        inDistinctOn: Expr[Boolean],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
     )(using q: Quotes): Expr[List[SqlSelectItem]] =
@@ -255,7 +261,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, inDistinctOn.value.get))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -265,7 +271,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, inDistinctOn.value.get))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -273,12 +279,12 @@ object ClauseMacro:
                 if t.startsWith("Tuple")
             =>
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, inDistinctOn.value.get))
                 val exprs = items.map(_._1).map: i =>
                     '{ SqlSelectItem.Item($i, None) }
                 exprs -> items.map(_._2)
             case _ =>
-                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext)
+                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext, false, false, inDistinctOn.value.get)
                 ('{ SqlSelectItem.Item($expr, None) } :: Nil) -> (info :: Nil)
 
         for i <- info do
@@ -314,7 +320,7 @@ object ClauseMacro:
             =>
                 val functionName = TableMacro.tableNameMacro[T]
                 val metaData = TableMacro.tableMetaDataMacro[T]
-                val (functionExpr, _) = ExprMacro.createFunction(Nil, '{ Nil }, functionName.value.get, term, false, queryContext)
+                val (functionExpr, _) = ExprMacro.createFunction(Nil, '{ Nil }, functionName.value.get, term, false, queryContext, false, false, false)
                 '{
                     val function = $functionExpr.asInstanceOf[SqlExpr.Func]
                     val columns = $metaData.columnNames
@@ -373,7 +379,7 @@ object ClauseMacro:
                             SqlExpr.Column(None, columnName)
                         }
                 val (valueExpr, _) =
-                    ExprMacro.treeInfoMacro(args, tableNames, value, queryContext)
+                    ExprMacro.treeInfoMacro(args, tableNames, value, queryContext, false, false, false)
                 Expr.ofTuple(columnExpr, valueExpr)
             case _ =>
                 report.errorAndAbort(

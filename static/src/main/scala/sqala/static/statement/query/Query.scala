@@ -115,7 +115,7 @@ class SortQuery[T](
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => S]
     )(inline f: F): SortQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, tableNames, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, tableNames, queryContext)
         SortQuery(tables, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     transparent inline def map[F, M: AsSelectItem](using
@@ -147,7 +147,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val cond = ClauseMacro.fetchFilter(f, false, newParam, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         SelectQuery(tables, newParam, newAst.addWhere(cond))
 
     inline def withFilter[F](using
@@ -163,7 +163,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val cond = ClauseMacro.fetchFilter(f, false, newParam, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         SelectQuery(tables, newParam, if test then newAst.addWhere(cond) else newAst)
 
     inline def sortBy[F, S: AsSort](using
@@ -173,7 +173,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val sortBy = ClauseMacro.fetchSortBy(f, newParam, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, newParam, queryContext)
         SortQuery(tables, newParam, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
     inline def groupBy[F, N <: Tuple, V <: Tuple : AsExpr](using
@@ -254,6 +254,22 @@ class SelectQuery[T: SelectItem](
             newAst.copy(groupBy = SqlGroupItem.GroupingSets(groupingSets) :: Nil)
         )
 
+    inline def distinctOn[F, N <: Tuple, V <: Tuple : AsExpr](using
+        tt: ToTuple[T],
+        tf: TupledFunction[F, tt.R => NamedTuple[N, V]],
+        tu: ToUngrouped[T],
+        tut: ToTuple[tu.R]
+    )(inline f: F): DistinctOnQuery[Group[N, V] *: tut.R] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = if tableNames.isEmpty then args else tableNames
+        val newAst = replaceTableName(tables, newParam, ast)
+        val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
+        DistinctOnQuery(
+            groupBy,
+            newParam,
+            newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
+        )
+
     transparent inline def map[F, M: AsSelectItem](using
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => M]
@@ -269,7 +285,7 @@ object SelectQuery:
             val args = ClauseMacro.fetchArgNames(f)
             val newParam = if query.tableNames.isEmpty then args else query.tableNames
             val newAst = replaceTableName(query.tables, newParam, query.ast)
-            val cond = ClauseMacro.fetchFilter(f, false, newParam, query.queryContext)
+            val cond = ClauseMacro.fetchFilter(f, false, true, newParam, query.queryContext)
             val joinAst = newAst
                 .copy(
                     from = SqlTable.JoinTable(

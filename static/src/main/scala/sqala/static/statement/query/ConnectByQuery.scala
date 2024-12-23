@@ -15,15 +15,15 @@ class ConnectByQuery[T](
         SqlQuery.Select(select = Nil, from = SqlTable.IdentTable("__cte__", None) :: Nil)
 )(using val queryContext: QueryContext):
     inline def startWith(inline f: Table[T] => Boolean): ConnectByQuery[T] =
-        val cond = ClauseMacro.fetchFilter(f, false, tableName :: Nil, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, tableName :: Nil, queryContext)
         ConnectByQuery(table, tableName, baseAst, connectByAst, baseAst.addWhere(cond))
 
     inline def sortBy[S: AsSort](inline f: Table[T] => S): ConnectByQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, "__cte__" :: Nil, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, "__cte__" :: Nil, queryContext)
         ConnectByQuery(table, tableName, baseAst, connectByAst, startWithAst, mapAst.copy(orderBy = mapAst.orderBy ++ sortBy))
 
     inline def sortSiblingsBy[S: AsSort](inline f: Table[T] => S): ConnectByQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, tableName :: Nil, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, tableName :: Nil, queryContext)
         ConnectByQuery(
             table,
             tableName,
