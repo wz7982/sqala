@@ -14,12 +14,12 @@ class DistinctOnQuery[T](
 )(using val queryContext: QueryContext):
     inline def sortBy[F, S: AsSort](using
         TupledFunction[F, T => S]
-    )(inline f: F): GroupByQuery[T] =
+    )(inline f: F): DistinctOnQuery[T] =
         val args = ClauseMacro.fetchArgNames(f)
         queryContext.groups.prepend((args.head, groups))
         val sortBy =
             ClauseMacro.fetchSortBy(f, true, tableNames.prepended(args.head), queryContext)
-        GroupByQuery(groups, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
+        DistinctOnQuery(groups, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     inline def map[F, M: AsSelectItem](using
         TupledFunction[F, T => M]
