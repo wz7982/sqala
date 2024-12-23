@@ -308,7 +308,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             sqlBuilder.append(")")
         else
             printExpr(expr.right)
-            
+
     def printNullTestExpr(expr: SqlExpr.NullTest): Unit =
         printExpr(expr.expr)
         if expr.not then sqlBuilder.append(" IS NOT NULL")
@@ -441,6 +441,13 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     def printTable(table: SqlTable): Unit = table match
         case SqlTable.IdentTable(tableName, alias) =>
             sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
+            for a <- alias do
+                printTableAlias(a)
+        case SqlTable.FuncTable(functionName, args, alias) =>
+            sqlBuilder.append(s"$functionName")
+            sqlBuilder.append("(")
+            printList(args)(printExpr)
+            sqlBuilder.append(")")
             for a <- alias do
                 printTableAlias(a)
         case SqlTable.SubQueryTable(query, lateral, alias) =>

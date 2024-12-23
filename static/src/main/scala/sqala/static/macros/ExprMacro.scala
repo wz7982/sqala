@@ -21,25 +21,25 @@ object ExprMacro:
         ungroupedRef: List[(String, String)]
     )
 
-    private def binaryOperators: List[String] =
+    private[sqala] def binaryOperators: List[String] =
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
             "+", "-", "*", "/", "%", "->", "->>",
             "like", "contains", "startsWith", "endsWith", "in"
         )
 
-    private def unaryOperators: List[String] =
-        List("unary_+", "unary_-", "unary_!")
+    private[sqala] def unaryOperators: List[String] =
+        List("unary_+", "unary_-", "unary_!", "prior")
 
-    private def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
+    private[sqala] def missMatch(using q: Quotes)(term: q.reflect.Term): Nothing =
         import q.reflect.*
 
         report.errorAndAbort(
-            s"\"${term.show}\" cannot be converted to SQL expression.", 
+            s"\"${term.show}\" cannot be converted to SQL expression.",
             term.asExpr
         )
 
-    private def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
+    private[sqala] def validateDiv(using q: Quotes)(term: q.reflect.Term): Unit =
         import q.reflect.*
 
         val isZero = term match
@@ -50,7 +50,7 @@ object ExprMacro:
             case _ => false
         if isZero then report.error("Division by zero.", term.asExpr)
 
-    private def validateQuery(using q: Quotes)(term: q.reflect.Term): Unit =
+    private[sqala] def validateQuery(using q: Quotes)(term: q.reflect.Term): Unit =
         import q.reflect.*
 
         term.tpe.asType match
@@ -62,7 +62,10 @@ object ExprMacro:
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -84,13 +87,15 @@ object ExprMacro:
                             case '[Table[t]] => TableMacro.tableMetaDataMacro[t]
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
-                            if args.contains(objectName) then
+                        val tableNameExpr =
+                            if isPrior then
+                                Expr("__cte__")
+                            else if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
-                            else objectNameExpr                        
+                            else objectNameExpr
                         val sqlExpr = '{
-                            val columnName = 
+                            val columnName =
                                 $metaDataExpr.fieldNames
                                     .zip($metaDataExpr.columnNames)
                                     .find(_._1 == $valueNameExpr)
@@ -99,14 +104,14 @@ object ExprMacro:
                             SqlExpr.Column(Some($tableNameExpr), columnName)
                         }
                         val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
+                            hasAgg = false,
+                            isAgg = false,
                             isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil, 
-                            nonAggRef = (objectName, valName) :: Nil, 
+                            hasWindow = false,
+                            isConst = false,
+                            columnRef = (objectName, valName) :: Nil,
+                            aggRef = Nil,
+                            nonAggRef = (objectName, valName) :: Nil,
                             ungroupedRef = Nil
                         )
                         sqlExpr -> info
@@ -116,13 +121,13 @@ object ExprMacro:
                             case '[UngroupedTable[t]] => TableMacro.tableMetaDataMacro[t]
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
+                        val tableNameExpr =
                             if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
-                            else objectNameExpr                        
+                            else objectNameExpr
                         val sqlExpr = '{
-                            val columnName = 
+                            val columnName =
                                 $metaDataExpr.fieldNames
                                     .zip($metaDataExpr.columnNames)
                                     .find(_._1 == $valueNameExpr)
@@ -130,18 +135,32 @@ object ExprMacro:
                                     .get
                             SqlExpr.Column(Some($tableNameExpr), columnName)
                         }
-                        val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
-                            isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil,
-                            nonAggRef = (objectName, valName) :: Nil,
-                            ungroupedRef = (objectName, valName) :: Nil
-                        )
-                        sqlExpr -> info
+                        if inDistinctOn then
+                            val info = ExprInfo(
+                                hasAgg = true,
+                                isAgg = true,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = (objectName, valName) :: Nil,
+                                nonAggRef = Nil,
+                                ungroupedRef = Nil
+                            )
+                            '{ SqlExpr.Func("ANY_VALUE", $sqlExpr :: Nil) } -> info
+                        else
+                            val info = ExprInfo(
+                                hasAgg = false,
+                                isAgg = false,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = Nil,
+                                nonAggRef = (objectName, valName) :: Nil,
+                                ungroupedRef = (objectName, valName) :: Nil
+                            )
+                            sqlExpr -> info
                     case '[Group[n, _]] =>
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
@@ -152,192 +171,144 @@ object ExprMacro:
                                     case ConstantType(StringConstant(n)) => Expr(n)
                         val namesExpr = Expr.ofList(colNames)
                         val sqlExpr = '{
-                            val group = 
+                            val group =
                                 $queryContext.groups.find(_._1 == $objectNameExpr).get
                             val index = $namesExpr.indexOf($valueNameExpr)
                             group._2.apply(index)
                         }
                         val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
+                            hasAgg = false,
+                            isAgg = false,
                             isGroup = true,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil, 
-                            nonAggRef = (objectName, valName) :: Nil, 
+                            hasWindow = false,
+                            isConst = false,
+                            columnRef = (objectName, valName) :: Nil,
+                            aggRef = Nil,
+                            nonAggRef = (objectName, valName) :: Nil,
                             ungroupedRef = Nil
                         )
                         sqlExpr -> info
                     case '[SubQuery[_, _]] =>
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
-                            if args.contains(objectName) then
+                        val tableNameExpr =
+                            if isPrior then
+                                Expr("__cte__")
+                            else if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
                             else objectNameExpr
                         val sqlExpr = '{ SqlExpr.Column(Some($tableNameExpr), $valueNameExpr) }
                         val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
+                            hasAgg = false,
+                            isAgg = false,
                             isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil, 
-                            nonAggRef = (objectName, valName) :: Nil, 
+                            hasWindow = false,
+                            isConst = false,
+                            columnRef = (objectName, valName) :: Nil,
+                            aggRef = Nil,
+                            nonAggRef = (objectName, valName) :: Nil,
                             ungroupedRef = Nil
                         )
                         sqlExpr -> info
                     case '[UngroupedSubQuery[_, _]] =>
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
+                        val tableNameExpr =
                             if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
                             else objectNameExpr
                         val sqlExpr = '{ SqlExpr.Column(Some($tableNameExpr), $valueNameExpr) }
-                        val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
-                            isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil,
-                            nonAggRef = (objectName, valName) :: Nil,
-                            ungroupedRef = (objectName, valName) :: Nil
-                        )
-                        sqlExpr -> info
-                    case '[TableSubQuery[_]] =>
-                        val metaDataExpr = ident.tpe.asType match
-                            case '[TableSubQuery[Option[t]]] => TableMacro.tableMetaDataMacro[t]
-                            case '[TableSubQuery[t]] => TableMacro.tableMetaDataMacro[t]
-                        val objectNameExpr = Expr(objectName)
-                        val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
-                            if args.contains(objectName) then
-                                val indexExpr = Expr(args.indexOf(objectName))
-                                '{ $tableNames($indexExpr) }
-                            else objectNameExpr                        
-                        val sqlExpr = '{
-                            val columnName = 
-                                $metaDataExpr.fieldNames
-                                    .zip($metaDataExpr.columnNames)
-                                    .find(_._1 == $valueNameExpr)
-                                    .map(_._2)
-                                    .get
-                            SqlExpr.Column(Some($tableNameExpr), columnName)
-                        }
-                        val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
-                            isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil, 
-                            nonAggRef = (objectName, valName) :: Nil, 
-                            ungroupedRef = Nil
-                        )
-                        sqlExpr -> info
-                    case '[UngroupedTableSubQuery[_]] =>
-                        val metaDataExpr = ident.tpe.asType match
-                            case '[UngroupedTableSubQuery[Option[t]]] => TableMacro.tableMetaDataMacro[t]
-                            case '[UngroupedTableSubQuery[t]] => TableMacro.tableMetaDataMacro[t]
-                        val objectNameExpr = Expr(objectName)
-                        val valueNameExpr = Expr(valName)
-                        val tableNameExpr = 
-                            if args.contains(objectName) then
-                                val indexExpr = Expr(args.indexOf(objectName))
-                                '{ $tableNames($indexExpr) }
-                            else objectNameExpr                        
-                        val sqlExpr = '{
-                            val columnName = 
-                                $metaDataExpr.fieldNames
-                                    .zip($metaDataExpr.columnNames)
-                                    .find(_._1 == $valueNameExpr)
-                                    .map(_._2)
-                                    .get
-                            SqlExpr.Column(Some($tableNameExpr), columnName)
-                        }
-                        val info = ExprInfo(
-                            hasAgg = false, 
-                            isAgg = false, 
-                            isGroup = false,
-                            hasWindow = false, 
-                            isConst = false, 
-                            columnRef = (objectName, valName) :: Nil, 
-                            aggRef = Nil,
-                            nonAggRef = (objectName, valName) :: Nil,
-                            ungroupedRef = (objectName, valName) :: Nil
-                        )
-                        sqlExpr -> info
+                        if inDistinctOn then
+                            val info = ExprInfo(
+                                hasAgg = true,
+                                isAgg = true,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = (objectName, valName) :: Nil,
+                                nonAggRef = Nil,
+                                ungroupedRef = Nil
+                            )
+                            '{ SqlExpr.Func("ANY_VALUE", $sqlExpr :: Nil) } -> info
+                        else
+                            val info = ExprInfo(
+                                hasAgg = false,
+                                isAgg = false,
+                                isGroup = false,
+                                hasWindow = false,
+                                isConst = false,
+                                columnRef = (objectName, valName) :: Nil,
+                                aggRef = Nil,
+                                nonAggRef = (objectName, valName) :: Nil,
+                                ungroupedRef = (objectName, valName) :: Nil
+                            )
+                            sqlExpr -> info
                     case _ => missMatch(term)
             case Apply(Select(left, op), right :: Nil) if binaryOperators.contains(op) =>
-                createBinary(args, tableNames, left, op, right, queryContext)
+                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext)
+                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(Ident(op), left :: Nil), _), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext)
+                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(TypeApply(Ident(op), _), left :: Nil), _), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext)
+                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
                 if binaryOperators.contains(op)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext)
+                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Select(v, op) if unaryOperators.contains(op) =>
-                createUnary(args, tableNames, v, op, queryContext)
+                createUnary(args, tableNames, v, op, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) if unaryOperators.contains(op) =>
-                createUnary(args, tableNames, v, op, queryContext)
+                createUnary(args, tableNames, v, op, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(
                 Apply(
-                    TypeApply(Apply(TypeApply(Ident("between"), _), v :: Nil), _), 
+                    TypeApply(Apply(TypeApply(Ident("between"), _), v :: Nil), _),
                     s :: e :: Nil
-                ), 
+                ),
                 _
             ) =>
-                createBetween(args, tableNames, v, s, e, queryContext)
-            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms) 
+                createBetween(args, tableNames, v, s, e, queryContext, inConnectBy, isPrior, inDistinctOn)
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
-                createTuple(args, tableNames, terms, queryContext)
+                createTuple(args, tableNames, terms, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), v :: Nil), _), _ :: _ :: cast :: Nil) =>
-                createCast(args, tableNames, v, cast, queryContext)
+                createCast(args, tableNames, v, cast, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Ident("interval"), interval :: Nil) =>
                 createInterval(interval)
             case Apply(
                 Apply(
-                    TypeApply(Ident("extract"), _), 
+                    TypeApply(Ident("extract"), _),
                     Apply(Apply(TypeApply(Ident(unit), _), v :: Nil), _) :: Nil
-                ), 
+                ),
                 _
             ) =>
-                createExtract(args, tableNames, unit, v, queryContext)
+                createExtract(args, tableNames, unit, v, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(
                 Apply(
-                    TypeApply(Ident("extract"), _), 
+                    TypeApply(Ident("extract"), _),
                     Apply(TypeApply(Ident(unit), _), v :: Nil) :: Nil
-                ), 
+                ),
                 _
             ) =>
-                createExtract(args, tableNames, unit, v, queryContext)
+                createExtract(args, tableNames, unit, v, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(
                 Apply(
                     Apply(
-                        Ident(s@("timestamp" | "date")), 
+                        Ident(s@("timestamp" | "date")),
                         Apply(_, Typed(Repeated(t :: Nil, _), _) :: Nil) :: Nil
-                    ), 
+                    ),
                     _
-                ), 
+                ),
                 _
             ) =>
                 val timeExpr = t.asExprOf[String]
@@ -362,13 +333,13 @@ object ExprMacro:
                     case _ => false
                 .isDefined
             =>
-                val (functionName, kind) = 
+                val (functionName, kind) =
                     term.symbol.annotations.find:
                         case Apply(Select(New(TypeIdent("sqlFunction" | "sqlAgg" | "sqlWindow")), _), _) => true
                         case _ => false
                     .get match
                         case Apply(
-                            Select(New(TypeIdent(k)), _), 
+                            Select(New(TypeIdent(k)), _),
                             functionArg :: Nil
                         ) =>
                             functionArg match
@@ -378,26 +349,26 @@ object ExprMacro:
                         case _ => missMatch(term)
                 (functionName, kind) match
                     case ("GROUPING", _) =>
-                        createGrouping(args, tableNames, term, queryContext)
-                    case (_, "sqlAgg") => 
-                        createAgg(args, tableNames, functionName, term, queryContext)
+                        createGrouping(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
+                    case (_, "sqlAgg") =>
+                        createAgg(args, tableNames, functionName, term, queryContext, inConnectBy, isPrior, inDistinctOn)
                     case (_, "sqlFunction") =>
-                        createFunction(args, tableNames, functionName, term, false, queryContext)
+                        createFunction(args, tableNames, functionName, term, false, queryContext, inConnectBy, isPrior, inDistinctOn)
                     case (_, "sqlWindow") =>
-                        createFunction(args, tableNames, functionName, term, false, queryContext)
+                        createFunction(args, tableNames, functionName, term, false, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(
                 Apply(Apply(TypeApply(Ident("over"), _), function :: Nil), overValue :: Nil),
                 _
             ) =>
-                createOver(args, tableNames, function, overValue, queryContext)
+                createOver(args, tableNames, function, overValue, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(TypeApply(Select(Ident("Some"), "apply"), _), v :: Nil) =>
-                treeInfoMacro(args, tableNames, v, queryContext)
+                treeInfoMacro(args, tableNames, v, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Ident(name), v :: Nil) if name.endsWith("2bigDecimal") =>
-                treeInfoMacro(args, tableNames, v, queryContext)
+                treeInfoMacro(args, tableNames, v, queryContext, inConnectBy, isPrior, inDistinctOn)
             case i@If(_, _, _) =>
-                createIf(args, tableNames, i, queryContext)
+                createIf(args, tableNames, i, queryContext, inConnectBy, isPrior, inDistinctOn)
             case m@Match(_, _) =>
-                createMatch(args, tableNames, m, queryContext)
+                createMatch(args, tableNames, m, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Ident("exists"), q :: Nil), _) =>
                 val expr = q.asExprOf[Query[?, ?]]
                 val sqlExpr = '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.Exists) }
@@ -459,24 +430,27 @@ object ExprMacro:
                         )
                     case _ => createValue(term)
 
-    private def createBinary(using q: Quotes)(
+    private[sqala] def createBinary(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         left: q.reflect.Term,
         op: String,
         right: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         if op == "/" || op == "%" then
             validateDiv(right)
 
-        val (leftExpr, leftInfo) = treeInfoMacro(args, tableNames, left, queryContext)
+        val (leftExpr, leftInfo) = treeInfoMacro(args, tableNames, left, queryContext, inConnectBy, isPrior, inDistinctOn)
         val leftHasString = left.tpe.widen.asType match
             case '[String] => true
             case '[Option[String]] => true
             case _ => false
 
-        val (rightExpr, rightInfo) = treeInfoMacro(args, tableNames, right, queryContext)
+        val (rightExpr, rightInfo) = treeInfoMacro(args, tableNames, right, queryContext, inConnectBy, isPrior, inDistinctOn)
         val rightHasString = right.tpe.widen.asType match
             case '[String] => true
             case '[Option[String]] => true
@@ -508,7 +482,7 @@ object ExprMacro:
 
         val sqlExpr = if op == "+" && (leftHasString || rightHasString) then
             '{
-                SqlExpr.Func("CONCAT", $leftExpr :: $rightExpr :: Nil) 
+                SqlExpr.Func("CONCAT", $leftExpr :: $rightExpr :: Nil)
             }
         else
             '{
@@ -565,53 +539,67 @@ object ExprMacro:
             ungroupedRef = leftInfo.ungroupedRef ++ rightInfo.ungroupedRef
         )
 
-    private def createUnary(using q: Quotes)(
+    private[sqala] def createUnary(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
         op: String,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
-        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
+        import q.reflect.*
 
-        val operatorExpr = op match
-            case "unary_+" => '{ SqlUnaryOperator.Positive }
-            case "unary_-" => '{ SqlUnaryOperator.Negative }
-            case "unary_!" => '{ SqlUnaryOperator.Not }
+        if op == "prior" then
+            if !inConnectBy then
+                report.errorAndAbort("Prior can only be used in CONNECT BY clause.", term.asExpr)
+            else
+                treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, true, inDistinctOn)
+        else
+            val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
 
-        val sqlExpr = '{
-            ($operatorExpr, $expr) match
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
-                    SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
-                    SqlExpr.BooleanLiteral(true)
-                case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
-                    SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
-                case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
-                    SqlExpr.Between(x, s, e, true)
-                case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
-                    SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
-                case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
-                    SqlExpr.BooleanLiteral(true)
-                case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
-                    SqlExpr.BooleanLiteral(false)
-                case (o, x) =>
-                    SqlExpr.Unary(x, o)
-        }
+            val operatorExpr = op match
+                case "unary_+" => '{ SqlUnaryOperator.Positive }
+                case "unary_-" => '{ SqlUnaryOperator.Negative }
+                case "unary_!" => '{ SqlUnaryOperator.Not }
 
-        sqlExpr -> info
+            val sqlExpr = '{
+                ($operatorExpr, $expr) match
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
+                        SqlExpr.BooleanLiteral(true)
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
+                        SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
+                    case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
+                        SqlExpr.Between(x, s, e, true)
+                    case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
+                        SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
+                        SqlExpr.BooleanLiteral(true)
+                    case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
+                        SqlExpr.BooleanLiteral(false)
+                    case (o, x) =>
+                        SqlExpr.Unary(x, o)
+            }
 
-    private def createBetween(using q: Quotes)(
+            sqlExpr -> info
+
+    private[sqala] def createBetween(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
         startTerm: q.reflect.Term,
         endTerm: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
-        val (betweenExpr, betweenInfo) = treeInfoMacro(args, tableNames, term, queryContext)
-        val (startExpr, startInfo) = treeInfoMacro(args, tableNames, startTerm, queryContext)
-        val (endExpr, endInfo) = treeInfoMacro(args, tableNames, endTerm, queryContext)
+        val (betweenExpr, betweenInfo) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
+        val (startExpr, startInfo) = treeInfoMacro(args, tableNames, startTerm, queryContext, inConnectBy, isPrior, inDistinctOn)
+        val (endExpr, endInfo) = treeInfoMacro(args, tableNames, endTerm, queryContext, inConnectBy, isPrior, inDistinctOn)
 
         val sqlExpr = '{
             SqlExpr.Between($betweenExpr, $startExpr, $endExpr, false)
@@ -629,14 +617,17 @@ object ExprMacro:
             ungroupedRef = betweenInfo.ungroupedRef ++ startInfo.ungroupedRef ++ endInfo.ungroupedRef
         )
 
-    private def createTuple(using q: Quotes)(
+    private[sqala] def createTuple(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         terms: List[q.reflect.Term],
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         val exprs = terms
-            .map(t => treeInfoMacro(args, tableNames, t, queryContext))
+            .map(t => treeInfoMacro(args, tableNames, t, queryContext, inConnectBy, isPrior, inDistinctOn))
         val listExpr = Expr.ofList(exprs.map(_._1))
         val info = exprs.map(_._2)
         val sqlExpr = '{
@@ -654,27 +645,30 @@ object ExprMacro:
             ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
         )
 
-    private def createCast(using q: Quotes)(
+    private[sqala] def createCast(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
         cast: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         cast.tpe.asType match
             case '[Cast[_, _]] =>
                 val castExpr = cast.asExprOf[Cast[?, ?]]
-                val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
+                val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
                 val sqlExpr = '{
                     SqlExpr.Cast($expr, $castExpr.castType)
                 }
                 sqlExpr -> info.copy(isConst = false)
 
-    private def createInterval(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
+    private[sqala] def createInterval(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
         term.tpe.asType match
             case '[TimeInterval] =>
                 val expr = term.asExprOf[TimeInterval]
-                val sqlExpr = '{ 
+                val sqlExpr = '{
                    SqlExpr.Interval($expr.n, $expr.unit)
                 }
                 sqlExpr -> ExprInfo(
@@ -689,12 +683,15 @@ object ExprMacro:
                     ungroupedRef = Nil
                 )
 
-    private def createExtract(using q: Quotes)(
+    private[sqala] def createExtract(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         unit: String,
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         val unitExpr = unit match
             case "year" => '{ SqlTimeUnit.Year }
@@ -705,31 +702,34 @@ object ExprMacro:
             case "minute" => '{ SqlTimeUnit.Minute }
             case "second" => '{ SqlTimeUnit.Second }
             case _ => missMatch(term)
-        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
+        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
         val sqlExpr = '{
             SqlExpr.Extract($unitExpr, $expr)
         }
         sqlExpr -> info.copy(isConst = false)
 
-    private def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
+    private[sqala] def removeNestedApply(using q: Quotes)(term: q.reflect.Term): q.reflect.Term =
         import q.reflect.*
 
         term match
             case Apply(a@Apply(_, _), _) => a
             case _ => term
 
-    private def createGrouping(using q: Quotes)(
+    private[sqala] def createGrouping(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
         term match
             case Apply(Apply(Ident("grouping"), Typed(Repeated(items, _), _) :: Nil), _) =>
                 val info = items
-                    .map(i => treeInfoMacro(args, tableNames, i, queryContext))
+                    .map(i => treeInfoMacro(args, tableNames, i, queryContext, inConnectBy, isPrior, inDistinctOn))
                 for i <- info do
                     if !i._2.isGroup then
                         report.error(
@@ -737,7 +737,7 @@ object ExprMacro:
                             term.asExpr
                         )
                 val paramsExpr = Expr.ofList(info.map(_._1))
-                val sqlExpr = '{ 
+                val sqlExpr = '{
                     SqlExpr.Func("GROUPING", $paramsExpr)
                 }
                 sqlExpr -> ExprInfo(
@@ -753,12 +753,15 @@ object ExprMacro:
                 )
             case _ => missMatch(term)
 
-    private def createAgg(using q: Quotes)(
+    private[sqala] def createAgg(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         name: String,
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -771,7 +774,7 @@ object ExprMacro:
             p.flags match
                 case f if f.is(Flags.Given) => false
                 case _ => true
-        
+
         val paramNames = params.map(_.name)
 
         val namedParams = paramTerms.filter:
@@ -804,7 +807,7 @@ object ExprMacro:
             report.error(s"Cannot use DISTINCT with WITHIN GROUP.", term.asExpr)
 
         val valueParamInfo = valueParams
-            .map(p => treeInfoMacro(args, tableNames, p, queryContext))
+            .map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn))
         val valueParamExpr = Expr.ofList(valueParamInfo.map(_._1))
 
         val sortByList = sortByParam.toList.map:
@@ -812,7 +815,7 @@ object ExprMacro:
             case x => x :: Nil
         .flatten
         val sortByInfo = sortByList
-            .map(s => sortInfoMacro(args, tableNames, s, queryContext))
+            .map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
         val sortByExpr = Expr.ofList(sortByInfo.map(_._1))
 
         val withinGroupList = withinGroupParam.toList.map:
@@ -820,11 +823,11 @@ object ExprMacro:
             case x => x :: Nil
         .flatten
         val withinGroupInfo = withinGroupList
-            .map(s => sortInfoMacro(args, tableNames, s, queryContext))
+            .map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
         val withinGroupExpr = Expr.ofList(withinGroupInfo.map(_._1))
 
-        val paramsInfo = 
-            valueParamInfo.map(_._2) ++ 
+        val paramsInfo =
+            valueParamInfo.map(_._2) ++
             sortByInfo.map(_._2) ++
             withinGroupInfo.map(_._2)
 
@@ -833,7 +836,7 @@ object ExprMacro:
                 report.error("Aggregate function calls cannot be nested.", term.asExpr)
             if p.hasWindow then
                 report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
-        val columnsRef = 
+        val columnsRef =
             paramsInfo.flatMap(_.columnRef)
         if !columnsRef.map(_._1).forall(args.contains) then
             report.error("Outer query columns are not allowed in aggregate functions.", term.asExpr)
@@ -843,11 +846,11 @@ object ExprMacro:
 
         val sqlExpr = '{
             SqlExpr.Func(
-                $nameExpr, 
-                $valueParamExpr, 
-                $distinctExpr, 
+                $nameExpr,
+                $valueParamExpr,
+                $distinctExpr,
                 $sortByExpr,
-                $withinGroupExpr, 
+                $withinGroupExpr,
                 None
             )
         }
@@ -864,13 +867,16 @@ object ExprMacro:
             ungroupedRef = Nil
         )
 
-    private def createFunction(using q: Quotes)(
+    private[sqala] def createFunction(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         name: String,
         term: q.reflect.Term,
         isWindow: Boolean,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
@@ -893,7 +899,7 @@ object ExprMacro:
                 report.error(
                     s"WITHIN GROUP specified, but %s is not an aggregate function."
                 )
-        
+
         val paramNames = params.map(_.name)
 
         val namedParams = paramTerms.filter:
@@ -910,7 +916,7 @@ object ExprMacro:
         val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
 
         val paramsData = allParams
-            .map(p => treeInfoMacro(args, tableNames, p._2, queryContext))
+            .map(p => treeInfoMacro(args, tableNames, p._2, queryContext, inConnectBy, isPrior, inDistinctOn))
         val paramsInfo = paramsData.map(_._2)
         val paramsExpr = Expr.ofList(paramsData.map(_._1))
 
@@ -932,7 +938,7 @@ object ExprMacro:
                 nonAggRef = paramsInfo.flatMap(_.nonAggRef),
                 ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
             )
-        else 
+        else
             ExprInfo(
                 hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
                 isAgg = false,
@@ -947,16 +953,19 @@ object ExprMacro:
 
         sqlExpr -> exprInfo
 
-    private def createOver(using q: Quotes)(
+    private[sqala] def createOver(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
         overValue: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
-        val (functionExpr, functionInfo) = treeInfoMacro(args, tableNames, term, queryContext)
+        val (functionExpr, functionInfo) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
 
         val isWindow = term.symbol.annotations.find:
             case Apply(Select(New(TypeIdent("sqlWindow")), _), _) => true
@@ -965,7 +974,7 @@ object ExprMacro:
 
         if !functionInfo.isAgg && !isWindow then
             report.error(
-                "OVER specified, but expression is not a window function nor an aggregate function.", 
+                "OVER specified, but expression is not a window function nor an aggregate function.",
                 term.asExpr
             )
 
@@ -973,9 +982,9 @@ object ExprMacro:
             value match
                 case Apply(
                     Apply(
-                        Select(t, kind@("rowsBetween" | "rangeBetween" | "groupsBetween")), 
+                        Select(t, kind@("rowsBetween" | "rangeBetween" | "groupsBetween")),
                         s :: e :: Nil
-                    ), 
+                    ),
                     _
                 ) =>
                     (t, Some(kind, s, e))
@@ -1007,13 +1016,13 @@ object ExprMacro:
                         case "rangeBetween" => '{ Some(SqlWindowFrame.Range($startExpr, $endExpr)) }
                         case "groupsBetween" => '{ Some(SqlWindowFrame.Groups($startExpr, $endExpr)) }
 
-        val (partition, sort) = value match 
+        val (partition, sort) = value match
             case Apply(Apply(Ident("partitionBy"), Typed(Repeated(partitionBy, _), _) :: Nil), _) =>
-                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext)) ->
+                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn)) ->
                 Nil
             case Apply(Apply(Ident("sortBy"), Typed(Repeated(sortBy, _), _) :: Nil), _) =>
                 Nil ->
-                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext))
+                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
             case Apply(
                 Apply(
                     Select(
@@ -1024,8 +1033,8 @@ object ExprMacro:
                 ),
                 _
             ) =>
-                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext)) ->
-                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext))
+                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn)) ->
+                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
             case _ => Nil -> Nil
 
         val partitionExpr = Expr.ofList(partition.map(_._1))
@@ -1047,9 +1056,9 @@ object ExprMacro:
 
         val sqlExpr = '{
             SqlExpr.Window(
-                $functionExpr, 
-                $partitionExpr, 
-                $sortExpr, 
+                $functionExpr,
+                $partitionExpr,
+                $sortExpr,
                 $frameExpr
             )
         }
@@ -1066,29 +1075,32 @@ object ExprMacro:
             ungroupedRef = functionInfo.ungroupedRef ++ windowInfo.flatMap(_.ungroupedRef)
         )
 
-    private def createIf(using q: Quotes)(
+    private[sqala] def createIf(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
         def collectIf(
-            ifTerm: q.reflect.Term, 
+            ifTerm: q.reflect.Term,
             exprs: List[(Expr[SqlExpr], ExprInfo)]
         ): List[(Expr[SqlExpr], ExprInfo)] =
             ifTerm match
                 case If(i, t, e) =>
                     val newExprs = exprs ++ List(
-                        treeInfoMacro(args, tableNames, i, queryContext),
-                        treeInfoMacro(args, tableNames, t, queryContext)
+                        treeInfoMacro(args, tableNames, i, queryContext, inConnectBy, isPrior, inDistinctOn),
+                        treeInfoMacro(args, tableNames, t, queryContext, inConnectBy, isPrior, inDistinctOn)
                     )
                     collectIf(e, newExprs)
-                case t => exprs :+ treeInfoMacro(args, tableNames, t, queryContext)
+                case t => exprs :+ treeInfoMacro(args, tableNames, t, queryContext, inConnectBy, isPrior, inDistinctOn)
 
         val ifInfo = collectIf(term, Nil)
-        
+
         val expr = Expr.ofList(ifInfo.map(_._1))
         val info = ifInfo.map(_._2)
 
@@ -1110,24 +1122,27 @@ object ExprMacro:
             ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
         )
 
-    private def createMatch(using q: Quotes)(
+    private[sqala] def createMatch(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
         term match
             case Match(m, c) =>
-                val (matchExpr, matchInfo) = treeInfoMacro(args, tableNames, m, queryContext)
+                val (matchExpr, matchInfo) = treeInfoMacro(args, tableNames, m, queryContext, inConnectBy, isPrior, inDistinctOn)
                 val caseExprs = c.map:
                     case CaseDef(Ident(_), _, Block(_, v)) =>
-                        val (valueExpr, valueInfo) = treeInfoMacro(args, tableNames, v, queryContext)
+                        val (valueExpr, valueInfo) = treeInfoMacro(args, tableNames, v, queryContext, inConnectBy, isPrior, inDistinctOn)
                         '{ SqlCase($matchExpr, $valueExpr) } -> valueInfo
                     case CaseDef(c, _, Block(_, v)) =>
-                        val (caseExpr, caseInfo) = treeInfoMacro(args, tableNames, c.asExpr.asTerm, queryContext)
-                        val (valueExpr, valueInfo) = treeInfoMacro(args, tableNames, v, queryContext)
+                        val (caseExpr, caseInfo) = treeInfoMacro(args, tableNames, c.asExpr.asTerm, queryContext, inConnectBy, isPrior, inDistinctOn)
+                        val (valueExpr, valueInfo) = treeInfoMacro(args, tableNames, v, queryContext, inConnectBy, isPrior, inDistinctOn)
                         val info = caseInfo :: valueInfo :: Nil
                         '{ SqlCase($caseExpr, $valueExpr) } -> ExprInfo(
                             hasAgg = info.map(_.hasAgg).fold(false)(_ || _),
@@ -1145,14 +1160,14 @@ object ExprMacro:
                 val caseExpr = Expr.ofList(caseExprs.map(_._1))
                 val info = caseExprs.map(_._2)
 
-                val sqlExpr = '{ 
+                val sqlExpr = '{
                     val branches = $caseExpr
                         .filter(c => c.whenExpr != $matchExpr)
                     val default = $caseExpr
                         .find(c => c.whenExpr == $matchExpr)
                         .map(_.thenExpr)
                         .getOrElse(SqlExpr.Null)
-                    SqlExpr.Match($matchExpr, branches, default) 
+                    SqlExpr.Match($matchExpr, branches, default)
                 }
 
                 sqlExpr -> ExprInfo(
@@ -1167,7 +1182,7 @@ object ExprMacro:
                     ungroupedRef = info.map(_.ungroupedRef).fold(Nil)(_ ++ _)
                 )
 
-    private def createValue(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
+    private[sqala] def createValue(using q: Quotes)(term: q.reflect.Term): (Expr[SqlExpr], ExprInfo) =
         val sqlExpr = term.tpe.widen.asType match
             case '[Seq[t]] =>
                 val asSqlExpr = Expr.summon[Merge[t]]
@@ -1185,7 +1200,7 @@ object ExprMacro:
                     case Some(e) =>
                         val valueExpr = term.asExprOf[t]
                         '{ $e.asSqlExpr($valueExpr) }
-        
+
         sqlExpr -> ExprInfo(
             hasAgg = false,
             isAgg = false,
@@ -1202,22 +1217,25 @@ object ExprMacro:
         args: List[String],
         tableNames: Expr[List[String]],
         term: q.reflect.Term,
-        queryContext: Expr[QueryContext]
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
     ): (Expr[SqlOrderBy], ExprInfo) =
         import q.reflect.*
-        
+
         term match
-            case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) 
+            case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _)
                 if List(
-                    "asc", 
-                    "ascNullsFirst", 
+                    "asc",
+                    "ascNullsFirst",
                     "ascNullsLast",
                     "desc",
                     "descNullsFirst",
                     "descNullsLast"
                 ).contains(op)
             =>
-                val (expr, info) = treeInfoMacro(args, tableNames, v, queryContext)
+                val (expr, info) = treeInfoMacro(args, tableNames, v, queryContext, inConnectBy, isPrior, inDistinctOn)
                 val sqlExpr = op match
                     case "asc" => '{
                         SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None)
@@ -1240,5 +1258,5 @@ object ExprMacro:
                     case _ => missMatch(term)
                 sqlExpr -> info
             case _ =>
-                val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext)
+                val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
                 '{ SqlOrderBy($expr, Some(SqlOrderByOption.Asc), None) } -> info

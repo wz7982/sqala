@@ -21,7 +21,7 @@ class JoinPart[T](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames.appended(args.last)
         val newAst = replaceTableName(tables, newParam, ast)
-        val cond = ClauseMacro.fetchFilter(f, false, newParam, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         val newTable = newAst.from.head match
             case t: SqlTable.JoinTable =>
                 t.copy(condition = Some(SqlJoinCondition.On(cond)))

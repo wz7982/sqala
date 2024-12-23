@@ -32,9 +32,25 @@ inline def query[T](using
     )
     TableQuery(table, ast)
 
+inline def query[T](inline function: T)(using
+    p: Mirror.ProductOf[T],
+    c: QueryContext
+): TableQuery[T] =
+    AsSqlExpr.summonInstances[p.MirroredElemTypes]
+    val metaData = TableMacro.tableMetaData[T]
+    val table = Table[T](metaData)
+    val selectItems = metaData.columnNames.map: n =>
+        SqlSelectItem.Item(SqlExpr.Column(Some(metaData.tableName), n), None)
+    val sqlTable = ClauseMacro.fetchFunctionTable(function, c)
+    val ast = SqlQuery.Select(
+        select = selectItems,
+        from = sqlTable :: Nil
+    )
+    TableQuery(table, ast)
+
 inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](
     subQuery: Query[NamedTuple[N, V], S]
-)(using 
+)(using
     s: SelectItem[SubQuery[N, V]],
     c: QueryContext
 ): SelectQuery[SubQuery[N, V]] =
@@ -48,7 +64,7 @@ inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](
 
 inline def query[T <: Product](
     values: List[T]
-)(using 
+)(using
     m: Mirror.ProductOf[T],
     c: QueryContext
 ): SelectQuery[Table[T]] =
@@ -56,7 +72,7 @@ inline def query[T <: Product](
     val metaData = TableMacro.tableMetaData[T]
     val table = Table[T](metaData)
     val alias = "__values__"
-    val selectItems: List[SqlSelectItem.Item] = 
+    val selectItems: List[SqlSelectItem.Item] =
         metaData.columnNames.map: n =>
             SqlSelectItem.Item(SqlExpr.Column(Some(alias), n), None)
     val exprList = values.map: datum =>

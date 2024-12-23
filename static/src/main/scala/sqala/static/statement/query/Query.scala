@@ -115,7 +115,7 @@ class SortQuery[T](
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => S]
     )(inline f: F): SortQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, tableNames, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, tableNames, queryContext)
         SortQuery(tables, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     transparent inline def map[F, M: AsSelectItem](using
@@ -147,7 +147,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val cond = ClauseMacro.fetchFilter(f, false, newParam, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         SelectQuery(tables, newParam, newAst.addWhere(cond))
 
     inline def withFilter[F](using
@@ -163,7 +163,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val cond = ClauseMacro.fetchFilter(f, false, newParam, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         SelectQuery(tables, newParam, if test then newAst.addWhere(cond) else newAst)
 
     inline def sortBy[F, S: AsSort](using
@@ -173,7 +173,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val sortBy = ClauseMacro.fetchSortBy(f, newParam, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, newParam, queryContext)
         SortQuery(tables, newParam, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
     inline def groupBy[F, N <: Tuple, V <: Tuple : AsExpr](using
@@ -254,6 +254,22 @@ class SelectQuery[T: SelectItem](
             newAst.copy(groupBy = SqlGroupItem.GroupingSets(groupingSets) :: Nil)
         )
 
+    inline def distinctOn[F, N <: Tuple, V <: Tuple : AsExpr](using
+        tt: ToTuple[T],
+        tf: TupledFunction[F, tt.R => NamedTuple[N, V]],
+        tu: ToUngrouped[T],
+        tut: ToTuple[tu.R]
+    )(inline f: F): DistinctOnQuery[Group[N, V] *: tut.R] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = if tableNames.isEmpty then args else tableNames
+        val newAst = replaceTableName(tables, newParam, ast)
+        val groupBy = ClauseMacro.fetchGroupBy(f, newParam, queryContext)
+        DistinctOnQuery(
+            groupBy,
+            newParam,
+            newAst.copy(groupBy = groupBy.map(g => SqlGroupItem.Singleton(g)))
+        )
+
     transparent inline def map[F, M: AsSelectItem](using
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => M]
@@ -262,6 +278,34 @@ class SelectQuery[T: SelectItem](
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
         ClauseMacro.fetchMap(f, newParam, newAst, queryContext)
+
+    inline def pivot[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        tf: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: F): PivotQuery[T, N, V] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = if tableNames.isEmpty then args else tableNames
+        val newAst = replaceTableName(tables, newParam, ast)
+        val functions = ClauseMacro.fetchPivot(f, newParam, queryContext)
+        PivotQuery[T, N, V](tables, newParam, functions, newAst)
+
+object SelectQuery:
+    extension [T](query: SelectQuery[Table[T]])
+        inline def connectBy(inline f: Table[T] => Boolean): ConnectByQuery[T] =
+            val args = ClauseMacro.fetchArgNames(f)
+            val newParam = if query.tableNames.isEmpty then args else query.tableNames
+            val newAst = replaceTableName(query.tables, newParam, query.ast)
+            val cond = ClauseMacro.fetchFilter(f, false, true, newParam, query.queryContext)
+            val joinAst = newAst
+                .copy(
+                    from = SqlTable.JoinTable(
+                        newAst.from.head,
+                        SqlJoinType.Inner,
+                        SqlTable.IdentTable("__cte__", None),
+                        Some(SqlJoinCondition.On(cond))
+                    ) :: Nil
+                )
+            ConnectByQuery(query.tables, newParam.head, newAst, joinAst, newAst)(using query.queryContext)
 
 class JoinQuery[T: SelectItem](
     private[sqala] override val tables: T,
@@ -306,19 +350,22 @@ class JoinQuery[T: SelectItem](
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
 
-    private inline def joinTableQueryClause[J, S <: ResultSize, R](
+    private inline def joinFunctionClause[J, R](
         joinType: SqlJoinType,
-        query: Query[Table[J], S],
-        f: TableSubQuery[J] => R,
-        lateral: Boolean = false
+        inline function: J,
+        f: Table[J] => R
+    )(using
+        m: Mirror.ProductOf[J]
     ): JoinPart[R] =
-        val joinQuery = TableSubQuery[J](TableMacro.tableMetaData[J])
-        val tables = f(joinQuery)
+        AsSqlExpr.summonInstances[m.MirroredElemTypes]
+        val joinTable = Table[J](TableMacro.tableMetaData[J])
+        val functionTable = ClauseMacro.fetchFunctionTable(function, queryContext)
+        val tables = f(joinTable)
         val sqlTable = ast.from.headOption.map: i =>
             SqlTable.JoinTable(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(query.ast, lateral, SqlTableAlias("")),
+                functionTable,
                 None
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
@@ -341,12 +388,23 @@ class JoinQuery[T: SelectItem](
             j => tt.toTuple(tables) :* j
         )
 
-    inline def join[J, S <: ResultSize](joinQuery: Query[Table[J], S])(using
+    inline def join[N <: Tuple, V <: Tuple, S <: ResultSize](joinQuery: T => Query[NamedTuple[N, V], S])(using
         tt: ToTuple[T]
-    ): JoinPart[Tuple.Append[tt.R, TableSubQuery[J]]] =
-        joinTableQueryClause[J, S, Tuple.Append[tt.R, TableSubQuery[J]]](
+    ): JoinPart[Tuple.Append[tt.R, SubQuery[N, V]]] =
+        joinQueryClause[N, V, S, Tuple.Append[tt.R, SubQuery[N, V]]](
             SqlJoinType.Inner,
-            joinQuery,
+            joinQuery(tables),
+            j => tt.toTuple(tables) :* j,
+            true
+        )
+
+    inline def join[J](inline function: J)(using
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[T]
+    ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, Table[J]]](
+            SqlJoinType.Inner,
+            function,
             j => tt.toTuple(tables) :* j
         )
 
@@ -370,13 +428,25 @@ class JoinQuery[T: SelectItem](
             j => tt.toTuple(tables) :* o.toOption(j)
         )
 
-    inline def leftJoin[J, S <: ResultSize](joinQuery: Query[Table[J], S])(using
-        o: ToOption[TableSubQuery[J]],
+    inline def leftJoin[N <: Tuple, V <: Tuple, S <: ResultSize](joinQuery: T => Query[NamedTuple[N, V], S])(using
+        o: ToOption[SubQuery[N, V]],
         tt: ToTuple[T]
     ): JoinPart[Tuple.Append[tt.R, o.R]] =
-        joinTableQueryClause[J, S, Tuple.Append[tt.R, o.R]](
+        joinQueryClause[N, V, S, Tuple.Append[tt.R, o.R]](
             SqlJoinType.Left,
-            joinQuery,
+            joinQuery(tables),
+            j => tt.toTuple(tables) :* o.toOption(j),
+            true
+        )
+
+    inline def leftJoin[J](inline function: J)(using
+        o: ToOption[Table[J]],
+        m: Mirror.ProductOf[J],
+        tt: ToTuple[T]
+    ): JoinPart[Tuple.Append[tt.R, o.R]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, o.R]](
+            SqlJoinType.Left,
+            function,
             j => tt.toTuple(tables) :* o.toOption(j)
         )
 
@@ -386,7 +456,7 @@ class JoinQuery[T: SelectItem](
         tt: ToTuple[o.R]
     ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
         joinClause[J, Tuple.Append[tt.R, Table[J]]](
-            SqlJoinType.Left,
+            SqlJoinType.Right,
             j => tt.toTuple(o.toOption(tables)) :* j
         )
 
@@ -400,13 +470,14 @@ class JoinQuery[T: SelectItem](
             j => tt.toTuple(o.toOption(tables)) :* j
         )
 
-    inline def rightJoin[J, S <: ResultSize](joinQuery: Query[Table[J], S])(using
+    inline def rightJoin[J](inline function: J)(using
         o: ToOption[T],
+        m: Mirror.ProductOf[J],
         tt: ToTuple[o.R]
-    ): JoinPart[Tuple.Append[tt.R, TableSubQuery[J]]] =
-        joinTableQueryClause[J, S, Tuple.Append[tt.R, TableSubQuery[J]]](
+    ): JoinPart[Tuple.Append[tt.R, Table[J]]] =
+        joinFunctionClause[J, Tuple.Append[tt.R, Table[J]]](
             SqlJoinType.Right,
-            joinQuery,
+            function,
             j => tt.toTuple(o.toOption(tables)) :* j
         )
 

@@ -26,9 +26,6 @@ object Result:
         new Result[SubQuery[N, V]]:
             type R = r.R
 
-    given tableSubQuery[T]: Aux[TableSubQuery[T], T] = new Result[TableSubQuery[T]]:
-        type R = T
-
     given tuple[H, T <: Tuple](using
         hr: Result[H],
         tr: Result[T],

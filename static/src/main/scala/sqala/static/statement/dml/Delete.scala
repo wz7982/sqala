@@ -10,7 +10,7 @@ class Delete[T](
     override val ast: SqlStatement.Delete
 ) extends Dml(ast):
     inline def where(inline f: T => Boolean): Delete[T] =
-        val condition = ClauseMacro.fetchFilter(f, false, tableName :: Nil, new QueryContext)
+        val condition = ClauseMacro.fetchFilter(f, false, false, tableName :: Nil, new QueryContext)
         new Delete(tableName, ast.addWhere(condition))
 
 object Delete:

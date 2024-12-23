@@ -2,6 +2,7 @@ package sqala.printer
 
 import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
+import sqala.ast.table.SqlTable
 
 class DB2Printer(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
@@ -75,9 +76,21 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
             case SqlCastType.Json => "JSON"
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
-    
+
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
         sqlBuilder.append("' ")
         sqlBuilder.append(expr.unit.unit)
+
+    override def printTable(table: SqlTable): Unit =
+        table match
+            case SqlTable.FuncTable(functionName, args, alias) =>
+                sqlBuilder.append("TABLE(")
+                sqlBuilder.append(s"$functionName")
+                sqlBuilder.append("(")
+                printList(args)(printExpr)
+                sqlBuilder.append("))")
+                for a <- alias do
+                    printTableAlias(a)
+            case _ => super.printTable(table)

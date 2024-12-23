@@ -22,17 +22,6 @@ class UngroupedSubQuery[N <: Tuple, V <: Tuple](
 
     def selectDynamic(name: String): Any = compileTimeOnly
 
-class UngroupedTableSubQuery[T](
-    private[sqala] val __metaData__ : TableMetaData
-) extends Selectable:
-    type Fields =
-        NamedTuple[
-            Names[From[Unwrap[T, Option]]],
-            Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T]]
-        ]
-
-    def selectDynamic(name: String): Any = compileTimeOnly
-
 trait ToUngrouped[T]:
     type R
 
@@ -55,14 +44,7 @@ object ToUngrouped:
             def toUngrouped(x: SubQuery[N, V]): R =
                 new UngroupedSubQuery(x.__columns__)
 
-    given tableSubQuery[T]: Aux[TableSubQuery[T], UngroupedTableSubQuery[T]] = 
-        new ToUngrouped[TableSubQuery[T]]:
-            type R = UngroupedTableSubQuery[T]
-
-            def toUngrouped(x: TableSubQuery[T]): R =
-                UngroupedTableSubQuery(x.__metaData__)
-
-    given tuple[H, T <: Tuple](using 
+    given tuple[H, T <: Tuple](using
         h: ToUngrouped[H],
         t: ToUngrouped[T],
         to: ToTuple[t.R]
