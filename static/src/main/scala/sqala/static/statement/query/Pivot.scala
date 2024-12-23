@@ -83,7 +83,6 @@ class GroupedPivotQuery[GN <: Tuple, GV <: Tuple, T, N <: Tuple, V <: Tuple](
         val forList = ClauseMacro.fetchPivotFor(f, tableNames.prepended(args.head), queryContext)
         val conditions = combine(forList)
 
-        val groupAliasList = constValueTuple[GN].toList.map(_.asInstanceOf[String])
         val aliasList = constValueTuple[Names[r.R]].toList.map(_.asInstanceOf[String])
 
         val projectionList =
@@ -96,7 +95,7 @@ class GroupedPivotQuery[GN <: Tuple, GV <: Tuple, T, N <: Tuple, V <: Tuple](
                 val args = if a.args.isEmpty then replacedArg :: Nil else replacedArg :: a.args.tail
                 a.copy(args = args)
 
-        val selectItems = (groups ++ projectionList).zip(groupAliasList ++ aliasList).map: (p, a) =>
+        val selectItems = (groups ++ projectionList).zip(aliasList).map: (p, a) =>
             SqlSelectItem.Item(p, Some(a))
 
         Query(ast.copy(select = selectItems))
