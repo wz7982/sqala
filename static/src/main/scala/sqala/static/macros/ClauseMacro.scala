@@ -59,6 +59,20 @@ object ClauseMacro:
     ): SqlTable =
         ${ fetchFunctionTableMacro[T]('f, 'queryContext) }
 
+    inline def fetchPivot[T](
+        inline f: T,
+        tableNames: List[String],
+        queryContext: QueryContext
+    ): List[SqlExpr.Func] =
+        ${ fetchPivotMacro[T]('f, 'tableNames, 'queryContext) }
+
+    inline def fetchPivotFor[T](
+        inline f: T,
+        tableNames: List[String],
+        queryContext: QueryContext
+    ): List[(SqlExpr, List[SqlExpr])] =
+        ${ fetchPivotForMacro[T]('f, 'tableNames, 'queryContext) }
+
     inline def fetchSet[T](
         inline f: T,
         tableNames: List[String],
@@ -331,6 +345,77 @@ object ClauseMacro:
                     s"The function table must have the @sqlFunctionTable annotation.",
                     f
                 )
+
+    def fetchPivotMacro[T](
+        f: Expr[T],
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[List[SqlExpr.Func]] =
+        import q.reflect.*
+
+        val (args, body) = unwrapFuncMacro(f)
+
+        body match
+            case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
+                if t.startsWith("Tuple")
+            =>
+                val functions = terms.map: t =>
+                    val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false)
+                    if !info.isAgg then
+                        report.error("The expression in PVIOT must be an aggregate function.", t.asExpr)
+                    '{ $expr.asInstanceOf[SqlExpr.Func] }
+
+                Expr.ofList(functions)
+            case _ =>
+                report.errorAndAbort(s"\"${body.show}\" cannot be converted to PIVOT expression.", body.asExpr)
+
+    def fetchPivotForMacro[T](
+        f: Expr[T],
+        tableNames: Expr[List[String]],
+        queryContext: Expr[QueryContext]
+    )(using q: Quotes): Expr[List[(SqlExpr, List[SqlExpr])]] =
+        import q.reflect.*
+
+        val (args, body) = unwrapFuncMacro(f)
+
+        def fetchOne(term: Term): (Expr[SqlExpr], List[Expr[SqlExpr]]) =
+            term match
+                case Apply(Apply(TypeApply(Apply(TypeApply(Ident("within"), _), expr :: Nil), _), terms :: Nil), _) =>
+                    terms match
+                        case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _) =>
+                            val (forExpr, forInfo) = ExprMacro.treeInfoMacro(args, tableNames, expr, queryContext, false, false, false)
+
+                            val in = terms
+                                .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
+
+                            val info = forInfo :: in.map(_._2)
+
+                            for i <- info do
+                                if i.hasAgg then
+                                    report.error("Aggregate function calls cannot be nested.", term.asExpr)
+                                if i.hasWindow then
+                                    report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
+
+                            forExpr -> in.map(_._1)
+                        case _ =>
+                            report.errorAndAbort(s"\"${body.show}\" cannot be converted to PIVOT expression.", body.asExpr)
+                case _ =>
+                    report.errorAndAbort(s"\"${body.show}\" cannot be converted to PIVOT expression.", body.asExpr)
+
+        val forList = body match
+            case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
+                if t.startsWith("Tuple")
+            =>
+                terms.map(t => fetchOne(t))
+            case _ =>
+                fetchOne(body) :: Nil
+
+        val forExpr = Expr.ofList(forList.map(_._1))
+        val inExpr = Expr.ofList(forList.map(_._2).map(Expr.ofList))
+
+        '{
+            $forExpr.zip($inExpr)
+        }
 
     def fetchSetMacro[T](
         f: Expr[T],

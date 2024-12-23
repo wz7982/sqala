@@ -46,3 +46,5 @@ object Json:
         def toString: String = x
 
 opaque type Interval = Long
+
+class PivotPair[T, N <: Tuple, V <: Tuple]

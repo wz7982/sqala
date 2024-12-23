@@ -6,6 +6,7 @@ import sqala.static.statement.query.Query
 import sqala.static.statement.dml.*
 
 import java.time.{LocalDate, LocalDateTime}
+import scala.NamedTuple.NamedTuple
 
 export sqala.printer.{
     DB2Dialect,
@@ -162,4 +163,8 @@ class OverValue:
         compileTimeOnly
 
     infix def groupsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
+        compileTimeOnly
+
+extension [X: AsSqlExpr](x: X)
+    def within[N <: Tuple, V <: Tuple](group: NamedTuple[N, V])(using QueryContext): PivotPair[X, N, V] =
         compileTimeOnly

@@ -279,6 +279,16 @@ class SelectQuery[T: SelectItem](
         val newAst = replaceTableName(tables, newParam, ast)
         ClauseMacro.fetchMap(f, newParam, newAst, queryContext)
 
+    inline def pivot[F, N <: Tuple, V <: Tuple](using
+        tt: ToTuple[T],
+        tf: TupledFunction[F, tt.R => NamedTuple[N, V]]
+    )(inline f: F): PivotQuery[T, N, V] =
+        val args = ClauseMacro.fetchArgNames(f)
+        val newParam = if tableNames.isEmpty then args else tableNames
+        val newAst = replaceTableName(tables, newParam, ast)
+        val functions = ClauseMacro.fetchPivot(f, newParam, queryContext)
+        PivotQuery[T, N, V](tables, newParam, functions, newAst)
+
 object SelectQuery:
     extension [T](query: SelectQuery[Table[T]])
         inline def connectBy(inline f: Table[T] => Boolean): ConnectByQuery[T] =
