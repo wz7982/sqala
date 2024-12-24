@@ -249,11 +249,11 @@ object ClauseMacro:
 
         if hasAgg then
             '{
-                ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
+                ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))(using $queryContext)
             }
         else
             '{
-                ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
+                ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))(using $queryContext)
             }
 
     def fetchGroupedMapMacro[T](
