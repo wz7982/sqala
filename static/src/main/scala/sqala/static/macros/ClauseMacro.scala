@@ -396,6 +396,12 @@ object ClauseMacro:
                                 if i.hasWindow then
                                     report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
 
+                            val forType = expr.tpe.widen
+
+                            for t <- terms do
+                                if !(t.tpe.widen =:= forType) then
+                                    report.error("Expressions must have the same type.", t.asExpr)
+
                             forExpr -> in.map(_._1)
                         case _ =>
                             report.errorAndAbort(s"\"${body.show}\" cannot be converted to PIVOT expression.", body.asExpr)
