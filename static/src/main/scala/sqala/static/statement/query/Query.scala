@@ -23,6 +23,8 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
         val limit = ast match
             case s: SqlQuery.Select => s.limit
             case u: SqlQuery.Union => u.limit
+            case SqlQuery.Cte(_, _, s: SqlQuery.Select) => s.limit
+            case SqlQuery.Cte(_, _, u: SqlQuery.Union) => u.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n)))
@@ -30,6 +32,10 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
         val newAst = ast match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+            case SqlQuery.Cte(w, r, s: SqlQuery.Select) =>
+                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
+            case SqlQuery.Cte(w, r, u: SqlQuery.Union) =>
+                SqlQuery.Cte(w, r, u.copy(limit = sqlLimit))
             case _ => ast
         Query(newAst)
 
@@ -37,6 +43,8 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
         val limit = ast match
             case s: SqlQuery.Select => s.limit
             case u: SqlQuery.Union => u.limit
+            case SqlQuery.Cte(_, _, s: SqlQuery.Select) => s.limit
+            case SqlQuery.Cte(_, _, u: SqlQuery.Union) => u.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset))
@@ -44,6 +52,10 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
         val newAst = ast match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+            case SqlQuery.Cte(w, r, s: SqlQuery.Select) =>
+                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
+            case SqlQuery.Cte(w, r, u: SqlQuery.Union) =>
+                SqlQuery.Cte(w, r, u.copy(limit = sqlLimit))
             case _ => ast
         Query(newAst)
 

@@ -577,7 +577,9 @@ object ClauseMacro:
         val args = func match
             case DefDef(_, params :: Nil, _, _) =>
                 params.params.asInstanceOf[List[ValDef]].map:
-                    case ValDef(argName, _, _) =>
+                    case v@ValDef(argName, _, _) =>
+                        if (argName.startsWith("_") || argName.endsWith("_")) && !argName.startsWith("_$") then
+                            report.error("Parameter names cannot start or end with \"_\".", v.pos)
                         argName
             case _ =>
                 report.errorAndAbort(
