@@ -249,11 +249,11 @@ object ClauseMacro:
 
         if hasAgg then
             '{
-                ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))
+                ProjectionQuery[T, OneRow]($ast.copy(select = $itemsExpr))(using $queryContext)
             }
         else
             '{
-                ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))
+                ProjectionQuery[T, ManyRows]($ast.copy(select = $itemsExpr))(using $queryContext)
             }
 
     def fetchGroupedMapMacro[T](
@@ -395,6 +395,12 @@ object ClauseMacro:
                                     report.error("Aggregate function calls cannot be nested.", term.asExpr)
                                 if i.hasWindow then
                                     report.error("Aggregate function calls cannot contain window function calls.", term.asExpr)
+
+                            val forType = expr.tpe.widen
+
+                            for t <- terms do
+                                if !(t.tpe.widen =:= forType) then
+                                    report.error("Expressions must have the same type.", t.asExpr)
 
                             forExpr -> in.map(_._1)
                         case _ =>

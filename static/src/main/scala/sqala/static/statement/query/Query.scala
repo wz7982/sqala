@@ -126,7 +126,7 @@ class SortQuery[T](
 
 class ProjectionQuery[T, S <: ResultSize](
     override val ast: SqlQuery.Select
-) extends Query[T, S](ast):
+)(using val queryContext: QueryContext) extends Query[T, S](ast):
     def distinct: Query[T, S] =
         val newSortBy = ast.orderBy.filter: o =>
             val expr = o.expr
@@ -134,6 +134,24 @@ class ProjectionQuery[T, S <: ResultSize](
                 case SqlSelectItem.Item(e, _) if e == expr => true
                 case _ => false
         Query(ast.copy(param = Some(SqlSelectParam.Distinct), orderBy =  newSortBy))
+
+object ProjectionQuery:
+    extension [N <: Tuple, V <: Tuple, S <: ResultSize](query: ProjectionQuery[NamedTuple[N, V], S])
+        inline def qualify(inline f: SubQuery[N, V] => Boolean): QualifyQuery[N, V, ManyRows] =
+            val selectItems = query.ast.select.map:
+                case SqlSelectItem.Item(_, Some(n)) =>
+                    SqlSelectItem.Item(SqlExpr.Column(Some("__subquery__"), n), Some(n))
+                case i => i
+            val from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias("__subquery__"))
+            val cond = ClauseMacro.fetchFilter(f, false, false, "__subquery__" :: Nil, query.queryContext)
+            QualifyQuery(SqlQuery.Select(select = selectItems, from = from :: Nil, where = Some(cond)))(using query.queryContext)
+
+class QualifyQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
+    override val ast: SqlQuery.Select
+)(using val queryContext: QueryContext) extends Query[NamedTuple[N, V], S](ast):
+    inline def qualify(inline f: SubQuery[N, V] => Boolean): QualifyQuery[N, V, ManyRows] =
+        val cond = ClauseMacro.fetchFilter(f, false, false, "__subquery__" :: Nil, queryContext)
+        QualifyQuery(ast.addWhere(cond))
 
 class SelectQuery[T: SelectItem](
     private[sqala] val tables: T,
