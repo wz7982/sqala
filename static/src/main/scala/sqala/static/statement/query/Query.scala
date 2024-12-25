@@ -127,7 +127,7 @@ class SortQuery[T](
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => S]
     )(inline f: F): SortQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, false, tableNames, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, false, tableNames, queryContext)
         SortQuery(tables, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     transparent inline def map[F, M: AsSelectItem](using
@@ -203,7 +203,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        val sortBy = ClauseMacro.fetchSortBy(f, false, newParam, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, false, false, newParam, queryContext)
         SortQuery(tables, newParam, newAst.copy(orderBy = newAst.orderBy ++ sortBy))
 
     inline def groupBy[F, N <: Tuple, V <: Tuple : AsExpr](using
