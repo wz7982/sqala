@@ -89,7 +89,7 @@ object ExprMacro:
                         val valueNameExpr = Expr(valName)
                         val tableNameExpr =
                             if isPrior then
-                                Expr("__cte__")
+                                Expr(tableCte)
                             else if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
@@ -193,7 +193,7 @@ object ExprMacro:
                         val valueNameExpr = Expr(valName)
                         val tableNameExpr =
                             if isPrior then
-                                Expr("__cte__")
+                                Expr(tableCte)
                             else if args.contains(objectName) then
                                 val indexExpr = Expr(args.indexOf(objectName))
                                 '{ $tableNames($indexExpr) }
@@ -553,7 +553,7 @@ object ExprMacro:
 
         if op == "prior" then
             if !inConnectBy then
-                report.errorAndAbort("Prior can only be used in CONNECT BY clause.", term.asExpr)
+                report.errorAndAbort("Prior can only be used in CONNECT BY.", term.asExpr)
             else
                 treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, true, inDistinctOn)
         else
@@ -880,78 +880,99 @@ object ExprMacro:
     ): (Expr[SqlExpr], ExprInfo) =
         import q.reflect.*
 
-        val paramTerms = removeNestedApply(term) match
-            case Apply(TypeApply(_, _), p) => p
-            case Apply(_, p) => p
+        if name == columnPseudoLevel then
+            if !inConnectBy then
+                report.errorAndAbort("Pseudo Column \"level\" can only be used in CONNECT BY.", term.asExpr)
+            val sqlExpr = '{
+                SqlExpr.Column(Some(tableCte), columnPseudoLevel)
+            }
 
-        val symbol = term.symbol
-        val params = symbol.paramSymss.flatten.filter(p => p.isTerm).filter: p =>
-            p.flags match
-                case f if f.is(Flags.Given) => false
-                case _ => true
-
-        for p <- params do
-            if p.name == "sortBy" then
-                report.error(
-                    s"SORT BY specified, but %s is not an aggregate function."
-                )
-            if p.name == "withinGroup" then
-                report.error(
-                    s"WITHIN GROUP specified, but %s is not an aggregate function."
-                )
-
-        val paramNames = params.map(_.name)
-
-        val namedParams = paramTerms.filter:
-            case NamedArg(n, p) => true
-            case _ => false
-        .map:
-            case NamedArg(n, p) => (n, p)
-
-        val unnamedParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
-        val unnamedParams = paramTerms.filter:
-            case NamedArg(n, p) => false
-            case _ => true
-
-        val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
-
-        val paramsData = allParams
-            .map(p => treeInfoMacro(args, tableNames, p._2, queryContext, inConnectBy, isPrior, inDistinctOn))
-        val paramsInfo = paramsData.map(_._2)
-        val paramsExpr = Expr.ofList(paramsData.map(_._1))
-
-        val nameExpr = Expr(name)
-
-        val sqlExpr = '{
-            SqlExpr.Func($nameExpr, $paramsExpr)
-        }
-
-        val exprInfo = if isWindow then
-            ExprInfo(
+            val exprInfo = ExprInfo(
                 hasAgg = false,
                 isAgg = false,
                 isGroup = false,
                 hasWindow = false,
                 isConst = false,
-                columnRef = paramsInfo.flatMap(_.columnRef),
+                columnRef = (tableCte, columnPseudoLevel) :: Nil,
                 aggRef = Nil,
-                nonAggRef = paramsInfo.flatMap(_.nonAggRef),
-                ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
-            )
-        else
-            ExprInfo(
-                hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
-                isAgg = false,
-                isGroup = false,
-                hasWindow = paramsInfo.map(_.hasWindow).fold(false)(_ || _),
-                isConst = false,
-                columnRef = paramsInfo.flatMap(_.columnRef),
-                aggRef = paramsInfo.flatMap(_.aggRef),
-                nonAggRef = paramsInfo.flatMap(_.nonAggRef),
-                ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+                nonAggRef = (tableCte, columnPseudoLevel) :: Nil,
+                ungroupedRef = Nil
             )
 
-        sqlExpr -> exprInfo
+            sqlExpr -> exprInfo
+        else
+            val paramTerms = removeNestedApply(term) match
+                case Apply(TypeApply(_, _), p) => p
+                case Apply(_, p) => p
+
+            val symbol = term.symbol
+            val params = symbol.paramSymss.flatten.filter(p => p.isTerm).filter: p =>
+                p.flags match
+                    case f if f.is(Flags.Given) => false
+                    case _ => true
+
+            for p <- params do
+                if p.name == "sortBy" then
+                    report.error(
+                        s"SORT BY specified, but %s is not an aggregate function."
+                    )
+                if p.name == "withinGroup" then
+                    report.error(
+                        s"WITHIN GROUP specified, but %s is not an aggregate function."
+                    )
+
+            val paramNames = params.map(_.name)
+
+            val namedParams = paramTerms.filter:
+                case NamedArg(n, p) => true
+                case _ => false
+            .map:
+                case NamedArg(n, p) => (n, p)
+
+            val unnamedParamNames = paramNames.filter(n => !namedParams.map(_._1).contains(n))
+            val unnamedParams = paramTerms.filter:
+                case NamedArg(n, p) => false
+                case _ => true
+
+            val allParams = namedParams ++ (unnamedParamNames.zip(unnamedParams))
+
+            val paramsData = allParams
+                .map(p => treeInfoMacro(args, tableNames, p._2, queryContext, inConnectBy, isPrior, inDistinctOn))
+            val paramsInfo = paramsData.map(_._2)
+            val paramsExpr = Expr.ofList(paramsData.map(_._1))
+
+            val nameExpr = Expr(name)
+
+            val sqlExpr = '{
+                SqlExpr.Func($nameExpr, $paramsExpr)
+            }
+
+            val exprInfo = if isWindow then
+                ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    columnRef = paramsInfo.flatMap(_.columnRef),
+                    aggRef = Nil,
+                    nonAggRef = paramsInfo.flatMap(_.nonAggRef),
+                    ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+                )
+            else
+                ExprInfo(
+                    hasAgg = paramsInfo.map(_.hasAgg).fold(false)(_ || _),
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = paramsInfo.map(_.hasWindow).fold(false)(_ || _),
+                    isConst = false,
+                    columnRef = paramsInfo.flatMap(_.columnRef),
+                    aggRef = paramsInfo.flatMap(_.aggRef),
+                    nonAggRef = paramsInfo.flatMap(_.nonAggRef),
+                    ungroupedRef = paramsInfo.flatMap(_.ungroupedRef)
+                )
+
+            sqlExpr -> exprInfo
 
     private[sqala] def createOver(using q: Quotes)(
         args: List[String],

@@ -207,3 +207,7 @@ def lower(x: String | Option[String])(using QueryContext): Option[String] =
 @sqlFunction("NOW")
 def now()(using QueryContext): Option[LocalDateTime] =
     compileTimeOnly
+
+@sqlFunction("__@pseudo@__@level@__")
+def level()(using QueryContext): Int =
+    compileTimeOnly

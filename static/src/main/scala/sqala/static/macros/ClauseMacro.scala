@@ -32,11 +32,12 @@ object ClauseMacro:
 
     transparent inline def fetchMap[F, T](
         inline f: F,
+        inline inConnectBy: Boolean,
         tableNames: List[String],
         ast: SqlQuery.Select,
         queryContext: QueryContext
     ): Query[T, ?] =
-        ${ fetchMapMacro[F, T]('f, 'tableNames, 'ast, 'queryContext) }
+        ${ fetchMapMacro[F, T]('f, 'inConnectBy, 'tableNames, 'ast, 'queryContext) }
 
     inline def fetchGroupBy[T](
         inline f: T,
@@ -191,6 +192,7 @@ object ClauseMacro:
 
     def fetchMapMacro[F, T: Type](
         f: Expr[F],
+        inConnectBy: Expr[Boolean],
         tableNames: Expr[List[String]],
         ast: Expr[SqlQuery.Select],
         queryContext: Expr[QueryContext]
@@ -198,6 +200,8 @@ object ClauseMacro:
         import q.reflect.*
 
         val (args, body) = unwrapFuncMacro(f)
+
+        val inConnectByValue = inConnectBy.value.getOrElse(false)
 
         val (items, info) = body match
             case Inlined(Some(Apply(n, Apply(TypeApply(Select(Ident(t), "apply"), _), terms) :: Nil)), _, _)
@@ -208,7 +212,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, inConnectByValue, false, false))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -220,7 +224,7 @@ object ClauseMacro:
                         ns.map:
                             case Singleton(Literal(StringConstant(s))) => Expr(s)
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, inConnectByValue, false, false))
                 val exprs = items.map(_._1).zip(names).map: (i, n) =>
                     '{ SqlSelectItem.Item($i, Some($n)) }
                 exprs -> items.map(_._2)
@@ -228,12 +232,12 @@ object ClauseMacro:
                 if t.startsWith("Tuple")
             =>
                 val items = terms
-                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, false, false, false))
+                    .map(t => ExprMacro.treeInfoMacro(args, tableNames, t, queryContext, inConnectByValue, false, false))
                 val exprs = items.map(_._1).map: i =>
                     '{ SqlSelectItem.Item($i, None) }
                 exprs -> items.map(_._2)
             case _ =>
-                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext, false, false, false)
+                val (expr, info) = ExprMacro.treeInfoMacro(args, tableNames, body, queryContext, inConnectByValue, false, false)
                 ('{ SqlSelectItem.Item($expr, None) } :: Nil) -> (info :: Nil)
 
         val itemsExpr = Expr.ofList(items)

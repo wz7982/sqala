@@ -72,7 +72,7 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
                     select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias("__subquery__")) :: Nil
+                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias(tableSubquery)) :: Nil
                 )
                 Query(outerQuery)
 
@@ -134,7 +134,7 @@ class SortQuery[T](
         tt: ToTuple[T],
         tf: TupledFunction[F, tt.R => M]
     )(inline f: F): Query[M, ?] =
-        ClauseMacro.fetchMap(f, tableNames, ast, queryContext)
+        ClauseMacro.fetchMap(f, false, tableNames, ast, queryContext)
 
 class ProjectionQuery[T, S <: ResultSize](
     override val ast: SqlQuery.Select
@@ -152,17 +152,17 @@ object ProjectionQuery:
         inline def qualify(inline f: SubQuery[N, V] => Boolean): QualifyQuery[N, V, ManyRows] =
             val selectItems = query.ast.select.map:
                 case SqlSelectItem.Item(_, Some(n)) =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some("__subquery__"), n), Some(n))
+                    SqlSelectItem.Item(SqlExpr.Column(Some(tableSubquery), n), Some(n))
                 case i => i
-            val from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias("__subquery__"))
-            val cond = ClauseMacro.fetchFilter(f, false, false, "__subquery__" :: Nil, query.queryContext)
+            val from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(tableSubquery))
+            val cond = ClauseMacro.fetchFilter(f, false, false, tableSubquery :: Nil, query.queryContext)
             QualifyQuery(SqlQuery.Select(select = selectItems, from = from :: Nil, where = Some(cond)))(using query.queryContext)
 
 class QualifyQuery[N <: Tuple, V <: Tuple, S <: ResultSize](
     override val ast: SqlQuery.Select
 )(using val queryContext: QueryContext) extends Query[NamedTuple[N, V], S](ast):
     inline def qualify(inline f: SubQuery[N, V] => Boolean): QualifyQuery[N, V, ManyRows] =
-        val cond = ClauseMacro.fetchFilter(f, false, false, "__subquery__" :: Nil, queryContext)
+        val cond = ClauseMacro.fetchFilter(f, false, false, tableSubquery :: Nil, queryContext)
         QualifyQuery(ast.addWhere(cond))
 
 class SelectQuery[T: SelectItem](
@@ -307,7 +307,7 @@ class SelectQuery[T: SelectItem](
         val args = ClauseMacro.fetchArgNames(f)
         val newParam = if tableNames.isEmpty then args else tableNames
         val newAst = replaceTableName(tables, newParam, ast)
-        ClauseMacro.fetchMap(f, newParam, newAst, queryContext)
+        ClauseMacro.fetchMap(f, false, newParam, newAst, queryContext)
 
     inline def pivot[F, N <: Tuple, V <: Tuple](using
         tt: ToTuple[T],
@@ -328,14 +328,29 @@ object SelectQuery:
             val cond = ClauseMacro.fetchFilter(f, false, true, newParam, query.queryContext)
             val joinAst = newAst
                 .copy(
+                    select = newAst.select :+ SqlSelectItem.Item(
+                        SqlExpr.Binary(
+                            SqlExpr.Column(Some(tableCte), columnPseudoLevel),
+                            SqlBinaryOperator.Plus,
+                            SqlExpr.NumberLiteral(1)
+                        ),
+                        Some(columnPseudoLevel)
+                    ),
                     from = SqlTable.JoinTable(
                         newAst.from.head,
                         SqlJoinType.Inner,
-                        SqlTable.IdentTable("__cte__", None),
+                        SqlTable.IdentTable(tableCte, None),
                         Some(SqlJoinCondition.On(cond))
                     ) :: Nil
                 )
-            ConnectByQuery(query.tables, newParam.head, newAst, joinAst, newAst)(using query.queryContext)
+            val startAst = newAst
+                .copy(
+                    select = newAst.select :+ SqlSelectItem.Item(
+                        SqlExpr.NumberLiteral(1),
+                        Some(columnPseudoLevel)
+                    )
+                )
+            ConnectByQuery(query.tables, newParam.head, joinAst, startAst)(using query.queryContext)
 
 class JoinQuery[T: SelectItem](
     private[sqala] override val tables: T,
