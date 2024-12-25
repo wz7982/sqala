@@ -54,7 +54,7 @@ inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](
     s: SelectItem[SubQuery[N, V]],
     c: QueryContext
 ): SelectQuery[SubQuery[N, V]] =
-    val alias = "__subquery__"
+    val alias = tableSubquery
     val innerQuery = SubQuery[N, V](constValueTuple[N].toList.map(_.asInstanceOf[String]))
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, alias :: Nil),
@@ -71,7 +71,7 @@ inline def query[T <: Product](
     val instances = AsSqlExpr.summonInstances[m.MirroredElemTypes]
     val metaData = TableMacro.tableMetaData[T]
     val table = Table[T](metaData)
-    val alias = "__values__"
+    val alias = tableValues
     val selectItems: List[SqlSelectItem.Item] =
         metaData.columnNames.map: n =>
             SqlSelectItem.Item(SqlExpr.Column(Some(alias), n), None)

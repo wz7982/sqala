@@ -17,11 +17,11 @@ class WithRecursive[T](val ast: SqlQuery.Cte):
 object WithRecursive:
     inline def apply[N <: Tuple, WN <: Tuple, V <: Tuple](
         query: Query[NamedTuple[N, V], ?]
-    )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using 
-        sq: SelectItem[SubQuery[N, V]], 
+    )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
+        sq: SelectItem[SubQuery[N, V]],
         qc: QueryContext
     ): WithRecursive[NamedTuple[N, V]] =
-        val alias = "__cte__"
+        val alias = tableCte
         val columns = constValueTuple[N].toList.map(_.asInstanceOf[String])
         val subQuery = SubQuery[N, V](columns)
         val selectItems = sq.selectItems(subQuery, alias :: Nil)
