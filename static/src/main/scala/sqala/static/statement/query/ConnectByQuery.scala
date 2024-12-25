@@ -19,7 +19,7 @@ class ConnectByQuery[T](
         ConnectByQuery(table, tableName, connectByAst, startWithAst.addWhere(cond))
 
     inline def sortBy[S: AsSort](inline f: Table[T] => S): ConnectByQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, false, tableCte :: Nil, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, true, false, tableCte :: Nil, queryContext)
         ConnectByQuery(table, tableName, connectByAst, startWithAst, mapAst.copy(orderBy = mapAst.orderBy ++ sortBy))
 
     def maxDepth(n: Int): ConnectByQuery[T] =
@@ -28,7 +28,7 @@ class ConnectByQuery[T](
         ConnectByQuery(table, tableName, connectByAst.addWhere(cond), startWithAst)
 
     inline def sortSiblingsBy[S: AsSort](inline f: Table[T] => S): ConnectByQuery[T] =
-        val sortBy = ClauseMacro.fetchSortBy(f, false, tableName :: Nil, queryContext)
+        val sortBy = ClauseMacro.fetchSortBy(f, true, false, tableName :: Nil, queryContext)
         ConnectByQuery(
             table,
             tableName,

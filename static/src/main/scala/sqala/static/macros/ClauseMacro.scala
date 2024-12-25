@@ -24,11 +24,12 @@ object ClauseMacro:
 
     inline def fetchSortBy[T](
         inline f: T,
+        inline inConnectBy: Boolean,
         inline inDistinctOn: Boolean,
         tableNames: List[String],
         queryContext: QueryContext
     ): List[SqlOrderBy] =
-        ${ fetchSortByMacro[T]('f, 'inDistinctOn, 'tableNames, 'queryContext) }
+        ${ fetchSortByMacro[T]('f, 'inConnectBy, 'inDistinctOn, 'tableNames, 'queryContext) }
 
     transparent inline def fetchMap[F, T](
         inline f: F,
@@ -133,6 +134,7 @@ object ClauseMacro:
 
     def fetchSortByMacro[T](
         f: Expr[T],
+        inConnectBy: Expr[Boolean],
         inDistinctOn: Expr[Boolean],
         tableNames: Expr[List[String]],
         queryContext: Expr[QueryContext]
@@ -141,13 +143,16 @@ object ClauseMacro:
 
         val (args, body) = unwrapFuncMacro(f)
 
+        val inConnectByValue = inConnectBy.value.getOrElse(false)
+        val inDistinctOnValue = inDistinctOn.value.getOrElse(false)
+
         val sort = body match
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
-                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext, false, false, inDistinctOn.value.get))
+                terms.map(t => ExprMacro.sortInfoMacro(args, tableNames, t, queryContext, inConnectByValue, false, inDistinctOnValue))
             case _ =>
-                ExprMacro.sortInfoMacro(args, tableNames, body, queryContext, false, false, inDistinctOn.value.get) :: Nil
+                ExprMacro.sortInfoMacro(args, tableNames, body, queryContext, inConnectByValue, false, inDistinctOnValue) :: Nil
 
         val info = sort.map(_._2)
 

@@ -18,7 +18,7 @@ class DistinctOnQuery[T](
         val args = ClauseMacro.fetchArgNames(f)
         queryContext.groups.prepend((args.head, groups))
         val sortBy =
-            ClauseMacro.fetchSortBy(f, true, tableNames.prepended(args.head), queryContext)
+            ClauseMacro.fetchSortBy(f, false, true, tableNames.prepended(args.head), queryContext)
         DistinctOnQuery(groups, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     inline def map[F, M: AsSelectItem](using

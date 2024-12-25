@@ -28,7 +28,7 @@ class GroupByQuery[T](
         val args = ClauseMacro.fetchArgNames(f)
         queryContext.groups.prepend((args.head, groups))
         val sortBy =
-            ClauseMacro.fetchSortBy(f, false, tableNames.prepended(args.head), queryContext)
+            ClauseMacro.fetchSortBy(f, false, false, tableNames.prepended(args.head), queryContext)
         GroupByQuery(groups, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
     inline def map[F, M: AsSelectItem](using
