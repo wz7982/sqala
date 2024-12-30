@@ -1037,26 +1037,44 @@ object ExprMacro:
                         case "rangeBetween" => '{ Some(SqlWindowFrame.Range($startExpr, $endExpr)) }
                         case "groupsBetween" => '{ Some(SqlWindowFrame.Groups($startExpr, $endExpr)) }
 
-        val (partition, sort) = value match
-            case Apply(Apply(Ident("partitionBy"), Typed(Repeated(partitionBy, _), _) :: Nil), _) =>
-                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn)) ->
-                Nil
-            case Apply(Apply(Ident("sortBy"), Typed(Repeated(sortBy, _), _) :: Nil), _) =>
-                Nil ->
-                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
+        val (partitionTerm, sortTerm) = value match
+            case Apply(Apply(TypeApply(Ident("partitionBy"), _), p :: Nil), _) =>
+                Some(p) -> None
+            case Apply(Apply(TypeApply(Ident("sortBy"), _), s :: Nil), _) =>
+                None -> Some(s)
             case Apply(
                 Apply(
-                    Select(
-                        Apply(Apply(Ident("partitionBy"), Typed(Repeated(partitionBy, _), _) :: Nil), _),
-                        "sortBy"
+                    TypeApply(
+                        Select(
+                            Apply(Apply(TypeApply(Ident("partitionBy"), _), p :: Nil), _),
+                            "sortBy"
+                        ),
+                        _
                     ),
-                    Typed(Repeated(sortBy, _), _) :: Nil
+                    s :: Nil
                 ),
                 _
             ) =>
-                partitionBy.map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn)) ->
-                sortBy.map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
-            case _ => Nil -> Nil
+                Some(p) -> Some(s)
+            case _ => None -> None
+
+        val partition = partitionTerm match
+            case Some(Apply(TypeApply(Select(Ident(t), "apply"), _), ps))
+                if t.startsWith("Tuple")
+            =>
+                ps.map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn))
+            case Some(p) =>
+                treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn) :: Nil
+            case None => Nil
+
+        val sort = sortTerm match
+            case Some(Apply(TypeApply(Select(Ident(t), "apply"), _), ss))
+                if t.startsWith("Tuple")
+            =>
+                ss.map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
+            case Some(s) =>
+                sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn) :: Nil
+            case None => Nil
 
         val partitionExpr = Expr.ofList(partition.map(_._1))
         val sortExpr = Expr.ofList(sort.map(_._1))
