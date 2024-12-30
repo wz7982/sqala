@@ -135,10 +135,10 @@ extension (s: StringContext)
 
     def date()(using QueryContext): LocalDate = compileTimeOnly
 
-def partitionBy(value: Any*)(using QueryContext): OverValue =
+def partitionBy[P: AsExpr](value: P)(using QueryContext): OverValue =
     compileTimeOnly
 
-def sortBy(value: Sort[?]*)(using QueryContext): OverValue =
+def sortBy[S: AsSort](value: S)(using QueryContext): OverValue =
     compileTimeOnly
 
 def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
@@ -153,7 +153,7 @@ extension (n: Int)
     def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
 class OverValue:
-    infix def sortBy(value: Sort[?]*)(using QueryContext): OverValue =
+    infix def sortBy[S: AsSort](value: S)(using QueryContext): OverValue =
         compileTimeOnly
 
     infix def rowsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =

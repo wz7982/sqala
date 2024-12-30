@@ -38,24 +38,24 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         val NativeSql(sql, args) = nativeSql
         executeDml(sql, args)
 
-    inline def insert[A <: Product](entity: A)(using 
-        Mirror.ProductOf[A], 
+    inline def insert[A <: Product](entity: A)(using
+        Mirror.ProductOf[A],
         NotGiven[JdbcTransactionContext]
     ): Int =
         val i = sqala.static.dsl.insert[A](entity)
         val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
-    inline def insertBatch[A <: Product](entities: List[A])(using 
-        Mirror.ProductOf[A], 
+    inline def insertBatch[A <: Product](entities: List[A])(using
+        Mirror.ProductOf[A],
         NotGiven[JdbcTransactionContext]
     ): Int =
         val i = sqala.static.dsl.insert[A](entities)
         val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
-    inline def insertAndReturn[A <: Product](entity: A)(using 
-        Mirror.ProductOf[A], 
+    inline def insertAndReturn[A <: Product](entity: A)(using
+        Mirror.ProductOf[A],
         NotGiven[JdbcTransactionContext]
     ): A =
         val i = sqala.static.dsl.insert[A](entity)
@@ -64,10 +64,10 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         ClauseMacro.bindGeneratedPrimaryKey[A](id, entity)
 
     inline def update[A <: Product](
-        entity: A, 
+        entity: A,
         skipNone: Boolean = false
-    )(using 
-        Mirror.ProductOf[A], 
+    )(using
+        Mirror.ProductOf[A],
         NotGiven[JdbcTransactionContext]
     ): Int =
         val u = sqala.static.dsl.update(entity, skipNone)
@@ -79,8 +79,8 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
 
     inline def save[A <: Product](
         entity: A
-    )(using 
-        Mirror.ProductOf[A], 
+    )(using
+        Mirror.ProductOf[A],
         NotGiven[JdbcTransactionContext]
     ): Int =
         val s = sqala.static.dsl.save(entity)
@@ -155,6 +155,19 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
 
     def showSql[T](query: Query[T, ?]): String =
         queryToString(query.ast, dialect, true)._1
+
+    def cursorFetch[T, R](
+        query: Query[T, ?],
+        fetchSize: Int
+    )(using
+        r: Result[T],
+        d: JdbcDecoder[r.R]
+    )(f: Cursor[r.R] => R): Unit =
+        val (sql, args) = queryToString(query.ast, dialect, true)
+        logger(sql, args)
+        val conn = dataSource.getConnection()
+        jdbcCursorQuery(conn, sql, args, fetchSize, f)
+        conn.close()
 
     def transaction[T](block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()

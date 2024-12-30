@@ -46,7 +46,29 @@ def anyValue[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
 @sqlAgg("PERCENTILE_CONT")
 def percentileCont[T](
     n: Double,
+    withinGroup: T
+)(using
+    Number[T],
+    Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."],
+    QueryContext
+): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlAgg("PERCENTILE_CONT")
+def percentileCont[T](
+    n: Double,
     withinGroup: Sort[T]
+)(using
+    Number[T],
+    Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."],
+    QueryContext
+): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlAgg("PERCENTILE_DISC")
+def percentileDisc[T](
+    n: Double,
+    withinGroup: T
 )(using
     Number[T],
     Validate[n.type >= 0D && n.type <= 1D, "The percentage must be between 0 and 1."],
@@ -69,7 +91,7 @@ def percentileDisc[T](
 def stringAgg(
     x: String | Option[String],
     separator: String,
-    sortBy: Sort[?]*
+    sortBy: Any*
 )(using QueryContext): Option[String] =
     compileTimeOnly
 
@@ -77,7 +99,7 @@ def stringAgg(
 def groupConcat(
     x: String | Option[String],
     separator: String,
-    sortBy: Sort[?]*
+    sortBy: Any*
 )(using QueryContext): Option[String] =
     compileTimeOnly
 

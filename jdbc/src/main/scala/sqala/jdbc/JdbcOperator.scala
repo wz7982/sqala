@@ -31,6 +31,48 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
+private[sqala] def jdbcCursorQuery[T, R](
+    conn: Connection,
+    sql: String,
+    args: Array[Any],
+    size: Int,
+    f: Cursor[T] => R
+)(using decoder: JdbcDecoder[T]): Unit =
+    var stmt: PreparedStatement = null
+    var rs: ResultSet = null
+    val result = ListBuffer[T]()
+    var batchNo = 1
+    try
+        stmt = conn.prepareStatement(
+            sql,
+            ResultSet.TYPE_FORWARD_ONLY,
+            ResultSet.CONCUR_READ_ONLY
+        )
+        stmt.setFetchSize(size)
+        for i <- 1 to args.length do
+            val arg = args(i - 1)
+            arg match
+                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
+                case n: Int => stmt.setInt(i, n)
+                case n: Long => stmt.setLong(i, n)
+                case n: Float => stmt.setFloat(i, n)
+                case n: Double => stmt.setDouble(i, n)
+                case b: Boolean => stmt.setBoolean(i, b)
+                case s: String => stmt.setString(i, s)
+                case _ => stmt.setObject(i, arg)
+        rs = stmt.executeQuery()
+        while rs.next() do
+            result.addOne(decoder.decode(rs, 1))
+            if result.size == size then
+                f(Cursor(batchNo, size, result.toList))
+                result.clear()
+                batchNo += 1
+        if result.nonEmpty then
+            f(Cursor(batchNo, size, result.toList))
+    finally
+        if stmt != null then stmt.close()
+        if rs != null then rs.close()
+
 private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any]): List[Map[String, Any]] =
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
