@@ -386,9 +386,14 @@ object ExprMacro:
                     nonAggRef = Nil,
                     ungroupedRef = Nil
                 )
-            case Apply(Apply(Ident("any"), q :: Nil), _) =>
-                val expr = q.asExprOf[Query[?, ?]]
-                val sqlExpr = '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.Any) }
+            case Apply(Apply(TypeApply(Ident("any"), _), q :: Nil), _) =>
+                val sqlExpr = q.tpe.asType match
+                    case '[Query[?, ?]] =>
+                        val expr = q.asExprOf[Query[?, ?]]
+                        '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.Any) }
+                    case _ =>
+                        val (expr, _) = treeInfoMacro(args, tableNames, q, queryContext, inConnectBy, isPrior, inDistinctOn)
+                        '{ SqlExpr.Func("ANY", $expr :: Nil) }
                 sqlExpr -> ExprInfo(
                     hasAgg = false,
                     isAgg = false,
@@ -400,9 +405,14 @@ object ExprMacro:
                     nonAggRef = Nil,
                     ungroupedRef = Nil
                 )
-            case Apply(Apply(Ident("all"), q :: Nil), _) =>
-                val expr = q.asExprOf[Query[?, ?]]
-                val sqlExpr = '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.All) }
+            case Apply(Apply(TypeApply(Ident("all"), _), q :: Nil), _) =>
+                val sqlExpr = q.tpe.asType match
+                    case '[Query[?, ?]] =>
+                        val expr = q.asExprOf[Query[?, ?]]
+                        '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.All) }
+                    case _ =>
+                        val (expr, _) = treeInfoMacro(args, tableNames, q, queryContext, inConnectBy, isPrior, inDistinctOn)
+                        '{ SqlExpr.Func("ANY", $expr :: Nil) }
                 sqlExpr -> ExprInfo(
                     hasAgg = false,
                     isAgg = false,
@@ -1312,7 +1322,7 @@ object ExprMacro:
                     case None => missMatch(term)
                     case Some(e) =>
                         val valueExpr = term.asExprOf[Seq[t]]
-                        '{ SqlExpr.Tuple($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
+                        '{ SqlExpr.Array($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
             case '[Unit] =>
                 '{ SqlExpr.Tuple(Nil) }
             case '[t] =>

@@ -43,7 +43,11 @@ def exists(query: Query[?, ?])(using QueryContext): Boolean = compileTimeOnly
 
 def all[T](query: Query[T, ?])(using QueryContext): SubLink[T] = compileTimeOnly
 
+def all[T](list: List[T])(using QueryContext): SubLink[T] = compileTimeOnly
+
 def any[T](query: Query[T, ?])(using QueryContext): SubLink[T] = compileTimeOnly
+
+def any[T](list: List[T])(using QueryContext): SubLink[T] = compileTimeOnly
 
 class Window[T]
 

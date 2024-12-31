@@ -203,6 +203,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
         case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
         case v: SqlExpr.Tuple => printTupleExpr(v)
+        case a: SqlExpr.Array => printArrayExpr(a)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case n: SqlExpr.NullTest => printNullTestExpr(n)
@@ -260,6 +261,11 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         sqlBuilder.append("(")
         printList(expr.items)(printExpr)
         sqlBuilder.append(")")
+
+    def printArrayExpr(expr: SqlExpr.Array): Unit =
+        sqlBuilder.append("ARRAY[")
+        printList(expr.items)(printExpr)
+        sqlBuilder.append("]")
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
         expr.op match
