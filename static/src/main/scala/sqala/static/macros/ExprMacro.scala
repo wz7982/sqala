@@ -26,7 +26,7 @@ object ExprMacro:
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
             "+", "-", "*", "/", "%", "->", "->>",
-            "like", "contains", "startsWith", "endsWith", "in"
+            "like", "contains", "startsWith", "endsWith"
         )
 
     private[sqala] def unaryOperators: List[String] =
@@ -278,6 +278,8 @@ object ExprMacro:
                 _
             ) =>
                 createBetween(args, tableNames, v, s, e, queryContext, inConnectBy, isPrior, inDistinctOn)
+            case Apply(Apply(TypeApply(Apply(TypeApply(Ident("in"), _), e :: Nil), _), i :: Nil), _) =>
+                createIn(args, tableNames, e, i, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
@@ -477,7 +479,6 @@ object ExprMacro:
             case "contains" => '{ SqlBinaryOperator.Like }
             case "startsWith" => '{ SqlBinaryOperator.Like }
             case "endsWith" => '{ SqlBinaryOperator.Like }
-            case "in" => '{ SqlBinaryOperator.In }
 
         val opNameExpr = Expr(op)
 
@@ -522,8 +523,6 @@ object ExprMacro:
                             SqlBinaryOperator.Like,
                             SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: Nil)
                         )
-                    case (l, SqlBinaryOperator.In, SqlExpr.Tuple(Nil), _) =>
-                        SqlExpr.BooleanLiteral(false)
                     case (l, o, r, _) =>
                         SqlExpr.Binary(l, o, r)
             }
@@ -616,6 +615,70 @@ object ExprMacro:
             aggRef = betweenInfo.aggRef ++ startInfo.aggRef ++ endInfo.aggRef,
             nonAggRef = betweenInfo.nonAggRef ++ startInfo.nonAggRef ++ endInfo.nonAggRef,
             ungroupedRef = betweenInfo.ungroupedRef ++ startInfo.ungroupedRef ++ endInfo.ungroupedRef
+        )
+
+    private[sqala] def createIn(using q: Quotes)(
+        args: List[String],
+        tableNames: Expr[List[String]],
+        term: q.reflect.Term,
+        inTerm: q.reflect.Term,
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
+    ): (Expr[SqlExpr], ExprInfo) =
+        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
+        val (inExpr, inInfo) = inTerm.tpe.asType match
+            case '[Seq[t]] =>
+                val asSqlExpr = Expr.summon[Merge[t]]
+                val expr = asSqlExpr match
+                    case None => missMatch(term)
+                    case Some(e) =>
+                        val valueExpr = inTerm.asExprOf[Seq[t]]
+                        '{ SqlExpr.Tuple($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
+                val info = ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    columnRef = Nil,
+                    aggRef = Nil,
+                    nonAggRef = Nil,
+                    ungroupedRef = Nil
+                )
+                expr -> info
+            case '[Query[?, ?]] =>
+                val expr = inTerm.asExprOf[Query[?, ?]]
+                val sqlExpr = '{ SqlExpr.SubQuery($expr.ast) }
+                sqlExpr -> ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    columnRef = Nil,
+                    aggRef = Nil,
+                    nonAggRef = Nil,
+                    ungroupedRef = Nil
+                )
+            case _ =>
+                treeInfoMacro(args, tableNames, inTerm, queryContext, inConnectBy, isPrior, inDistinctOn)
+
+        val sqlExpr = '{
+            SqlExpr.Binary($expr, SqlBinaryOperator.In, $inExpr)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = info.hasAgg || inInfo.hasAgg,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = info.hasWindow || inInfo.hasWindow,
+            isConst = false,
+            columnRef = info.columnRef ++ inInfo.columnRef,
+            aggRef = info.aggRef ++ inInfo.aggRef,
+            nonAggRef = info.nonAggRef ++ inInfo.nonAggRef,
+            ungroupedRef = info.ungroupedRef ++ inInfo.ungroupedRef
         )
 
     private[sqala] def createTuple(using q: Quotes)(
