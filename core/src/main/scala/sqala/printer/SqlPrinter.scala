@@ -60,7 +60,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             printQuery(insert.query.get)
         else
             sqlBuilder.append(" VALUES ")
-            printList(insert.values.map(SqlExpr.Vector(_)))(printExpr)
+            printList(insert.values.map(SqlExpr.Tuple(_)))(printExpr)
 
     def printDelete(delete: SqlStatement.Delete): Unit =
         sqlBuilder.append("DELETE FROM ")
@@ -166,7 +166,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     def printValues(values: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
-        printList(values.values.map(SqlExpr.Vector(_)))(printExpr)
+        printList(values.values.map(SqlExpr.Tuple(_)))(printExpr)
 
     def printCte(cte: SqlQuery.Cte): Unit =
         printSpace()
@@ -202,7 +202,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
         case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
-        case v: SqlExpr.Vector => printVectorExpr(v)
+        case v: SqlExpr.Tuple => printTupleExpr(v)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case n: SqlExpr.NullTest => printNullTestExpr(n)
@@ -256,7 +256,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         else
             sqlBuilder.append(s"'${expr.time}'")
 
-    def printVectorExpr(expr: SqlExpr.Vector): Unit =
+    def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
         printList(expr.items)(printExpr)
         sqlBuilder.append(")")

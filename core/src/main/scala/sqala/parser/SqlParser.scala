@@ -98,8 +98,8 @@ class SqlParser extends StandardTokenParsers:
                 case (acc, (not: Boolean, "between", l: SqlExpr, r: SqlExpr)) => SqlExpr.Between(acc, l, r, not)
                 case (acc, (false, "in", in: SqlExpr.SubQuery)) => SqlExpr.Binary(acc, SqlBinaryOperator.In, in)
                 case (acc, (true, "in", in: SqlExpr.SubQuery)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, in)
-                case (acc, (false, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.In, SqlExpr.Vector(in.asInstanceOf[List[SqlExpr]]))
-                case (acc, (true, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, SqlExpr.Vector(in.asInstanceOf[List[SqlExpr]]))
+                case (acc, (false, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.In, SqlExpr.Tuple(in.asInstanceOf[List[SqlExpr]]))
+                case (acc, (true, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, SqlExpr.Tuple(in.asInstanceOf[List[SqlExpr]]))
                 case (acc, (false, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.Like, expr)
                 case (acc, (true, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotLike, expr)
                 case _ => SqlExpr.Null
@@ -310,13 +310,13 @@ class SqlParser extends StandardTokenParsers:
 
     def limit: Parser[SqlLimit] =
         "LIMIT" ~ numericLit ~ opt("OFFSET" ~> numericLit) ^^ {
-            case _ ~ limit ~ offset => 
+            case _ ~ limit ~ offset =>
                 val limitInt = BigDecimal(limit).setScale(0, BigDecimal.RoundingMode.HALF_UP).toInt
                 val offsetInt = offset
                     .map(BigDecimal(_).setScale(0, BigDecimal.RoundingMode.HALF_UP).toInt)
-                    .getOrElse(0) 
+                    .getOrElse(0)
                 SqlLimit(
-                    SqlExpr.NumberLiteral(limitInt), 
+                    SqlExpr.NumberLiteral(limitInt),
                     SqlExpr.NumberLiteral(offsetInt)
                 )
         }

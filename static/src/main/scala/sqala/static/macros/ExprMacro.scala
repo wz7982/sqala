@@ -522,7 +522,7 @@ object ExprMacro:
                             SqlBinaryOperator.Like,
                             SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: Nil)
                         )
-                    case (l, SqlBinaryOperator.In, SqlExpr.Vector(Nil), _) =>
+                    case (l, SqlBinaryOperator.In, SqlExpr.Tuple(Nil), _) =>
                         SqlExpr.BooleanLiteral(false)
                     case (l, o, r, _) =>
                         SqlExpr.Binary(l, o, r)
@@ -569,7 +569,7 @@ object ExprMacro:
                 ($operatorExpr, $expr) match
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
-                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Tuple(Nil))) =>
                         SqlExpr.BooleanLiteral(true)
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
@@ -632,7 +632,7 @@ object ExprMacro:
         val listExpr = Expr.ofList(exprs.map(_._1))
         val info = exprs.map(_._2)
         val sqlExpr = '{
-            SqlExpr.Vector($listExpr)
+            SqlExpr.Tuple($listExpr)
         }
         sqlExpr -> ExprInfo(
             hasAgg = info.map(_.hasAgg).fold(false)(_ || _),
@@ -1249,9 +1249,9 @@ object ExprMacro:
                     case None => missMatch(term)
                     case Some(e) =>
                         val valueExpr = term.asExprOf[Seq[t]]
-                        '{ SqlExpr.Vector($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
+                        '{ SqlExpr.Tuple($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
             case '[Unit] =>
-                '{ SqlExpr.Vector(Nil) }
+                '{ SqlExpr.Tuple(Nil) }
             case '[t] =>
                 val asSqlExpr = Expr.summon[AsSqlExpr[t]]
                 asSqlExpr match

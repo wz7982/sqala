@@ -40,12 +40,12 @@ case class Expr(sqlExpr: SqlExpr):
         case _ => Expr(SqlExpr.Binary(sqlExpr, LessThanEqual, expr.sqlExpr))
 
     def in(list: List[Expr]): Expr =
-        if list.isEmpty then Expr(SqlExpr.BooleanLiteral(false)) 
-        else Expr(SqlExpr.Binary(sqlExpr, In, SqlExpr.Vector(list.map(_.sqlExpr))))
+        if list.isEmpty then Expr(SqlExpr.BooleanLiteral(false))
+        else Expr(SqlExpr.Binary(sqlExpr, In, SqlExpr.Tuple(list.map(_.sqlExpr))))
 
     def notIn(list: List[Expr]): Expr =
-        if list.isEmpty then Expr(SqlExpr.BooleanLiteral(true)) 
-        else Expr(SqlExpr.Binary(sqlExpr, NotIn, SqlExpr.Vector(list.map(_.sqlExpr))))
+        if list.isEmpty then Expr(SqlExpr.BooleanLiteral(true))
+        else Expr(SqlExpr.Binary(sqlExpr, NotIn, SqlExpr.Tuple(list.map(_.sqlExpr))))
 
     def between(start: Expr, end: Expr): Expr = Expr(SqlExpr.Between(sqlExpr, start.sqlExpr, end.sqlExpr, false))
 
@@ -92,7 +92,7 @@ case class Expr(sqlExpr: SqlExpr):
         case _ => this
 
     def orderBy(items: OrderBy*): Expr = sqlExpr match
-        case SqlExpr.Window(expr, partitionBy, _, frame) => 
+        case SqlExpr.Window(expr, partitionBy, _, frame) =>
             Expr(SqlExpr.Window(expr, partitionBy, items.toList.map(i => i.asSqlOrderBy), frame))
         case _ => this
 
