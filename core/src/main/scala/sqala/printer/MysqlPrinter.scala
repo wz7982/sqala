@@ -19,6 +19,26 @@ class MysqlPrinter(override val prepare: Boolean, override val indent: Int) exte
         sqlBuilder.append(", ")
         printExpr(limit.limit)
 
+    override def printUpsert(upsert: SqlStatement.Upsert): Unit =
+        sqlBuilder.append("INSERT INTO ")
+        printTable(upsert.table)
+
+        sqlBuilder.append(" (")
+        printList(upsert.columns)(printExpr)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" VALUES (")
+        printList(upsert.values)(printExpr)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
+
+        printList(upsert.updateList): u =>
+            printExpr(u)
+            sqlBuilder.append(" = VALUES (")
+            printExpr(u)
+            sqlBuilder.append(")")
+
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
@@ -48,26 +68,6 @@ class MysqlPrinter(override val prepare: Boolean, override val indent: Int) exte
         printList(values.values.map(SqlExpr.Vector(_))): v =>
             sqlBuilder.append("ROW")
             printExpr(v)
-
-    override def printUpsert(upsert: SqlStatement.Upsert): Unit =
-        sqlBuilder.append("INSERT INTO ")
-        printTable(upsert.table)
-
-        sqlBuilder.append(" (")
-        printList(upsert.columns)(printExpr)
-        sqlBuilder.append(")")
-
-        sqlBuilder.append(" VALUES (")
-        printList(upsert.values)(printExpr)
-        sqlBuilder.append(")")
-
-        sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
-
-        printList(upsert.updateList): u =>
-            printExpr(u)
-            sqlBuilder.append(" = VALUES (")
-            printExpr(u)
-            sqlBuilder.append(")")
 
     override def printCastType(castType: SqlCastType): Unit =
         val t = castType match

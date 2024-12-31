@@ -52,7 +52,6 @@ class OraclePrinter(override val prepare: Boolean, override val indent: Int) ext
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
         printList(upsert.columns): c =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(c)
         sqlBuilder.append(")")
 

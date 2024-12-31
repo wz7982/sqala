@@ -19,7 +19,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s" FROM ${leftQuote}dual$rightQuote) ${leftQuote}t2$rightQuote")
+        sqlBuilder.append(s") ${leftQuote}t2$rightQuote")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
@@ -43,7 +43,6 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
         sqlBuilder.append(" (")
         printList(upsert.columns): c =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(c)
         sqlBuilder.append(")")
 

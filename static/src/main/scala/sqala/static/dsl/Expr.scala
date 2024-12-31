@@ -10,6 +10,7 @@ import scala.NamedTuple.NamedTuple
 
 export sqala.printer.{
     DB2Dialect,
+    H2Dialect,
     MssqlDialect,
     MysqlDialect,
     OracleDialect,
