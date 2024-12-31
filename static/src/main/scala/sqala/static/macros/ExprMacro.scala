@@ -29,6 +29,27 @@ object ExprMacro:
             "like", "contains", "startsWith", "endsWith"
         )
 
+    private[sqala] def isBinaryOperator(using q: Quotes)(name: String, term: q.reflect.Term): Boolean =
+        import q.reflect.*
+
+        binaryOperators.contains(name) ||
+        term.symbol.annotations.exists:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), _) => true
+            case _ => false
+
+    private[sqala] def fetchBinaryOperator(using q: Quotes)(name: String, term: q.reflect.Term): String =
+        import q.reflect.*
+
+        term.symbol.annotations.find:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), _) => true
+            case _ => false
+        .map:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), n :: Nil) =>
+                n match
+                    case Literal(StringConstant(n)) => n
+                    case NamedArg(_, Literal(StringConstant(n))) => n
+        .getOrElse(name)
+
     private[sqala] def unaryOperators: List[String] =
         List("unary_+", "unary_-", "unary_!", "prior")
 
@@ -248,24 +269,29 @@ object ExprMacro:
                             )
                             sqlExpr -> info
                     case _ => missMatch(term)
-            case Apply(Select(left, op), right :: Nil) if binaryOperators.contains(op) =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+            case Apply(Select(left, op), right :: Nil) if isBinaryOperator(op, term) =>
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(Ident(op), left :: Nil), _), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(TypeApply(Ident(op), _), left :: Nil), _), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Select(v, op) if unaryOperators.contains(op) =>
                 createUnary(args, tableNames, v, op, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) if unaryOperators.contains(op) =>
@@ -469,6 +495,8 @@ object ExprMacro:
             case '[Option[String]] => true
             case _ => false
 
+        val opNameExpr = Expr(op)
+
         val operatorExpr = op match
             case "==" => '{ SqlBinaryOperator.Equal }
             case "!=" => '{ SqlBinaryOperator.NotEqual }
@@ -489,8 +517,7 @@ object ExprMacro:
             case "contains" => '{ SqlBinaryOperator.Like }
             case "startsWith" => '{ SqlBinaryOperator.Like }
             case "endsWith" => '{ SqlBinaryOperator.Like }
-
-        val opNameExpr = Expr(op)
+            case n => '{ SqlBinaryOperator.Custom($opNameExpr) }
 
         val sqlExpr = if op == "+" && (leftHasString || rightHasString) then
             '{
