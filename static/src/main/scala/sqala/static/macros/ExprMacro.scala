@@ -914,11 +914,11 @@ object ExprMacro:
             for p <- params do
                 if p.name == "sortBy" then
                     report.error(
-                        s"SORT BY specified, but %s is not an aggregate function."
+                        s"SORT BY specified, but this expression is not an aggregate function."
                     )
                 if p.name == "withinGroup" then
                     report.error(
-                        s"WITHIN GROUP specified, but %s is not an aggregate function."
+                        s"WITHIN GROUP specified, but this expression is not an aggregate function."
                     )
 
             val paramNames = params.map(_.name)
