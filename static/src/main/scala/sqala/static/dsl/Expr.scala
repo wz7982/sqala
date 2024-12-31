@@ -23,6 +23,7 @@ export sqala.static.annotation.{
     column,
     primaryKey,
     sqlAgg,
+    sqlBinaryOperator,
     sqlFunction,
     sqlFunctionTable,
     sqlWindow,
