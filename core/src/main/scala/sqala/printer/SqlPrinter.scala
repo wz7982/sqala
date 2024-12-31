@@ -317,7 +317,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
-        if expr.distinct then sqlBuilder.append("DISTINCT ")
+        expr.param.foreach(p => sqlBuilder.append(p.param + " "))
         if expr.name.toUpperCase == "COUNT" && expr.args.isEmpty then sqlBuilder.append("*")
         printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
@@ -439,18 +439,18 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             sqlBuilder.append(")")
 
     def printTable(table: SqlTable): Unit = table match
-        case SqlTable.IdentTable(tableName, alias) =>
+        case SqlTable.Range(tableName, alias) =>
             sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
             for a <- alias do
                 printTableAlias(a)
-        case SqlTable.FuncTable(functionName, args, alias) =>
+        case SqlTable.Func(functionName, args, alias) =>
             sqlBuilder.append(s"$functionName")
             sqlBuilder.append("(")
             printList(args)(printExpr)
             sqlBuilder.append(")")
             for a <- alias do
                 printTableAlias(a)
-        case SqlTable.SubQueryTable(query, lateral, alias) =>
+        case SqlTable.SubQuery(query, lateral, alias) =>
             if lateral then sqlBuilder.append("LATERAL ")
             sqlBuilder.append("(\n")
             push()
@@ -459,14 +459,15 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append(")")
-            printTableAlias(alias)
-        case SqlTable.JoinTable(left, joinType, right, condition) =>
+            for a <- alias do
+                printTableAlias(a)
+        case SqlTable.Join(left, joinType, right, condition, alias) =>
             printTable(left)
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append(s"${joinType.joinType} ")
             right match
-                case _: SqlTable.JoinTable =>
+                case _: SqlTable.Join =>
                     sqlBuilder.append("(")
                     sqlBuilder.append("\n")
                     push()
@@ -488,6 +489,8 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
                         sqlBuilder.append(" USING (")
                         printList(usingCondition)(printExpr)
                         sqlBuilder.append(")")
+            for a <- alias do
+                printTableAlias(a)
 
     def printSelectItem(item: SqlSelectItem): Unit = item match
         case SqlSelectItem.Wildcard(table) =>

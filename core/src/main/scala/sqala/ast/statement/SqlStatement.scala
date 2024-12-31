@@ -5,6 +5,7 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.table.SqlTable
 import sqala.ast.group.SqlGroupItem
+import sqala.ast.param.SqlParam
 
 enum SqlStatement:
     case Delete(table: SqlTable, where: Option[SqlExpr])
@@ -24,7 +25,7 @@ object SqlStatement:
 
 enum SqlQuery:
     case Select(
-        param: Option[SqlSelectParam] = None,
+        param: Option[SqlParam] = None,
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr] = None,

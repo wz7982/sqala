@@ -28,7 +28,7 @@ inline def query[T](using
         SqlSelectItem.Item(SqlExpr.Column(Some(metaData.tableName), n), None)
     val ast = SqlQuery.Select(
         select = selectItems,
-        from = SqlTable.IdentTable(tableName, Some(SqlTableAlias(metaData.tableName, Nil))) :: Nil
+        from = SqlTable.Range(tableName, Some(SqlTableAlias(metaData.tableName, Nil))) :: Nil
     )
     TableQuery(table, ast)
 
@@ -58,7 +58,7 @@ inline def query[N <: Tuple, V <: Tuple, S <: ResultSize](
     val innerQuery = SubQuery[N, V](constValueTuple[N].toList.map(_.asInstanceOf[String]))
     val ast = SqlQuery.Select(
         select = s.selectItems(innerQuery, alias :: Nil),
-        from = SqlTable.SubQueryTable(subQuery.ast, false, SqlTableAlias(alias, Nil)) :: Nil
+        from = SqlTable.SubQuery(subQuery.ast, false, Some(SqlTableAlias(alias, Nil))) :: Nil
     )
     SelectQuery(innerQuery, Nil, ast)
 
@@ -82,7 +82,7 @@ inline def query[T <: Product](
     val tableAlias = SqlTableAlias(alias, metaData.columnNames)
     val ast = SqlQuery.Select(
         select = selectItems,
-        from = SqlTable.SubQueryTable(sqlValues, false, tableAlias) :: Nil
+        from = SqlTable.SubQuery(sqlValues, false, Some(tableAlias)) :: Nil
     )
     SelectQuery(table, Nil, ast)
 

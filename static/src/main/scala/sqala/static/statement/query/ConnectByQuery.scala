@@ -12,7 +12,7 @@ class ConnectByQuery[T](
     private[sqala] val connectByAst: SqlQuery.Select,
     private[sqala] val startWithAst: SqlQuery.Select,
     private[sqala] val mapAst: SqlQuery.Select =
-        SqlQuery.Select(select = Nil, from = SqlTable.IdentTable(tableCte, None) :: Nil)
+        SqlQuery.Select(select = Nil, from = SqlTable.Range(tableCte, None) :: Nil)
 )(using val queryContext: QueryContext):
     inline def startWith(inline f: Table[T] => Boolean): ConnectByQuery[T] =
         val cond = ClauseMacro.fetchFilter(f, false, false, tableName :: Nil, queryContext)

@@ -347,7 +347,7 @@ object ClauseMacro:
                 '{
                     val function = $functionExpr.asInstanceOf[SqlExpr.Func]
                     val columns = $metaData.columnNames
-                    SqlTable.FuncTable($functionName, function.args, Some(SqlTableAlias($functionName, columns)))
+                    SqlTable.Func($functionName, function.args, Some(SqlTableAlias($functionName, columns)))
                 }
             case _ =>
                 report.errorAndAbort(

@@ -3,6 +3,7 @@ package sqala.static.statement.query
 import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.group.SqlGroupItem
+import sqala.ast.param.SqlParam
 import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.printer.Dialect
@@ -61,7 +62,7 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
 
     private[sqala] def size: Query[Long, OneRow] =
         ast match
-            case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) if p != Some(SqlSelectParam.Distinct) =>
+            case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) if p != Some(SqlParam.Distinct) =>
                 Query(
                     s.copy(
                         select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
@@ -72,7 +73,7 @@ sealed class Query[T, S <: ResultSize](val ast: SqlQuery):
             case _ =>
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
                     select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                    from = SqlTable.SubQueryTable(ast, false, SqlTableAlias(tableSubquery)) :: Nil
+                    from = SqlTable.SubQuery(ast, false, Some(SqlTableAlias(tableSubquery))) :: Nil
                 )
                 Query(outerQuery)
 
@@ -145,7 +146,7 @@ class ProjectionQuery[T, S <: ResultSize](
             ast.select.exists:
                 case SqlSelectItem.Item(e, _) if e == expr => true
                 case _ => false
-        Query(ast.copy(param = Some(SqlSelectParam.Distinct), orderBy =  newSortBy))
+        Query(ast.copy(param = Some(SqlParam.Distinct), orderBy =  newSortBy))
 
 object ProjectionQuery:
     extension [N <: Tuple, V <: Tuple, S <: ResultSize](query: ProjectionQuery[NamedTuple[N, V], S])
@@ -154,7 +155,7 @@ object ProjectionQuery:
                 case SqlSelectItem.Item(_, Some(n)) =>
                     SqlSelectItem.Item(SqlExpr.Column(Some(tableSubquery), n), Some(n))
                 case i => i
-            val from = SqlTable.SubQueryTable(query.ast, false, SqlTableAlias(tableSubquery))
+            val from = SqlTable.SubQuery(query.ast, false, Some(SqlTableAlias(tableSubquery)))
             val cond = ClauseMacro.fetchFilter(f, false, false, tableSubquery :: Nil, query.queryContext)
             QualifyQuery(SqlQuery.Select(select = selectItems, from = from :: Nil, where = Some(cond)))(using query.queryContext)
 
@@ -336,11 +337,12 @@ object SelectQuery:
                         ),
                         Some(columnPseudoLevel)
                     ),
-                    from = SqlTable.JoinTable(
+                    from = SqlTable.Join(
                         newAst.from.head,
                         SqlJoinType.Inner,
-                        SqlTable.IdentTable(tableCte, None),
-                        Some(SqlJoinCondition.On(cond))
+                        SqlTable.Range(tableCte, None),
+                        Some(SqlJoinCondition.On(cond)),
+                        None
                     ) :: Nil
                 )
             val startAst = newAst
@@ -370,10 +372,11 @@ class JoinQuery[T: SelectItem](
         val joinTableName = TableMacro.tableName[J]
         val tables = f(joinTable)
         val sqlTable = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
+            SqlTable.Join(
                 i,
                 joinType,
-                SqlTable.IdentTable(joinTableName, Some(SqlTableAlias(joinTableName))),
+                SqlTable.Range(joinTableName, Some(SqlTableAlias(joinTableName))),
+                None,
                 None
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
@@ -387,10 +390,11 @@ class JoinQuery[T: SelectItem](
         val joinQuery = SubQuery[N, V](constValueTuple[N].toList.map(_.asInstanceOf[String]))
         val tables = f(joinQuery)
         val sqlTable = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
+            SqlTable.Join(
                 i,
                 joinType,
-                SqlTable.SubQueryTable(query.ast, lateral, SqlTableAlias("")),
+                SqlTable.SubQuery(query.ast, lateral, Some(SqlTableAlias(""))),
+                None,
                 None
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))
@@ -407,10 +411,11 @@ class JoinQuery[T: SelectItem](
         val functionTable = ClauseMacro.fetchFunctionTable(function, queryContext)
         val tables = f(joinTable)
         val sqlTable = ast.from.headOption.map: i =>
-            SqlTable.JoinTable(
+            SqlTable.Join(
                 i,
                 joinType,
                 functionTable,
+                None,
                 None
             )
         JoinPart(tables, tableNames, ast.copy(from = sqlTable.toList))

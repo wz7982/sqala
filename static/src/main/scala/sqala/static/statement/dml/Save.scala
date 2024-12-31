@@ -26,5 +26,5 @@ object Save:
             .filterNot((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => SqlExpr.Column(None, c))
         val ast: SqlStatement.Upsert = 
-            SqlStatement.Upsert(SqlTable.IdentTable(tableName, None), columns, values, primaryKeys, updateColumns)
+            SqlStatement.Upsert(SqlTable.Range(tableName, None), columns, values, primaryKeys, updateColumns)
         new Save(ast)

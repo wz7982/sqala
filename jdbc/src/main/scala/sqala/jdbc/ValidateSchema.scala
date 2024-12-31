@@ -24,7 +24,7 @@ object ValidateSchema:
 
         val conn = c.value.get
         val metaData = TableMacro.tableMetaDataMacro[T].value.get
-        val table = SqlTable.IdentTable(metaData.tableName, None)
+        val table = SqlTable.Range(metaData.tableName, None)
         val columns = metaData.columnNames.map: n => 
             SqlExpr.Column(None, n)
         val query = SqlStatement.Insert(table, columns, columns.map(_ => SqlExpr.NumberLiteral(0)) :: Nil, None)

@@ -16,5 +16,5 @@ class Delete[T](
 object Delete:
     inline def apply[T <: Product]: Delete[Table[T]] =
         val tableName = TableMacro.tableName[T]
-        val ast: SqlStatement.Delete = SqlStatement.Delete(SqlTable.IdentTable(tableName, None), None)
+        val ast: SqlStatement.Delete = SqlStatement.Delete(SqlTable.Range(tableName, None), None)
         new Delete(tableName, ast)

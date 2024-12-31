@@ -36,7 +36,7 @@ class Insert[T, S <: InsertState](
 object Insert:
     inline def apply[T <: Product]: Insert[Table[T], InsertNew] =
         val tableName = TableMacro.tableName[T]
-        val ast: SqlStatement.Insert = SqlStatement.Insert(SqlTable.IdentTable(tableName, None), Nil, Nil, None)
+        val ast: SqlStatement.Insert = SqlStatement.Insert(SqlTable.Range(tableName, None), Nil, Nil, None)
         new Insert(tableName, ast)
 
     inline def apply[T <: Product](entities: List[T])(using p: Mirror.ProductOf[T]): Insert[Table[T], InsertEntity] =
@@ -55,4 +55,4 @@ object Insert:
                 .map(_._1)
             data.map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
-        new Insert(tableName, SqlStatement.Insert(SqlTable.IdentTable(tableName, None), columns, values, None))
+        new Insert(tableName, SqlStatement.Insert(SqlTable.Range(tableName, None), columns, values, None))

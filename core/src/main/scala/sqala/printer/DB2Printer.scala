@@ -19,7 +19,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s" FROM ${leftQuote}dual$rightQuote) ${leftQuote}t2$rightQuote")
+        sqlBuilder.append(s") ${leftQuote}t2$rightQuote")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
@@ -43,7 +43,6 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
         sqlBuilder.append(" (")
         printList(upsert.columns): c =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(c)
         sqlBuilder.append(")")
 
@@ -54,7 +53,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
     override def printCteRecursive(): Unit = {}
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("LISTAGG")
             sqlBuilder.append("(")
             printList(expr.args)(printExpr)
@@ -85,7 +84,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
 
     override def printTable(table: SqlTable): Unit =
         table match
-            case SqlTable.FuncTable(functionName, args, alias) =>
+            case SqlTable.Func(functionName, args, alias) =>
                 sqlBuilder.append("TABLE(")
                 sqlBuilder.append(s"$functionName")
                 sqlBuilder.append("(")

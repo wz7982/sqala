@@ -55,7 +55,6 @@ class MssqlPrinter(override val prepare: Boolean, override val indent: Int) exte
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
         printList(upsert.columns): c =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
             printExpr(c)
         sqlBuilder.append(")")
 

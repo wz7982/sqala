@@ -4,7 +4,8 @@ import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSelectParam, SqlUnionType}
+import sqala.ast.param.SqlParam
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 
 import scala.util.parsing.combinator.lexical.StdLexical
@@ -145,12 +146,12 @@ class SqlParser extends StandardTokenParsers:
         "COUNT" | "SUM" | "AVG" | "MAX" | "MIN"
 
     def aggFunction: Parser[SqlExpr] =
-        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, false, Nil)) |
+        "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, None, Nil)) |
         (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
-            case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, false, Nil)
+            case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, None, Nil)
         } |
         ident ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
-            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, true, Nil)
+            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, Some(SqlParam.Distinct), Nil)
         }
 
     def over: Parser[(List[SqlExpr], List[SqlOrderBy])] =
@@ -240,7 +241,7 @@ class SqlParser extends StandardTokenParsers:
     def select: Parser[SqlExpr.SubQuery] =
         "SELECT" ~> opt("DISTINCT") ~ selectItems ~ opt(from) ~ opt(where) ~ opt(groupBy) ~ opt(orderBy) ~ opt(limit) ^^ {
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
-                val param = if distinct.isDefined then Some(SqlSelectParam.Distinct) else None
+                val param = if distinct.isDefined then Some(SqlParam.Distinct) else None
                 SqlExpr.SubQuery(
                     SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.flatMap(_._2), o.getOrElse(Nil), l)
                 )
@@ -263,11 +264,11 @@ class SqlParser extends StandardTokenParsers:
             case table ~ alias =>
                 val tableAlias = alias.map:
                     case ta ~ ca => SqlTableAlias(ta, ca.getOrElse(Nil))
-                SqlTable.IdentTable(table, tableAlias)
+                SqlTable.Range(table, tableAlias)
         } |
         opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
             case lateral ~ s ~ (tableAlias ~ columnAlias) =>
-                SqlTable.SubQueryTable(s.query, lateral.isDefined, SqlTableAlias(tableAlias, columnAlias.getOrElse(Nil)))
+                SqlTable.SubQuery(s.query, lateral.isDefined, Some(SqlTableAlias(tableAlias, columnAlias.getOrElse(Nil))))
         }
 
     def joinType: Parser[SqlJoinType] =
@@ -289,7 +290,7 @@ class SqlParser extends StandardTokenParsers:
             }
         ) ^^ {
             case t ~ joins => joins.foldLeft(t) {
-                case (l, r) => SqlTable.JoinTable(l, r._1, r._2, r._3.map(SqlJoinCondition.On(_)))
+                case (l, r) => SqlTable.Join(l, r._1, r._2, r._3.map(SqlJoinCondition.On(_)), None)
             }
         }
 

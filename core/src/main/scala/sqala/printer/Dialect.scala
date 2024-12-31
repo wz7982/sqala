@@ -26,3 +26,7 @@ object MssqlDialect extends Dialect:
 object DB2Dialect extends Dialect:
     override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
         new DB2Printer(prepare, indent)
+
+object H2Dialect extends Dialect:
+    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
+        new H2Printer(prepare, indent)
