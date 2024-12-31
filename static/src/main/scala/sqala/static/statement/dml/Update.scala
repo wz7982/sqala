@@ -23,7 +23,7 @@ class Update[T, S <: UpdateState](
 object Update:
     inline def apply[T <: Product]: Update[Table[T], UpdateTable] =
         val tableName = TableMacro.tableName[T]
-        val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.IdentTable(tableName, None), Nil, None)
+        val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.Range(tableName, None), Nil, None)
         new Update(tableName, ast)
 
     inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using p: Mirror.ProductOf[T]): Update[Table[T], UpdateEntity] =
@@ -46,5 +46,5 @@ object Update:
             .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
             .map((_, column, instance, field) => SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, instance.asSqlExpr(field)))
         val condition = if conditions.isEmpty then None else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
-        val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.IdentTable(tableName, None), updateColumns, condition)
+        val ast: SqlStatement.Update = SqlStatement.Update(SqlTable.Range(tableName, None), updateColumns, condition)
         new Update(tableName, ast)

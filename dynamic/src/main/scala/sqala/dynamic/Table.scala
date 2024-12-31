@@ -12,10 +12,10 @@ sealed trait AnyTable:
     infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Full, table, None)
 
     def toSqlTable: SqlTable = this match
-        case Table(name, alias) => SqlTable.IdentTable(name, alias.map(a => SqlTableAlias(a)))
-        case SubQueryTable(query, alias, lateral) => SqlTable.SubQueryTable(query.ast, lateral, SqlTableAlias(alias, Nil))
+        case Table(name, alias) => SqlTable.Range(name, alias.map(a => SqlTableAlias(a)))
+        case SubQueryTable(query, alias, lateral) => SqlTable.SubQuery(query.ast, lateral, Some(SqlTableAlias(alias, Nil)))
         case JoinTable(left, joinType, right, condition) => 
-            SqlTable.JoinTable(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)))
+            SqlTable.Join(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)), None)
 
 case class Table(name: String, alias: Option[String]) extends AnyTable:
     infix def as(name: String): Table = copy(alias = Some(name))

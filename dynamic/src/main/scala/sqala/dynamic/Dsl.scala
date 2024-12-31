@@ -21,23 +21,23 @@ def `with`(items: List[SubQueryTable]): With = With(items)
 def `case`(branches: List[(Expr, Expr)], default: Expr): Expr =
     Expr(SqlExpr.Case(branches.toList.map(b => SqlCase(b._1.sqlExpr, b._2.sqlExpr)), default.sqlExpr))
 
-def count(): Expr = Expr(SqlExpr.Func("COUNT", Nil, false, Nil))
+def count(): Expr = Expr(SqlExpr.Func("COUNT", Nil))
 
-def count(expr: Expr): Expr = Expr(SqlExpr.Func("COUNT", expr.sqlExpr :: Nil, false, Nil))
+def count(expr: Expr): Expr = Expr(SqlExpr.Func("COUNT", expr.sqlExpr :: Nil))
 
-def sum(expr: Expr): Expr = Expr(SqlExpr.Func("SUM", expr.sqlExpr :: Nil, false, Nil))
+def sum(expr: Expr): Expr = Expr(SqlExpr.Func("SUM", expr.sqlExpr :: Nil))
 
-def avg(expr: Expr): Expr = Expr(SqlExpr.Func("AVG", expr.sqlExpr :: Nil, false, Nil))
+def avg(expr: Expr): Expr = Expr(SqlExpr.Func("AVG", expr.sqlExpr :: Nil))
 
-def max(expr: Expr): Expr = Expr(SqlExpr.Func("MAX", expr.sqlExpr :: Nil, false, Nil))
+def max(expr: Expr): Expr = Expr(SqlExpr.Func("MAX", expr.sqlExpr :: Nil))
 
-def min(expr: Expr): Expr = Expr(SqlExpr.Func("MIN", expr.sqlExpr :: Nil, false, Nil))
+def min(expr: Expr): Expr = Expr(SqlExpr.Func("MIN", expr.sqlExpr :: Nil))
 
-def rank(): Expr = Expr(SqlExpr.Func("RANK", Nil, false, Nil))
+def rank(): Expr = Expr(SqlExpr.Func("RANK", Nil))
 
-def denseRank(): Expr = Expr(SqlExpr.Func("DENSE_RANK", Nil, false, Nil))
+def denseRank(): Expr = Expr(SqlExpr.Func("DENSE_RANK", Nil))
 
-def rowNumber(): Expr = Expr(SqlExpr.Func("ROW_NUMBER", Nil, false, Nil))
+def rowNumber(): Expr = Expr(SqlExpr.Func("ROW_NUMBER", Nil))
 
 def any(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Any))
 

@@ -69,7 +69,7 @@ class SqlitePrinter(override val prepare: Boolean, override val indent: Int) ext
         sqlBuilder.append(")")
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("GROUP_CONCAT")
             sqlBuilder.append("(")
             printList(expr.args)(printExpr)

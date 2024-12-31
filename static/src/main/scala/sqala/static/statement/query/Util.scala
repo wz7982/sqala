@@ -11,23 +11,23 @@ private[sqala] inline def replaceTableName[T: SelectItem](
     val iterator = tableNames.iterator
 
     def from(table: SqlTable): SqlTable = table match
-        case SqlTable.IdentTable(t, a) =>
-            val newTable = SqlTable.IdentTable(
+        case SqlTable.Range(t, a) =>
+            val newTable = SqlTable.Range(
                 t,
                 a.map(_.copy(tableAlias = iterator.next()))
             )
             newTable
-        case SqlTable.FuncTable(n, args, a) =>
-            val newTable = SqlTable.FuncTable(
+        case SqlTable.Func(n, args, a) =>
+            val newTable = SqlTable.Func(
                 n,
                 args,
                 a.map(_.copy(tableAlias = iterator.next()))
             )
             newTable
-        case SqlTable.SubQueryTable(q, l, a) =>
-            SqlTable.SubQueryTable(q, l, a.copy(tableAlias = iterator.next()))
-        case SqlTable.JoinTable(l, j, r, c) =>
-            SqlTable.JoinTable(from(l), j, from(r), c)
+        case SqlTable.SubQuery(q, l, a) =>
+            SqlTable.SubQuery(q, l, a.map(_.copy(tableAlias = iterator.next())))
+        case SqlTable.Join(l, j, r, c, _) =>
+            SqlTable.Join(from(l), j, from(r), c, None)
 
     val select = summon[SelectItem[T]].selectItems(tables, tableNames)
 

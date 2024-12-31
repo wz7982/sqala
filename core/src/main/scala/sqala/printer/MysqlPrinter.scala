@@ -26,7 +26,7 @@ class MysqlPrinter(override val prepare: Boolean, override val indent: Int) exte
         sqlBuilder.append(expr.unit.unit)
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             val (args, separator) = if expr.args.size == 2 then
                 (expr.args.head :: Nil) -> expr.args.last
             else

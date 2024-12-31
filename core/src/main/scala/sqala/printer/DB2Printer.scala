@@ -54,7 +54,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
     override def printCteRecursive(): Unit = {}
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && !expr.distinct && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("LISTAGG")
             sqlBuilder.append("(")
             printList(expr.args)(printExpr)
@@ -85,7 +85,7 @@ class DB2Printer(override val prepare: Boolean, override val indent: Int) extend
 
     override def printTable(table: SqlTable): Unit =
         table match
-            case SqlTable.FuncTable(functionName, args, alias) =>
+            case SqlTable.Func(functionName, args, alias) =>
                 sqlBuilder.append("TABLE(")
                 sqlBuilder.append(s"$functionName")
                 sqlBuilder.append("(")

@@ -23,7 +23,7 @@ class JoinPart[T](
         val newAst = replaceTableName(tables, newParam, ast)
         val cond = ClauseMacro.fetchFilter(f, false, false, newParam, queryContext)
         val newTable = newAst.from.head match
-            case t: SqlTable.JoinTable =>
+            case t: SqlTable.Join =>
                 t.copy(condition = Some(SqlJoinCondition.On(cond)))
             case t => t
         JoinQuery(tables, newParam, newAst.copy(from = newTable :: Nil))

@@ -4,6 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
+import sqala.ast.param.SqlParam
 import sqala.ast.statement.*
 import sqala.printer.Dialect
 
@@ -63,7 +64,7 @@ class Select(val ast: SqlQuery.Select) extends Query:
         val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
         new Select(ast.copy(limit = sqlLimit))
 
-    def distinct: Select = new Select(ast.copy(param = Some(SqlSelectParam.Distinct)))
+    def distinct: Select = new Select(ast.copy(param = Some(SqlParam.Distinct)))
 
 object Select:
     def apply(): Select = new Select(SqlQuery.Select(select = Nil, from = Nil))

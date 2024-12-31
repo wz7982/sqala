@@ -1,6 +1,7 @@
 package sqala.ast.expr
 
 import sqala.ast.order.SqlOrderBy
+import sqala.ast.param.SqlParam
 import sqala.ast.statement.SqlQuery
 
 enum SqlExpr:
@@ -17,7 +18,7 @@ enum SqlExpr:
     case Func(
         name: String, 
         args: List[SqlExpr], 
-        distinct: Boolean = false,
+        param: Option[SqlParam] = None,
         orderBy: List[SqlOrderBy] = Nil,
         withinGroup: List[SqlOrderBy] = Nil,
         filter: Option[SqlExpr] = None

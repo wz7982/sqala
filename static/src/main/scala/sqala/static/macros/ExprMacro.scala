@@ -2,6 +2,7 @@ package sqala.static.macros
 
 import sqala.ast.expr.*
 import sqala.ast.order.*
+import sqala.ast.param.SqlParam
 import sqala.static.common.*
 import sqala.static.dsl.*
 import sqala.static.statement.query.*
@@ -860,7 +861,7 @@ object ExprMacro:
             SqlExpr.Func(
                 $nameExpr,
                 $valueParamExpr,
-                $distinctExpr,
+                if $distinctExpr then Some(SqlParam.Distinct) else None,
                 $sortByExpr,
                 $withinGroupExpr,
                 $filterExpr.headOption

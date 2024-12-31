@@ -28,10 +28,10 @@ object WithRecursive:
         val cteQuery = f(query)
 
         def transformTable(table: SqlTable): SqlTable = table match
-            case SqlTable.SubQueryTable(query.ast, false, a) =>
-                SqlTable.IdentTable(alias, Some(a))
-            case SqlTable.JoinTable(left, joinType, right, condition) =>
-                SqlTable.JoinTable(transformTable(left), joinType, transformTable(right), condition)
+            case SqlTable.SubQuery(query.ast, false, a) =>
+                SqlTable.Range(alias, a)
+            case SqlTable.Join(left, joinType, right, condition, _) =>
+                SqlTable.Join(transformTable(left), joinType, transformTable(right), condition, None)
             case _ => table
 
         def transformAst(originalAst: SqlQuery): SqlQuery = originalAst match
@@ -46,7 +46,7 @@ object WithRecursive:
             true,
             SqlQuery.Select(
                 select = selectItems,
-                from = SqlTable.IdentTable(alias, None) :: Nil
+                from = SqlTable.Range(alias, None) :: Nil
             )
         )
         new WithRecursive(ast)
