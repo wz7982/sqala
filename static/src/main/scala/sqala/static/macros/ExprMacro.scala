@@ -800,6 +800,12 @@ object ExprMacro:
 
         val withinGroupParam = allParams.find(_._1 == "withinGroup").map(_._2)
 
+        val filterParam = allParams.find(_._1 == "filter").map(_._2)
+        filterParam.foreach: p =>
+            p.tpe.asType match
+                case '[Boolean] =>
+                case _ => report.error("The type of the parameter \"filter\" must be Boolean.", term.asExpr)
+
         if distinct && valueParams.isEmpty then
             report.error("Aggregates with DISTINCT must be able to sort their inputs.", term.asExpr)
 
@@ -826,10 +832,16 @@ object ExprMacro:
             .map(s => sortInfoMacro(args, tableNames, s, queryContext, inConnectBy, isPrior, inDistinctOn))
         val withinGroupExpr = Expr.ofList(withinGroupInfo.map(_._1))
 
+        val filterInfo = filterParam
+            .map(p => treeInfoMacro(args, tableNames, p, queryContext, inConnectBy, isPrior, inDistinctOn))
+            .toList
+        val filterExpr = Expr.ofList(filterInfo.map(_._1))
+
         val paramsInfo =
             valueParamInfo.map(_._2) ++
             sortByInfo.map(_._2) ++
-            withinGroupInfo.map(_._2)
+            withinGroupInfo.map(_._2) ++
+            filterInfo.map(_._2)
 
         for p <- paramsInfo do
             if p.hasAgg then
@@ -851,7 +863,7 @@ object ExprMacro:
                 $distinctExpr,
                 $sortByExpr,
                 $withinGroupExpr,
-                None
+                $filterExpr.headOption
             )
         }
 
@@ -920,6 +932,11 @@ object ExprMacro:
                 if p.name == "withinGroup" then
                     report.error(
                         s"WITHIN GROUP specified, but this expression is not an aggregate function.",
+                        term.asExpr
+                    )
+                if p.name == "filter" then
+                    report.error(
+                        s"FILTER specified, but this expression is not an aggregate function.",
                         term.asExpr
                     )
 
