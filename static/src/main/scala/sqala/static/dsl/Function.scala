@@ -20,27 +20,55 @@ def count[T](x: T)(using AsSqlExpr[T], QueryContext): Long =
     compileTimeOnly
 
 @sqlAgg("COUNT")
+def count[T](x: T, filter: Boolean)(using AsSqlExpr[T], QueryContext): Long =
+    compileTimeOnly
+
+@sqlAgg("COUNT")
 def countDistinct[T](x: T)(using AsSqlExpr[T], QueryContext): Long =
+    compileTimeOnly
+
+@sqlAgg("COUNT")
+def countDistinct[T](x: T, filter: Boolean)(using AsSqlExpr[T], QueryContext): Long =
     compileTimeOnly
 
 @sqlAgg("SUM")
 def sum[T](x: T)(using Number[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
+@sqlAgg("SUM")
+def sum[T](x: T, filter: Boolean)(using Number[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
 @sqlAgg("AVG")
 def avg[T](x: T)(using Number[T], QueryContext): Option[BigDecimal] =
+    compileTimeOnly
+
+@sqlAgg("AVG")
+def avg[T](x: T, filter: Boolean)(using Number[T], QueryContext): Option[BigDecimal] =
     compileTimeOnly
 
 @sqlAgg("MAX")
 def max[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
+@sqlAgg("MAX")
+def max[T](x: T, filter: Boolean)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
 @sqlAgg("MIN")
 def min[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
+@sqlAgg("MIN")
+def min[T](x: T, filter: Boolean)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
 @sqlAgg("ANY_VALUE")
 def anyValue[T](x: T)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
+    compileTimeOnly
+
+@sqlAgg("ANY_VALUE")
+def anyValue[T](x: T, filter: Boolean)(using AsSqlExpr[T], QueryContext): Wrap[T, Option] =
     compileTimeOnly
 
 @sqlAgg("PERCENTILE_CONT")
