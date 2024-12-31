@@ -26,8 +26,29 @@ object ExprMacro:
         List(
             "==", "!=", ">", ">=", "<", "<=", "&&", "||",
             "+", "-", "*", "/", "%", "->", "->>",
-            "like", "contains", "startsWith", "endsWith", "in"
+            "like", "contains", "startsWith", "endsWith"
         )
+
+    private[sqala] def isBinaryOperator(using q: Quotes)(name: String, term: q.reflect.Term): Boolean =
+        import q.reflect.*
+
+        binaryOperators.contains(name) ||
+        term.symbol.annotations.exists:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), _) => true
+            case _ => false
+
+    private[sqala] def fetchBinaryOperator(using q: Quotes)(name: String, term: q.reflect.Term): String =
+        import q.reflect.*
+
+        term.symbol.annotations.find:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), _) => true
+            case _ => false
+        .map:
+            case Apply(Select(New(TypeIdent("sqlBinaryOperator")), _), n :: Nil) =>
+                n match
+                    case Literal(StringConstant(n)) => n
+                    case NamedArg(_, Literal(StringConstant(n))) => n
+        .getOrElse(name)
 
     private[sqala] def unaryOperators: List[String] =
         List("unary_+", "unary_-", "unary_!", "prior")
@@ -248,24 +269,29 @@ object ExprMacro:
                             )
                             sqlExpr -> info
                     case _ => missMatch(term)
-            case Apply(Select(left, op), right :: Nil) if binaryOperators.contains(op) =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+            case Apply(Select(left, op), right :: Nil) if isBinaryOperator(op, term) =>
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(TypeApply(Ident(op), _), left :: Nil), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(Ident(op), left :: Nil), _), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Apply(TypeApply(Ident(op), _), left :: Nil), _), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(Apply(Ident(op), left :: Nil), right :: Nil), _)
-                if binaryOperators.contains(op)
+                if isBinaryOperator(op, term)
             =>
-                createBinary(args, tableNames, left, op, right, queryContext, inConnectBy, isPrior, inDistinctOn)
+                val operator = fetchBinaryOperator(op, term)
+                createBinary(args, tableNames, left, operator, right, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Select(v, op) if unaryOperators.contains(op) =>
                 createUnary(args, tableNames, v, op, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(Apply(TypeApply(Ident(op), _), v :: Nil), _) if unaryOperators.contains(op) =>
@@ -278,6 +304,8 @@ object ExprMacro:
                 _
             ) =>
                 createBetween(args, tableNames, v, s, e, queryContext, inConnectBy, isPrior, inDistinctOn)
+            case Apply(Apply(TypeApply(Apply(TypeApply(Ident("in"), _), e :: Nil), _), i :: Nil), _) =>
+                createIn(args, tableNames, e, i, queryContext, inConnectBy, isPrior, inDistinctOn)
             case Apply(TypeApply(Select(Ident(t), "apply"), _), terms)
                 if t.startsWith("Tuple")
             =>
@@ -384,9 +412,14 @@ object ExprMacro:
                     nonAggRef = Nil,
                     ungroupedRef = Nil
                 )
-            case Apply(Apply(Ident("any"), q :: Nil), _) =>
-                val expr = q.asExprOf[Query[?, ?]]
-                val sqlExpr = '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.Any) }
+            case Apply(Apply(TypeApply(Ident("any"), _), q :: Nil), _) =>
+                val sqlExpr = q.tpe.asType match
+                    case '[Query[?, ?]] =>
+                        val expr = q.asExprOf[Query[?, ?]]
+                        '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.Any) }
+                    case _ =>
+                        val (expr, _) = treeInfoMacro(args, tableNames, q, queryContext, inConnectBy, isPrior, inDistinctOn)
+                        '{ SqlExpr.Func("ANY", $expr :: Nil) }
                 sqlExpr -> ExprInfo(
                     hasAgg = false,
                     isAgg = false,
@@ -398,9 +431,14 @@ object ExprMacro:
                     nonAggRef = Nil,
                     ungroupedRef = Nil
                 )
-            case Apply(Apply(Ident("all"), q :: Nil), _) =>
-                val expr = q.asExprOf[Query[?, ?]]
-                val sqlExpr = '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.All) }
+            case Apply(Apply(TypeApply(Ident("all"), _), q :: Nil), _) =>
+                val sqlExpr = q.tpe.asType match
+                    case '[Query[?, ?]] =>
+                        val expr = q.asExprOf[Query[?, ?]]
+                        '{ SqlExpr.SubLink($expr.ast, SqlSubLinkType.All) }
+                    case _ =>
+                        val (expr, _) = treeInfoMacro(args, tableNames, q, queryContext, inConnectBy, isPrior, inDistinctOn)
+                        '{ SqlExpr.Func("ANY", $expr :: Nil) }
                 sqlExpr -> ExprInfo(
                     hasAgg = false,
                     isAgg = false,
@@ -457,6 +495,8 @@ object ExprMacro:
             case '[Option[String]] => true
             case _ => false
 
+        val opNameExpr = Expr(op)
+
         val operatorExpr = op match
             case "==" => '{ SqlBinaryOperator.Equal }
             case "!=" => '{ SqlBinaryOperator.NotEqual }
@@ -477,9 +517,7 @@ object ExprMacro:
             case "contains" => '{ SqlBinaryOperator.Like }
             case "startsWith" => '{ SqlBinaryOperator.Like }
             case "endsWith" => '{ SqlBinaryOperator.Like }
-            case "in" => '{ SqlBinaryOperator.In }
-
-        val opNameExpr = Expr(op)
+            case n => '{ SqlBinaryOperator.Custom($opNameExpr) }
 
         val sqlExpr = if op == "+" && (leftHasString || rightHasString) then
             '{
@@ -522,8 +560,6 @@ object ExprMacro:
                             SqlBinaryOperator.Like,
                             SqlExpr.Func("CONCAT", SqlExpr.StringLiteral("%") :: r :: Nil)
                         )
-                    case (l, SqlBinaryOperator.In, SqlExpr.Vector(Nil), _) =>
-                        SqlExpr.BooleanLiteral(false)
                     case (l, o, r, _) =>
                         SqlExpr.Binary(l, o, r)
             }
@@ -569,7 +605,7 @@ object ExprMacro:
                 ($operatorExpr, $expr) match
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.Like, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
-                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Vector(Nil))) =>
+                    case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, SqlExpr.Tuple(Nil))) =>
                         SqlExpr.BooleanLiteral(true)
                     case (SqlUnaryOperator.Not, SqlExpr.Binary(l, SqlBinaryOperator.In, r)) =>
                         SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
@@ -618,6 +654,70 @@ object ExprMacro:
             ungroupedRef = betweenInfo.ungroupedRef ++ startInfo.ungroupedRef ++ endInfo.ungroupedRef
         )
 
+    private[sqala] def createIn(using q: Quotes)(
+        args: List[String],
+        tableNames: Expr[List[String]],
+        term: q.reflect.Term,
+        inTerm: q.reflect.Term,
+        queryContext: Expr[QueryContext],
+        inConnectBy: Boolean,
+        isPrior: Boolean,
+        inDistinctOn: Boolean
+    ): (Expr[SqlExpr], ExprInfo) =
+        val (expr, info) = treeInfoMacro(args, tableNames, term, queryContext, inConnectBy, isPrior, inDistinctOn)
+        val (inExpr, inInfo) = inTerm.tpe.asType match
+            case '[Seq[t]] =>
+                val asSqlExpr = Expr.summon[Merge[t]]
+                val expr = asSqlExpr match
+                    case None => missMatch(term)
+                    case Some(e) =>
+                        val valueExpr = inTerm.asExprOf[Seq[t]]
+                        '{ SqlExpr.Tuple($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
+                val info = ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    columnRef = Nil,
+                    aggRef = Nil,
+                    nonAggRef = Nil,
+                    ungroupedRef = Nil
+                )
+                expr -> info
+            case '[Query[?, ?]] =>
+                val expr = inTerm.asExprOf[Query[?, ?]]
+                val sqlExpr = '{ SqlExpr.SubQuery($expr.ast) }
+                sqlExpr -> ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    isGroup = false,
+                    hasWindow = false,
+                    isConst = false,
+                    columnRef = Nil,
+                    aggRef = Nil,
+                    nonAggRef = Nil,
+                    ungroupedRef = Nil
+                )
+            case _ =>
+                treeInfoMacro(args, tableNames, inTerm, queryContext, inConnectBy, isPrior, inDistinctOn)
+
+        val sqlExpr = '{
+            SqlExpr.Binary($expr, SqlBinaryOperator.In, $inExpr)
+        }
+
+        sqlExpr -> ExprInfo(
+            hasAgg = info.hasAgg || inInfo.hasAgg,
+            isAgg = false,
+            isGroup = false,
+            hasWindow = info.hasWindow || inInfo.hasWindow,
+            isConst = false,
+            columnRef = info.columnRef ++ inInfo.columnRef,
+            aggRef = info.aggRef ++ inInfo.aggRef,
+            nonAggRef = info.nonAggRef ++ inInfo.nonAggRef,
+            ungroupedRef = info.ungroupedRef ++ inInfo.ungroupedRef
+        )
+
     private[sqala] def createTuple(using q: Quotes)(
         args: List[String],
         tableNames: Expr[List[String]],
@@ -632,7 +732,7 @@ object ExprMacro:
         val listExpr = Expr.ofList(exprs.map(_._1))
         val info = exprs.map(_._2)
         val sqlExpr = '{
-            SqlExpr.Vector($listExpr)
+            SqlExpr.Tuple($listExpr)
         }
         sqlExpr -> ExprInfo(
             hasAgg = info.map(_.hasAgg).fold(false)(_ || _),
@@ -1249,9 +1349,9 @@ object ExprMacro:
                     case None => missMatch(term)
                     case Some(e) =>
                         val valueExpr = term.asExprOf[Seq[t]]
-                        '{ SqlExpr.Vector($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
+                        '{ SqlExpr.Array($valueExpr.map(i => $e.asSqlExpr(i)).toList) }
             case '[Unit] =>
-                '{ SqlExpr.Vector(Nil) }
+                '{ SqlExpr.Tuple(Nil) }
             case '[t] =>
                 val asSqlExpr = Expr.summon[AsSqlExpr[t]]
                 asSqlExpr match

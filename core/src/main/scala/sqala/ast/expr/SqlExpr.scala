@@ -11,13 +11,14 @@ enum SqlExpr:
     case NumberLiteral(number: Number)
     case BooleanLiteral(boolean: Boolean)
     case TimeLiteral(unit: SqlTimeLiteralUnit, time: String)
-    case Vector(items: List[SqlExpr])
+    case Tuple(items: List[SqlExpr])
+    case Array(items: List[SqlExpr])
     case Unary(expr: SqlExpr, op: SqlUnaryOperator)
     case Binary(left: SqlExpr, op: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
     case Func(
-        name: String, 
-        args: List[SqlExpr], 
+        name: String,
+        args: List[SqlExpr],
         param: Option[SqlParam] = None,
         orderBy: List[SqlOrderBy] = Nil,
         withinGroup: List[SqlOrderBy] = Nil,
