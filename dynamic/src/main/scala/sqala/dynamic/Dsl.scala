@@ -46,5 +46,3 @@ def all(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.All
 def some(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Some))
 
 def exists(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.Exists))
-
-def notExists(query: Query): Expr = Expr(SqlExpr.SubLink(query.ast, SqlSubLinkType.NotExists))

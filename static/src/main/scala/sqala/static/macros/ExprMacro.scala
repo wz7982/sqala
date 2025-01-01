@@ -611,8 +611,6 @@ object ExprMacro:
                         SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
                     case (SqlUnaryOperator.Not, SqlExpr.Between(x, s, e, false)) =>
                         SqlExpr.Between(x, s, e, true)
-                    case (SqlUnaryOperator.Not, SqlExpr.SubLink(q, SqlSubLinkType.Exists)) =>
-                        SqlExpr.SubLink(q, SqlSubLinkType.NotExists)
                     case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(false)) =>
                         SqlExpr.BooleanLiteral(true)
                     case (SqlUnaryOperator.Not, SqlExpr.BooleanLiteral(true)) =>
