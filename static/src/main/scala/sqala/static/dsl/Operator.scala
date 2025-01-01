@@ -56,7 +56,7 @@ extension [X](x: X)
     def in[I <: Tuple](items: I)(using QueryContext, CanIn[X, I]): Boolean =
         compileTimeOnly
 
-    def in[Y, S <: Seq[Y]](items: S)(using QueryContext, CanEqual[X, Y]): Boolean =
+    def in[Y](items: Seq[Y])(using QueryContext, CanEqual[X, Y]): Boolean =
         compileTimeOnly
 
     def in[Y, S <: ResultSize](query: Query[Y, S])(using QueryContext, CanEqual[X, Y]): Boolean =
@@ -125,6 +125,6 @@ extension [X: DateTime](x: X)
     def -(interval: TimeInterval)(using QueryContext): X = compileTimeOnly
 
     @targetName("minus")
-    def -(y: LocalDate | Option[LocalDate] | LocalDateTime | Option[LocalDateTime])(using 
+    def -(y: LocalDate | Option[LocalDate] | LocalDateTime | Option[LocalDateTime])(using
         QueryContext
     ): Option[Interval] = compileTimeOnly
