@@ -181,7 +181,7 @@ class SqlParser extends StandardTokenParsers:
             SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
         } |
         "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u.query, SqlSubLinkType.NotExists)
+            SqlExpr.Unary(SqlExpr.SubLink(u.query, SqlSubLinkType.Exists), SqlUnaryOperator.Not)
         }
 
     def order: Parser[SqlOrderBy] =
