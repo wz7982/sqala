@@ -12,7 +12,7 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValueTuple
 import scala.deriving.Mirror
 
-def queryContext[T](f: QueryContext ?=> T): T =
+def queryContext[T, S <: ResultSize](f: QueryContext ?=> Query[T, S]): Query[T, S] =
     given QueryContext = new QueryContext
     f
 
