@@ -138,6 +138,11 @@ object ExprMacro:
                         )
                         sqlExpr -> info
                     case '[UngroupedTable[_]] =>
+                        if !args.contains(objectName) then
+                            report.error(
+                                s"Subquery uses ungrouped column \"${objectName}.${valName}\" from outer query.", 
+                                term.asExpr
+                            )
                         val metaDataExpr = ident.tpe.asType match
                             case '[UngroupedTable[Option[t]]] => TableMacro.tableMetaDataMacro[t]
                             case '[UngroupedTable[t]] => TableMacro.tableMetaDataMacro[t]
@@ -234,6 +239,11 @@ object ExprMacro:
                         )
                         sqlExpr -> info
                     case '[UngroupedSubQuery[_, _]] =>
+                        if !args.contains(objectName) then
+                            report.error(
+                                s"Subquery uses ungrouped column \"${objectName}.${valName}\" from outer query.", 
+                                term.asExpr
+                            )
                         val objectNameExpr = Expr(objectName)
                         val valueNameExpr = Expr(valName)
                         val tableNameExpr =

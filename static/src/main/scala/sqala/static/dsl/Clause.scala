@@ -12,7 +12,7 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValueTuple
 import scala.deriving.Mirror
 
-def queryContext[T](f: QueryContext ?=> T): T =
+def queryContext[T, S <: ResultSize](f: QueryContext ?=> Query[T, S]): Query[T, S] =
     given QueryContext = new QueryContext
     f
 
@@ -91,7 +91,7 @@ inline def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
 )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
     SelectItem[SubQuery[N, V]],
     QueryContext
-): WithRecursive[NamedTuple[N, V]] =
+): Query[NamedTuple[N, V], ManyRows] =
     WithRecursive(query)(f)
 
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]
