@@ -31,7 +31,7 @@ class GroupByQuery[T](
             ClauseMacro.fetchSortBy(f, false, false, tableNames.prepended(args.head), queryContext)
         GroupByQuery(groups, tableNames, ast.copy(orderBy = ast.orderBy ++ sortBy))
 
-    inline def map[F, M: AsSelectItem](using
+    transparent inline def map[F, M: AsSelectItem](using
         TupledFunction[F, T => M]
     )(inline f: F): ProjectionQuery[M, ManyRows] =
         val args = ClauseMacro.fetchArgNames(f)
