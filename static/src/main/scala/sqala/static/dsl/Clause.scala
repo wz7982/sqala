@@ -91,7 +91,7 @@ inline def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
 )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
     SelectItem[SubQuery[N, V]],
     QueryContext
-): WithRecursive[NamedTuple[N, V]] =
+): Query[NamedTuple[N, V], ManyRows] =
     WithRecursive(query)(f)
 
 inline def delete[T <: Product]: Delete[Table[T]] = Delete[T]

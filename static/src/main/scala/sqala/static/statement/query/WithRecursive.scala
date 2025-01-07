@@ -20,7 +20,7 @@ object WithRecursive:
     )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
         sq: SelectItem[SubQuery[N, V]],
         qc: QueryContext
-    ): WithRecursive[NamedTuple[N, V]] =
+    ): Query[NamedTuple[N, V], ManyRows] =
         val alias = tableCte
         val columns = constValueTuple[N].toList.map(_.asInstanceOf[String])
         val subQuery = SubQuery[N, V](columns)
@@ -49,4 +49,4 @@ object WithRecursive:
                 from = SqlTable.Range(alias, None) :: Nil
             )
         )
-        new WithRecursive(ast)
+        Query(ast)
