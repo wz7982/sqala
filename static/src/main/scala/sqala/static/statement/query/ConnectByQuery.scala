@@ -36,7 +36,7 @@ class ConnectByQuery[T](
             startWithAst
         )
 
-    inline def map[M: AsSelectItem](inline f: Table[T] => M): Query[M, ManyRows] =
+    transparent inline def map[M: AsSelectItem](inline f: Table[T] => M): Query[M, ManyRows] =
         val mapQuery = ClauseMacro.fetchMap(f, true, tableCte :: Nil, mapAst, queryContext)
         val metaData = TableMacro.tableMetaData[T]
         val unionQuery = SqlQuery.Union(startWithAst, SqlUnionType.UnionAll, connectByAst)
