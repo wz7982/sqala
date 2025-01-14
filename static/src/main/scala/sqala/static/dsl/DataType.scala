@@ -1,4 +1,4 @@
-package sqala.static.common
+package sqala.static.dsl
 
 import java.time.{LocalDate, LocalDateTime}
 import scala.annotation.implicitNotFound

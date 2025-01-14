@@ -85,20 +85,12 @@ inline def save[A <: Product](
     val (sql, args) = statementToString(s.ast, t.dialect, true)
     jdbcExec(t.connection, sql, args)
 
-def fetchTo[T](query: Query[?, ?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
+def fetchTo[T](query: Query[?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
     val (sql, args) = queryToString(query.ast, t.dialect, true)
     l(sql, args)
     jdbcQuery(t.connection, sql, args)
     
-def fetch[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
-    fetchTo[r.R](query)
-
-def fetchTo[T](query: WithRecursive[?])(using d: JdbcDecoder[T], t: JdbcTransactionContext, l: Logger): List[T] =
-    val (sql, args) = queryToString(query.ast, t.dialect, true)
-    l(sql, args)
-    jdbcQuery(t.connection, sql, args)
-    
-def fetch[T](query: WithRecursive[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
+def fetch[T](query: Query[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): List[r.R] =
     fetchTo[r.R](query)
 
 def fetch[T <: Record](nativeSql: StaticNativeSql[T])(using t: JdbcTransactionContext, l: Logger): List[T] =
@@ -125,14 +117,14 @@ def fetchToMap[T](nativeSql: (String, Array[Any]))(using d: JdbcDecoder[T], t: J
     l(sql, args)
     jdbcQueryToMap(t.connection, sql, args)
 
-def findTo[T](query: Query[?, ?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] =
+def findTo[T](query: Query[?])(using JdbcDecoder[T], JdbcTransactionContext, Logger): Option[T] =
     fetchTo[T](query.take(1)).headOption
 
-def find[T](query: Query[T, ?])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] =
+def find[T](query: Query[T])(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Option[r.R] =
     findTo[r.R](query)
 
 def pageTo[T](
-    query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using JdbcDecoder[T], JdbcTransactionContext, Logger): Page[T] =
     val data = if pageSize == 0 then Nil
         else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
@@ -143,17 +135,17 @@ def pageTo[T](
     Page(total, count, pageNo, pageSize, data)
 
 def page[T](
-    query: Query[T, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
 )(using r: Result[T], d: JdbcDecoder[r.R], c: JdbcTransactionContext, l: Logger): Page[r.R] =
     pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-def fetchSize[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Long =
+def fetchSize[T](query: Query[T])(using JdbcTransactionContext, Logger): Long =
     val sizeQuery = query.size
     fetch(sizeQuery).head
 
-def fetchExists[T](query: Query[T, ?])(using JdbcTransactionContext, Logger): Boolean =
+def fetchExists[T](query: Query[T])(using JdbcTransactionContext, Logger): Boolean =
     val existsQuery = query.exists
     fetch(existsQuery).head
 
-def showSql[T](query: Query[T, ?])(using t: JdbcTransactionContext): String =
+def showSql[T](query: Query[T])(using t: JdbcTransactionContext): String =
     queryToString(query.ast, t.dialect, true)._1

@@ -3,35 +3,28 @@ package sqala.static.statement.query
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.*
 import sqala.ast.table.SqlTable
-import sqala.printer.Dialect
-import sqala.static.common.*
-import sqala.util.queryToString
+import sqala.static.dsl.tableCte
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.constValueTuple
-
-class WithRecursive[T](val ast: SqlQuery.Cte):
-    def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
-        queryToString(ast, dialect, prepare, indent)
 
 object WithRecursive:
-    inline def apply[N <: Tuple, WN <: Tuple, V <: Tuple](
-        query: Query[NamedTuple[N, V], ?]
-    )(f: Query[NamedTuple[N, V], ?] => Query[NamedTuple[WN, V], ?])(using
-        sq: SelectItem[SubQuery[N, V]],
-        qc: QueryContext
-    ): Query[NamedTuple[N, V], ManyRows] =
-        val alias = tableCte
-        val columns = constValueTuple[N].toList.map(_.asInstanceOf[String])
-        val subQuery = SubQuery[N, V](columns)
-        val selectItems = sq.selectItems(subQuery, alias :: Nil)
+    def apply[N <: Tuple, WN <: Tuple, V <: Tuple](
+        query: Query[NamedTuple[N, V]]
+    )(f: Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using 
+        s: AsSelect[SubQuery[N, V]],
+        sq: AsSubQuery[V]
+    ): Query[NamedTuple[N, V]] =
+        given QueryContext = query.context
+        val aliasName = tableCte
+        val subQuery = SubQuery[N, V](query.queryParam, aliasName)
+        val selectItems = s.selectItems(subQuery, 1)
         val cteQuery = f(query)
 
         def transformTable(table: SqlTable): SqlTable = table match
-            case SqlTable.SubQuery(query.ast, false, a) =>
-                SqlTable.Range(alias, a)
-            case SqlTable.Join(left, joinType, right, condition, _) =>
-                SqlTable.Join(transformTable(left), joinType, transformTable(right), condition, None)
+            case SqlTable.SubQuery(query.ast, false, alias) =>
+                SqlTable.Range(aliasName, alias)
+            case SqlTable.Join(left, joinType, right, condition, alias) =>
+                SqlTable.Join(transformTable(left), joinType, transformTable(right), condition, alias)
             case _ => table
 
         def transformAst(originalAst: SqlQuery): SqlQuery = originalAst match
@@ -42,11 +35,12 @@ object WithRecursive:
             case _ => originalAst
 
         val ast: SqlQuery.Cte = SqlQuery.Cte(
-            SqlWithItem(alias, transformAst(cteQuery.ast), columns) :: Nil,
+            SqlWithItem(aliasName, transformAst(cteQuery.ast), selectItems.map(_.alias.get)) :: Nil,
             true,
             SqlQuery.Select(
                 select = selectItems,
-                from = SqlTable.Range(alias, None) :: Nil
+                from = SqlTable.Range(aliasName, None) :: Nil
             )
         )
-        Query(ast)
+
+        Query(subQuery.__items__, ast)

@@ -1,3 +1,5 @@
 package sqala.static.statement.dml
 
-class UpdatePair
+import sqala.ast.expr.SqlExpr
+
+case class UpdatePair(columnName: String, updateExpr: SqlExpr)

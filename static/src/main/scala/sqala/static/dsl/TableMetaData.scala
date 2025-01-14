@@ -1,4 +1,4 @@
-package sqala.static.common
+package sqala.static.dsl
 
 case class TableMetaData(
     tableName: String,
