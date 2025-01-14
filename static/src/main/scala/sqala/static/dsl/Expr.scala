@@ -1,176 +1,499 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.*
-import sqala.static.common.*
+import sqala.ast.expr.SqlBinaryOperator.*
+import sqala.ast.expr.SqlUnaryOperator.*
+import sqala.ast.order.SqlOrderByNullsOption.{First, Last}
+import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
+import sqala.ast.order.{SqlOrderByNullsOption, SqlOrderByOption}
+import sqala.ast.param.SqlParam
+import sqala.ast.statement.SqlQuery
+import sqala.static.statement.dml.UpdatePair
 import sqala.static.statement.query.Query
-import sqala.static.statement.dml.*
 
-import java.time.{LocalDate, LocalDateTime}
-import scala.NamedTuple.NamedTuple
+import java.time.LocalDateTime
+import scala.annotation.targetName
+import scala.compiletime.ops.boolean.*
 
-export sqala.printer.{
-    DB2Dialect,
-    H2Dialect,
-    MssqlDialect,
-    MysqlDialect,
-    OracleDialect,
-    PostgresqlDialect,
-    SqliteDialect
-}
+enum Expr[T]:
+    case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
 
-export sqala.static.annotation.{
-    autoInc,
-    column,
-    primaryKey,
-    sqlAgg,
-    sqlBinaryOperator,
-    sqlFunction,
-    sqlFunctionTable,
-    sqlWindow,
-    table
-}
+    case Column[T](tableName: String, columnName: String) extends Expr[T]
 
-export sqala.static.common.compileTimeOnly
+    case Binary[T](left: Expr[?], op: SqlBinaryOperator, right: Expr[?]) extends Expr[T]
 
-export sqala.static.common.{
-    CustomField,
-    QueryContext,
-    Sort,
-    Table,
-    Validate
-}
+    case Unary[T](expr: Expr[?], op: SqlUnaryOperator) extends Expr[T]
 
-def exists(query: Query[?, ?])(using QueryContext): Boolean = compileTimeOnly
+    case SubQuery[T](query: SqlQuery) extends Expr[T]
 
-def all[T](query: Query[T, ?])(using QueryContext): SubLink[T] = compileTimeOnly
+    case Func[T](
+        name: String,
+        args: List[Expr[?]],
+        distinct: Boolean = false,
+        sortBy: List[Sort[?]] = Nil,
+        withinGroup: List[Sort[?]] = Nil,
+        filter: Option[Expr[?]] = None
+    ) extends Expr[T]
 
-def all[T](list: Seq[T])(using QueryContext): SubLink[T] = compileTimeOnly
+    case Case[T](
+        branches: List[(Expr[?], Expr[?])],
+        default: Expr[?]
+    ) extends Expr[T]
 
-def any[T](query: Query[T, ?])(using QueryContext): SubLink[T] = compileTimeOnly
+    case Tuple[T](items: List[Expr[?]]) extends Expr[T]
 
-def any[T](list: Seq[T])(using QueryContext): SubLink[T] = compileTimeOnly
+    case Array[T](items: List[Expr[?]]) extends Expr[T]
 
-class Window[T]
+    case In(expr: Expr[?], inExpr: Expr[?], not: Boolean) extends Expr[Boolean]
 
-type OverResult[T] = T match
-    case Window[t] => t
-    case _ => T
+    case Between(
+        expr: Expr[?],
+        start: Expr[?],
+        end: Expr[?],
+        not: Boolean
+    ) extends Expr[Boolean]
 
-extension [X](x: X)
-    def asc(using QueryContext): Sort[X] = compileTimeOnly
+    case Window[T](
+        expr: Expr[?],
+        partitionBy: List[Expr[?]],
+        sortBy: List[Sort[?]],
+        frame: Option[SqlWindowFrame]
+    ) extends Expr[T]
 
-    def ascNullsFirst(using QueryContext): Sort[X] = compileTimeOnly
+    case SubLink[T](query: SqlQuery, linkType: SqlSubLinkType) extends Expr[T]
 
-    def ascNullsLast(using QueryContext): Sort[X] = compileTimeOnly
+    case Interval[T](value: Double, unit: SqlTimeUnit) extends Expr[T]
 
-    def desc(using QueryContext): Sort[X] = compileTimeOnly
+    case Cast[T](expr: Expr[?], castType: SqlCastType) extends Expr[T]
 
-    def descNullsFirst(using QueryContext): Sort[X] = compileTimeOnly
+    case Extract[T](unit: SqlTimeUnit, expr: Expr[?]) extends Expr[T]
 
-    def descNullsLast(using QueryContext): Sort[X] = compileTimeOnly
+    case Ref[T](expr: SqlExpr) extends Expr[T]
 
-    def as[Y](using QueryContext, Cast[X, Y]): Option[Y] = compileTimeOnly
+    @targetName("eq")
+    def ==[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, Equal, v.asExpr(value))
 
-    def :=[Y](value: Y)(using CanEqual[X, Y]): UpdatePair = compileTimeOnly
+    @targetName("eq")
+    def ==[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
+        Binary(this, Equal, that)
 
-    infix def over(value: OverValue)(using QueryContext): OverResult[X] = compileTimeOnly
+    @targetName("eq")
+    def ==[R](query: Query[R])(using
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, Equal, SubQuery(query.ast))
 
-    infix def over(value: Unit)(using QueryContext): OverResult[X] = compileTimeOnly
+    @targetName("eq")
+    def ==[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, Equal, SubLink(item.query, item.linkType))
 
-def prior[X: AsSqlExpr](x: X)(using QueryContext): X = compileTimeOnly
+    @targetName("ne")
+    def !=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, NotEqual, v.asExpr(value))
 
-case class TimeInterval(n: Double, unit: SqlTimeUnit)
+    @targetName("ne")
+    def !=[R](that: Expr[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, NotEqual, that)
 
-extension (n: Double)
-    def year: TimeInterval = TimeInterval(n, SqlTimeUnit.Year)
+    @targetName("ne")
+    def !=[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, NotEqual, SubQuery(query.ast))
 
-    def month: TimeInterval = TimeInterval(n, SqlTimeUnit.Month)
+    @targetName("ne")
+    def !=[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
-    def week: TimeInterval = TimeInterval(n, SqlTimeUnit.Week)
+    @targetName("gt")
+    def >[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThan, v.asExpr(value))
 
-    def day: TimeInterval = TimeInterval(n, SqlTimeUnit.Day)
+    @targetName("gt")
+    def >[R](that: Expr[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThan, that)
 
-    def hour: TimeInterval = TimeInterval(n, SqlTimeUnit.Hour)
+    @targetName("gt")
+    def >[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThan, SubQuery(query.ast))
 
-    def minute: TimeInterval = TimeInterval(n, SqlTimeUnit.Minute)
+    @targetName("gt")
+    def >[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThan, SubLink(item.query, item.linkType))
 
-    def second: TimeInterval = TimeInterval(n, SqlTimeUnit.Second)
+    @targetName("ge")
+    def >=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, v.asExpr(value))
 
-def interval(value: TimeInterval): TimeInterval = value
+    @targetName("ge")
+    def >=[R](that: Expr[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, that)
 
-class ExtractValue[T]
+    @targetName("ge")
+    def >=[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
-extension [X: DateTime](x: X)
-    def year: ExtractValue[X] = ExtractValue()
+    @targetName("ge")
+    def >=[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
 
-    def month: ExtractValue[X] = ExtractValue()
+    @targetName("lt")
+    def <[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThan, v.asExpr(value))
 
-    def week: ExtractValue[X] = ExtractValue()
+    @targetName("lt")
+    def <[R](that: Expr[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThan, that)
 
-    def day: ExtractValue[X] = ExtractValue()
+    @targetName("lt")
+    def <[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThan, SubQuery(query.ast))
 
-    def hour: ExtractValue[X] = ExtractValue()
+    @targetName("lt")
+    def <[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThan, SubLink(item.query, item.linkType))
 
-    def minute: ExtractValue[X] = ExtractValue()
+    @targetName("le")
+    def <=[R](value: R)(using 
+        v: ComparableValue[R], 
+        c: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThanEqual, v.asExpr(value))
 
-    def second: ExtractValue[X] = ExtractValue()
+    @targetName("le")
+    def <=[R](that: Expr[R])(using CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]): Expr[Boolean] =
+        Binary(this, LessThanEqual, that)
 
-extension [X <: Interval | Option[Interval]](x: X)
-    def year: ExtractValue[X] = ExtractValue()
+    @targetName("le")
+    def <=[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThanEqual, SubQuery(query.ast))
 
-    def month: ExtractValue[X] = ExtractValue()
+    @targetName("le")
+    def <=[R](item: SubLinkItem[R])(using 
+        CompareOperation[Unwrap[T, Option], 
+        Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
-    def week: ExtractValue[X] = ExtractValue()
+    def in[R](list: Seq[R])(using
+        a: ComparableValue[R],
+        o: CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        In(this, Tuple(list.toList.map(a.asExpr(_))), false)
 
-    def day: ExtractValue[X] = ExtractValue()
+    def in[R <: scala.Tuple](exprs: R)(using
+        m: MergeIn[T, R]
+    ): Expr[Boolean] =
+        In(this, m.asExpr(exprs), false)
 
-    def hour: ExtractValue[X] = ExtractValue()
+    def in[R](query: Query[R])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+    ): Expr[Boolean] =
+        In(this, SubQuery(query.ast), false)
 
-    def minute: ExtractValue[X] = ExtractValue()
+    def between[S, E](start: S, end: E)(using
+        as: ComparableValue[S],
+        ae: ComparableValue[E],
+        cs: CompareOperation[Unwrap[T, Option], Unwrap[S, Option]],
+        ce: CompareOperation[Unwrap[T, Option], Unwrap[E, Option]]
+    ): Expr[Boolean] =
+        Between(this, as.asExpr(start), ae.asExpr(end), false)
 
-    def second: ExtractValue[X] = ExtractValue()
+    def between[S, E](start: Expr[S], end: Expr[E])(using
+        CompareOperation[Unwrap[T, Option], Unwrap[S, Option]],
+        CompareOperation[Unwrap[T, Option], Unwrap[E, Option]]
+    ): Expr[Boolean] =
+        Between(this, start, end, false)
 
-def extract[T: DateTime](value: ExtractValue[T])(using QueryContext): Option[BigDecimal] =
-    compileTimeOnly
+    @targetName("plus")
+    def +[R: Number](value: R)(using
+        n: Number[T],
+        a: AsSqlExpr[R],
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Plus, Literal(value, a))
 
-def extract[T <: Interval | Option[Interval]](value: ExtractValue[T])(using QueryContext): Option[BigDecimal] =
-    compileTimeOnly
+    @targetName("plus")
+    def +[R: Number](that: Expr[R])(using
+        n: Number[T],
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Plus, that)
 
-extension (s: StringContext)
-    def timestamp()(using QueryContext): LocalDateTime = compileTimeOnly
+    @targetName("plus")
+    def +(interval: TimeInterval)(using 
+        d: DateTime[T],
+        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
+    ): Expr[r.R] =
+        Binary(this, Plus, Interval(interval.value, interval.unit))
 
-    def date()(using QueryContext): LocalDate = compileTimeOnly
+    @targetName("minus")
+    def -[R](value: R)(using
+        a: AsSqlExpr[R],
+        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Minus, Literal(value, a))
 
-def partitionBy[P: AsExpr](value: P)(using QueryContext): OverValue =
-    compileTimeOnly
+    @targetName("minus")
+    def -[R](that: Expr[R])(using
+        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Minus, that)
 
-def sortBy[S: AsSort](value: S)(using QueryContext): OverValue =
-    compileTimeOnly
+    @targetName("minus")
+    def -(interval: TimeInterval)(using 
+        d: DateTime[T],
+        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
+    ): Expr[r.R] =
+        Binary(this, Minus, Interval(interval.value, interval.unit))
 
-def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
+    @targetName("times")
+    def *[R: Number](value: R)(using
+        n: Number[T],
+        a: AsSqlExpr[R],
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Times, Literal(value, a))
 
-def unboundedPreceding: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedPreceding
+    @targetName("times")
+    def *[R: Number](that: Expr[R])(using
+        n: Number[T],
+        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    ): Expr[r.R] =
+        Binary(this, Times, that)
 
-def unboundedFollowing: SqlWindowFrameOption = SqlWindowFrameOption.UnboundedFollowing
+    @targetName("div")
+    def /[R: Number](value: R)(using
+        n: Number[T],
+        a: AsSqlExpr[R]
+    ): Expr[Option[BigDecimal]] =
+        Binary(this, Div, Literal(value, a))
 
-extension (n: Int)
-    def preceding: SqlWindowFrameOption = SqlWindowFrameOption.Preceding(n)
+    @targetName("div")
+    def /[R: Number](that: Expr[R])(using
+        Number[T]
+    ): Expr[Option[BigDecimal]] =
+        Binary(this, Div, that)
 
-    def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
+    @targetName("mod")
+    def %[R: Number](value: R)(using
+        n: Number[T],
+        a: AsSqlExpr[R]
+    ): Expr[Option[BigDecimal]] =
+        Binary(this, Mod, Literal(value, a))
 
-class OverValue:
-    infix def sortBy[S: AsSort](value: S)(using QueryContext): OverValue =
-        compileTimeOnly
+    @targetName("mod")
+    def %[R: Number](that: Expr[R])(using
+        Number[T]
+    ): Expr[Option[BigDecimal]] =
+        Binary(this, Mod, that)
 
-    infix def rowsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
-        compileTimeOnly
+    @targetName("positive")
+    def unary_+(using Number[T]): Expr[T] = Unary(this, Positive)
 
-    infix def rangeBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
-        compileTimeOnly
+    @targetName("negative")
+    def unary_-(using Number[T]): Expr[T] = Unary(this, Negative)
 
-    infix def groupsBetween(s: SqlWindowFrameOption, e: SqlWindowFrameOption)(using QueryContext): OverValue =
-        compileTimeOnly
+    @targetName("and")
+    def &&(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
+        Binary(this, And, that)
 
-extension [X: AsSqlExpr](x: X)
-    def within[N <: Tuple, V <: Tuple](group: NamedTuple[N, V])(using QueryContext): PivotPair[X, N, V] =
-        compileTimeOnly
+    @targetName("or")
+    def ||(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
+        Binary(this, Or, that)
+
+    @targetName("not")
+    def unary_!(using T =:= Boolean): Expr[Boolean] =
+        Unary(this, Not)
+
+    def like(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
+        Binary(this, Like, Literal(value, summon[AsSqlExpr[String]]))
+
+    def like[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
+        Binary(this, Like, that)
+
+    def contains(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
+        like("%" + value + "%")
+
+    def startWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
+        like(value + "%")
+
+    def endWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
+        like("%" + value)
+
+    @targetName("json")
+    def ->(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
+        Binary(this, Json, Literal(n, summon[AsSqlExpr[Int]]))
+
+    @targetName("json")
+    def ->(n: String)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
+        Binary(this, Json, Literal(n, summon[AsSqlExpr[String]]))
+
+    @targetName("jsonText")
+    def ->>(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
+        Binary(this, JsonText, Literal(n, summon[AsSqlExpr[Int]]))
+
+    @targetName("jsonText")
+    def ->>(n: String)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
+        Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
+
+    def asc: Sort[T] = Sort(this, Asc, None)
+
+    def desc: Sort[T] = Sort(this, Desc, None)
+
+    def ascNullsFirst: Sort[T] = Sort(this, Asc, Some(First))
+
+    def ascNullsLast: Sort[T] = Sort(this, Asc, Some(Last))
+
+    def descNullsFirst: Sort[T] = Sort(this, Desc, Some(First))
+
+    def descNullsLast: Sort[T] = Sort(this, Desc, Some(Last))
+
+    infix def over(overValue: OverValue): Expr[T] =
+        Expr.Window(this, overValue.partitionBy, overValue.sortBy, overValue.frame)
+
+    infix def over(overValue: Unit): Expr[T] =
+        Expr.Window(this, Nil, Nil, None)
+
+    @targetName("to")
+    def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = this match
+        case Column(_, columnName) =>
+            UpdatePair(columnName, Literal(value, a).asSqlExpr)
+        case _ => throw MatchError(this)
+
+    @targetName("to")
+    def :=[R](updateExpr: Expr[R])(using
+        CompareOperation[T, R]
+    ): UpdatePair = this match
+        case Column(_, columnName) =>
+            UpdatePair(columnName, updateExpr.asSqlExpr)
+        case _ => throw MatchError(this)
+
+object Expr:
+    extension [T](expr: Expr[T])
+        private[sqala] def asSqlExpr: SqlExpr = expr match
+            case Literal(v, a) => a.asSqlExpr(v)
+            case Column(tableName, columnName) =>
+                SqlExpr.Column(Some(tableName), columnName)
+            case Binary(left, SqlBinaryOperator.Equal, Literal(None, _)) =>
+                SqlExpr.NullTest(left.asSqlExpr, false)
+            case Binary(left, SqlBinaryOperator.NotEqual, Literal(None, _)) =>
+                SqlExpr.NullTest(left.asSqlExpr, true)
+            case Binary(left, SqlBinaryOperator.NotEqual, right@Literal(Some(v), _)) =>
+                SqlExpr.Binary(
+                    SqlExpr.Binary(left.asSqlExpr, SqlBinaryOperator.NotEqual, right.asSqlExpr),
+                    SqlBinaryOperator.Or,
+                    SqlExpr.NullTest(left.asSqlExpr, false)
+                )
+            case Binary(left, op, right) =>
+                SqlExpr.Binary(left.asSqlExpr, op, right.asSqlExpr)
+            case Unary(expr, SqlUnaryOperator.Not) =>
+                val sqlExpr = expr.asSqlExpr
+                sqlExpr match
+                    case SqlExpr.BooleanLiteral(boolean) => 
+                        SqlExpr.BooleanLiteral(!boolean)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.Like, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.Like, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.In, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.NotIn, right)
+                    case SqlExpr.Binary(left, SqlBinaryOperator.NotIn, right) =>
+                        SqlExpr.Binary(left, SqlBinaryOperator.In, right)
+                    case SqlExpr.NullTest(query, n) =>
+                        SqlExpr.NullTest(query, !n)
+                    case SqlExpr.Between(expr, s, e, n) =>
+                        SqlExpr.Between(expr, s, e, !n)
+                    case _ => SqlExpr.Unary(sqlExpr, SqlUnaryOperator.Not)
+            case Unary(expr, op) =>
+                SqlExpr.Unary(expr.asSqlExpr, op)
+            case SubQuery(query) => SqlExpr.SubQuery(query)
+            case Func(name, args, distinct, sortBy, withinGroup, filter) =>
+                SqlExpr.Func(
+                    name,
+                    args.map(_.asSqlExpr),
+                    if distinct then Some(SqlParam.Distinct) else None,
+                    sortBy.map(_.asSqlOrderBy),
+                    withinGroup.map(_.asSqlOrderBy),
+                    filter.map(_.asSqlExpr)
+                )
+            case Case(branches, default) =>
+                SqlExpr.Case(branches.map((x, y) => SqlCase(x.asSqlExpr, y.asSqlExpr)), default.asSqlExpr)
+            case Tuple(items) =>
+                SqlExpr.Tuple(items.map(_.asSqlExpr))
+            case Array(items) =>
+                SqlExpr.Array(items.map(_.asSqlExpr))
+            case In(_, Tuple(Nil), false) => SqlExpr.BooleanLiteral(false)
+            case In(_, Tuple(Nil), true) => SqlExpr.BooleanLiteral(true)
+            case In(expr, inExpr, false) =>
+                SqlExpr.Binary(expr.asSqlExpr, SqlBinaryOperator.In, inExpr.asSqlExpr)
+            case In(expr, inExpr, true) =>
+                SqlExpr.Binary(expr.asSqlExpr, SqlBinaryOperator.NotIn, inExpr.asSqlExpr)
+            case Between(expr, start, end, not) =>
+                SqlExpr.Between(expr.asSqlExpr, start.asSqlExpr, end.asSqlExpr, not)
+            case Window(expr, partitionBy, sortBy, frame) =>
+                SqlExpr.Window(expr.asSqlExpr, partitionBy.map(_.asSqlExpr), sortBy.map(_.asSqlOrderBy), frame)
+            case SubLink(query, linkType) =>
+                SqlExpr.SubLink(query, linkType)
+            case Interval(value, unit) =>
+                SqlExpr.Interval(value, unit)
+            case Cast(expr, castType) =>
+                SqlExpr.Cast(expr.asSqlExpr, castType)
+            case Extract(unit, expr) =>
+                SqlExpr.Extract(unit, expr.asSqlExpr)
+            case Ref(expr) => expr
+
+    given valueAsExpr[T](using a: AsSqlExpr[T]): Conversion[T, Expr[T]] = 
+        Expr.Literal(_, a)

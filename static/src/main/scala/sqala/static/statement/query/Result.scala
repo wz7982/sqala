@@ -1,6 +1,6 @@
 package sqala.static.statement.query
 
-import sqala.static.common.*
+import sqala.static.dsl.*
 
 import scala.NamedTuple.NamedTuple
 
@@ -11,22 +11,19 @@ object Result:
     type Aux[T, O] = Result[T]:
         type R = O
 
-    given table[T]: Aux[Table[T], T] = new Result[Table[T]]:
+    given tableResult[T]: Aux[Table[T], T] = new Result[Table[T]]:
         type R = T
 
-    given expr[T: AsSqlExpr]: Aux[T, T] = new Result[T]:
+    given exprResult[T]: Aux[Expr[T], T] = new Result[Expr[T]]:
         type R = T
 
-    given scalarQuery[T: AsSqlExpr]: Aux[Query[T, OneRow], T] = new Result[Query[T, OneRow]]:
-        type R = T
-
-    given subQuery[N <: Tuple, V <: Tuple](using
+    given subQueryResult[N <: Tuple, V <: Tuple](using
         r: Result[NamedTuple[N, V]]
     ): Aux[SubQuery[N, V], r.R] =
         new Result[SubQuery[N, V]]:
             type R = r.R
 
-    given tuple[H, T <: Tuple](using
+    given tupleResult[H, T <: Tuple](using
         hr: Result[H],
         tr: Result[T],
         tt: ToTuple[tr.R]
@@ -34,11 +31,11 @@ object Result:
         new Result[H *: T]:
             type R = hr.R *: tt.R
 
-    given tuple1[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
+    given tuple1Result[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
-    given namedTuple[N <: Tuple, V <: Tuple](using
+    given namedTupleResult[N <: Tuple, V <: Tuple](using
         r: Result[V],
         tt: ToTuple[r.R]
     ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =

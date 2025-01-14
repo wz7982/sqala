@@ -1,7 +1,6 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlCastType
-import sqala.static.common.*
 
 import java.time.LocalDateTime
 import scala.annotation.implicitNotFound

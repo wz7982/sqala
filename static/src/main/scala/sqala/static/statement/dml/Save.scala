@@ -3,12 +3,12 @@ package sqala.static.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.common.AsSqlExpr
+import sqala.static.dsl.AsSqlExpr
 import sqala.static.macros.TableMacro
 
 import scala.deriving.Mirror
 
-class Save(override val ast: SqlStatement.Upsert) extends Dml(ast)
+class Save(val ast: SqlStatement.Upsert)
 
 object Save:
     inline def apply[T <: Product](entity: T)(using m: Mirror.ProductOf[T]): Save =

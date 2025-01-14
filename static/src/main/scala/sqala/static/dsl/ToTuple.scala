@@ -1,4 +1,4 @@
-package sqala.static.common
+package sqala.static.dsl
 
 import scala.util.NotGiven
 

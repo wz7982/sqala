@@ -1,6 +1,6 @@
 package sqala.static.macros
 
-import sqala.static.common.TableMetaData
+import sqala.static.dsl.*
 import sqala.util.camelToSnake
 
 import scala.collection.mutable.ListBuffer
