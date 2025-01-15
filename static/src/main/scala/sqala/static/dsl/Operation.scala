@@ -105,10 +105,6 @@ object ResultOperation:
         new ResultOperation[A, A, true]:
             type R = Option[A]
 
-    given nothingResult[N <: Boolean]: Aux[Nothing, Nothing, N, None.type] =
-        new ResultOperation[Nothing, Nothing, N]:
-            type R = None.type
-
     given leftNothingResult[A, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[Nothing, A, N, Option[A]] =
         new ResultOperation[Nothing, A, N]:
             type R = Option[A]
