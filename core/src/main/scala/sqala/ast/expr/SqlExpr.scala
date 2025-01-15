@@ -8,7 +8,7 @@ enum SqlExpr:
     case Column(tableName: Option[String], columnName: String)
     case Null
     case StringLiteral(string: String)
-    case NumberLiteral(number: Number)
+    case NumberLiteral[N: Numeric](number: N)
     case BooleanLiteral(boolean: Boolean)
     case TimeLiteral(unit: SqlTimeLiteralUnit, time: String)
     case Tuple(items: List[SqlExpr])

@@ -199,7 +199,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case c: SqlExpr.Column => printColumnExpr(c)
         case SqlExpr.Null => printNullExpr()
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
-        case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
+        case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
         case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
         case v: SqlExpr.Tuple => printTupleExpr(v)
@@ -231,7 +231,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         else
             sqlBuilder.append(s"'${expr.string}'")
 
-    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
+    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         if prepare then
             sqlBuilder.append("?")
             args.append(expr.number)

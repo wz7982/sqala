@@ -31,7 +31,7 @@ sealed class Query[T](
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n)))
-            .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
+            .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
         val newAst = ast match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case u: SqlQuery.Union => u.copy(limit = sqlLimit)
