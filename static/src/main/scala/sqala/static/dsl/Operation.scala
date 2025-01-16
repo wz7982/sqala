@@ -81,6 +81,14 @@ object MinusOperation:
     type Aux[A, B, N <: Boolean, O] = MinusOperation[A, B, N]:
         type R = O
 
+    given leftNothingResult[A: Numeric, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[Nothing, A, N, Option[A]] =
+        new MinusOperation[Nothing, A, N]:
+            type R = Option[A]
+
+    given rightNothingResult[A: Numeric, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[A, Nothing, N, Option[A]] =
+        new MinusOperation[A, Nothing, N]:
+            type R = Option[A]
+
     given numberMinusNumber[A: Number, B: Number, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
         new MinusOperation[A, B, N]:
             type R = NumericResult[A, B, N]
