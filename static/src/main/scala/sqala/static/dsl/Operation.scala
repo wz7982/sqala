@@ -133,10 +133,26 @@ object ResultOperation:
         new ResultOperation[A, B, false]:
             type R = LocalDateTime
 
-    given optionTimeResult[A: DateTime, B: DateTime](using
+    given timeOptionResult[A: DateTime, B: DateTime](using
         NotGiven[A =:= B]
     ): Aux[A, B, true, Option[LocalDateTime]] =
         new ResultOperation[A, B, true]:
+            type R = Option[LocalDateTime]
+
+    given timeAndStringResult[A: DateTime]: Aux[A, String, false, LocalDateTime] =
+        new ResultOperation[A, String, false]:
+            type R = LocalDateTime
+
+    given timeAndStringOptionResult[A: DateTime]: Aux[A, String, true, Option[LocalDateTime]] =
+        new ResultOperation[A, String, true]:
+            type R = Option[LocalDateTime]
+
+    given stringAndTimeResult[A: DateTime]: Aux[String, A, false, LocalDateTime] =
+        new ResultOperation[String, A, false]:
+            type R = LocalDateTime
+
+    given stringAndTimeOptionResult[A: DateTime]: Aux[String, A, true, Option[LocalDateTime]] =
+        new ResultOperation[String, A, true]:
             type R = Option[LocalDateTime]
 
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
