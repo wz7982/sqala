@@ -61,7 +61,7 @@ object AsSelect:
                 tmpCursor += 1
             items.toList
 
-    given scalarQuery[T]: Aux[Query[Expr[T]], Expr[T]] = new AsSelect[Query[Expr[T]]]:
+    given scalarQuery[T: AsSqlExpr]: Aux[Query[Expr[T]], Expr[T]] = new AsSelect[Query[Expr[T]]]:
         type R = Expr[T]
 
         def transform(x: Query[Expr[T]]): R = x.asExpr
