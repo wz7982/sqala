@@ -299,7 +299,7 @@ class JoinQuery[T](
             j => tt.toTuple(queryParam) :* j
         )
 
-    inline def joinQuery[N <: Tuple, V <: Tuple](
+    def joinQuery[N <: Tuple, V <: Tuple](
         query: QueryContext ?=> Query[NamedTuple[N, V]]
     )(using
         tt: ToTuple[T],
@@ -314,7 +314,7 @@ class JoinQuery[T](
             v => ts.toTuple(v)
         )
 
-    inline def joinLateral[N <: Tuple, V <: Tuple](
+    def joinLateral[N <: Tuple, V <: Tuple](
         query: QueryContext ?=> T => Query[NamedTuple[N, V]]
     )(using
         tt: ToTuple[T],
@@ -340,7 +340,7 @@ class JoinQuery[T](
             j => tt.toTuple(queryParam) :* o.toOption(j)
         )
 
-    inline def leftJoinQuery[N <: Tuple, V <: Tuple](
+    def leftJoinQuery[N <: Tuple, V <: Tuple](
         query: QueryContext ?=> Query[NamedTuple[N, V]]
     )(using
         o: ToOption[V],
@@ -356,7 +356,7 @@ class JoinQuery[T](
             v => ts.toTuple(o.toOption(v))
         )
 
-    inline def leftJoinLateral[N <: Tuple, V <: Tuple](
+    def leftJoinLateral[N <: Tuple, V <: Tuple](
         query: QueryContext ?=> T => Query[NamedTuple[N, V]]
     )(using
         o: ToOption[V],
@@ -383,7 +383,7 @@ class JoinQuery[T](
             j => tt.toTuple(o.toOption(queryParam)) :* j
         )
 
-    inline def rightJoinQuery[N <: Tuple, V <: Tuple](
+    def rightJoinQuery[N <: Tuple, V <: Tuple](
         query: QueryContext ?=> Query[NamedTuple[N, V]]
     )(using
         o: ToOption[T],

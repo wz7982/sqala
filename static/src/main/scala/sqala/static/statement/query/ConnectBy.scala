@@ -35,7 +35,7 @@ case class ConnectBy[T](
         val sqlOrderBy = s.asSort(sort)
         copy(connectByAst = connectByAst.copy(orderBy = connectByAst.orderBy ++ sqlOrderBy))
 
-    inline def map[M](f: QueryContext ?=> Table[T] => M)(using s: AsSelect[M]): Query[s.R] =
+    def map[M](f: QueryContext ?=> Table[T] => M)(using s: AsSelect[M]): Query[s.R] =
         val mapped = f(table.copy(__aliasName__ = tableCte))
         val sqlSelect = s.selectItems(mapped, 1)
         val metaData = TableMacro.tableMetaData[T]
