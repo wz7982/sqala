@@ -185,7 +185,7 @@ def sortBy(sortValue: Sort[?]*): OverValue =
     OverValue(sortBy = sortValue.toList)
 
 def queryContext[T](v: QueryContext ?=> T): T =
-    given QueryContext = QueryContext(-1)
+    given QueryContext = QueryContext(0)
     v
     
 inline def from[T](using
