@@ -16,3 +16,5 @@ export sqala.static.annotation.{
     primaryKey,
     table
 }
+
+export sqala.static.statement.query.QueryContext
