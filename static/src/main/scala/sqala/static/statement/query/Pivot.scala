@@ -32,7 +32,7 @@ class PivotQuery[T, N <: Tuple, V <: Tuple](
     private[sqala] val aggs: List[SqlExpr.Func],
     private[sqala] val ast: SqlQuery.Select
 )(using val queryContext: QueryContext):
-    inline def `for`[I](f: T => I)(using
+    def `for`[I](f: T => I)(using
         r: PivotResult[I, N, V]
     ): Query[r.R] =
         val forList = r.collect(f(queryParam))
