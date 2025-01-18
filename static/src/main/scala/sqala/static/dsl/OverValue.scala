@@ -10,6 +10,9 @@ case class OverValue(
     infix def sortBy(sortValue: Sort[?]*): OverValue =
         copy(sortBy = sortValue.toList)
 
+    infix def orderBy(sortValue: Sort[?]*): OverValue =
+        copy(sortBy = sortValue.toList)
+
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Rows(start, end)))
 

@@ -184,6 +184,9 @@ def partitionBy(partitionValue: Expr[?]*): OverValue =
 def sortBy(sortValue: Sort[?]*): OverValue =
     OverValue(sortBy = sortValue.toList)
 
+def orderBy(sortValue: Sort[?]*): OverValue =
+    OverValue(sortBy = sortValue.toList)
+
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     v
