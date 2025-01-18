@@ -1,6 +1,7 @@
 package sqala.jdbc
 
-import sqala.static.macros.*
+import sqala.dynamic.dsl.{Query as DynamicQuery}
+import sqala.macros.*
 import sqala.static.statement.dml.*
 import sqala.static.statement.query.*
 import sqala.printer.Dialect
@@ -104,7 +105,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap[T](nativeSql: NativeSql)(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: NativeSql)(using NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
         val NativeSql(sql, args) = nativeSql
         logger(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
@@ -114,8 +115,18 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap[T](nativeSql: (String, Array[Any]))(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: (String, Array[Any]))(using NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
         val (sql, args) = nativeSql
+        logger(sql, args)
+        execute(c => jdbcQueryToMap(c, sql, args))
+
+    def fetchTo[T](query: DynamicQuery)(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[T] =
+        val (sql, args) = queryToString(query.ast, dialect, true)
+        logger(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
+
+    def fetchToMap(query: DynamicQuery)(using NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 

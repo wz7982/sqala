@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.macros.TableMacro
+import sqala.macros.TableMacro
 import sqala.util.statementToString
 
 import scala.compiletime.summonInline
