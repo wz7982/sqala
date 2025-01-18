@@ -61,7 +61,7 @@ class Select(val ast: SqlQuery.Select) extends Query:
         new Select(ast.copy(limit = sqlLimit))
 
     infix def offset(n: Int): Select =
-        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(n))))
+        val sqlLimit = ast.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
         new Select(ast.copy(limit = sqlLimit))
 
     def distinct: Select = new Select(ast.copy(param = Some(SqlParam.Distinct)))
