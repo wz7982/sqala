@@ -21,10 +21,16 @@ class Grouping[T](
         val sqlOrderBy = s.asSort(sort)
         Grouping(queryParam, ast.copy(orderBy = ast.orderBy ++ sqlOrderBy))
 
+    def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): Grouping[T] =
+        sortBy(f)
+
     def map[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         val mapped = f(queryParam)
         val sqlSelect = s.selectItems(mapped, 1)
         Query(s.transform(mapped), ast.copy(select = sqlSelect))
+
+    def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
+        map(f)
 
     def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: T => NamedTuple[N, V]): PivotQuery[T, N, V] =
         val functions = a.asExprs(f(queryParam).toTuple)

@@ -42,6 +42,8 @@ sealed class Query[T](
             case _ => ast
         Query(queryParam, newAst)
 
+    def offset(n: Int): Query[T] = drop(n)
+
     def take(n: Int): Query[T] =
         val limit = ast match
             case s: SqlQuery.Select => s.limit
@@ -61,6 +63,8 @@ sealed class Query[T](
                 SqlQuery.Cte(w, r, u.copy(limit = sqlLimit))
             case _ => ast
         Query(queryParam, newAst)
+
+    def limit(n: Int): Query[T] = take(n)
 
     def distinct: Query[T] =
         val newAst = ast match
@@ -139,10 +143,16 @@ class SortQuery[T](
         val orderBy = s.asSort(sort)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ orderBy))
 
+    def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
+        sortBy(f)
+
     def map[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         val mapped = f(queryParam)
         val sqlSelect = s.selectItems(mapped, 1)
         Query(s.transform(mapped), ast.copy(select = sqlSelect))
+
+    def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
+        map(f)
 
 class SelectQuery[T](
     private[sqala] override val queryParam: T,
@@ -154,16 +164,25 @@ class SelectQuery[T](
         val cond = f(queryParam)
         SelectQuery(queryParam, ast.addWhere(cond.asSqlExpr))
 
+    def where(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
+        filter(f)
+
     def withFilter(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
         filter(f)
     
     def filterIf(test: => Boolean)(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
         if test then filter(f) else this
 
+    def whereIf(test: => Boolean)(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
+        if test then where(f) else this
+
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         val sort = f(queryParam)
         val sqlOrderBy = s.asSort(sort)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ sqlOrderBy))
+
+    def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
+        sortBy(f)
 
     def groupBy[G](f: QueryContext ?=> T => G)(using e: AsExpr[G]): Grouping[T] =
         val group = f(queryParam)
@@ -198,6 +217,9 @@ class SelectQuery[T](
         val mapped = f(queryParam)
         val sqlSelect = s.selectItems(mapped, 1)
         Query(s.transform(mapped), ast.copy(select = sqlSelect))
+
+    def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
+        map(f)
 
     def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: T => NamedTuple[N, V]): PivotQuery[T, N, V] =
         val functions = a.asExprs(f(queryParam).toTuple)
