@@ -58,3 +58,12 @@ class autoInc extends MacroAnnotation:
                 case _ =>
 
         definition :: Nil
+
+@scala.annotation.meta.field
+class sqlFunction extends StaticAnnotation
+
+@scala.annotation.meta.field
+class sqlAgg extends StaticAnnotation
+
+@scala.annotation.meta.field
+class sqlWindow extends StaticAnnotation

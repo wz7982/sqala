@@ -2,7 +2,7 @@ package sqala.macros
 
 import scala.quoted.*
 
-object ClauseMacro:
+private[sqala] object ClauseMacro:
     inline def bindGeneratedPrimaryKey[A](id: Long, entity: A): A =
         ${ bindGeneratedPrimaryKeyMacro[A]('id, 'entity) }
 
