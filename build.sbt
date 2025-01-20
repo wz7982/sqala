@@ -42,10 +42,8 @@ lazy val commonSettings = Seq(
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
-    .aggregate(core, jdbc, dynamic, data, static)
+    .aggregate(core, query, jdbc, data)
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
-lazy val dsl = project.in(file("dsl")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dsl")
-lazy val jdbc = project.in(file("jdbc")).dependsOn(static).settings(commonSettings).settings(name := "sqala-jdbc")
-lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
+lazy val query = project.in(file("query")).dependsOn(core).settings(commonSettings).settings(name := "sqala-query")
+lazy val jdbc = project.in(file("jdbc")).dependsOn(query).settings(commonSettings).settings(name := "sqala-jdbc")
 lazy val data = project.in(file("data")).settings(commonSettings).settings(name := "sqala-data")
-lazy val static = project.in(file("static")).dependsOn(core).settings(commonSettings).settings(name := "sqala-static")
