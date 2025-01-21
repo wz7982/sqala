@@ -222,6 +222,11 @@ class SelectQuery[T](
     def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         map(f)
 
+    def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: T => NamedTuple[N, V]): PivotQuery[T, N, V] =
+        val functions = a.asExprs(f(queryParam).toTuple)
+            .map(e => e.asSqlExpr.asInstanceOf[SqlExpr.Func])
+        PivotQuery[T, N, V](queryParam, functions, ast)
+
 object SelectQuery:
     extension [T](query: SelectQuery[Table[T]])
         def connectBy(f: QueryContext ?=> Table[T] => Expr[Boolean]): ConnectBy[T] =

@@ -46,7 +46,7 @@ object Merge:
             def exprs(x: H *: EmptyTuple): List[Expr[?]] =
                 h.asExpr(x.head) :: Nil
 
-@implicitNotFound("The type ${R} cannot be merged into a SQL expression.")
+@implicitNotFound("Types ${L} and ${R} be cannot compared.")
 trait MergeIn[L, R]:
     def exprs(x: R): List[Expr[?]]
 
@@ -55,7 +55,15 @@ trait MergeIn[L, R]:
         Expr.Tuple(exprList)
 
 object MergeIn:
-    given mergeTuple[L, H, T <: Tuple](using
+    given mergeValue[L, H, T <: Tuple](using
+        t: MergeIn[L, T],
+        a: AsSqlExpr[H],
+        c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
+    ): MergeIn[L, H *: T] with
+        def exprs(x: H *: T): List[Expr[?]] =
+            Expr.Ref(a.asSqlExpr(x.head)) :: t.exprs(x.tail)
+
+    given mergeExpr[L, H, T <: Tuple](using
         t: MergeIn[L, T],
         c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
     ): MergeIn[L, Expr[H] *: T] with
