@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.common.*
-import sqala.macros.TableMacro
+import sqala.macros.*
 import sqala.static.statement.query.*
 import sqala.static.statement.dml.*
 
@@ -26,7 +26,7 @@ def date(s: String): Expr[LocalDate] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
 extension [T: AsSqlExpr](expr: Expr[T])
-    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V]): PivotPair[T, N, V] =
+    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using MergeIn[T, V]): PivotPair[T, N, V] =
         PivotPair(expr, pivot)
 
 private[sqala] val tableCte = "__cte__"
@@ -190,6 +190,11 @@ def orderBy(sortValue: Sort[?]*): OverValue =
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
+    v
+
+inline def analysisContext[T](inline v: QueryContext ?=> T): T =
+    given QueryContext = QueryContext(0)
+    AnalysisClauseMacro.analysis(v)
     v
     
 inline def from[T](using

@@ -6,7 +6,7 @@ import sqala.util.camelToSnake
 import scala.collection.mutable.ListBuffer
 import scala.quoted.{Expr, Quotes, Type}
 
-object TableMacro:
+private[sqala] object TableMacro:
     val annoNameTable = "table"
     val annoNameColumn = "column"
     val annoNamePrimaryKey = "primaryKey"
