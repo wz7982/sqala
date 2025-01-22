@@ -2,10 +2,19 @@ package sqala.macros
 
 import sqala.static.statement.query.Query
 
-import scala.language.experimental.namedTuples
 import scala.quoted.*
+import scala.language.experimental.namedTuples
 
 private[sqala] object AnalysisClauseMacro:
+    class QueryInfo(using val q: Quotes)(
+        val createAtFrom: Boolean, 
+        val groups: List[q.reflect.Term], 
+        val isOneRow: Boolean, 
+        val inGroup: Boolean, 
+        val currentOrders: List[q.reflect.Term],
+        val currentSelect: List[q.reflect.Term]
+    )
+
     inline def analysis[T](inline x: T): Unit =
         ${ analysisMacro[T]('x) }
 
@@ -28,28 +37,32 @@ private[sqala] object AnalysisClauseMacro:
 
     def analysisQueryMacro(using q: Quotes)(
         term: q.reflect.Term,
-        groups: List[String]
-    ): (groups: List[String], isOneRow: Boolean) =
+        groups: List[q.reflect.Term]
+    ): (groups: List[q.reflect.Term], isOneRow: Boolean) =
         import q.reflect.*
 
         val info = analysisQueryClauseMacro(term, groups)
         if !info.createAtFrom then
             report.warning("The query contains multiple query contexts.")
 
-        (groups = info.groups, isOneRow = info.isOneRow)
+        (groups = info.groups.asInstanceOf[List[q.reflect.Term]], isOneRow = info.isOneRow)
 
     def analysisQueryClauseMacro(using q: Quotes)(
         term: q.reflect.Term,
-        groups: List[String]
-    ): (createAtFrom: Boolean, groups: List[String], isOneRow: Boolean, inGroup: Boolean) =
+        groups: List[q.reflect.Term]
+    ): QueryInfo =
         import q.reflect.*
 
+        // TODO whereIf qualify groupBySets pivot join on limit offset connectBy union
+        // TODO join的内联可能有成员方法和父类方法两种情况
+        // TODO join的on
         removeInlined(term) match
             case Apply(Select(query, "filter" | "where"), filter :: Nil) => 
                 val queryInfo = 
                     analysisQueryClauseMacro(query, groups)
                 val (args, body) = analysisLambda(filter)
-                val exprInfo = AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups, false)
+                val exprInfo = AnalysisExprMacro
+                    .treeInfoMacro(body, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
                 if exprInfo.hasAgg then
                     report.warning(
                         "Aggregate functions are not allowed in WHERE/ON.",
@@ -65,7 +78,8 @@ private[sqala] object AnalysisClauseMacro:
                 val queryInfo = 
                     analysisQueryClauseMacro(query, groups)
                 val (args, body) = analysisLambda(filter)
-                val exprInfo = AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups, false)
+                val exprInfo = AnalysisExprMacro
+                    .treeInfoMacro(body, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
                 if exprInfo.hasWindow then
                     report.warning(
                         "Window functions are not allowed in HAVING.",
@@ -77,8 +91,15 @@ private[sqala] object AnalysisClauseMacro:
                         s"Column \"$c\" must appear in the GROUP BY clause or be used in an aggregate function.",
                         body.asExpr
                     )
-                (queryInfo.createAtFrom, queryInfo.groups, false, true)
-            case Apply(Apply(TypeApply(Select(query, "groupBy"), _), group :: Nil), _) =>
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = queryInfo.groups.asInstanceOf[List[q.reflect.Term]], 
+                    isOneRow = false, 
+                    inGroup = true, 
+                    currentOrders = Nil, 
+                    currentSelect = Nil
+                )
+            case Apply(Apply(TypeApply(Select(query, "groupBy" | "groupByCube" | "groupByRollup"), _), group :: Nil), _) =>
                 val queryInfo = 
                     analysisQueryClauseMacro(query, groups)
                 val (args, body) = analysisLambda(group)
@@ -88,10 +109,11 @@ private[sqala] object AnalysisClauseMacro:
                             if n.startsWith("Tuple")
                         =>
                             terms -> 
-                            terms.map(t => AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups, false))
+                            terms.map: t => 
+                                AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
                         case _ =>
                             (body :: Nil) -> 
-                            (AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups, false) :: Nil)
+                            (AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false) :: Nil)
                 val hasAgg = 
                     exprInfoList.map(_.hasAgg).fold(false)(_ || _)
                 val hasWindow =
@@ -113,23 +135,35 @@ private[sqala] object AnalysisClauseMacro:
                         "Value expressions are not allowed in GROUP BY.",
                         body.pos
                     )
-                (queryInfo.createAtFrom, terms.map(_.show) ++ queryInfo.groups, false, true)
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = terms ++ queryInfo.groups.asInstanceOf[List[q.reflect.Term]], 
+                    isOneRow = false, 
+                    inGroup = true, 
+                    currentOrders = Nil, 
+                    currentSelect = Nil
+                )
             case Apply(Apply(TypeApply(Select(query, "map" | "select"), _), map :: Nil), _) =>
                 val queryInfo = 
                     analysisQueryClauseMacro(query, groups)
                 val (args, body) = analysisLambda(map)
-                val exprInfoList =
+                val (terms, exprInfoList) =
                     body match
                         case Apply(TypeApply(Select(Ident(n), "apply"), _), terms) 
                             if n.startsWith("Tuple")
                         =>
-                            terms.map(t => AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups, false))
+                            terms ->
+                            terms.map: t => 
+                                AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
                         case Inlined(Some(Apply(_, Apply(TypeApply(Select(Ident(n), "apply"), _), terms) :: Nil)), _, _)
                             if n.startsWith("Tuple")
                         =>
-                            terms.map(t => AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups, false))
+                            terms ->
+                            terms.map: t => 
+                                AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
                         case _ =>
-                            (AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups, false) :: Nil)
+                            (body :: Nil) ->
+                            (AnalysisExprMacro.treeInfoMacro(body, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false) :: Nil)
                 val hasAgg = 
                     exprInfoList.map(_.hasAgg).fold(false)(_ || _)
                 val ungrouped =
@@ -146,15 +180,95 @@ private[sqala] object AnalysisClauseMacro:
                         s"Column \"$c\" must appear in the GROUP BY clause or be used in an aggregate function.",
                         body.asExpr
                     )
-                (queryInfo.createAtFrom, Nil, hasAgg, false)
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = Nil, 
+                    isOneRow = hasAgg, 
+                    inGroup = false, 
+                    currentOrders = queryInfo.currentOrders.asInstanceOf[List[q.reflect.Term]], 
+                    currentSelect = terms
+                )
+            case Apply(Apply(TypeApply(Select(query, "sortBy" | "orderBy"), _), sort :: Nil), _) =>
+                val queryInfo = 
+                    analysisQueryClauseMacro(query, groups)
+                val (args, body) = analysisLambda(sort)
+                val terms =
+                    body match
+                        case Apply(TypeApply(Select(Ident(n), "apply"), _), terms) 
+                            if n.startsWith("Tuple")
+                        =>
+                            terms
+                        case _ =>
+                            body :: Nil
+                val orders = (queryInfo.currentOrders ++ terms).asInstanceOf[List[q.reflect.Term]]
+                val exprInfoList = orders.map: t => 
+                    AnalysisExprMacro.treeInfoMacro(t, args, queryInfo.groups.asInstanceOf[List[q.reflect.Term]], false)
+                val hasAgg = 
+                    exprInfoList.map(_.hasAgg).fold(false)(_ || _)
+                val hasWindow =
+                    exprInfoList.map(_.hasWindow).fold(false)(_ || _)
+                val hasValue = 
+                    exprInfoList.map(_.isValue).fold(false)(_ || _)
+                val ungrouped =
+                    exprInfoList.flatMap(_.ungroupedPaths).map(_.mkString("."))
+                if !queryInfo.inGroup && hasAgg && ungrouped.nonEmpty then
+                    val c = ungrouped.head
+                    report.warning(
+                        s"Column \"$c\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                        body.asExpr
+                    )
+                if queryInfo.inGroup && ungrouped.nonEmpty then
+                    val c = ungrouped.head
+                    report.warning(
+                        s"Column \"$c\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                        body.asExpr
+                    )
+                if hasWindow then
+                    report.warning(
+                        "Window functions are not allowed in ORDER BY.",
+                        body.pos
+                    )
+                if hasValue then
+                    report.warning(
+                        "Value expressions are not allowed in ORDER BY.",
+                        body.pos
+                    )
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = queryInfo.groups.asInstanceOf[List[q.reflect.Term]], 
+                    isOneRow = false, 
+                    inGroup = queryInfo.inGroup, 
+                    currentOrders = orders.asInstanceOf[List[q.reflect.Term]], 
+                    currentSelect = Nil
+                )
+            case Select(query, "distinct") =>
+                val queryInfo = 
+                    analysisQueryClauseMacro(query, groups)
+                val orderExprs = queryInfo
+                    .currentOrders
+                    .map(o => AnalysisExprMacro.fetchOrderExprMacro(o.asInstanceOf[q.reflect.Term]))
+                    .map(_.show)
+                if !orderExprs.forall(queryInfo.currentSelect.map(_.show).contains) then
+                    report.warning(
+                        "For SELECT DISTINCT, ORDER BY expressions must appear in select list.",
+                        query.pos
+                    )
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = Nil, 
+                    isOneRow = queryInfo.isOneRow, 
+                    inGroup = false, 
+                    currentOrders = Nil, 
+                    currentSelect = Nil
+                )
             case Inlined(Some(Apply(TypeApply(Ident("from"), _), _)), _, _) =>
-                (true, groups, false, false)
+                QueryInfo(true, groups, false, false, Nil, Nil)
             case t =>
                 report.error(s"other$t")
                 t.tpe.asType match
                     case '[Query[_]] =>
-                        (false, groups, false, false)
-                    case _ => (true, groups, false, false)
+                        QueryInfo(false, groups, false, false, Nil, Nil)
+                    case _ => QueryInfo(true, groups, false, false, Nil, Nil)
 
     def analysisLambda(using q: Quotes)(term: q.reflect.Term): (List[String], q.reflect.Term) =
         import q.reflect.*

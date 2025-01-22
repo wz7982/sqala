@@ -39,12 +39,12 @@ private[sqala] object AnalysisExprMacro:
     def treeInfoMacro(using q: Quotes)(
         term: q.reflect.Term,
         currentArgs: List[String],
-        groups: List[String],
+        groups: List[q.reflect.Term],
         inConnectBy: Boolean
     ): ExprInfo =
         import q.reflect.*
 
-        val isGroupExpr = groups.contains(term.show)
+        val isGroupExpr = groups.map(_.show).contains(term.show)
 
         val exprInfo = term match
             // TODO 多级引用q.t.c
@@ -85,12 +85,14 @@ private[sqala] object AnalysisExprMacro:
                 if binaryOperators.contains(op)
             =>
                 binaryInfoMacro(left, op, right, currentArgs, groups, inConnectBy)
-            // TODO asExpr 尤其是子查询
+            case Apply(Apply(TypeApply(Ident("asExpr"), _), t :: Nil), _) =>
+                treeInfoMacro(t, currentArgs, groups, inConnectBy)
+            case Apply(TypeApply(Select(_, "asExpr"), _), t :: Nil) =>
+                treeInfoMacro(t, currentArgs, groups, inConnectBy)
             case _ if
-                term.symbol.annotations.find:
+                term.symbol.annotations.exists:
                     case Apply(Select(New(TypeIdent("sqlAgg")), _), _) => true
                     case _ => false
-                .isDefined
             =>
                 val funcArgsRef = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
@@ -115,10 +117,9 @@ private[sqala] object AnalysisExprMacro:
                     ungroupedPaths = Nil
                 )
             case _ if
-                term.symbol.annotations.find:
+                term.symbol.annotations.exists:
                     case Apply(Select(New(TypeIdent("sqlFunction")), _), _) => true
                     case _ => false
-                .isDefined
             =>
                 val funcArgsRef = term match
                     case Apply(Apply(_, funcArgs), _) => funcArgs
@@ -137,7 +138,103 @@ private[sqala] object AnalysisExprMacro:
                     isGroup = false,
                     ungroupedPaths = argsInfo.flatMap(_.ungroupedPaths)
                 )
-            // TODO 窗口等其他表达式
+            case _ if
+                term.symbol.annotations.exists:
+                    case Apply(Select(New(TypeIdent("sqlWindow")), _), _) => true
+                    case _ => false
+            =>
+                report.warning(
+                    "Window function requires an OVER clause.", 
+                    term.pos
+                )
+                ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    hasWindow = false,
+                    isValue = false,
+                    isGroup = false,
+                    ungroupedPaths = Nil
+                )
+            case Apply(Select(f, "over"), o :: Nil) =>
+                val isAggOrWindow = f.symbol.annotations.exists:
+                    case Apply(Select(New(TypeIdent("sqlWindow" | "sqlAgg")), _), _) => true
+                    case _ => false
+                if !isAggOrWindow then
+                    report.warning(
+                        "OVER specified, but this expression is not a window function nor an aggregate function.",
+                        term.pos
+                    )
+
+                val funcArgsRef = f match
+                    case Apply(Apply(_, funcArgs), _) => funcArgs
+                    case Apply(_, funcArgs) => funcArgs
+                    case _ => Nil
+                val funcArgs = funcArgsRef.flatMap:
+                    case Typed(Repeated(a, _), _) => a
+                    case a => a :: Nil
+                val funcInfo =
+                    funcArgs.map(a => treeInfoMacro(a, currentArgs, groups, inConnectBy))
+
+                def windowParamsInfo(paramTerm: Term): List[ExprInfo] =
+                    paramTerm match
+                        case Typed(Repeated(params, _), _) =>
+                            params.map(t => treeInfoMacro(t, currentArgs, groups, inConnectBy))
+                        case _ => Nil
+
+                def removeFrame(window: Term): Term =
+                    window match
+                        case Apply(Select(t, "rowsBetween" | "rangeBetween" | "groupsBetween"), _) =>
+                            t
+                        case _ => window
+
+                val over = removeFrame(o)
+
+                val windowInfo = over match
+                    case Apply(Ident("partitionBy"), partition :: Nil) =>
+                        windowParamsInfo(partition)
+                    case Apply(Ident("sortBy" | "orderBy"), order :: Nil) =>
+                        windowParamsInfo(order)
+                    case Apply(
+                        Select(Apply(Ident("partitionBy"), partition :: Nil), "sortBy" | "orderBy"),
+                        order :: Nil
+                    ) =>
+                        windowParamsInfo(partition) ++ windowParamsInfo(order)
+                    case _ => Nil
+
+                val info = funcInfo ++ windowInfo
+
+                for i <- info do
+                    if i.hasAgg then
+                        report.warning("Window function calls cannot contain aggregate function calls.", term.pos)
+                    if i.hasWindow then
+                        report.warning("Window function calls cannot be nested.", term.pos)
+                    if i.ungroupedPaths.nonEmpty then
+                        val c = i.ungroupedPaths.head.mkString(".")
+                        report.warning(
+                            s"Column \"$c\" must appear in the GROUP BY clause or be used in an aggregate function.",
+                            term.pos
+                        )
+
+                ExprInfo(
+                    hasAgg = false,
+                    isAgg = false,
+                    hasWindow = true,
+                    isValue = false,
+                    isGroup = false,
+                    ungroupedPaths = info.flatMap(_.ungroupedPaths)
+                )
+            // TODO 其他表达式 还要多分析一个within 还有子查询等
+            case Select(expr, order)
+                if List(
+                    "asc", 
+                    "desc", 
+                    "ascNullsFirst", 
+                    "ascNullsLast", 
+                    "descNullsFirst", 
+                    "descNullsLast"
+                ).contains(order)
+            =>
+                treeInfoMacro(expr, currentArgs, groups, inConnectBy)
             case _ =>
                 term.tpe.widen.asType match
                     case '[t] =>
@@ -170,7 +267,7 @@ private[sqala] object AnalysisExprMacro:
         op: String,
         right: q.reflect.Term,
         currentArgs: List[String],
-        groups: List[String],
+        groups: List[q.reflect.Term],
         inConnectBy: Boolean
     ): ExprInfo =
         if op == "/" || op == "%" then
@@ -185,3 +282,22 @@ private[sqala] object AnalysisExprMacro:
             isGroup = false,
             ungroupedPaths = leftInfo.ungroupedPaths ++ rightInfo.ungroupedPaths
         )
+
+    def fetchOrderExprMacro(using q: Quotes)(
+        term: q.reflect.Term
+    ): q.reflect.Term =
+        import q.reflect.*
+        
+        term match
+            case Select(expr, order)
+                if List(
+                    "asc", 
+                    "desc", 
+                    "ascNullsFirst", 
+                    "ascNullsLast", 
+                    "descNullsFirst", 
+                    "descNullsLast"
+                ).contains(order)
+            =>
+                expr
+            case _ => term
