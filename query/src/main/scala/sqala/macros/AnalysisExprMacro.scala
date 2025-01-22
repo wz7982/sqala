@@ -4,6 +4,7 @@ import sqala.common.AsSqlExpr
 import sqala.static.statement.query.Query
 
 import scala.quoted.*
+import scala.language.experimental.namedTuples
 
 private[sqala] object AnalysisExprMacro:
     case class ExprInfo(
@@ -85,6 +86,12 @@ private[sqala] object AnalysisExprMacro:
                 if binaryOperators.contains(op)
             =>
                 binaryInfoMacro(left, op, right, currentArgs, groups, inConnectBy)
+            case Apply(Select(expr, op), _) if op.startsWith("unary_") =>
+                treeInfoMacro(expr, currentArgs, groups, inConnectBy)
+            case Apply(TypeApply(Ident("prior"), _), expr :: Nil) =>
+                if !inConnectBy then
+                    report.warning("Prior can only be used in CONNECT BY.", term.pos)
+                treeInfoMacro(expr, currentArgs, groups, inConnectBy)
             case Apply(Apply(TypeApply(Ident("asExpr"), _), t :: Nil), _) =>
                 treeInfoMacro(t, currentArgs, groups, inConnectBy)
             case Apply(TypeApply(Select(_, "asExpr"), _), t :: Nil) =>
@@ -223,7 +230,7 @@ private[sqala] object AnalysisExprMacro:
                     isGroup = false,
                     ungroupedPaths = info.flatMap(_.ungroupedPaths)
                 )
-            // TODO 其他表达式 还要多分析一个within 还有子查询等
+            // TODO 其他表达式 还要多分析一个within 还有子查询、元组、grouping、in等，还有any all的几种情况
             case Select(expr, order)
                 if List(
                     "asc", 
@@ -237,6 +244,19 @@ private[sqala] object AnalysisExprMacro:
                 treeInfoMacro(expr, currentArgs, groups, inConnectBy)
             case _ =>
                 term.tpe.widen.asType match
+                    case '[Query[_]] =>
+                        val queryInfo = 
+                            AnalysisClauseMacro.analysisQueryMacro(term, groups)
+                        if !queryInfo.isOneRow then
+                            report.warning("Subquery must be return one row.", term.pos)
+                        ExprInfo(
+                            hasAgg = false,
+                            isAgg = false,
+                            hasWindow = false,
+                            isValue = false,
+                            isGroup = false,
+                            ungroupedPaths = Nil
+                        )
                     case '[t] =>
                         if Expr.summon[AsSqlExpr[t]].isDefined then
                             ExprInfo(
@@ -248,6 +268,7 @@ private[sqala] object AnalysisExprMacro:
                                 ungroupedPaths = Nil
                             )
                         else
+                            report.error(s"$term")
                             ExprInfo(
                                 hasAgg = false,
                                 isAgg = false,

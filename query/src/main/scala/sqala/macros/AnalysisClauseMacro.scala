@@ -53,7 +53,7 @@ private[sqala] object AnalysisClauseMacro:
     ): QueryInfo =
         import q.reflect.*
 
-        // TODO whereIf qualify groupBySets pivot join on limit offset connectBy union
+        // TODO whereIf qualify groupBySets pivot join on limit offset connectBy union fromQuery joinQuery joinLiteral
         // TODO join的内联可能有成员方法和父类方法两种情况
         // TODO join的on
         removeInlined(term) match
@@ -183,7 +183,7 @@ private[sqala] object AnalysisClauseMacro:
                 QueryInfo(
                     createAtFrom = queryInfo.createAtFrom, 
                     groups = Nil, 
-                    isOneRow = hasAgg, 
+                    isOneRow = !queryInfo.inGroup && hasAgg, 
                     inGroup = false, 
                     currentOrders = queryInfo.currentOrders.asInstanceOf[List[q.reflect.Term]], 
                     currentSelect = terms
@@ -257,6 +257,31 @@ private[sqala] object AnalysisClauseMacro:
                     createAtFrom = queryInfo.createAtFrom, 
                     groups = Nil, 
                     isOneRow = queryInfo.isOneRow, 
+                    inGroup = false, 
+                    currentOrders = Nil, 
+                    currentSelect = Nil
+                )
+            case Apply(Select(query, "drop" | "offset"), _) =>
+                val queryInfo = 
+                    analysisQueryClauseMacro(query, groups)
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = Nil, 
+                    isOneRow = queryInfo.isOneRow, 
+                    inGroup = false, 
+                    currentOrders = Nil, 
+                    currentSelect = Nil
+                )
+            case Apply(Select(query, "take" | "limit"), n :: Nil) =>
+                val queryInfo = 
+                    analysisQueryClauseMacro(query, groups)
+                val isOneRow = n match
+                    case Literal(IntConstant(1)) => true
+                    case _ => queryInfo.isOneRow
+                QueryInfo(
+                    createAtFrom = queryInfo.createAtFrom, 
+                    groups = Nil, 
+                    isOneRow = isOneRow, 
                     inGroup = false, 
                     currentOrders = Nil, 
                     currentSelect = Nil
