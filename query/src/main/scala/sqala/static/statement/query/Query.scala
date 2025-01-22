@@ -116,19 +116,6 @@ sealed class Query[T](
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.IntersectAll, query.ast)
 
 object Query:
-    extension [N <: Tuple, V <: Tuple : AsSubQuery](query: Query[NamedTuple[N, V]])
-        def qualify(f: QueryContext ?=> SubQuery[N, V] => Expr[Boolean])(using 
-            s: AsSelect[SubQuery[N, V]]
-        ): Query[NamedTuple[N, V]] =
-            given QueryContext = query.context
-            val innerQuery = SubQuery[N, V](query.queryParam)
-            val cond = f(innerQuery)
-            val ast = SqlQuery.Select(
-                select = s.selectItems(innerQuery, 1),
-                from = SqlTable.SubQuery(query.ast, false, Some(SqlTableAlias(innerQuery.__alias__, Nil))) :: Nil
-            )
-            Query(innerQuery.__items__, ast.addWhere(cond.asSqlExpr))
-
     extension [T](query: Query[Expr[T]])
         def asExpr: Expr[T] =
             Expr.SubQuery(query.ast)
@@ -190,27 +177,30 @@ class SelectQuery[T](
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
         Grouping(queryParam, ast.copy(groupBy = sqlGroupBy.map(g => SqlGroupItem.Singleton(g))))
 
-    def groupByCube[G](f: QueryContext ?=> T => G)(using 
-        e: AsExpr[G],
+    def groupByCube[G](using 
         o: ToOption[T]
+    )(f: QueryContext ?=> o.R => G)(using 
+        e: AsExpr[G]
     ): Grouping[o.R] =
-        val group = f(queryParam)
+        val group = f(o.toOption(queryParam))
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
         Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Cube(sqlGroupBy) :: Nil))
 
-    def groupByRollup[G](f: QueryContext ?=> T => G)(using 
-        e: AsExpr[G],
+    def groupByRollup[G](using 
         o: ToOption[T]
+    )(f: QueryContext ?=> o.R => G)(using 
+        e: AsExpr[G]
     ): Grouping[o.R] =
-        val group = f(queryParam)
+        val group = f(o.toOption(queryParam))
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
         Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Rollup(sqlGroupBy) :: Nil))
 
-    def groupBySets[G](f: QueryContext ?=> T => G)(using 
-        g: GroupingSets[G],
+    def groupBySets[G](using
         o: ToOption[T]
+    )(f: QueryContext ?=> o.R => G)(using 
+        g: GroupingSets[G]
     ): Grouping[o.R] =
-        val group = f(queryParam)
+        val group = f(o.toOption(queryParam))
         val sqlGroupBy = g.asSqlExprs(group)
         Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.GroupingSets(sqlGroupBy) :: Nil))
 
