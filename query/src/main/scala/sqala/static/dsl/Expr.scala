@@ -112,7 +112,8 @@ enum Expr[T]:
 
     @targetName("ne")
     def !=[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubQuery(query.ast))
 
@@ -139,7 +140,8 @@ enum Expr[T]:
 
     @targetName("gt")
     def >[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThan, SubQuery(query.ast))
 
@@ -166,7 +168,8 @@ enum Expr[T]:
 
     @targetName("ge")
     def >=[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
@@ -193,7 +196,8 @@ enum Expr[T]:
 
     @targetName("lt")
     def <[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThan, SubQuery(query.ast))
 
@@ -217,7 +221,8 @@ enum Expr[T]:
 
     @targetName("le")
     def <=[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
+        m: Merge[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThanEqual, SubQuery(query.ast))
 
