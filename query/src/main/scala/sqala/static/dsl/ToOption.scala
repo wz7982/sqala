@@ -33,7 +33,7 @@ object ToOption:
             type R = SubQuery[N, tt.R]
 
             def toOption(x: SubQuery[N, V]): R =
-                new SubQuery( x.__alias__, tt.toTuple(t.toOption(x.__items__)))(using x.context)
+                new SubQuery( x.__alias__, tt.toTuple(t.toOption(x.__items__)))(using x.__context__)
 
     given tupleToOption[H, T <: Tuple](using
         h: ToOption[H],
