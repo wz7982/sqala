@@ -34,11 +34,6 @@ class Grouping[T](
     def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         map(f)
 
-    def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: T => NamedTuple[N, V]): PivotQuery[T, N, V] =
-        val functions = a.asExprs(f(queryParam).toTuple)
-            .map(e => e.asSqlExpr.asInstanceOf[SqlExpr.Func])
-        PivotQuery[T, N, V](queryParam, functions, ast)
-
 class GroupingTable[T](
     private[sqala] val __tableName__ : String,
     private[sqala] val __aliasName__ : String,
