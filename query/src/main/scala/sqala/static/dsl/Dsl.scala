@@ -25,6 +25,10 @@ def timestamp(s: String): Expr[LocalDateTime] =
 def date(s: String): Expr[LocalDate] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
+extension [T: AsSqlExpr](expr: Expr[T])
+    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using MergeIn[T, V]): PivotPair[T, N, V] =
+        PivotPair(expr, pivot)
+
 private[sqala] val tableCte = "__cte__"
 
 private[sqala] val columnPseudoLevel = "__pseudo__level__"
