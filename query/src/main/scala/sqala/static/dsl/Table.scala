@@ -5,7 +5,7 @@ import sqala.common.TableMetaData
 import scala.NamedTuple.*
 import scala.compiletime.constValue
 
-case class Table[T](
+class Table[T](
     private[sqala] val __tableName__ : String,
     private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData

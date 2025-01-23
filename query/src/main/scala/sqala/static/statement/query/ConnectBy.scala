@@ -42,7 +42,7 @@ case class ConnectBy[T](
         sortSiblingsBy(f)
 
     def map[M](f: QueryContext ?=> Table[T] => M)(using s: AsSelect[M]): Query[s.R] =
-        val mapped = f(table.copy(__aliasName__ = tableCte))
+        val mapped = f(Table[T](table.__tableName__, tableCte, table.__metaData__))
         val sqlSelect = s.selectItems(mapped, 1)
         val metaData = TableMacro.tableMetaData[T]
         val unionQuery = SqlQuery.Union(startWithAst, SqlUnionType.UnionAll, connectByAst)

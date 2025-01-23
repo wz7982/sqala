@@ -10,7 +10,7 @@ class SubQuery[N <: Tuple, V <: Tuple](
     private[sqala] val __alias__ : String,
     private[sqala] val __items__ : V
 )(using 
-    private[sqala] val context: QueryContext
+    private[sqala] val __context__ : QueryContext
 ) extends Selectable:
     type Fields = NamedTuple[N, V]
 
@@ -67,7 +67,7 @@ object AsSubQuery:
         def offset(item: SubQuery[N, V]): Int = s.offset(item.__items__)
 
         def asSubQuery(x: SubQuery[N, V], queryAlias: String, cursor: Int): SubQuery[N, V] =
-            SubQuery(s.asSubQuery(x.__items__, queryAlias, cursor))(using s, x.context)
+            SubQuery(s.asSubQuery(x.__items__, queryAlias, cursor))(using s, x.__context__)
 
     given tuple[H, T <: Tuple](using
         h: AsSubQuery[H],

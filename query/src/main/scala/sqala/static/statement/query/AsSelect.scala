@@ -79,7 +79,7 @@ object AsSelect:
         type R = SubQuery[N, t.R]
 
         def transform(x: SubQuery[N, V]): R =
-            new SubQuery(x.__alias__, t.toTuple(s.transform(x.__items__)))(using x.context)
+            new SubQuery(x.__alias__, t.toTuple(s.transform(x.__items__)))(using x.__context__)
 
         def offset(x: SubQuery[N, V]): Int = s.offset(x.__items__)
 

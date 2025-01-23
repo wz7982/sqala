@@ -27,7 +27,7 @@ private def combine(lists: List[(SqlExpr, List[SqlExpr])]): List[SqlExpr] =
             item.flatMap: e =>
                 combine(xs).map(i => SqlExpr.Binary(e, SqlBinaryOperator.And, i))
 
-class PivotQuery[T, N <: Tuple, V <: Tuple](
+class Pivot[T, N <: Tuple, V <: Tuple](
     private[sqala] val queryParam: T,
     private[sqala] val aggs: List[SqlExpr.Func],
     private[sqala] val ast: SqlQuery.Select

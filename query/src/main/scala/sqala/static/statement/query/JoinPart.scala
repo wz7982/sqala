@@ -15,6 +15,3 @@ class JoinPart[T](
         val cond = f(queryParam)
         val newTable = joinTable.copy(condition = Some(SqlJoinCondition.On(cond.asSqlExpr)))
         JoinQuery(queryParam, ast.copy(from = newTable :: Nil))
-
-    def apply(f: QueryContext ?=> T => Expr[Boolean]): JoinQuery[T] =
-        on(f)

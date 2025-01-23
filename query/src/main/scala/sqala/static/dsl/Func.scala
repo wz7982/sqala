@@ -5,7 +5,6 @@ import sqala.metadata.*
 
 import java.time.LocalDateTime
 
-@sqlAgg
 def grouping(items: Expr[?]*): Expr[Int] =
     Expr.Func("GROUPING", items.toList)
 

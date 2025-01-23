@@ -116,19 +116,6 @@ sealed class Query[T](
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.IntersectAll, query.ast)
 
 object Query:
-    extension [N <: Tuple, V <: Tuple : AsSubQuery](query: Query[NamedTuple[N, V]])
-        def qualify(f: QueryContext ?=> SubQuery[N, V] => Expr[Boolean])(using 
-            s: AsSelect[SubQuery[N, V]]
-        ): Query[NamedTuple[N, V]] =
-            given QueryContext = query.context
-            val innerQuery = SubQuery[N, V](query.queryParam)
-            val cond = f(innerQuery)
-            val ast = SqlQuery.Select(
-                select = s.selectItems(innerQuery, 1),
-                from = SqlTable.SubQuery(query.ast, false, Some(SqlTableAlias(innerQuery.__alias__, Nil))) :: Nil
-            )
-            Query(innerQuery.__items__, ast.addWhere(cond.asSqlExpr))
-
     extension [T](query: Query[Expr[T]])
         def asExpr: Expr[T] =
             Expr.SubQuery(query.ast)
@@ -185,34 +172,44 @@ class SelectQuery[T](
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         sortBy(f)
 
-    def groupBy[G](f: QueryContext ?=> T => G)(using e: AsExpr[G]): Grouping[T] =
-        val group = f(queryParam)
+    def groupBy[G](using 
+        tg: ToGrouping[T]
+    )(f: QueryContext ?=> tg.R => G)(using 
+        e: AsExpr[G]
+    ): Grouping[tg.R] =
+        val group = f(tg.toGrouping(queryParam))
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(queryParam, ast.copy(groupBy = sqlGroupBy.map(g => SqlGroupItem.Singleton(g))))
+        Grouping(tg.toGrouping(queryParam), ast.copy(groupBy = sqlGroupBy.map(g => SqlGroupItem.Singleton(g))))
 
-    def groupByCube[G](f: QueryContext ?=> T => G)(using 
-        e: AsExpr[G],
-        o: ToOption[T]
-    ): Grouping[o.R] =
-        val group = f(queryParam)
+    def groupByCube[G](using 
+        o: ToOption[T],
+        tg: ToGrouping[o.R]
+    )(f: QueryContext ?=> tg.R => G)(using 
+        e: AsExpr[G]
+    ): Grouping[tg.R] =
+        val group = f(tg.toGrouping(o.toOption(queryParam)))
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Cube(sqlGroupBy) :: Nil))
+        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.Cube(sqlGroupBy) :: Nil))
 
-    def groupByRollup[G](f: QueryContext ?=> T => G)(using 
-        e: AsExpr[G],
-        o: ToOption[T]
-    ): Grouping[o.R] =
-        val group = f(queryParam)
+    def groupByRollup[G](using 
+        o: ToOption[T],
+        tg: ToGrouping[o.R]
+    )(f: QueryContext ?=> tg.R => G)(using 
+        e: AsExpr[G]
+    ): Grouping[tg.R] =
+        val group = f(tg.toGrouping(o.toOption(queryParam)))
         val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Rollup(sqlGroupBy) :: Nil))
+        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.Rollup(sqlGroupBy) :: Nil))
 
-    def groupBySets[G](f: QueryContext ?=> T => G)(using 
-        g: GroupingSets[G],
-        o: ToOption[T]
-    ): Grouping[o.R] =
-        val group = f(queryParam)
+    def groupBySets[G](using
+        o: ToOption[T],
+        tg: ToGrouping[o.R]
+    )(f: QueryContext ?=> tg.R => G)(using 
+        g: GroupingSets[G]
+    ): Grouping[tg.R] =
+        val group = f(tg.toGrouping(o.toOption(queryParam)))
         val sqlGroupBy = g.asSqlExprs(group)
-        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.GroupingSets(sqlGroupBy) :: Nil))
+        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.GroupingSets(sqlGroupBy) :: Nil))
 
     def map[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         val mapped = f(queryParam)
@@ -222,10 +219,10 @@ class SelectQuery[T](
     def select[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         map(f)
 
-    def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: T => NamedTuple[N, V]): PivotQuery[T, N, V] =
+    def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: QueryContext ?=> T => NamedTuple[N, V]): Pivot[T, N, V] =
         val functions = a.asExprs(f(queryParam).toTuple)
             .map(e => e.asSqlExpr.asInstanceOf[SqlExpr.Func])
-        PivotQuery[T, N, V](queryParam, functions, ast)
+        Pivot[T, N, V](queryParam, functions, ast)
 
 object SelectQuery:
     extension [T](query: SelectQuery[Table[T]])
