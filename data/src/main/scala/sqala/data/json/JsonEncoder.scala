@@ -2,7 +2,7 @@ package sqala.data.json
 
 import sqala.data.util.{fetchNames, fetchTypes}
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, LocalTime}
 import java.time.format.DateTimeFormatter
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.*
@@ -42,7 +42,7 @@ object JsonEncoder:
     given localDateEncoder: JsonEncoder[LocalDate] with
         override inline def encode(x: LocalDate)(using dateFormat: JsonDateFormat): JsonNode =
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-            JsonNode.Str(x.format(formatter))
+            JsonNode.Str(LocalDateTime.of(x, LocalTime.MIN).format(formatter))
 
     given localDateTimeEncoder: JsonEncoder[LocalDateTime] with
         override inline def encode(x: LocalDateTime)(using dateFormat: JsonDateFormat): JsonNode =

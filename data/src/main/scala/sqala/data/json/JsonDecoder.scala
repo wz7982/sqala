@@ -64,7 +64,7 @@ object JsonDecoder:
             node match
                 case JsonNode.Str(string) =>
                     val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-                    LocalDate.parse(string, formatter)
+                    LocalDateTime.parse(string, formatter).toLocalDate()
                 case _ => throw new JsonDecodeException
 
     given localDateTimeDecoder: JsonDecoder[LocalDateTime] with
