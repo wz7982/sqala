@@ -13,11 +13,11 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 
-extension [T: AsSqlExpr](value: T)
-    def asExpr: Expr[T] = Expr.Literal(value, summon[AsSqlExpr[T]])
-
-extension [T <: Tuple](exprs: T)(using m: Merge[T])
+extension [T](exprs: T)(using m: Merge[T])
     def asExpr: Expr[m.R] = m.asExpr(exprs)
+
+given mergeExpr[T](using m: Merge[T]): Conversion[T, Expr[m.R]] =
+    m.asExpr(_)
 
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
