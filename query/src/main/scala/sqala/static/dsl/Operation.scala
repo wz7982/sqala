@@ -10,34 +10,6 @@ import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 import scala.util.NotGiven
 
-@implicitNotFound("The type ${T} cannot be converted to SQL expression.")
-trait ComparableValue[T]:
-    def exprs(x: T): List[Expr[?]]
-
-    def asExpr(x: T): Expr[?] =
-        val exprList = exprs(x)
-        if exprList.size == 1 then exprList.head
-        else Expr.Tuple(exprList)
-
-object ComparableValue:
-    given valueAsExpr[T](using a: AsSqlExpr[T]): ComparableValue[T] with
-        def exprs(x: T): List[Expr[?]] =
-            Expr.Literal(x, a) :: Nil
-
-    given tupleAsExpr[H, T <: Tuple](using 
-        h: AsSqlExpr[H], 
-        t: ComparableValue[T]
-    ): ComparableValue[H *: T] with
-        def exprs(x: H *: T): List[Expr[?]] =
-            val head = Expr.Literal(x.head, h)
-            val tail = t.exprs(x.tail)
-            head :: tail
-
-    given tuple1AsExpr[H](using h: AsSqlExpr[H]): ComparableValue[H *: EmptyTuple] with
-        def exprs(x: H *: EmptyTuple): List[Expr[?]] =
-            val head = Expr.Literal(x.head, h)
-            head :: Nil
-
 @implicitNotFound("Types ${A} and ${B} be cannot compared.")
 trait CompareOperation[A, B]
 

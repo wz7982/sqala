@@ -21,7 +21,14 @@ object Merge:
     type Aux[T, O] = Merge[T]:
         type R = O
 
-    given mergeExpr[T: AsSqlExpr]: Aux[Expr[T], T] =
+    given mergeValue[T: AsSqlExpr as a]: Aux[T, T] =
+        new Merge[T]:
+            type R = T
+
+            def exprs(x: T): List[Expr[?]] = 
+                Expr.Literal(x, a) :: Nil            
+
+    given mergeExpr[T]: Aux[Expr[T], T] =
         new Merge[Expr[T]]:
             type R = T
 
@@ -55,20 +62,20 @@ trait MergeIn[L, R]:
         Expr.Tuple(exprList)
 
 object MergeIn:
-    given mergeValue[L, H, T <: Tuple](using
+    given merge[L, H, T <: Tuple](using
+        m: Merge[H],
         t: MergeIn[L, T],
-        a: AsSqlExpr[H],
-        c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
+        c: CompareOperation[Unwrap[L, Option], Unwrap[m.R, Option]]
     ): MergeIn[L, H *: T] with
         def exprs(x: H *: T): List[Expr[?]] =
-            Expr.Ref(a.asSqlExpr(x.head)) :: t.exprs(x.tail)
+            m.asExpr(x.head) :: t.exprs(x.tail)
 
-    given mergeExpr[L, H, T <: Tuple](using
-        t: MergeIn[L, T],
-        c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
-    ): MergeIn[L, Expr[H] *: T] with
-        def exprs(x: Expr[H] *: T): List[Expr[?]] =
-            x.head :: t.exprs(x.tail)
+    // given mergeExpr[L, H, T <: Tuple](using
+    //     t: MergeIn[L, T],
+    //     c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
+    // ): MergeIn[L, Expr[H] *: T] with
+    //     def exprs(x: Expr[H] *: T): List[Expr[?]] =
+    //         x.head :: t.exprs(x.tail)
 
     given mergeEmptyTuple[L]: MergeIn[L, EmptyTuple] with
         def exprs(x: EmptyTuple): List[Expr[?]] = Nil
