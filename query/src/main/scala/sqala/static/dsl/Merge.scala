@@ -70,12 +70,5 @@ object MergeIn:
         def exprs(x: H *: T): List[Expr[?]] =
             m.asExpr(x.head) :: t.exprs(x.tail)
 
-    // given mergeExpr[L, H, T <: Tuple](using
-    //     t: MergeIn[L, T],
-    //     c: CompareOperation[Unwrap[L, Option], Unwrap[H, Option]]
-    // ): MergeIn[L, Expr[H] *: T] with
-    //     def exprs(x: Expr[H] *: T): List[Expr[?]] =
-    //         x.head :: t.exprs(x.tail)
-
     given mergeEmptyTuple[L]: MergeIn[L, EmptyTuple] with
         def exprs(x: EmptyTuple): List[Expr[?]] = Nil
