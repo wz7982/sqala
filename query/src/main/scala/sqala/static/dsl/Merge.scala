@@ -1,6 +1,7 @@
 package sqala.static.dsl
 
 import sqala.common.AsSqlExpr
+import sqala.static.statement.query.Query
 
 import scala.annotation.implicitNotFound
 
@@ -35,6 +36,13 @@ object Merge:
             def exprs(x: Expr[T]): List[Expr[?]] = 
                 x :: Nil
 
+    given mergeQuery[Q](using m: Merge[Q]): Aux[Query[Q], m.R] =
+        new Merge[Query[Q]]:
+            type R = m.R
+
+            def exprs(x: Query[Q]): List[Expr[?]] =
+                Expr.SubQuery(x.ast) :: Nil
+
     given mergeTuple[H, T <: Tuple](using
         h: Merge[H],
         t: Merge[T],
@@ -59,10 +67,17 @@ trait MergeIn[L, R]:
 
     def asExpr(x: R): Expr[?] =
         val exprList = exprs(x)
-        Expr.Tuple(exprList)
+        if exprList.size == 1 then
+            exprList.head
+        else
+            Expr.Tuple(exprList)
 
 object MergeIn:
-    given merge[L, H, T <: Tuple](using
+    given merge[L, R](using m: Merge[R]): MergeIn[L, R] with
+        def exprs(x: R): List[Expr[?]] =
+            m.asExpr(x) :: Nil
+
+    given mergeTuple[L, H, T <: Tuple](using
         m: Merge[H],
         t: MergeIn[L, T],
         c: CompareOperation[Unwrap[L, Option], Unwrap[m.R, Option]]
