@@ -8,11 +8,22 @@ import java.time.LocalDateTime
 def grouping(items: Expr[?]*): Expr[Int] =
     Expr.Func("GROUPING", items.toList)
 
+class AggStar
+
+def * : AggStar = AggStar()
+
 @sqlAgg
 def count(): Expr[Long] = Expr.Func("COUNT", Nil)
 
 @sqlAgg
-def count[T](expr: Expr[T], distinct: Boolean = false): Expr[Long] =
+def count(stat: AggStar): Expr[Long] = Expr.Func("COUNT", Nil)
+
+@sqlAgg
+def count[T](expr: Expr[T]): Expr[Long] =
+    Expr.Func("COUNT", expr :: Nil, false)
+
+@sqlAgg
+def count[T](expr: Expr[T], distinct: Boolean): Expr[Long] =
     Expr.Func("COUNT", expr :: Nil, distinct)
 
 @sqlAgg
@@ -68,18 +79,44 @@ def rowNumber(): Expr[Long] = Expr.Func("ROW_NUMBER", Nil)
 
 @sqlWindow
 def lag[T](
+    expr: Expr[T]
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
+    Expr.Func("LAG", expr :: Expr.Literal(1, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
+
+@sqlWindow
+def lag[T](
     expr: Expr[T],
-    offset: Int = 1,
-    default: Option[Unwrap[T, Option]] = None
+    offset: Int
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
+    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
+
+@sqlWindow
+def lag[T](
+    expr: Expr[T],
+    offset: Int,
+    default: Option[Unwrap[T, Option]]
 )(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
     val defaultExpr = Expr.Literal(default, a)
     Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
 
 @sqlWindow
 def lead[T](
+    expr: Expr[T]
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
+    Expr.Func("LEAD", expr :: Expr.Literal(1, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
+
+@sqlWindow
+def lead[T](
     expr: Expr[T],
-    offset: Int = 1,
-    default: Option[Unwrap[T, Option]] = None
+    offset: Int
+)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
+    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
+
+@sqlWindow
+def lead[T](
+    expr: Expr[T],
+    offset: Int,
+    default: Option[Unwrap[T, Option]]
 )(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
     val defaultExpr = Expr.Literal(default, a)
     Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
