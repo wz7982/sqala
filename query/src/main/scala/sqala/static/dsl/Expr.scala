@@ -10,7 +10,6 @@ import sqala.ast.param.SqlParam
 import sqala.ast.statement.SqlQuery
 import sqala.common.*
 import sqala.static.statement.dml.UpdatePair
-import sqala.static.statement.query.Query
 
 import java.time.LocalDateTime
 import scala.annotation.targetName
@@ -79,13 +78,6 @@ enum Expr[T]:
         Binary(this, Equal, m.asExpr(that))
 
     @targetName("eq")
-    def ==[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, Equal, SubQuery(query.ast))
-
-    @targetName("eq")
     def ==[R](item: SubLinkItem[R])(using 
         CompareOperation[Unwrap[T, Option], 
         Unwrap[R, Option]]
@@ -100,13 +92,6 @@ enum Expr[T]:
         Binary(this, Equal, m.asExpr(that))
 
     @targetName("equal")
-    def ===[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, Equal, SubQuery(query.ast))
-
-    @targetName("equal")
     def ===[R](item: SubLinkItem[R])(using 
         CompareOperation[Unwrap[T, Option], 
         Unwrap[R, Option]]
@@ -119,13 +104,6 @@ enum Expr[T]:
         c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, m.asExpr(that))
-    
-    @targetName("ne")
-    def !=[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("ne")
     def !=[R](item: SubLinkItem[R])(using 
@@ -140,13 +118,6 @@ enum Expr[T]:
         c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, m.asExpr(that))
-    
-    @targetName("notEqual")
-    def <>[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, NotEqual, SubQuery(query.ast))
 
     @targetName("notEqual")
     def <>[R](item: SubLinkItem[R])(using 
@@ -163,13 +134,6 @@ enum Expr[T]:
         Binary(this, GreaterThan, m.asExpr(that))
 
     @targetName("gt")
-    def >[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThan, SubQuery(query.ast))
-
-    @targetName("gt")
     def >[R](item: SubLinkItem[R])(using 
         CompareOperation[Unwrap[T, Option], 
         Unwrap[R, Option]]
@@ -182,13 +146,6 @@ enum Expr[T]:
         c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, m.asExpr(that))
-
-    @targetName("ge")
-    def >=[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, SubQuery(query.ast))
 
     @targetName("ge")
     def >=[R](item: SubLinkItem[R])(using 
@@ -205,13 +162,6 @@ enum Expr[T]:
         Binary(this, LessThan, m.asExpr(that))
 
     @targetName("lt")
-    def <[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThan, SubQuery(query.ast))
-
-    @targetName("lt")
     def <[R](item: SubLinkItem[R])(using 
         CompareOperation[Unwrap[T, Option], 
         Unwrap[R, Option]]
@@ -226,13 +176,6 @@ enum Expr[T]:
         Binary(this, LessThanEqual, m.asExpr(that))
 
     @targetName("le")
-    def <=[R](query: Query[R])(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThanEqual, SubQuery(query.ast))
-
-    @targetName("le")
     def <=[R](item: SubLinkItem[R])(using 
         CompareOperation[Unwrap[T, Option], 
         Unwrap[R, Option]]
@@ -245,15 +188,10 @@ enum Expr[T]:
     ): Expr[Boolean] =
         In(this, Tuple(list.toList.map(m.asExpr(_))), false)
 
-    def in[R <: scala.Tuple](exprs: R)(using
+    def in[R](exprs: R)(using
         m: MergeIn[T, R]
     ): Expr[Boolean] =
         In(this, m.asExpr(exprs), false)
-
-    def in[R](query: Query[R])(using
-        CompareOperation[Unwrap[T, Option], Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        In(this, SubQuery(query.ast), false)
 
     def between[S, E](start: S, end: E)(using
         ms: Merge[S],

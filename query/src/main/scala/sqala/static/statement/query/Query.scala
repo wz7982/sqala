@@ -115,11 +115,6 @@ sealed class Query[T](
     infix def intersectAll[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.IntersectAll, query.ast)
 
-object Query:
-    extension [T](query: Query[Expr[T]])
-        def asExpr: Expr[T] =
-            Expr.SubQuery(query.ast)
-
 class SortQuery[T](
     private[sqala] override val queryParam: T,
     override val ast: SqlQuery.Select
