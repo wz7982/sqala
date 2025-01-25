@@ -161,7 +161,7 @@ private[sqala] object AnalysisExprMacro:
                 treeInfo(expr, currentArgs, groups, inConnectBy)
             case Apply(Apply(TypeApply(Ident("asExpr"), _), t :: Nil), _) =>
                 treeInfo(t, currentArgs, groups, inConnectBy)
-            case Apply(TypeApply(Select(_, "asExpr"), _), t :: Nil) =>
+            case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), t :: Nil), _), _) =>
                 treeInfo(t, currentArgs, groups, inConnectBy)
             case _ if
                 term.symbol.annotations.exists:
@@ -358,7 +358,22 @@ private[sqala] object AnalysisExprMacro:
                     notInAggPaths = exprInfoList.flatMap(_.notInAggPaths)
                 )
             case Apply(Apply(TypeApply(Select(expr, "in"), _), in), _) =>
-                val exprInfoList = (expr :: in).map(t => treeInfo(t, currentArgs, groups, inConnectBy))
+                val inInfoList = in.map: t => 
+                    t.tpe.asType match
+                        case '[Query[_]] => 
+                            AnalysisClauseMacro.analysisQuery(t, groups)
+                            ExprInfo(
+                                hasAgg = false,
+                                isAgg = false,
+                                hasWindow = false,
+                                isValue = false,
+                                isGroup = false,
+                                ungroupedPaths = Nil,
+                                notInAggPaths = Nil
+                            )
+                        case _ => treeInfo(t, currentArgs, groups, inConnectBy)
+                val exprInfoList = 
+                    treeInfo(expr, currentArgs, groups, inConnectBy) :: inInfoList
                 ExprInfo(
                     hasAgg = exprInfoList.map(_.hasAgg).fold(false)(_ || _),
                     isAgg = false,
