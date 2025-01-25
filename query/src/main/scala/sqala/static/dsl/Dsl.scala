@@ -89,22 +89,10 @@ def any[T](query: Query[T])(using
 ): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def any[T: AsSqlExpr as a](items: Seq[T]): Expr[T] =
-    Expr.Func("ANY", Expr.Array(items.map(i => Expr.Literal(i, a)).toList) :: Nil)
-
-def any[T, S <: Seq[S]](expr: Expr[S]): Expr[T] =
-    Expr.Func("ANY", expr :: Nil)
-
 def all[T](query: Query[T])(using 
     m: Merge[T]
 ): SubLinkItem[m.R] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
-
-def all[T: AsSqlExpr as a](items: Seq[T]): Expr[T] =
-    Expr.Func("ALL", Expr.Array(items.map(i => Expr.Literal(i, a)).toList) :: Nil)
-
-def all[T, S <: Seq[S]](expr: Expr[S]): Expr[T] =
-    Expr.Func("ALL", expr :: Nil)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
 

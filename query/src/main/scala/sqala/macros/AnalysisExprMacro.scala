@@ -451,8 +451,6 @@ private[sqala] object AnalysisExprMacro:
                     ungroupedPaths = Nil,
                     notInAggPaths = Nil
                 )
-            case Apply(TypeApply(Ident("any" | "all"), _) , expr :: Nil) =>
-                treeInfo(expr, currentArgs, groups, inConnectBy)
             case _ =>
                 term.tpe.widen.asType match
                     case '[Query[_]] =>

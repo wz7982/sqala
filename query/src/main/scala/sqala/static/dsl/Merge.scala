@@ -1,5 +1,6 @@
 package sqala.static.dsl
 
+import sqala.ast.expr.SqlExpr
 import sqala.common.AsSqlExpr
 import sqala.static.statement.query.Query
 
@@ -68,7 +69,7 @@ trait MergeIn[L, R]:
     def asExpr(x: R): Expr[?] =
         val exprList = exprs(x)
         exprList match
-            case Expr.SubQuery(ast) :: Nil => Expr.SubQuery(ast)
+            case Expr.Ref(SqlExpr.SubQuery(ast)) :: Nil => Expr.SubQuery(ast)
             case _ => Expr.Tuple(exprList)
 
 object MergeIn:
