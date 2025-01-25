@@ -1,5 +1,6 @@
 package sqala.static.dsl
 
+import sqala.ast.expr.SqlExpr
 import sqala.common.AsSqlExpr
 import sqala.static.statement.query.Query
 
@@ -67,13 +68,15 @@ trait MergeIn[L, R]:
 
     def asExpr(x: R): Expr[?] =
         val exprList = exprs(x)
-        if exprList.size == 1 then
-            exprList.head
-        else
-            Expr.Tuple(exprList)
+        exprList match
+            case Expr.Ref(SqlExpr.SubQuery(ast)) :: Nil => Expr.SubQuery(ast)
+            case _ => Expr.Tuple(exprList)
 
 object MergeIn:
-    given merge[L, R](using m: Merge[R]): MergeIn[L, R] with
+    given merge[L, R](using 
+        m: Merge[R],
+        c: CompareOperation[Unwrap[L, Option], Unwrap[m.R, Option]]
+    ): MergeIn[L, R] with
         def exprs(x: R): List[Expr[?]] =
             m.asExpr(x) :: Nil
 
