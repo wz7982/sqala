@@ -1,32 +1,32 @@
 package sqala.printer
 
 trait Dialect:
-    def printer(prepare: Boolean, indent: Int = 4): SqlPrinter
+    def printer: SqlPrinter
 
 object MysqlDialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new MysqlPrinter(prepare, indent)
+    override def printer: SqlPrinter =
+        new MysqlPrinter
 
 object PostgresqlDialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new PostgresqlPrinter(prepare, indent)
+    override def printer: SqlPrinter =
+        new PostgresqlPrinter
 
 object SqliteDialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new SqlitePrinter(prepare, indent)
+    override def printer: SqlPrinter =
+        new SqlitePrinter
 
 object OracleDialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new OraclePrinter(prepare, indent)
+    override def printer: SqlPrinter =
+        new OraclePrinter
 
 object MssqlDialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new MssqlPrinter(prepare, indent)
+    override def printer: SqlPrinter =
+        new MssqlPrinter
 
 object DB2Dialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new DB2Printer(prepare, indent)
+    override def printer: SqlPrinter =
+        new DB2Printer
 
 object H2Dialect extends Dialect:
-    override def printer(prepare: Boolean, indent: Int = 4): SqlPrinter =
-        new H2Printer(prepare, indent)
+    override def printer: SqlPrinter =
+        new H2Printer

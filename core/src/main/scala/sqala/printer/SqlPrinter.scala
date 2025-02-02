@@ -12,7 +12,7 @@ import sqala.util.*
 import scala.collection.mutable.ArrayBuffer
 import sqala.ast.expr.SqlCastType
 
-abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
+abstract class SqlPrinter:
     val sqlBuilder: StringBuilder = StringBuilder()
 
     val leftQuote: String = "\""
@@ -21,7 +21,9 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
 
     val args: ArrayBuffer[Any] = ArrayBuffer()
 
-    var spaceNum = 0
+    val indent: Int = 4
+
+    var spaceNum: Int = 0
 
     def sql: String = sqlBuilder.toString
 
@@ -217,6 +219,7 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
+        case p: SqlExpr.PreparedParam[_] => printParamExpr(p)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -225,37 +228,21 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
     def printNullExpr(): Unit = sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
-        if prepare then
-            sqlBuilder.append("?")
-            args.append(expr.string)
-        else
-            sqlBuilder.append(s"'${expr.string}'")
+        sqlBuilder.append(s"'${expr.string}'")
 
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
-        if prepare then
-            sqlBuilder.append("?")
-            args.append(expr.number)
-        else
-            sqlBuilder.append(expr.number)
+        sqlBuilder.append(expr.number)
 
     def printBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
-        if prepare then
-            sqlBuilder.append("?")
-            args.append(expr.boolean)
+        if expr.boolean then
+            sqlBuilder.append("TRUE")
         else
-            if expr.boolean then
-                sqlBuilder.append("TRUE")
-            else
-                sqlBuilder.append("FALSE")
+            sqlBuilder.append("FALSE")
 
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" ")
-        if prepare then
-            sqlBuilder.append("?")
-            args.append(expr.time)
-        else
-            sqlBuilder.append(s"'${expr.time}'")
+        sqlBuilder.append(s"'${expr.time}'")
 
     def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
@@ -436,6 +423,10 @@ abstract class SqlPrinter(val prepare: Boolean, val indent: Int = 4):
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
         sqlBuilder.append(")")
+
+    def printParamExpr[T](expr: SqlExpr.PreparedParam[T]): Unit =
+        sqlBuilder.append("?")
+        args.append(expr.value)
 
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")

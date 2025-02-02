@@ -8,7 +8,7 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.order.SqlOrderByNullsOption.*
 import sqala.ast.order.SqlOrderByOption.*
 
-class MysqlPrinter(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
+class MysqlPrinter extends SqlPrinter:
     override val leftQuote: String = "`"
 
     override val rightQuote: String = "`"

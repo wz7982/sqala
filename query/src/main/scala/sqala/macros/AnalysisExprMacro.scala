@@ -159,7 +159,9 @@ private[sqala] object AnalysisExprMacro:
                 if !inConnectBy then
                     report.warning("Prior can only be used in CONNECT BY.", term.pos)
                 treeInfo(expr, currentArgs, groups, inConnectBy)
-            case Apply(Apply(TypeApply(Ident("asExpr"), _), t :: Nil), _) =>
+            case Apply(Apply(TypeApply(Ident("asExpr" | "asPreparedExpr"), _), t :: Nil), _) =>
+                treeInfo(t, currentArgs, groups, inConnectBy)
+            case Apply(Select(Apply(TypeApply(Ident("mergeExpr"), _), _), _), t :: Nil) =>
                 treeInfo(t, currentArgs, groups, inConnectBy)
             case Apply(TypeApply(Apply(TypeApply(Ident("as"), _), t :: Nil), _), _) =>
                 treeInfo(t, currentArgs, groups, inConnectBy)

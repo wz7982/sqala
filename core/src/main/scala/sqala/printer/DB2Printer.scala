@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 
-class DB2Printer(override val prepare: Boolean, override val indent: Int) extends SqlPrinter(prepare):
+class DB2Printer extends SqlPrinter:
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)

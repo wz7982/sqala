@@ -15,13 +15,13 @@ private[sqala] def camelToSnake(s: String): String = camelListToSnakeList(s.toLi
 extension [A, B](a: A)
     private[sqala] def |>(f: A => B): B = f(a)
 
-def queryToString(query: SqlQuery, dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
-    val printer = dialect.printer(prepare, indent)
+def queryToString(query: SqlQuery, dialect: Dialect): (String, Array[Any]) =
+    val printer = dialect.printer
     printer.printQuery(query)
     printer.sql -> printer.args.toArray
 
-def statementToString(statement: SqlStatement, dialect: Dialect, prepare: Boolean = true): (String, Array[Any]) =
-    val printer = dialect.printer(prepare)
+def statementToString(statement: SqlStatement, dialect: Dialect): (String, Array[Any]) =
+    val printer = dialect.printer
     printer.printStatement(statement)
     printer.sql -> printer.args.toArray
 
