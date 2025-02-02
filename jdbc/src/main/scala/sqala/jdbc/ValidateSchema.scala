@@ -28,7 +28,7 @@ object ValidateSchema:
         val columns = metaData.columnNames.map: n => 
             SqlExpr.Column(None, n)
         val query = SqlStatement.Insert(table, columns, columns.map(_ => SqlExpr.NumberLiteral(0)) :: Nil, None)
-        val sql = statementToString(query, conn.dialect, true)._1
+        val sql = statementToString(query, conn.dialect)._1
 
         Class.forName(conn.driverClassName)
 

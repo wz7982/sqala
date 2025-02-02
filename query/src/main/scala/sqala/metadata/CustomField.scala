@@ -8,4 +8,6 @@ trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
 
     def fromValue(x: R): T
         
-    override def asSqlExpr(x: T): SqlExpr = a.asSqlExpr(toValue(x))
+    def asSqlExpr(x: T): SqlExpr = a.asSqlExpr(toValue(x))
+
+    def asPreparedSqlExpr(x: T): SqlExpr = a.asPreparedSqlExpr(toValue(x))

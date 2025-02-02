@@ -20,8 +20,8 @@ sealed class Query[T](
     private[sqala] val queryParam: T,
     val ast: SqlQuery
 )(using private[sqala] val context: QueryContext):
-    def sql(dialect: Dialect, prepare: Boolean = true, indent: Int = 4): (String, Array[Any]) =
-        queryToString(ast, dialect, prepare, indent)
+    def sql(dialect: Dialect): (String, Array[Any]) =
+        queryToString(ast, dialect)
 
     def drop(n: Int): Query[T] =
         val limit = ast match
