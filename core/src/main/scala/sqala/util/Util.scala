@@ -26,7 +26,7 @@ def statementToString(statement: SqlStatement, dialect: Dialect, enableJdbcPrepa
     printer.sql -> printer.args.toArray
 
 def parseExpr(text: String): SqlExpr =
-    new SqlParser().parseExpr(text)
+    SqlParser.parseExpr(text)
 
 def parseQuery(text: String): SqlQuery =
-    new SqlParser().parseQuery(text)
+    SqlParser.parseQuery(text)

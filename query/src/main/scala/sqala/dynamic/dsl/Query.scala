@@ -14,7 +14,7 @@ sealed trait Query:
     def ast: SqlQuery
 
     infix def as(name: String): SubQueryTable =
-        SqlParser().parseIdent(name)
+        SqlParser.parseIdent(name)
         SubQueryTable(this, name, false)
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(ast))
@@ -36,7 +36,7 @@ sealed trait Query:
 
 case class LateralQuery(query: Query):
     infix def as(name: String): SubQueryTable =
-        SqlParser().parseIdent(name)
+        SqlParser.parseIdent(name)
         SubQueryTable(query, name, true)
 
 class Select(val ast: SqlQuery.Select) extends Query:

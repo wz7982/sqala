@@ -12,7 +12,7 @@ import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.input.CharArrayReader.EofCh
 
-class SqlParser extends StandardTokenParsers:
+object SqlParser extends StandardTokenParsers:
     class SqlLexical extends StdLexical:
         override protected def processIdent(name: String): Token =
             val upperCased = name.toUpperCase.nn
@@ -179,9 +179,6 @@ class SqlParser extends StandardTokenParsers:
         } |
         "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
             SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
-        } |
-        "NOT" ~> "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.Unary(SqlExpr.SubLink(u.query, SqlSubLinkType.Exists), SqlUnaryOperator.Not)
         }
 
     def order: Parser[SqlOrderBy] =
@@ -201,6 +198,34 @@ class SqlParser extends StandardTokenParsers:
             opt("ELSE" ~> expr) <~ "END" ^^ {
                 case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.Null))
             }
+
+    def interval: Parser[SqlExpr] =
+        "INTERVAL" ~> numericLit ~ ("YEAR" | "MONTH" | "WEEK" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ^^ {
+            case n ~ u =>
+                val timeUnit = u match
+                    case "YEAR" => SqlTimeUnit.Year
+                    case "MONTH" => SqlTimeUnit.Month
+                    case "WEEK" => SqlTimeUnit.Week
+                    case "DAY" => SqlTimeUnit.Day
+                    case "HOUR" => SqlTimeUnit.Hour
+                    case "MINUTE" => SqlTimeUnit.Minute
+                    case "SECOND" => SqlTimeUnit.Second
+                SqlExpr.Interval(n.toDouble, timeUnit)
+        }
+
+    def extract: Parser[SqlExpr] =
+        "EXTRACT" ~> "(" ~> ("YEAR" | "MONTH" | "WEEK" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ~ "FROM" ~ expr <~ ")" ^^ {
+            case u ~ _ ~ e =>
+                val timeUnit = u match
+                    case "YEAR" => SqlTimeUnit.Year
+                    case "MONTH" => SqlTimeUnit.Month
+                    case "WEEK" => SqlTimeUnit.Week
+                    case "DAY" => SqlTimeUnit.Day
+                    case "HOUR" => SqlTimeUnit.Hour
+                    case "MINUTE" => SqlTimeUnit.Minute
+                    case "SECOND" => SqlTimeUnit.Second
+                SqlExpr.Extract(timeUnit, e)
+        }
 
     def literal: Parser[SqlExpr] =
         numericLit ^^ (i => SqlExpr.NumberLiteral(BigDecimal(i))) |
