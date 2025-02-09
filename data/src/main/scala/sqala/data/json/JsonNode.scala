@@ -8,11 +8,11 @@ enum JsonNode:
     case Object(items: Map[String, JsonNode])
     case Array(items: List[JsonNode])
 
-    override def toString: String =
+    def show: String =
         this match
             case Num(number) => number.toString
             case Str(string) => "\"" + string + "\""
             case Bool(boolean) => boolean.toString
             case Null => "null"
-            case Object(items) => items.map((k, v) => s"\"$k\": $v").mkString("{", ", ", "}")
-            case Array(items) => items.mkString("[",", ", "]")
+            case Object(items) => items.map((k, v) => s"\"$k\": ${v.show}").mkString("{", ", ", "}")
+            case Array(items) => items.map(_.show).mkString("[",", ", "]")

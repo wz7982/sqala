@@ -10,7 +10,7 @@ import scala.deriving.Mirror
 import scala.quoted.*
 
 trait JsonEncoder[T]:
-    def encode(x: T)(using JsonDateFormat): JsonNode
+    def encode(x: T)(using JsonDateFormat): String
 
 object JsonEncoder:
     inline def summonInstances[T <: Tuple]: List[JsonEncoder[?]] =
@@ -19,39 +19,53 @@ object JsonEncoder:
             case _: (t *: ts) => summonInline[JsonEncoder[t]] :: summonInstances[ts]
 
     given intEncoder: JsonEncoder[Int] with
-        override inline def encode(x: Int)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
+        override inline def encode(x: Int)(using JsonDateFormat): String = 
+            x.toString
 
     given longEncoder: JsonEncoder[Long] with
-        override inline def encode(x: Long)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
+        override inline def encode(x: Long)(using JsonDateFormat): String = 
+            x.toString
 
     given floatEncoder: JsonEncoder[Float] with
-        override inline def encode(x: Float)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
+        override inline def encode(x: Float)(using JsonDateFormat): String = 
+            x.toString
 
     given doubleEncoder: JsonEncoder[Double] with
-        override inline def encode(x: Double)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
+        override inline def encode(x: Double)(using JsonDateFormat): String = 
+            x.toString
 
     given decimalEncoder: JsonEncoder[BigDecimal] with
-        override inline def encode(x: BigDecimal)(using JsonDateFormat): JsonNode = JsonNode.Num(x)
+        override inline def encode(x: BigDecimal)(using JsonDateFormat): String = 
+            x.toString
 
     given stringEncoder: JsonEncoder[String] with
-        override inline def encode(x: String)(using JsonDateFormat): JsonNode = JsonNode.Str(x)
+        override inline def encode(x: String)(using JsonDateFormat): String = 
+            val builder = new StringBuilder()
+            builder.append("\"")
+            for c <- x.toCharArray do
+                if c == '"' then
+                    builder.append("\\")
+                builder.append(c)
+            builder.append("\"")
+            builder.toString
 
     given booleanEncoder: JsonEncoder[Boolean] with
-        override inline def encode(x: Boolean)(using JsonDateFormat): JsonNode = JsonNode.Bool(x)
+        override inline def encode(x: Boolean)(using JsonDateFormat): String =
+            if x then "true" else "false"
 
     given localDateEncoder: JsonEncoder[LocalDate] with
-        override inline def encode(x: LocalDate)(using dateFormat: JsonDateFormat): JsonNode =
+        override inline def encode(x: LocalDate)(using dateFormat: JsonDateFormat): String =
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-            JsonNode.Str(LocalDateTime.of(x, LocalTime.MIN).format(formatter))
+            LocalDateTime.of(x, LocalTime.MIN).format(formatter)
 
     given localDateTimeEncoder: JsonEncoder[LocalDateTime] with
-        override inline def encode(x: LocalDateTime)(using dateFormat: JsonDateFormat): JsonNode =
+        override inline def encode(x: LocalDateTime)(using dateFormat: JsonDateFormat): String =
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
-            JsonNode.Str(x.format(formatter))
+            x.format(formatter)
 
     given optionEncoder[T](using e: JsonEncoder[T]): JsonEncoder[Option[T]] with
-        override inline def encode(x: Option[T])(using JsonDateFormat): JsonNode = x match
-            case None => JsonNode.Null
+        override inline def encode(x: Option[T])(using JsonDateFormat): String = x match
+            case None => "null"
             case Some(value) => e.encode(value)
 
     inline given namedTupleEncoder[N <: Tuple, V <: Tuple]: JsonEncoder[NamedTuple.NamedTuple[N, V]] =
@@ -59,13 +73,16 @@ object JsonEncoder:
         val instances = summonInstances[V]
         newEncoderNamedTuple(names, instances)
 
-    private def newEncoderNamedTuple[N <: Tuple, V <: Tuple](names: List[String], instances: List[JsonEncoder[?]]): JsonEncoder[NamedTuple.NamedTuple[N, V]] =
+    private def newEncoderNamedTuple[N <: Tuple, V <: Tuple](
+        names: List[String], 
+        instances: List[JsonEncoder[?]]
+    ): JsonEncoder[NamedTuple.NamedTuple[N, V]] =
         new JsonEncoder[NamedTuple.NamedTuple[N, V]]:
-            override def encode(x: NamedTuple.NamedTuple[N, V])(using JsonDateFormat): JsonNode =
+            override def encode(x: NamedTuple.NamedTuple[N, V])(using JsonDateFormat): String =
                 val data = x.toTuple.productIterator.toList
                 val nodes = data.zip(instances).map: (v, i) =>
                     i.asInstanceOf[JsonEncoder[Any]].encode(v)
-                JsonNode.Object(names.zip(nodes).toMap)
+                names.zip(nodes).map((k, v) => s"\"$k\": $v").mkString("{", ", ", "}")
 
     inline given derived[T](using m: Mirror.Of[T]): JsonEncoder[T] =
         ${ jsonEncoderMacro[T] }
@@ -87,8 +104,8 @@ object JsonEncoder:
                 val symbol = TypeRepr.of[T].typeSymbol
                 val fields = symbol.declaredFields
                 val fieldTypes = fetchTypes[elementTypes]
-                def fetchExprs(x: Expr[T], format: Expr[JsonDateFormat]): Expr[List[(String, JsonNode)]] =
-                    val fieldList = scala.collection.mutable.ListBuffer[Expr[(String, JsonNode)]]()
+                def fetchExprs(x: Expr[T], format: Expr[JsonDateFormat]): Expr[List[(String, String)]] =
+                    val fieldList = scala.collection.mutable.ListBuffer[Expr[(String, String)]]()
                     for (f, typ) <- fields.zip(fieldTypes) do
                         val annotations = f.annotations
                         if !annotations.exists:
@@ -115,11 +132,11 @@ object JsonEncoder:
                     Expr.ofList(fieldList.toList)
                 '{
                     new JsonEncoder[T]:
-                        override def encode(x: T)(using f: JsonDateFormat): JsonNode =
+                        override def encode(x: T)(using f: JsonDateFormat): String =
                             val fields = ${
                                 fetchExprs('x, 'f)
                             }
-                            JsonNode.Object(fields.toMap)
+                            fields.map((k, v) => s"\"$k\": $v").mkString("{", ", ", "}")
                 }
             case '{ $m: Mirror.SumOf[T] { type MirroredElemTypes = elementTypes; type MirroredElemLabels = elementLabels } } =>
                 '{
@@ -128,12 +145,12 @@ object JsonEncoder:
                     val instances = summonInstances[s.MirroredElemTypes]
 
                     new JsonEncoder[T]:
-                        override def encode(x: T)(using JsonDateFormat): JsonNode =
+                        override def encode(x: T)(using JsonDateFormat): String =
                             val ord = s.ordinal(x)
                             x match
-                                case p: Product if p.productArity == 0 => JsonNode.Str(names(ord))
+                                case p: Product if p.productArity == 0 => s"\"${names(ord)}\""
                                 case _ =>
                                     val instance = instances(ord)
                                     val node = instance.asInstanceOf[JsonEncoder[Any]].encode(x)
-                                    JsonNode.Object(Map(names(ord) -> node))
+                                    s"{\"${names(ord)}\": $node}"
                 }
