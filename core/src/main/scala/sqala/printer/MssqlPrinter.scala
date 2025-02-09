@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 
-class MssqlPrinter extends SqlPrinter:
+class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "["
 
     override val rightQuote: String = "]"

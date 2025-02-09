@@ -3,6 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
 import sqala.common.TableMetaData
 import sqala.ast.expr.SqlExpr
+import sqala.parser.SqlParser
 
 import scala.language.dynamics
 
@@ -26,14 +27,18 @@ case class Table(
     private[sqala] val name: String, 
     private[sqala] val alias: Option[String]
 ) extends AnyTable:
-    infix def as(name: String): Table = copy(alias = Some(name))
+    infix def as(name: String): Table =
+        SqlParser.parseIdent(name)
+        copy(alias = Some(name))
 
 case class EntityTable(
     private[sqala] val __name__ : String, 
     private[sqala] val __alias__ : String, 
     private[sqala] val __metaData__ : TableMetaData 
 ) extends AnyTable with Dynamic:
-    infix def as(name: String): EntityTable = copy(__alias__ = name)
+    infix def as(name: String): EntityTable =
+        SqlParser.parseIdent(name) 
+        copy(__alias__ = name)
 
     def selectDynamic(name: String): Expr =
         val columnName = __metaData__.fieldNames

@@ -59,7 +59,7 @@ object JdbcDecoder:
         override inline def offset: Int = 1
 
         override inline def decode(data: ResultSet, cursor: Int): LocalDate =
-            data.getTimestamp(cursor).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+            LocalDate.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
 
     given localDateTimeDecoder: JdbcDecoder[LocalDateTime] with
         override inline def offset: Int = 1

@@ -1,32 +1,32 @@
 package sqala.printer
 
 trait Dialect:
-    def printer: SqlPrinter
+    def printer(enableJdbcPrepare: Boolean): SqlPrinter
 
 object MysqlDialect extends Dialect:
-    override def printer: SqlPrinter =
-        new MysqlPrinter
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new MysqlPrinter(enableJdbcPrepare)
 
 object PostgresqlDialect extends Dialect:
-    override def printer: SqlPrinter =
-        new PostgresqlPrinter
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new PostgresqlPrinter(enableJdbcPrepare)
 
 object SqliteDialect extends Dialect:
-    override def printer: SqlPrinter =
-        new SqlitePrinter
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new SqlitePrinter(enableJdbcPrepare)
 
 object OracleDialect extends Dialect:
-    override def printer: SqlPrinter =
-        new OraclePrinter
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new OraclePrinter(enableJdbcPrepare)
 
 object MssqlDialect extends Dialect:
-    override def printer: SqlPrinter =
-        new MssqlPrinter
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new MssqlPrinter(enableJdbcPrepare)
 
 object DB2Dialect extends Dialect:
-    override def printer: SqlPrinter =
-        new DB2Printer
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new DB2Printer(enableJdbcPrepare)
 
 object H2Dialect extends Dialect:
-    override def printer: SqlPrinter =
-        new H2Printer
+    override def printer(enableJdbcPrepare: Boolean): SqlPrinter =
+        new H2Printer(enableJdbcPrepare)

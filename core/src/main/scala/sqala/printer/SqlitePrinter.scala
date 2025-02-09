@@ -8,7 +8,7 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.order.SqlOrderByNullsOption.*
 import sqala.ast.order.SqlOrderByOption.*
 
-class SqlitePrinter extends SqlPrinter:
+class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")
         printExpr(limit.offset)

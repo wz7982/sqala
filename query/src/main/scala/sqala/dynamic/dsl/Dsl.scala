@@ -5,16 +5,16 @@ import sqala.common.AsSqlExpr
 import sqala.macros.TableMacro
 import sqala.parser.SqlParser
 
-def column(name: String): Expr = Expr(SqlParser().parseColumn(name))
+def column(name: String): Expr = Expr(SqlParser.parseColumn(name))
 
-def unsafeExpr(snippet: String): Expr = Expr(SqlParser().parseExpr(snippet))
+def unsafeExpr(snippet: String): Expr = Expr(SqlParser.parseExpr(snippet))
 
 extension [T](value: T)(using a: AsSqlExpr[T])
     def asExpr: Expr = Expr(a.asSqlExpr(value))
 
-    def asPreparedExpr: Expr = Expr(a.asPreparedSqlExpr(value))
-
-def table(name: String): Table = Table(name, None)
+def table(name: String): Table =
+    SqlParser.parseIdent(name)
+    Table(name, None)
 
 inline def asTable[T]: EntityTable =
     val tableName = TableMacro.tableName[T]

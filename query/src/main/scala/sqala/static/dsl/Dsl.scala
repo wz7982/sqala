@@ -19,9 +19,6 @@ extension [T](exprs: T)(using m: Merge[T])
 given mergeExpr[T](using m: Merge[T]): Conversion[T, Expr[m.R]] =
     m.asExpr(_)
 
-extension [T](value: T)(using a: AsSqlExpr[T])
-    def asPreparedExpr: Expr[T] = Expr.Ref(a.asPreparedSqlExpr(value))
-
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
 
@@ -156,7 +153,7 @@ def extract[T <: Interval | Option[Interval]](
     Expr.Extract(value.unit, value.expr)
 
 extension [T](expr: Expr[T])
-    infix def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
+    def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
         Expr.Cast(expr, cast.castType)
 
 def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow

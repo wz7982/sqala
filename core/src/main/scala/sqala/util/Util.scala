@@ -15,18 +15,18 @@ private[sqala] def camelToSnake(s: String): String = camelListToSnakeList(s.toLi
 extension [A, B](a: A)
     private[sqala] def |>(f: A => B): B = f(a)
 
-def queryToString(query: SqlQuery, dialect: Dialect): (String, Array[Any]) =
-    val printer = dialect.printer
+def queryToString(query: SqlQuery, dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
+    val printer = dialect.printer(enableJdbcPrepare)
     printer.printQuery(query)
     printer.sql -> printer.args.toArray
 
-def statementToString(statement: SqlStatement, dialect: Dialect): (String, Array[Any]) =
-    val printer = dialect.printer
+def statementToString(statement: SqlStatement, dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
+    val printer = dialect.printer(enableJdbcPrepare)
     printer.printStatement(statement)
     printer.sql -> printer.args.toArray
 
 def parseExpr(text: String): SqlExpr =
-    new SqlParser().parseExpr(text)
+    SqlParser.parseExpr(text)
 
 def parseQuery(text: String): SqlQuery =
-    new SqlParser().parseQuery(text)
+    SqlParser.parseQuery(text)

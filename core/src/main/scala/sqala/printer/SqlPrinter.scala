@@ -12,7 +12,7 @@ import sqala.util.*
 import scala.collection.mutable.ArrayBuffer
 import sqala.ast.expr.SqlCastType
 
-abstract class SqlPrinter:
+abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
 
     val leftQuote: String = "\""
@@ -219,7 +219,6 @@ abstract class SqlPrinter:
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
-        case p: SqlExpr.PreparedParam[_] => printParamExpr(p)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -228,21 +227,37 @@ abstract class SqlPrinter:
     def printNullExpr(): Unit = sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
-        sqlBuilder.append(s"'${expr.string}'")
+        if enableJdbcPrepare then
+            sqlBuilder.append("?")
+            args.addOne(expr.string)
+        else
+            sqlBuilder.append(s"'${expr.string}'")
 
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
-        sqlBuilder.append(expr.number)
+        if enableJdbcPrepare then
+            sqlBuilder.append("?")
+            args.addOne(expr.number)
+        else
+            sqlBuilder.append(expr.number)
 
     def printBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
-        if expr.boolean then
-            sqlBuilder.append("TRUE")
+        if enableJdbcPrepare then
+            sqlBuilder.append("?")
+            args.addOne(expr.boolean)
         else
-            sqlBuilder.append("FALSE")
+            if expr.boolean then
+                sqlBuilder.append("TRUE")
+            else
+                sqlBuilder.append("FALSE")
 
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        sqlBuilder.append(expr.unit.unit)
-        sqlBuilder.append(" ")
-        sqlBuilder.append(s"'${expr.time}'")
+        if enableJdbcPrepare then
+            sqlBuilder.append("?")
+            args.addOne(expr.time)
+        else
+            sqlBuilder.append(expr.unit.unit)
+            sqlBuilder.append(" ")
+            sqlBuilder.append(s"'${expr.time}'")
 
     def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
@@ -423,10 +438,6 @@ abstract class SqlPrinter:
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
         sqlBuilder.append(")")
-
-    def printParamExpr[T](expr: SqlExpr.PreparedParam[T]): Unit =
-        sqlBuilder.append("?")
-        args.append(expr.value)
 
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")

@@ -3,7 +3,7 @@ package sqala.printer
 import sqala.ast.expr.*
 import sqala.ast.statement.SqlStatement
 
-class H2Printer extends SqlPrinter:
+class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "`"
 
     override val rightQuote: String = "`"
