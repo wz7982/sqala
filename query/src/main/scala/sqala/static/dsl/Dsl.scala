@@ -153,7 +153,7 @@ def extract[T <: Interval | Option[Interval]](
     Expr.Extract(value.unit, value.expr)
 
 extension [T](expr: Expr[T])
-    infix def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
+    def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
         Expr.Cast(expr, cast.castType)
 
 def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow

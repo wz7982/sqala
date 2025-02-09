@@ -331,6 +331,11 @@ class SqlParser extends StandardTokenParsers:
             case Success(result, _) => result
             case e => throw ParseException(e.toString)
 
+    def parseIdent(text: String): String =
+        phrase(ident)(new lexical.Scanner(text)) match
+            case Success(result, _) => result
+            case e => throw ParseException(e.toString)
+
     def parseQuery(text: String): SqlQuery =
         phrase(union)(new lexical.Scanner(text)) match
             case Success(result, _) => result.query

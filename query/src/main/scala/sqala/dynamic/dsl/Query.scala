@@ -6,13 +6,16 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderBy
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.*
+import sqala.parser.SqlParser
 import sqala.printer.Dialect
 import sqala.util.queryToString
 
 sealed trait Query:
     def ast: SqlQuery
 
-    infix def as(name: String): SubQueryTable = SubQueryTable(this, name, false)
+    infix def as(name: String): SubQueryTable =
+        SqlParser().parseIdent(name)
+        SubQueryTable(this, name, false)
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(ast))
 
@@ -32,7 +35,9 @@ sealed trait Query:
     infix def intersectAll(query: Query): Union = Union(this, SqlUnionType.IntersectAll, query)
 
 case class LateralQuery(query: Query):
-    infix def as(name: String): SubQueryTable = SubQueryTable(query, name, true)
+    infix def as(name: String): SubQueryTable =
+        SqlParser().parseIdent(name)
+        SubQueryTable(query, name, true)
 
 class Select(val ast: SqlQuery.Select) extends Query:
     infix def from(table: AnyTable): Select = new Select(ast.copy(from = table.toSqlTable :: Nil))

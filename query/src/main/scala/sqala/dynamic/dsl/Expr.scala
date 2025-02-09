@@ -6,6 +6,7 @@ import sqala.ast.expr.SqlUnaryOperator.*
 import sqala.ast.order.{SqlOrderBy, SqlOrderByNullsOption, SqlOrderByOption}
 import sqala.ast.statement.SqlSelectItem
 import sqala.common.AsSqlExpr
+import sqala.parser.SqlParser
 
 import scala.annotation.targetName
 import sqala.ast.expr.SqlBinaryOperator
@@ -125,7 +126,9 @@ case class Expr(sqlExpr: SqlExpr):
 
     def descNullsLast: OrderBy = OrderBy(this, SqlOrderByOption.Desc, Some(SqlOrderByNullsOption.Last))
 
-    infix def as(name: String): SelectItem = SelectItem(this, Some(name))
+    infix def as(name: String): SelectItem =
+        SqlParser().parseIdent(name) 
+        SelectItem(this, Some(name))
 
 object Expr:
     given valueToExpr[T](using a: AsSqlExpr[T]): Conversion[T, Expr] =
