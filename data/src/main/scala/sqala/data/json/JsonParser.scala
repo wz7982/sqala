@@ -1,69 +1,41 @@
 package sqala.data.json
 
-import scala.util.parsing.combinator.lexical.StdLexical
-import scala.util.parsing.combinator.syntactical.StandardTokenParsers
-import scala.util.parsing.input.CharArrayReader.EofCh
+import scala.util.parsing.combinator.JavaTokenParsers
 
-class JsonParser extends StandardTokenParsers:
-    class SqlLexical extends StdLexical:
-        override protected def processIdent(name: String): Token =
-            val upperCased = name.toUpperCase
-            if reserved.contains(upperCased) then Keyword(upperCased) else Identifier(name)
+object JsonParser extends JavaTokenParsers:
+    def value: Parser[JsonNode] =
+        number |
+        string |
+        boolean |
+        nil |
+        obj |
+        arr
 
-        override def token: Parser[Token] =
-            identChar ~ rep(identChar | digit) ^^ {
-                case first ~ rest => processIdent((first :: rest).mkString(""))
-            } |
-            rep1(digit) ~ opt('.' ~> rep(digit)) ^^ {
-                case i ~ None => NumericLit(i.mkString(""))
-                case i ~ Some(d) => NumericLit(i.mkString("") + "." + d.mkString(""))
-            } |
-            '"' ~ rep(chrExcept('"', '\n', EofCh)) ~ '"' ^^ {
-                case _ ~ chars ~ _ => StringLit(chars.mkString(""))
-            } |
-            EofCh ^^^ EOF |
-            delim |
-            failure("illegal character")
+    def number: Parser[JsonNode] =
+        decimalNumber ^^ (i => JsonNode.Num(BigDecimal(i)))
 
-    override val lexical: SqlLexical = new SqlLexical
+    def string: Parser[JsonNode] =
+        stringLiteral ^^ (i => JsonNode.Str(i.drop(1).dropRight(1)))
 
-    lexical.reserved.addAll(List("TRUE", "FALSE", "NULL"))
+    def boolean: Parser[JsonNode] =
+        "true" ^^ (_ => JsonNode.Bool(true)) |
+        "false" ^^ (_ => JsonNode.Bool(false))
 
-    lexical.delimiters.addAll(List("{", "}", "[", "]", "\"", ":", ",", "."))
-
-    def literal: Parser[JsonNode] =
-        numberLiteral |
-        stringLiteral |
-        booleanLiteral |
-        nullLiteral |
-        objectLiteral |
-        arrayLiteral
-
-    def numberLiteral: Parser[JsonNode] =
-        numericLit ^^ (i => JsonNode.Num(BigDecimal(i)))
-
-    def stringLiteral: Parser[JsonNode] =
-        stringLit ^^ (i => JsonNode.Str(i))
-
-    def booleanLiteral: Parser[JsonNode] =
-        "TRUE" ^^ (_ => JsonNode.Bool(true)) |
-        "FALSE" ^^ (_ => JsonNode.Bool(false))
-
-    def nullLiteral: Parser[JsonNode] =
-        "NULL" ^^ (_ => JsonNode.Null)
+    def nil: Parser[JsonNode] =
+        "null" ^^ (_ => JsonNode.Null)
 
     def attr: Parser[(String, JsonNode)] =
-        stringLiteral ~ ":" ~ literal ^^ {
+        string ~ ":" ~ value ^^ {
             case k ~ _ ~ v => k.asInstanceOf[JsonNode.Str].string -> v
         }
 
-    def objectLiteral: Parser[JsonNode] =
+    def obj: Parser[JsonNode] =
         "{" ~> repsep(attr, ",") <~ "}" ^^ (items => JsonNode.Object(items.toMap))
 
-    def arrayLiteral: Parser[JsonNode] =
-        "[" ~> repsep(literal, ",") <~ "]" ^^ (items => JsonNode.Array(items))
+    def arr: Parser[JsonNode] =
+        "[" ~> repsep(value, ",") <~ "]" ^^ (items => JsonNode.Array(items))
 
     def parse(text: String): JsonNode = 
-        phrase(objectLiteral | arrayLiteral)(new lexical.Scanner(text)) match
+        parseAll(obj | arr, text) match
             case Success(result, _) => result
             case e => throw JsonDecodeException(e.toString)
