@@ -2,6 +2,7 @@ package sqala.jdbc
 
 import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
 import java.sql.Types.*
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.unsafeNulls
@@ -114,8 +115,10 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
                     case (BOOLEAN, false) => rs.getBoolean(i)
                     case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => Option(rs.getString(i))
                     case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => rs.getString(i)
-                    case (DATE | TIME | TIMESTAMP, true) => Option(rs.getDate(i))
-                    case (DATE | TIME | TIMESTAMP, false) => rs.getDate(i)
+                    case (DATE, true) => Option(LocalDate.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault()))
+                    case (DATE, false) => LocalDate.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault())
+                    case (TIMESTAMP, true) => Option(LocalDateTime.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault()))
+                    case (TIMESTAMP, false) => LocalDateTime.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault())
                     case (_, true) => Option(rs.getObject(i))
                     case (_, false) => rs.getObject(i)
                 map.put(key, value)

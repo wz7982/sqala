@@ -75,7 +75,7 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
                     index += 1
                     expr.value.get.setValue(explainStmt, index)
                 case '[t] =>
-                    val expr =Expr.summon[SetDefaultValue[t]].get
+                    val expr = Expr.summon[SetDefaultValue[t]].get
                     expr.value.get
                     expr.value.get.setValue(explainStmt, index)
             index += 1
@@ -118,8 +118,10 @@ def sqlMacro(s: Expr[StringContext], args: Expr[Seq[Any]], c: Expr[JdbcTestConne
                 case (BOOLEAN, false) => TypeRepr.of[Boolean]
                 case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => TypeRepr.of[Option[String]]
                 case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => TypeRepr.of[String]
-                case (DATE | TIME | TIMESTAMP, true) => TypeRepr.of[Option[java.util.Date]]
-                case (DATE | TIME | TIMESTAMP, false) => TypeRepr.of[java.util.Date]
+                case (DATE, true) => TypeRepr.of[Option[java.time.LocalDate]]
+                case (DATE, false) => TypeRepr.of[java.time.LocalDate]
+                case (TIMESTAMP, true) => TypeRepr.of[Option[java.time.LocalDateTime]]
+                case (TIMESTAMP, false) => TypeRepr.of[java.time.LocalDateTime]
                 case (_, true) => TypeRepr.of[Option[Any]]
                 case (_, false) => TypeRepr.of[Any]
 
