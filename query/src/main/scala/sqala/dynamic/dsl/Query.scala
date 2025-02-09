@@ -7,6 +7,7 @@ import sqala.ast.order.SqlOrderBy
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.*
 import sqala.printer.Dialect
+import sqala.util.queryToString
 
 sealed trait Query:
     def ast: SqlQuery
@@ -15,10 +16,8 @@ sealed trait Query:
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(ast))
 
-    def sql(dialect: Dialect): (String, Array[Any]) =
-        val printer = dialect.printer
-        printer.printQuery(ast)
-        printer.sql -> printer.args.toArray
+    def sql(dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
+        queryToString(ast, dialect, enableJdbcPrepare)
 
     infix def union(query: Query): Union = Union(this, SqlUnionType.Union, query)
 

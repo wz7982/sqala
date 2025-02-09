@@ -3,7 +3,7 @@ package sqala.printer
 import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
 
-class PostgresqlPrinter extends SqlPrinter:
+class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
         printTable(upsert.table)

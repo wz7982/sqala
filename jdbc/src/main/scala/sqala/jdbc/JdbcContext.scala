@@ -24,15 +24,15 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         execute(c => jdbcExec(c, sql, args))
 
     def execute(insert: Insert[?, ?])(using NotGiven[JdbcTransactionContext]): Int =
-        val (sql, args) = statementToString(insert.ast, dialect)
+        val (sql, args) = statementToString(insert.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(update: Update[?, ?])(using NotGiven[JdbcTransactionContext]): Int =
-        val (sql, args) = statementToString(update.ast, dialect)
+        val (sql, args) = statementToString(update.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(delete: Delete[?])(using NotGiven[JdbcTransactionContext]): Int =
-        val (sql, args) = statementToString(delete.ast, dialect)
+        val (sql, args) = statementToString(delete.ast, dialect, true)
         executeDml(sql, args)
 
     def execute(nativeSql: NativeSql)(using NotGiven[JdbcTransactionContext]): Int =
@@ -44,7 +44,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         NotGiven[JdbcTransactionContext]
     ): Int =
         val i = sqala.static.dsl.insert[A](entity)
-        val (sql, args) = statementToString(i.ast, dialect)
+        val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
     inline def insertBatch[A <: Product](entities: List[A])(using
@@ -52,7 +52,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         NotGiven[JdbcTransactionContext]
     ): Int =
         val i = sqala.static.dsl.insert[A](entities)
-        val (sql, args) = statementToString(i.ast, dialect)
+        val (sql, args) = statementToString(i.ast, dialect, true)
         executeDml(sql, args)
 
     inline def insertAndReturn[A <: Product](entity: A)(using
@@ -60,7 +60,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         NotGiven[JdbcTransactionContext]
     ): A =
         val i = sqala.static.dsl.insert[A](entity)
-        val (sql, args) = statementToString(i.ast, dialect)
+        val (sql, args) = statementToString(i.ast, dialect, true)
         val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
         ClauseMacro.bindGeneratedPrimaryKey[A](id, entity)
 
@@ -75,7 +75,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         if u.ast.setList.isEmpty then
             0
         else
-            val (sql, args) = statementToString(u.ast, dialect)
+            val (sql, args) = statementToString(u.ast, dialect, true)
             executeDml(sql, args)
 
     inline def save[A <: Product](
@@ -85,11 +85,11 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         NotGiven[JdbcTransactionContext]
     ): Int =
         val s = sqala.static.dsl.save(entity)
-        val (sql, args) = statementToString(s.ast, dialect)
+        val (sql, args) = statementToString(s.ast, dialect, true)
         executeDml(sql, args)
 
     def fetchTo[T](query: Query[?])(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[T] =
-        val (sql, args) = queryToString(query.ast, dialect)
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
@@ -121,12 +121,12 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         execute(c => jdbcQueryToMap(c, sql, args))
 
     def fetchTo[T](query: DynamicQuery)(using JdbcDecoder[T], NotGiven[JdbcTransactionContext]): List[T] =
-        val (sql, args) = queryToString(query.ast, dialect)
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     def fetchToMap(query: DynamicQuery)(using NotGiven[JdbcTransactionContext]): List[Map[String, Any]] =
-        val (sql, args) = queryToString(query.ast, dialect)
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
@@ -157,7 +157,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         fetch(existsQuery).head
 
     def showSql[T](query: Query[T]): String =
-        queryToString(query.ast, dialect)._1
+        queryToString(query.ast, dialect, true)._1
 
     def cursorFetch[T, R](
         query: Query[T],
@@ -166,7 +166,7 @@ class JdbcContext(val dataSource: DataSource, val dialect: Dialect)(using val lo
         r: Result[T],
         d: JdbcDecoder[r.R]
     )(f: Cursor[r.R] => R): Unit =
-        val (sql, args) = queryToString(query.ast, dialect)
+        val (sql, args) = queryToString(query.ast, dialect, true)
         logger(sql, args)
         val conn = dataSource.getConnection()
         jdbcCursorQuery(conn, sql, args, fetchSize, f)
