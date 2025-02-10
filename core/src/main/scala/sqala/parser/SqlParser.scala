@@ -48,13 +48,14 @@ object SqlParser extends StandardTokenParsers:
            "BETWEEN", "IN", "LIKE", "IS",
            "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "LIMIT", "OFFSET",
            "JOIN", "OUTER", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "ON", "LATERAL",
-           "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME", "COUNT", "SUM", "AVG", "MAX", "MIN"
+           "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME", "COUNT",
+           "INTERVAL", "EXTRACT", "YEAR", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE", "SECOND"
        )
     )
 
     lexical.delimiters.addAll(
        List(
-           "+", "-", "*", "/", "%", "=", "<>", "!=", ">", ">=", "<", "<=", "(", ")", ",", ".", "`", "\"", "?"
+           "+", "-", "*", "/", "%", "=", "<>", "!=", ">", ">=", "<", "<=", "(", ")", ",", ".", "`", "\"", "?", "::"
        )
     )
 
@@ -131,26 +132,19 @@ object SqlParser extends StandardTokenParsers:
         cast |
         windowFunction |
         function |
-        aggFunction |
         "(" ~> union <~ ")" |
         column |
         subLink |
+        interval |
+        extract |
         "(" ~> expr <~ ")"
 
     def function: Parser[SqlExpr] =
-        ident ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
-            case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args)
-        }
-
-    def aggFunc: Parser[String] =
-        "COUNT" | "SUM" | "AVG" | "MAX" | "MIN"
-
-    def aggFunction: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ^^ (_ => SqlExpr.Func("COUNT", Nil, None, Nil)) |
-        (aggFunc | ident) ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
+        (ident | "COUNT") ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ {
             case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, None, Nil)
         } |
-        ident ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
+        (ident | "COUNT") ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
             case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, Some(SqlParam.Distinct), Nil)
         }
 
@@ -163,7 +157,7 @@ object SqlParser extends StandardTokenParsers:
         }
 
     def windowFunction: Parser[SqlExpr] =
-        aggFunction ~ "OVER" ~ over ^^ {
+        function ~ "OVER" ~ over ^^ {
             case agg ~ _ ~ o => SqlExpr.Window(agg, o._1, o._2, None)
         }
 
