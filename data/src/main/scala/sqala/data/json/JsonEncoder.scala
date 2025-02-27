@@ -19,27 +19,27 @@ object JsonEncoder:
             case _: (t *: ts) => summonInline[JsonEncoder[t]] :: summonInstances[ts]
 
     given intEncoder: JsonEncoder[Int] with
-        override inline def encode(x: Int)(using JsonDateFormat): String = 
+        override inline def encode(x: Int)(using JsonDateFormat): String =
             x.toString
 
     given longEncoder: JsonEncoder[Long] with
-        override inline def encode(x: Long)(using JsonDateFormat): String = 
+        override inline def encode(x: Long)(using JsonDateFormat): String =
             x.toString
 
     given floatEncoder: JsonEncoder[Float] with
-        override inline def encode(x: Float)(using JsonDateFormat): String = 
+        override inline def encode(x: Float)(using JsonDateFormat): String =
             x.toString
 
     given doubleEncoder: JsonEncoder[Double] with
-        override inline def encode(x: Double)(using JsonDateFormat): String = 
+        override inline def encode(x: Double)(using JsonDateFormat): String =
             x.toString
 
     given decimalEncoder: JsonEncoder[BigDecimal] with
-        override inline def encode(x: BigDecimal)(using JsonDateFormat): String = 
+        override inline def encode(x: BigDecimal)(using JsonDateFormat): String =
             x.toString
 
     given stringEncoder: JsonEncoder[String] with
-        override inline def encode(x: String)(using JsonDateFormat): String = 
+        override inline def encode(x: String)(using JsonDateFormat): String =
             val builder = new StringBuilder()
             builder.append("\"")
             for c <- x.toCharArray do
@@ -74,7 +74,7 @@ object JsonEncoder:
         newEncoderNamedTuple(names, instances)
 
     private def newEncoderNamedTuple[N <: Tuple, V <: Tuple](
-        names: List[String], 
+        names: List[String],
         instances: List[JsonEncoder[?]]
     ): JsonEncoder[NamedTuple.NamedTuple[N, V]] =
         new JsonEncoder[NamedTuple.NamedTuple[N, V]]:
@@ -97,8 +97,8 @@ object JsonEncoder:
                 val nameExpr = Expr(TypeRepr.of[label].show.replaceAll("\"", ""))
                 '{
                     new JsonEncoder[T]:
-                        override def encode(x: T)(using JsonDateFormat): JsonNode =
-                            JsonNode.Str($nameExpr)
+                        override def encode(x: T)(using JsonDateFormat): String =
+                            $nameExpr
                 }
             case '{ $m: Mirror.ProductOf[T] { type MirroredElemTypes = elementTypes } } =>
                 val symbol = TypeRepr.of[T].typeSymbol
