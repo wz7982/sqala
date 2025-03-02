@@ -60,7 +60,7 @@ class DB2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(ena
             sqlBuilder.append(")")
             if expr.orderBy.nonEmpty then
                 sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-                printList(expr.orderBy)(printOrderBy)
+                printList(expr.orderBy)(printOrderItem)
                 sqlBuilder.append(")")
         else super.printFuncExpr(expr)
 

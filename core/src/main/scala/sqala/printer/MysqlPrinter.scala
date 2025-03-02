@@ -4,9 +4,9 @@ import sqala.ast.expr.SqlExpr.*
 import sqala.ast.expr.{SqlCase, SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.{SqlQuery, SqlStatement}
-import sqala.ast.order.SqlOrderBy
-import sqala.ast.order.SqlOrderByNullsOption.*
-import sqala.ast.order.SqlOrderByOption.*
+import sqala.ast.order.SqlOrderItem
+import sqala.ast.order.SqlOrderNullsOption.*
+import sqala.ast.order.SqlOrderOption.*
 
 class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "`"
@@ -56,7 +56,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printList(args)(printExpr)
             if expr.orderBy.nonEmpty then
                 sqlBuilder.append(" ORDER BY ")
-                printList(expr.orderBy)(printOrderBy)
+                printList(expr.orderBy)(printOrderItem)
             sqlBuilder.append(" SEPARATOR ")
             printExpr(separator)
             sqlBuilder.append(")")
@@ -81,7 +81,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
 
-    override def printOrderBy(orderBy: SqlOrderBy): Unit =
+    override def printOrderItem(orderBy: SqlOrderItem): Unit =
         val order = orderBy.order match
             case None | Some(Asc) => Asc
             case _ => Desc

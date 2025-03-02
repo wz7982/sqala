@@ -3,9 +3,8 @@ package sqala.static.dsl
 import sqala.ast.expr.*
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.SqlUnaryOperator.*
-import sqala.ast.order.SqlOrderByNullsOption.{First, Last}
-import sqala.ast.order.SqlOrderByOption.{Asc, Desc}
-import sqala.ast.order.{SqlOrderByNullsOption, SqlOrderByOption}
+import sqala.ast.order.SqlOrderNullsOption.{First, Last}
+import sqala.ast.order.SqlOrderOption.{Asc, Desc}
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.SqlQuery
 import sqala.common.*
@@ -78,8 +77,8 @@ enum Expr[T]:
         Binary(this, Equal, m.asExpr(that))
 
     @targetName("eq")
-    def ==[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def ==[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
@@ -92,8 +91,8 @@ enum Expr[T]:
         Binary(this, Equal, m.asExpr(that))
 
     @targetName("equal")
-    def ===[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def ===[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
@@ -106,8 +105,8 @@ enum Expr[T]:
         Binary(this, NotEqual, m.asExpr(that))
 
     @targetName("ne")
-    def !=[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def !=[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
@@ -120,8 +119,8 @@ enum Expr[T]:
         Binary(this, NotEqual, m.asExpr(that))
 
     @targetName("notEqual")
-    def <>[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def <>[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
@@ -134,8 +133,8 @@ enum Expr[T]:
         Binary(this, GreaterThan, m.asExpr(that))
 
     @targetName("gt")
-    def >[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def >[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThan, SubLink(item.query, item.linkType))
@@ -148,8 +147,8 @@ enum Expr[T]:
         Binary(this, GreaterThanEqual, m.asExpr(that))
 
     @targetName("ge")
-    def >=[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def >=[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
@@ -162,8 +161,8 @@ enum Expr[T]:
         Binary(this, LessThan, m.asExpr(that))
 
     @targetName("lt")
-    def <[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def <[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThan, SubLink(item.query, item.linkType))
@@ -176,8 +175,8 @@ enum Expr[T]:
         Binary(this, LessThanEqual, m.asExpr(that))
 
     @targetName("le")
-    def <=[R](item: SubLinkItem[R])(using 
-        CompareOperation[Unwrap[T, Option], 
+    def <=[R](item: SubLinkItem[R])(using
+        CompareOperation[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
@@ -217,7 +216,7 @@ enum Expr[T]:
         Binary(this, Plus, that)
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using 
+    def +(interval: TimeInterval)(using
         d: DateTime[T],
         r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
     ): Expr[r.R] =
@@ -237,7 +236,7 @@ enum Expr[T]:
         Binary(this, Minus, that)
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using 
+    def -(interval: TimeInterval)(using
         d: DateTime[T],
         r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
     ): Expr[r.R] =
@@ -386,7 +385,7 @@ object Expr:
             case Unary(expr, SqlUnaryOperator.Not) =>
                 val sqlExpr = expr.asSqlExpr
                 sqlExpr match
-                    case SqlExpr.BooleanLiteral(boolean) => 
+                    case SqlExpr.BooleanLiteral(boolean) =>
                         SqlExpr.BooleanLiteral(!boolean)
                     case SqlExpr.Binary(left, SqlBinaryOperator.Like, right) =>
                         SqlExpr.Binary(left, SqlBinaryOperator.NotLike, right)

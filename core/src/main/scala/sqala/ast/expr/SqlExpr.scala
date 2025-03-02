@@ -1,6 +1,6 @@
 package sqala.ast.expr
 
-import sqala.ast.order.SqlOrderBy
+import sqala.ast.order.SqlOrderItem
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.SqlQuery
 
@@ -20,15 +20,15 @@ enum SqlExpr:
         name: String,
         args: List[SqlExpr],
         param: Option[SqlParam] = None,
-        orderBy: List[SqlOrderBy] = Nil,
-        withinGroup: List[SqlOrderBy] = Nil,
+        orderBy: List[SqlOrderItem] = Nil,
+        withinGroup: List[SqlOrderItem] = Nil,
         filter: Option[SqlExpr] = None
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlCase], default: SqlExpr)
     case Match(expr: SqlExpr, branches: List[SqlCase], default: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlCastType)
-    case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderBy], frame: Option[SqlWindowFrame])
+    case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderItem], frame: Option[SqlWindowFrame])
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, linkType: SqlSubLinkType)
     case Interval(value: Double, unit: SqlTimeUnit)

@@ -3,7 +3,6 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.SqlOrderBy
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.*
 import sqala.parser.SqlParser

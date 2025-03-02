@@ -4,7 +4,7 @@ import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.{SqlExpr, SqlUnaryOperator, SqlWindowFrame}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
+import sqala.ast.order.{SqlOrderItem, SqlOrderOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.*
@@ -123,7 +123,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
-            printList(select.orderBy, ",\n")(printOrderBy |> printWithSpace)
+            printList(select.orderBy, ",\n")(printOrderItem |> printWithSpace)
 
         for l <- select.limit do
             sqlBuilder.append("\n")
@@ -158,7 +158,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
-            printList(union.orderBy, ",\n")(printOrderBy |> printWithSpace)
+            printList(union.orderBy, ",\n")(printOrderItem |> printWithSpace)
 
         for l <- union.limit do
             sqlBuilder.append("\n")
@@ -330,11 +330,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
             sqlBuilder.append(" ORDER BY ")
-            printList(expr.orderBy)(printOrderBy)
+            printList(expr.orderBy)(printOrderItem)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
             sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-            printList(expr.withinGroup)(printOrderBy)
+            printList(expr.withinGroup)(printOrderItem)
             sqlBuilder.append(")")
         if expr.filter.nonEmpty then
             sqlBuilder.append(" FILTER (WHERE ")
@@ -391,7 +391,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             if expr.partitionBy.nonEmpty then
                 sqlBuilder.append(" ")
             sqlBuilder.append("ORDER BY ")
-            printList(expr.orderBy)(printOrderBy)
+            printList(expr.orderBy)(printOrderItem)
         expr.frame match
             case Some(SqlWindowFrame.Rows(start, end)) =>
                 sqlBuilder.append(" ROWS BETWEEN ")
@@ -523,13 +523,13 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printList(items)(printExpr)
             sqlBuilder.append(")")
 
-    def printOrderBy(orderBy: SqlOrderBy): Unit =
-        printExpr(orderBy.expr)
-        val order = orderBy.order match
-            case None | Some(SqlOrderByOption.Asc) => SqlOrderByOption.Asc
-            case _ => SqlOrderByOption.Desc
+    def printOrderItem(item: SqlOrderItem): Unit =
+        printExpr(item.expr)
+        val order = item.order match
+            case None | Some(SqlOrderOption.Asc) => SqlOrderOption.Asc
+            case _ => SqlOrderOption.Desc
         sqlBuilder.append(s" ${order.order}")
-        for o <- orderBy.nullsOrder do
+        for o <- item.nullsOrder do
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =
