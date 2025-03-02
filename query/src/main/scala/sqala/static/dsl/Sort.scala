@@ -4,8 +4,8 @@ import sqala.ast.order.*
 
 case class Sort[T](
     private[sqala] val expr: Expr[?],
-    private[sqala] val order: SqlOrderByOption,
-    private[sqala] val nullsOrder: Option[SqlOrderByNullsOption]
+    private[sqala] val order: SqlOrderOption,
+    private[sqala] val nullsOrder: Option[SqlOrderNullsOption]
 ):
-    private[sqala] def asSqlOrderBy: SqlOrderBy = 
-        SqlOrderBy(expr.asSqlExpr, Some(order), nullsOrder)
+    private[sqala] def asSqlOrderBy: SqlOrderItem =
+        SqlOrderItem(expr.asSqlExpr, Some(order), nullsOrder)

@@ -3,7 +3,7 @@ package sqala.parser
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlOrderBy, SqlOrderByOption}
+import sqala.ast.order.{SqlOrderItem, SqlOrderOption}
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTableAlias, SqlTable}
@@ -148,7 +148,7 @@ object SqlParser extends StandardTokenParsers:
             case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, Some(SqlParam.Distinct), Nil)
         }
 
-    def over: Parser[(List[SqlExpr], List[SqlOrderBy])] =
+    def over: Parser[(List[SqlExpr], List[SqlOrderItem])] =
         "(" ~> "PARTITION" ~> "BY" ~> rep1sep(expr, ",") ~ opt("ORDER" ~> "BY" ~> rep1sep(order, ",")) <~ ")" ^^ {
             case partition ~ order => (partition, order.getOrElse(Nil))
         } |
@@ -175,10 +175,10 @@ object SqlParser extends StandardTokenParsers:
             SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
         }
 
-    def order: Parser[SqlOrderBy] =
+    def order: Parser[SqlOrderItem] =
         expr ~ opt("ASC" | "DESC") ^^ {
-            case e ~ Some("DESC") => SqlOrderBy(e, Some(SqlOrderByOption.Desc), None)
-            case e ~ _ => SqlOrderBy(e, Some(SqlOrderByOption.Asc), None)
+            case e ~ Some("DESC") => SqlOrderItem(e, Some(SqlOrderOption.Desc), None)
+            case e ~ _ => SqlOrderItem(e, Some(SqlOrderOption.Asc), None)
         }
 
     def cast: Parser[SqlExpr] =
@@ -324,7 +324,7 @@ object SqlParser extends StandardTokenParsers:
             case g ~ h => (g, h)
         }
 
-    def orderBy: Parser[List[SqlOrderBy]] =
+    def orderBy: Parser[List[SqlOrderItem]] =
         "ORDER" ~> "BY" ~> rep1sep(order, ",")
 
     def limit: Parser[SqlLimit] =

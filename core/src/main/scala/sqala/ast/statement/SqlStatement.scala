@@ -2,7 +2,7 @@ package sqala.ast.statement
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.SqlOrderBy
+import sqala.ast.order.SqlOrderItem
 import sqala.ast.table.SqlTable
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.param.SqlParam
@@ -31,14 +31,14 @@ enum SqlQuery:
         where: Option[SqlExpr] = None,
         groupBy: List[SqlGroupItem] = Nil,
         having: Option[SqlExpr] = None,
-        orderBy: List[SqlOrderBy] = Nil,
+        orderBy: List[SqlOrderItem] = Nil,
         limit: Option[SqlLimit] = None
     )
     case Union(
         left: SqlQuery,
         unionType: SqlUnionType,
         right: SqlQuery,
-        orderBy: List[SqlOrderBy] = Nil,
+        orderBy: List[SqlOrderItem] = Nil,
         limit: Option[SqlLimit] = None
     )
     case Values(values: List[List[SqlExpr]])
