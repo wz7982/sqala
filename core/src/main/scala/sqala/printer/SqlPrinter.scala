@@ -219,6 +219,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
+        case c: SqlExpr.Custom => printCustomExpr(c)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
@@ -441,6 +442,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
         sqlBuilder.append(")")
+
+    def printCustomExpr(expr: SqlExpr.Custom): Unit =
+        sqlBuilder.append(expr.snippet)
 
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
