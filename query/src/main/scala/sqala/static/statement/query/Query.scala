@@ -123,7 +123,7 @@ class SortQuery[T](
 ) extends Query[T](queryParam, ast)(using context):
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         val sort = f(queryParam)
-        val orderBy = s.asSort(sort)
+        val orderBy = s.asSort(sort).map(_.asSqlOrderBy)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ orderBy))
 
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
@@ -161,7 +161,7 @@ class SelectQuery[T](
 
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         val sort = f(queryParam)
-        val sqlOrderBy = s.asSort(sort)
+        val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ sqlOrderBy))
 
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =

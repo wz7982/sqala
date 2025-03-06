@@ -19,7 +19,7 @@ class Grouping[T](
 
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): Grouping[T] =
         val sort = f(queryParam)
-        val sqlOrderBy = s.asSort(sort)
+        val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
         Grouping(queryParam, ast.copy(orderBy = ast.orderBy ++ sqlOrderBy))
 
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): Grouping[T] =

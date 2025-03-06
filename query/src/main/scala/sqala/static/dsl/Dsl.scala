@@ -150,14 +150,14 @@ extension (n: Int)
 
     def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-def partitionBy(partitionValue: Expr[?]*): OverValue =
-    OverValue(partitionBy = partitionValue.toList)
+def partitionBy[T: AsExpr as a](partitionValue: T): OverValue =
+    OverValue(partitionBy = a.exprs(partitionValue))
 
-def sortBy(sortValue: Sort[?]*): OverValue =
-    OverValue(sortBy = sortValue.toList)
+def sortBy[T: AsSort as a](sortValue: T): OverValue =
+    OverValue(sortBy = a.asSort(sortValue))
 
-def orderBy(sortValue: Sort[?]*): OverValue =
-    OverValue(sortBy = sortValue.toList)
+def orderBy[T: AsSort as a](sortValue: T): OverValue =
+    OverValue(sortBy = a.asSort(sortValue))
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)

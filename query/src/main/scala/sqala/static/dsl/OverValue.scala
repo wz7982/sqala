@@ -7,11 +7,11 @@ case class OverValue(
     private[sqala] val sortBy: List[Sort[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
-    infix def sortBy(sortValue: Sort[?]*): OverValue =
-        copy(sortBy = sortValue.toList)
+    infix def sortBy[T: AsSort as a](sortValue: T): OverValue =
+        copy(sortBy = a.asSort(sortValue))
 
-    infix def orderBy(sortValue: Sort[?]*): OverValue =
-        copy(sortBy = sortValue.toList)
+    infix def orderBy[T: AsSort as a](sortValue: T): OverValue =
+        copy(sortBy = a.asSort(sortValue))
 
     infix def rowsBetween(start: SqlWindowFrameOption, end: SqlWindowFrameOption): OverValue =
         copy(frame = Some(SqlWindowFrame.Rows(start, end)))
