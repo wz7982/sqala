@@ -16,7 +16,7 @@ class Insert[T, S <: InsertState](
 ):
     inline def apply[I: AsExpr](f: T => I)(using S =:= InsertNew): Insert[I, InsertTable] =
         val insertItems = f(items)
-        val columns = summon[AsExpr[I]].asExprs(insertItems).map: i =>
+        val columns = summon[AsExpr[I]].exprs(insertItems).map: i =>
             i match
                 case Expr.Column(_, c) => SqlExpr.Column(None, c)
                 case _ => throw MatchError(i)

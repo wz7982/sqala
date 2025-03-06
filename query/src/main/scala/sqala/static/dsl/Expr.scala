@@ -71,10 +71,10 @@ enum Expr[T]:
 
     @targetName("eq")
     def ==[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, Equal, m.asExpr(that))
+        Binary(this, Equal, a.asExpr(that))
 
     @targetName("eq")
     def ==[R](item: SubLinkItem[R])(using
@@ -85,10 +85,10 @@ enum Expr[T]:
 
     @targetName("equal")
     def ===[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, Equal, m.asExpr(that))
+        Binary(this, Equal, a.asExpr(that))
 
     @targetName("equal")
     def ===[R](item: SubLinkItem[R])(using
@@ -99,10 +99,10 @@ enum Expr[T]:
 
     @targetName("ne")
     def !=[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, NotEqual, m.asExpr(that))
+        Binary(this, NotEqual, a.asExpr(that))
 
     @targetName("ne")
     def !=[R](item: SubLinkItem[R])(using
@@ -113,10 +113,10 @@ enum Expr[T]:
 
     @targetName("notEqual")
     def <>[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, NotEqual, m.asExpr(that))
+        Binary(this, NotEqual, a.asExpr(that))
 
     @targetName("notEqual")
     def <>[R](item: SubLinkItem[R])(using
@@ -127,10 +127,10 @@ enum Expr[T]:
 
     @targetName("gt")
     def >[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, GreaterThan, m.asExpr(that))
+        Binary(this, GreaterThan, a.asExpr(that))
 
     @targetName("gt")
     def >[R](item: SubLinkItem[R])(using
@@ -141,10 +141,10 @@ enum Expr[T]:
 
     @targetName("ge")
     def >=[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, m.asExpr(that))
+        Binary(this, GreaterThanEqual, a.asExpr(that))
 
     @targetName("ge")
     def >=[R](item: SubLinkItem[R])(using
@@ -155,10 +155,10 @@ enum Expr[T]:
 
     @targetName("lt")
     def <[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, LessThan, m.asExpr(that))
+        Binary(this, LessThan, a.asExpr(that))
 
     @targetName("lt")
     def <[R](item: SubLinkItem[R])(using
@@ -169,10 +169,10 @@ enum Expr[T]:
 
     @targetName("le")
     def <=[R](that: R)(using
-        m: Merge[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        Binary(this, LessThanEqual, m.asExpr(that))
+        Binary(this, LessThanEqual, a.asExpr(that))
 
     @targetName("le")
     def <=[R](item: SubLinkItem[R])(using
@@ -182,23 +182,23 @@ enum Expr[T]:
         Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
 
     def in[R](list: Seq[R])(using
-        m: Merge[R],
-        o: CompareOperation[Unwrap[T, Option], Unwrap[m.R, Option]]
+        a: AsExpr[R],
+        o: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
-        In(this, Tuple(list.toList.map(m.asExpr(_))), false)
+        In(this, Tuple(list.toList.map(a.asExpr(_))), false)
 
     def in[R](exprs: R)(using
-        m: MergeIn[T, R]
+        c: CanIn[T, R]
     ): Expr[Boolean] =
-        In(this, m.asExpr(exprs), false)
+        In(this, c.asExpr(exprs), false)
 
     def between[S, E](start: S, end: E)(using
-        ms: Merge[S],
-        cs: CompareOperation[Unwrap[T, Option], Unwrap[ms.R, Option]],
-        me: Merge[E],
-        ce: CompareOperation[Unwrap[T, Option], Unwrap[me.R, Option]]
+        as: AsExpr[S],
+        cs: CompareOperation[Unwrap[T, Option], Unwrap[as.R, Option]],
+        ae: AsExpr[E],
+        ce: CompareOperation[Unwrap[T, Option], Unwrap[ae.R, Option]]
     ): Expr[Boolean] =
-        Between(this, ms.asExpr(start), me.asExpr(end), false)
+        Between(this, as.asExpr(start), ae.asExpr(end), false)
 
     @targetName("plus")
     def +[R: Number](value: R)(using

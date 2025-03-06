@@ -5,8 +5,8 @@ import sqala.metadata.*
 
 import java.time.LocalDateTime
 
-def grouping(items: Expr[?]*): Expr[Int] =
-    Expr.Func("GROUPING", items.toList)
+def grouping[T: AsExpr as a](items: T): Expr[Int] =
+    Expr.Func("GROUPING", a.exprs(items))
 
 class AggStar
 
@@ -62,6 +62,22 @@ def percentileDisc[N: Number](
 
 @sqlAgg
 def stringAgg[T <: String | Option[String]](
+    expr: Expr[T],
+    separator: String,
+    sortBy: Sort[?]*
+): Expr[Option[String]] =
+    Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, sortBy.toList)
+
+@sqlAgg
+def groupConcat[T <: String | Option[String]](
+    expr: Expr[T],
+    separator: String,
+    sortBy: Sort[?]*
+): Expr[Option[String]] =
+    Expr.Func("STRING_AGG", expr :: separator.asExpr :: Nil, false, sortBy.toList)
+
+@sqlAgg
+def listAgg[T <: String | Option[String]](
     expr: Expr[T],
     separator: String,
     sortBy: Sort[?]*
@@ -158,13 +174,8 @@ def power[T: Number](expr: Expr[T], n: Double): Expr[Option[BigDecimal]] =
     Expr.Func("POWER", expr :: n.asExpr :: Nil)
 
 @sqlFunction
-def concat(
-    expr: (Expr[String] | Expr[Option[String]] | String)*
-): Expr[Option[String]] =
-    val args = expr.toList.map:
-        case s: String => s.asExpr
-        case e: Expr[?] => e
-    Expr.Func("CONCAT", args)
+def concat[T: AsExpr as a](exprs: T): Expr[Option[String]] =
+    Expr.Func("CONCAT", a.exprs(exprs))
 
 @sqlFunction
 def substring[T <: String | Option[String]](

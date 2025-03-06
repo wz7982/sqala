@@ -118,12 +118,12 @@ sealed class Query[T](
 class SortQuery[T](
     private[sqala] override val queryParam: T,
     override val ast: SqlQuery.Select
-)(using 
+)(using
     private[sqala] override val context: QueryContext
 ) extends Query[T](queryParam, ast)(using context):
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         val sort = f(queryParam)
-        val orderBy = s.asSort(sort)
+        val orderBy = s.asSort(sort).map(_.asSqlOrderBy)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ orderBy))
 
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
@@ -140,7 +140,7 @@ class SortQuery[T](
 class SelectQuery[T](
     private[sqala] override val queryParam: T,
     override val ast: SqlQuery.Select
-)(using 
+)(using
     private[sqala] override val context: QueryContext
 ) extends Query[T](queryParam, ast)(using context):
     def filter(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
@@ -152,7 +152,7 @@ class SelectQuery[T](
 
     def withFilter(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
         filter(f)
-    
+
     def filterIf(test: => Boolean)(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
         if test then filter(f) else this
 
@@ -161,50 +161,42 @@ class SelectQuery[T](
 
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         val sort = f(queryParam)
-        val sqlOrderBy = s.asSort(sort)
+        val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
         SortQuery(queryParam, ast.copy(orderBy = ast.orderBy ++ sqlOrderBy))
 
     def orderBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): SortQuery[T] =
         sortBy(f)
 
-    def groupBy[G](using 
-        tg: ToGrouping[T]
-    )(f: QueryContext ?=> tg.R => G)(using 
+    def groupBy[G](f: QueryContext ?=> T => G)(using
         e: AsExpr[G]
-    ): Grouping[tg.R] =
-        val group = f(tg.toGrouping(queryParam))
-        val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(tg.toGrouping(queryParam), ast.copy(groupBy = sqlGroupBy.map(g => SqlGroupItem.Singleton(g))))
+    ): Grouping[T] =
+        val group = f(queryParam)
+        val sqlGroupBy = e.exprs(group).map(_.asSqlExpr)
+        Grouping(queryParam, ast.copy(groupBy = sqlGroupBy.map(g => SqlGroupItem.Singleton(g))))
 
-    def groupByCube[G](using 
+    def groupByCube[G](f: QueryContext ?=> T => G)(using
         o: ToOption[T],
-        tg: ToGrouping[o.R]
-    )(f: QueryContext ?=> tg.R => G)(using 
         e: AsExpr[G]
-    ): Grouping[tg.R] =
-        val group = f(tg.toGrouping(o.toOption(queryParam)))
-        val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.Cube(sqlGroupBy) :: Nil))
+    ): Grouping[o.R] =
+        val group = f(queryParam)
+        val sqlGroupBy = e.exprs(group).map(_.asSqlExpr)
+        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Cube(sqlGroupBy) :: Nil))
 
-    def groupByRollup[G](using 
+    def groupByRollup[G](f: QueryContext ?=> T => G)(using
         o: ToOption[T],
-        tg: ToGrouping[o.R]
-    )(f: QueryContext ?=> tg.R => G)(using 
         e: AsExpr[G]
-    ): Grouping[tg.R] =
-        val group = f(tg.toGrouping(o.toOption(queryParam)))
-        val sqlGroupBy = e.asExprs(group).map(_.asSqlExpr)
-        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.Rollup(sqlGroupBy) :: Nil))
+    ): Grouping[o.R] =
+        val group = f(queryParam)
+        val sqlGroupBy = e.exprs(group).map(_.asSqlExpr)
+        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.Rollup(sqlGroupBy) :: Nil))
 
-    def groupBySets[G](using
+    def groupBySets[G](f: QueryContext ?=> T => G)(using
         o: ToOption[T],
-        tg: ToGrouping[o.R]
-    )(f: QueryContext ?=> tg.R => G)(using 
         g: GroupingSets[G]
-    ): Grouping[tg.R] =
-        val group = f(tg.toGrouping(o.toOption(queryParam)))
+    ): Grouping[o.R] =
+        val group = f(queryParam)
         val sqlGroupBy = g.asSqlExprs(group)
-        Grouping(tg.toGrouping(o.toOption(queryParam)), ast.copy(groupBy = SqlGroupItem.GroupingSets(sqlGroupBy) :: Nil))
+        Grouping(o.toOption(queryParam), ast.copy(groupBy = SqlGroupItem.GroupingSets(sqlGroupBy) :: Nil))
 
     def map[M](f: QueryContext ?=> T => M)(using s: AsSelect[M]): Query[s.R] =
         val mapped = f(queryParam)
@@ -215,7 +207,7 @@ class SelectQuery[T](
         map(f)
 
     def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: QueryContext ?=> T => NamedTuple[N, V]): Pivot[T, N, V] =
-        val functions = a.asExprs(f(queryParam).toTuple)
+        val functions = a.exprs(f(queryParam).toTuple)
             .map(e => e.asSqlExpr.asInstanceOf[SqlExpr.Func])
         Pivot[T, N, V](queryParam, functions, ast)
 
@@ -254,14 +246,14 @@ object SelectQuery:
 class JoinQuery[T](
     private[sqala] override val queryParam: T,
     override val ast: SqlQuery.Select
-)(using 
+)(using
     private[sqala] override val context: QueryContext
 ) extends SelectQuery[T](queryParam, ast)(using context):
     private inline def joinClause[J, R](
         joinType: SqlJoinType,
         f: Table[J] => R
-    )(using 
-        m: Mirror.ProductOf[J], 
+    )(using
+        m: Mirror.ProductOf[J],
         s: AsSelect[R]
     ): JoinPart[R] =
         AsSqlExpr.summonInstances[m.MirroredElemTypes]
@@ -287,7 +279,7 @@ class JoinQuery[T](
         f: SubQuery[N, SV] => R,
         vf: V => SV,
         lateral: Boolean = false
-    )(using 
+    )(using
         s: AsSelect[R],
         sq: AsSubQuery[SV]
     ): JoinPart[R] =
@@ -365,7 +357,7 @@ class JoinQuery[T](
         sq: AsSubQuery[ts.R]
     ): JoinPart[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.Left, 
+            SqlJoinType.Left,
             query,
             j => tt.toTuple(queryParam) :* j,
             v => ts.toTuple(o.toOption(v))
@@ -381,7 +373,7 @@ class JoinQuery[T](
         sq: AsSubQuery[ts.R]
     ): JoinPart[Append[tt.R, SubQuery[N, ts.R]]] =
         joinQueryClause[N, V, ts.R, Append[tt.R, SubQuery[N, ts.R]]](
-            SqlJoinType.Left, 
+            SqlJoinType.Left,
             query(queryParam),
             j => tt.toTuple(queryParam) :* j,
             v => ts.toTuple(o.toOption(v))
@@ -417,7 +409,7 @@ class JoinQuery[T](
 class TableQuery[T](
     private[sqala] val table: Table[T],
     override val ast: SqlQuery.Select
-)(using 
+)(using
     private[sqala] override val context: QueryContext
 ) extends JoinQuery[Table[T]](table, ast)(using context)
 

@@ -13,11 +13,11 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 
-extension [T](exprs: T)(using m: Merge[T])
-    def asExpr: Expr[m.R] = m.asExpr(exprs)
+extension [T](exprs: T)(using a: AsExpr[T])
+    def asExpr: Expr[a.R] = a.asExpr(exprs)
 
-given mergeExpr[T](using m: Merge[T]): Conversion[T, Expr[m.R]] =
-    m.asExpr(_)
+given asExpr[T: AsExpr as a]: Conversion[T, Expr[a.R]] =
+    a.asExpr(_)
 
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
@@ -26,7 +26,7 @@ def date(s: String): Expr[LocalDate] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
 extension [T: AsSqlExpr](expr: Expr[T])
-    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using MergeIn[T, V]): PivotPair[T, N, V] =
+    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using CanEqual[T, V]): PivotPair[T, N, V] =
         PivotPair(expr, pivot)
 
 private[sqala] val tableCte = "__cte__"
@@ -42,39 +42,22 @@ def level(): Expr[Int] =
     Expr.Column(tableCte, columnPseudoLevel)
 
 class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
-    infix def `then`[E: AsSqlExpr](expr: Expr[E]): IfThen[E] =
-        IfThen(exprs :+ expr)
-
-    infix def `then`[E](value: E)(using
-        a: AsSqlExpr[E]
-    ): IfThen[E] =
-        IfThen(exprs :+ Expr.Literal(value, a))
+    infix def `then`[E : AsExpr as a](expr: E): IfThen[a.R] =
+        IfThen(exprs :+ a.asExpr(expr))
 
 class If[T](private[sqala] val exprs: List[Expr[?]]):
-    infix def `then`[R: AsSqlExpr](expr: Expr[R])(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    infix def `then`[R : AsExpr as a](expr: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): IfThen[o.R] =
-        IfThen(exprs :+ expr)
-
-    infix def `then`[R: AsSqlExpr](value: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): IfThen[o.R] =
-        IfThen(exprs :+ Expr.Literal(value, summon[AsSqlExpr[R]]))
+        IfThen(exprs :+ a.asExpr(expr))
 
 class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
-    infix def `else`[R: AsSqlExpr](expr: Expr[R])(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    infix def `else`[R : AsExpr as a](expr: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): Expr[o.R] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, expr)
-
-    infix def `else`[R: AsSqlExpr](value: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[o.R] =
-        val caseBranches =
-            exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, Expr.Literal(value, summon[AsSqlExpr[R]]))
+        Expr.Case(caseBranches, a.asExpr(expr))
 
     infix def `else if`(expr: Expr[Boolean]): If[T] =
         If(exprs :+ expr)
@@ -84,14 +67,14 @@ def `if`(expr: Expr[Boolean]): EmptyIf = EmptyIf(expr :: Nil)
 def exists[T](query: Query[T]): Expr[Boolean] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
 
-def any[T](query: Query[T])(using 
-    m: Merge[T]
-): SubLinkItem[m.R] =
+def any[T](query: Query[T])(using
+    a: AsExpr[T]
+): SubLinkItem[a.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def all[T](query: Query[T])(using 
-    m: Merge[T]
-): SubLinkItem[m.R] =
+def all[T](query: Query[T])(using
+    a: AsExpr[T]
+): SubLinkItem[a.R] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
@@ -167,24 +150,19 @@ extension (n: Int)
 
     def following: SqlWindowFrameOption = SqlWindowFrameOption.Following(n)
 
-def partitionBy(partitionValue: Expr[?]*): OverValue =
-    OverValue(partitionBy = partitionValue.toList)
+def partitionBy[T: AsExpr as a](partitionValue: T): OverValue =
+    OverValue(partitionBy = a.exprs(partitionValue))
 
-def sortBy(sortValue: Sort[?]*): OverValue =
-    OverValue(sortBy = sortValue.toList)
+def sortBy[T: AsSort as a](sortValue: T): OverValue =
+    OverValue(sortBy = a.asSort(sortValue))
 
-def orderBy(sortValue: Sort[?]*): OverValue =
-    OverValue(sortBy = sortValue.toList)
+def orderBy[T: AsSort as a](sortValue: T): OverValue =
+    OverValue(sortBy = a.asSort(sortValue))
 
 def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     v
 
-inline def analysisContext[T](inline v: QueryContext ?=> T): T =
-    given QueryContext = QueryContext(0)
-    AnalysisClauseMacro.analysis(v)
-    v
-    
 inline def from[T](using
     qc: QueryContext = QueryContext(0),
     p: Mirror.ProductOf[T],
@@ -284,7 +262,7 @@ inline def save[T <: Product](entity: T)(using Mirror.ProductOf[T]): Save = Save
 
 def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
     query: Query[NamedTuple[N, V]]
-)(f: Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using 
+)(f: Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using
     AsSelect[SubQuery[N, V]],
     AsSubQuery[V]
 ): Query[NamedTuple[N, V]] =

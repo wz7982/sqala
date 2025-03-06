@@ -19,7 +19,7 @@ case class ConnectBy[T](
 
     def sortBy[S](f: QueryContext ?=> Table[T] => S)(using s: AsSort[S]): ConnectBy[T] =
         val sort = f(table)
-        val sqlOrderBy = s.asSort(sort)
+        val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
         copy(mapAst = mapAst.copy(orderBy = mapAst.orderBy ++ sqlOrderBy))
 
     def orderBy[S](f: QueryContext ?=> Table[T] => S)(using s: AsSort[S]): ConnectBy[T] =
@@ -27,15 +27,15 @@ case class ConnectBy[T](
 
     def maxDepth(n: Int): ConnectBy[T] =
         val cond = SqlExpr.Binary(
-            SqlExpr.Column(Some(tableCte), columnPseudoLevel), 
-            SqlBinaryOperator.LessThan, 
+            SqlExpr.Column(Some(tableCte), columnPseudoLevel),
+            SqlBinaryOperator.LessThan,
             SqlExpr.NumberLiteral(n)
         )
         copy(connectByAst = connectByAst.addWhere(cond))
 
     def sortSiblingsBy[S](f: QueryContext ?=> Table[T] => S)(using s: AsSort[S]): ConnectBy[T] =
         val sort = f(table)
-        val sqlOrderBy = s.asSort(sort)
+        val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
         copy(connectByAst = connectByAst.copy(orderBy = connectByAst.orderBy ++ sqlOrderBy))
 
     def orderSiblingsBy[S](f: QueryContext ?=> Table[T] => S)(using s: AsSort[S]): ConnectBy[T] =
