@@ -13,11 +13,8 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.*
 import scala.deriving.Mirror
 
-extension [T](exprs: T)(using m: Merge[T])
-    def asExpr: Expr[m.R] = m.asExpr(exprs)
-
-given mergeExpr[T](using m: Merge[T]): Conversion[T, Expr[m.R]] =
-    m.asExpr(_)
+extension [T](exprs: T)(using a: AsExpr[T])
+    def asExpr: Expr[a.R] = a.asExpr(exprs)
 
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
@@ -26,7 +23,7 @@ def date(s: String): Expr[LocalDate] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
 extension [T: AsSqlExpr](expr: Expr[T])
-    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using MergeIn[T, V]): PivotPair[T, N, V] =
+    def within[N <: Tuple, V <: Tuple : AsExpr](pivot: NamedTuple[N, V])(using CanEqual[T, V]): PivotPair[T, N, V] =
         PivotPair(expr, pivot)
 
 private[sqala] val tableCte = "__cte__"
@@ -84,14 +81,14 @@ def `if`(expr: Expr[Boolean]): EmptyIf = EmptyIf(expr :: Nil)
 def exists[T](query: Query[T]): Expr[Boolean] =
     Expr.SubLink(query.ast, SqlSubLinkType.Exists)
 
-def any[T](query: Query[T])(using 
-    m: Merge[T]
-): SubLinkItem[m.R] =
+def any[T](query: Query[T])(using
+    a: AsExpr[T]
+): SubLinkItem[a.R] =
     SubLinkItem(query.ast, SqlSubLinkType.Any)
 
-def all[T](query: Query[T])(using 
-    m: Merge[T]
-): SubLinkItem[m.R] =
+def all[T](query: Query[T])(using
+    a: AsExpr[T]
+): SubLinkItem[a.R] =
     SubLinkItem(query.ast, SqlSubLinkType.All)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
@@ -184,7 +181,7 @@ inline def analysisContext[T](inline v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     AnalysisClauseMacro.analysis(v)
     v
-    
+
 inline def from[T](using
     qc: QueryContext = QueryContext(0),
     p: Mirror.ProductOf[T],
@@ -284,7 +281,7 @@ inline def save[T <: Product](entity: T)(using Mirror.ProductOf[T]): Save = Save
 
 def withRecursive[N <: Tuple, WN <: Tuple, V <: Tuple](
     query: Query[NamedTuple[N, V]]
-)(f: Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using 
+)(f: Query[NamedTuple[N, V]] => Query[NamedTuple[WN, V]])(using
     AsSelect[SubQuery[N, V]],
     AsSubQuery[V]
 ): Query[NamedTuple[N, V]] =

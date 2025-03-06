@@ -45,8 +45,8 @@ class Pivot[T, N <: Tuple, V <: Tuple](
             yield
                 val firstArg = a.args.headOption.getOrElse(SqlExpr.NumberLiteral(1))
                 val replacedArg = SqlExpr.Case(SqlCase(c, firstArg) :: Nil, SqlExpr.Null)
-                val args = 
-                    if a.args.isEmpty then replacedArg :: Nil 
+                val args =
+                    if a.args.isEmpty then replacedArg :: Nil
                     else replacedArg :: a.args.tail
                 a.copy(args = args)
 
@@ -54,7 +54,7 @@ class Pivot[T, N <: Tuple, V <: Tuple](
                 SqlSelectItem.Item(p, Some(s"c$i"))
 
         Query(
-            Tuple.fromArray(projectionList.toArray.map(_ => Expr.Column("", ""))).asInstanceOf[r.R], 
+            Tuple.fromArray(projectionList.toArray.map(_ => Expr.Column("", ""))).asInstanceOf[r.R],
             ast.copy(select = selectItems)
         )
 
@@ -110,8 +110,8 @@ object CollectPivotNames:
     type Aux[T, O <: Tuple] = CollectPivotNames[T]:
         type R = O
 
-    given tuple[H, T <: Tuple](using 
-        h: CollectPivotNames[H], 
+    given tuple[H, T <: Tuple](using
+        h: CollectPivotNames[H],
         t: CollectPivotNames[T]
     ): Aux[H *: T, Tuple.Concat[h.R, t.R]] =
         new CollectPivotNames[H *: T]:
@@ -132,5 +132,5 @@ object CollectPivotNames:
             type R = N *: EmptyTuple
 
             def collect(x: PivotPair[T, N, V]): List[(SqlExpr, List[SqlExpr])] =
-                (x.expr.asSqlExpr, summon[AsExpr[V]].asExprs(x.pivot.toTuple).map(_.asSqlExpr)) :: 
+                (x.expr.asSqlExpr, summon[AsExpr[V]].exprs(x.pivot.toTuple).map(_.asSqlExpr)) ::
                 Nil

@@ -11,7 +11,7 @@ import scala.compiletime.constValue
 class Grouping[T](
     private[sqala] val queryParam: T,
     val ast: SqlQuery.Select
-)(using 
+)(using
     private[sqala] val context: QueryContext
 ):
     def having(f: QueryContext ?=> T => Expr[Boolean]): Grouping[T] =
@@ -35,7 +35,7 @@ class Grouping[T](
         map(f)
 
     def pivot[N <: Tuple, V <: Tuple : AsExpr as a](f: QueryContext ?=> T => NamedTuple[N, V]): Pivot[T, N, V] =
-        val functions = a.asExprs(f(queryParam).toTuple)
+        val functions = a.exprs(f(queryParam).toTuple)
             .map(e => e.asSqlExpr.asInstanceOf[SqlExpr.Func])
         Pivot[T, N, V](queryParam, functions, ast)
 
@@ -51,14 +51,14 @@ class GroupingTable[T](
         ]
 
     inline def selectDynamic(name: String): Expr[?] =
-        val index = 
+        val index =
             constValue[Index[Names[From[Unwrap[T, Option]]], name.type, 0]]
         Expr.Column(__aliasName__, __metaData__.columnNames(index))
 
 class GroupingSubQuery[N <: Tuple, V <: Tuple](
     private[sqala] val __alias__ : String,
     private[sqala] val __items__ : V
-)(using 
+)(using
     private[sqala] val __context__ : QueryContext
 ) extends Selectable:
     type Fields = NamedTuple[N, V]
@@ -90,8 +90,8 @@ object ToGrouping:
             def toGrouping(x: SubQuery[N, V]): R =
                 GroupingSubQuery(x.__alias__, x.__items__)(using x.__context__)
 
-    given tuple[H, T <: Tuple](using 
-        h: ToGrouping[H], 
+    given tuple[H, T <: Tuple](using
+        h: ToGrouping[H],
         t: ToGrouping[T],
         tt: ToTuple[t.R]
     ): Aux[H *: T, h.R *: tt.R] =
