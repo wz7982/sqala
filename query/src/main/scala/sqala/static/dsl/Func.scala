@@ -27,7 +27,7 @@ def count[T](expr: Expr[T], distinct: Boolean): Expr[Long] =
     Expr.Func("COUNT", expr :: Nil, distinct)
 
 @sqlAgg
-def sum[T: Number](expr: Expr[T]): Expr[T] =
+def sum[T: Number](expr: Expr[T]): Expr[Wrap[T, Option]] =
     Expr.Func("SUM", expr :: Nil)
 
 @sqlAgg
@@ -79,38 +79,12 @@ def rowNumber(): Expr[Long] = Expr.Func("ROW_NUMBER", Nil)
 
 @sqlWindow
 def lag[T](
-    expr: Expr[T]
-)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
-    Expr.Func("LAG", expr :: Expr.Literal(1, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
-
-@sqlWindow
-def lag[T](
-    expr: Expr[T],
-    offset: Int
-)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
-    Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
-
-@sqlWindow
-def lag[T](
     expr: Expr[T],
     offset: Int,
     default: Option[Unwrap[T, Option]]
 )(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
     val defaultExpr = Expr.Literal(default, a)
     Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
-
-@sqlWindow
-def lead[T](
-    expr: Expr[T]
-)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
-    Expr.Func("LEAD", expr :: Expr.Literal(1, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
-
-@sqlWindow
-def lead[T](
-    expr: Expr[T],
-    offset: Int
-)(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
-    Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: None.asExpr :: Nil)
 
 @sqlWindow
 def lead[T](
@@ -152,13 +126,13 @@ def coalesce[T](expr: Expr[Option[T]], value: T)(using
     Expr.Func("COALESCE", expr :: Expr.Literal(value, a) :: Nil)
 
 @sqlFunction
-def ifnull[T](expr: Expr[Option[T]], value: T)(using
+def ifNull[T](expr: Expr[Option[T]], value: T)(using
     AsSqlExpr[T]
 ): Expr[T] =
     coalesce(expr, value)
 
 @sqlFunction
-def nullif[T](expr: Expr[T], value: T)(using
+def nullIf[T](expr: Expr[T], value: T)(using
     a: AsSqlExpr[T]
 ): Expr[Wrap[T, Option]] =
     Expr.Func("NULLIF", expr :: Expr.Literal(value, a) :: Nil)
