@@ -294,7 +294,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, op, _)
-                    if op.priority < parent.op.priority => true
+                    if op.priority < parent.op.priority || op.priority == 0 => true
                 case SqlExpr.Binary(_, Custom(_), _) => true
                 case _ => false
 
