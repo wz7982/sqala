@@ -163,11 +163,6 @@ def queryContext[T](v: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     v
 
-inline def analysisContext[T](inline v: QueryContext ?=> T): T =
-    given QueryContext = QueryContext(0)
-    AnalysisClauseMacro.analysis(v)
-    v
-
 inline def from[T](using
     qc: QueryContext = QueryContext(0),
     p: Mirror.ProductOf[T],
