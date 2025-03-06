@@ -16,6 +16,9 @@ import scala.deriving.Mirror
 extension [T](exprs: T)(using a: AsExpr[T])
     def asExpr: Expr[a.R] = a.asExpr(exprs)
 
+given asExpr[T: AsExpr as a]: Conversion[T, Expr[a.R]] =
+    a.asExpr(_)
+
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
 
@@ -39,39 +42,22 @@ def level(): Expr[Int] =
     Expr.Column(tableCte, columnPseudoLevel)
 
 class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
-    infix def `then`[E: AsSqlExpr](expr: Expr[E]): IfThen[E] =
-        IfThen(exprs :+ expr)
-
-    infix def `then`[E](value: E)(using
-        a: AsSqlExpr[E]
-    ): IfThen[E] =
-        IfThen(exprs :+ Expr.Literal(value, a))
+    infix def `then`[E : AsExpr as a](expr: E): IfThen[a.R] =
+        IfThen(exprs :+ a.asExpr(expr))
 
 class If[T](private[sqala] val exprs: List[Expr[?]]):
-    infix def `then`[R: AsSqlExpr](expr: Expr[R])(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    infix def `then`[R : AsExpr as a](expr: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): IfThen[o.R] =
-        IfThen(exprs :+ expr)
-
-    infix def `then`[R: AsSqlExpr](value: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): IfThen[o.R] =
-        IfThen(exprs :+ Expr.Literal(value, summon[AsSqlExpr[R]]))
+        IfThen(exprs :+ a.asExpr(expr))
 
 class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
-    infix def `else`[R: AsSqlExpr](expr: Expr[R])(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
+    infix def `else`[R : AsExpr as a](expr: R)(using
+        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): Expr[o.R] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, expr)
-
-    infix def `else`[R: AsSqlExpr](value: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[o.R] =
-        val caseBranches =
-            exprs.grouped(2).toList.map(i => (i(0), i(1)))
-        Expr.Case(caseBranches, Expr.Literal(value, summon[AsSqlExpr[R]]))
+        Expr.Case(caseBranches, a.asExpr(expr))
 
     infix def `else if`(expr: Expr[Boolean]): If[T] =
         If(exprs :+ expr)
