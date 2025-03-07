@@ -16,9 +16,6 @@ import scala.deriving.Mirror
 extension [T](exprs: T)(using a: AsExpr[T])
     def asExpr: Expr[a.R] = a.asExpr(exprs)
 
-given asExpr[T: AsExpr as a]: Conversion[T, Expr[a.R]] =
-    a.asExpr(_)
-
 def timestamp(s: String): Expr[LocalDateTime] =
     Expr.Ref(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
 
@@ -108,8 +105,8 @@ private enum TimeUnit(val unit: SqlTimeUnit):
     case Minute extends TimeUnit(SqlTimeUnit.Minute)
     case Second extends TimeUnit(SqlTimeUnit.Second)
 
-    infix def from[T](expr: Expr[T]): ExtractValue[T] =
-        ExtractValue(unit, expr)
+    infix def from[T: AsExpr as a](expr: T): ExtractValue[a.R] =
+        ExtractValue(unit, a.asExpr(expr))
 
 def year: TimeUnit = TimeUnit.Year
 
@@ -135,9 +132,9 @@ def extract[T <: Interval | Option[Interval]](
 ): Expr[Option[BigDecimal]] =
     Expr.Extract(value.unit, value.expr)
 
-extension [T](expr: Expr[T])
-    def as[R](using cast: Cast[T, R]): Expr[Option[R]] =
-        Expr.Cast(expr, cast.castType)
+extension [T: AsExpr as a](expr: T)
+    def as[R](using cast: Cast[a.R, R]): Expr[Option[R]] =
+        Expr.Cast(a.asExpr(expr), cast.castType)
 
 def currentRow: SqlWindowFrameOption = SqlWindowFrameOption.CurrentRow
 
