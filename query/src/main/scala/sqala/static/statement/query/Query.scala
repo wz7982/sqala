@@ -71,7 +71,15 @@ sealed class Query[T](
         val newAst = ast match
             case s: SqlQuery.Select =>
                 s.copy(param = Some(SqlParam.Distinct))
-            case _ => ast
+            case q =>
+                context.tableIndex += 1
+                val alias = s"t${context.tableIndex}"
+                val table = SqlTable.SubQuery(q, false, Some(SqlTableAlias(alias)))
+                SqlQuery.Select(
+                    param = Some(SqlParam.Distinct),
+                    select = SqlSelectItem.Wildcard(None) :: Nil,
+                    from = table :: Nil
+                )
         Query(queryParam, newAst)
 
     private[sqala] def size: Query[Expr[Long]] =
@@ -94,25 +102,25 @@ sealed class Query[T](
         )
         Query(expr, outerQuery)
 
-    infix def union[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def union[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Union, query.ast)
 
-    infix def unionAll[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def unionAll[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.UnionAll, query.ast)
 
-    def ++[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    def ++[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.UnionAll, query.ast)
 
-    infix def except[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def except[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Except, query.ast)
 
-    infix def exceptAll[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def exceptAll[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.ExceptAll, query.ast)
 
-    infix def intersect[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def intersect[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Intersect, query.ast)
 
-    infix def intersectAll[R](query: Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
+    infix def intersectAll[R](query:  QueryContext ?=> Query[R])(using u: UnionOperation[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.IntersectAll, query.ast)
 
 class SortQuery[T](
