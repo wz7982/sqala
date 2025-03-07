@@ -2,17 +2,12 @@ package sqala.static.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.expr.SqlBinaryOperator.*
-import sqala.ast.expr.SqlUnaryOperator.*
-import sqala.ast.order.SqlOrderNullsOption.{First, Last}
-import sqala.ast.order.SqlOrderOption.{Asc, Desc}
 import sqala.ast.param.SqlParam
 import sqala.ast.statement.SqlQuery
 import sqala.common.*
 import sqala.static.statement.dml.UpdatePair
 
-import java.time.LocalDateTime
 import scala.annotation.targetName
-import scala.compiletime.ops.boolean.*
 
 enum Expr[T]:
     case Literal[T](value: T, a: AsSqlExpr[T]) extends Expr[T]
@@ -83,20 +78,6 @@ enum Expr[T]:
     ): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
 
-    @targetName("equal")
-    def ===[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, Equal, a.asExpr(that))
-
-    @targetName("equal")
-    def ===[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, Equal, SubLink(item.query, item.linkType))
-
     @targetName("ne")
     def !=[R](that: R)(using
         a: AsExpr[R],
@@ -111,239 +92,6 @@ enum Expr[T]:
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
 
-    @targetName("notEqual")
-    def <>[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, NotEqual, a.asExpr(that))
-
-    @targetName("notEqual")
-    def <>[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, NotEqual, SubLink(item.query, item.linkType))
-
-    @targetName("gt")
-    def >[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThan, a.asExpr(that))
-
-    @targetName("gt")
-    def >[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThan, SubLink(item.query, item.linkType))
-
-    @targetName("ge")
-    def >=[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, a.asExpr(that))
-
-    @targetName("ge")
-    def >=[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, GreaterThanEqual, SubLink(item.query, item.linkType))
-
-    @targetName("lt")
-    def <[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThan, a.asExpr(that))
-
-    @targetName("lt")
-    def <[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThan, SubLink(item.query, item.linkType))
-
-    @targetName("le")
-    def <=[R](that: R)(using
-        a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThanEqual, a.asExpr(that))
-
-    @targetName("le")
-    def <=[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
-        Unwrap[R, Option]]
-    ): Expr[Boolean] =
-        Binary(this, LessThanEqual, SubLink(item.query, item.linkType))
-
-    def in[R](list: Seq[R])(using
-        a: AsExpr[R],
-        o: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
-    ): Expr[Boolean] =
-        In(this, Tuple(list.toList.map(a.asExpr(_))), false)
-
-    def in[R](exprs: R)(using
-        c: CanIn[T, R]
-    ): Expr[Boolean] =
-        In(this, c.asExpr(exprs), false)
-
-    def between[S, E](start: S, end: E)(using
-        as: AsExpr[S],
-        cs: CompareOperation[Unwrap[T, Option], Unwrap[as.R, Option]],
-        ae: AsExpr[E],
-        ce: CompareOperation[Unwrap[T, Option], Unwrap[ae.R, Option]]
-    ): Expr[Boolean] =
-        Between(this, as.asExpr(start), ae.asExpr(end), false)
-
-    @targetName("plus")
-    def +[R: Number](value: R)(using
-        n: Number[T],
-        a: AsSqlExpr[R],
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Plus, Literal(value, a))
-
-    @targetName("plus")
-    def +[R: Number](that: Expr[R])(using
-        n: Number[T],
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Plus, that)
-
-    @targetName("plus")
-    def +(interval: TimeInterval)(using
-        d: DateTime[T],
-        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
-    ): Expr[r.R] =
-        Binary(this, Plus, Interval(interval.value, interval.unit))
-
-    @targetName("minus")
-    def -[R](value: R)(using
-        a: AsSqlExpr[R],
-        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Minus, Literal(value, a))
-
-    @targetName("minus")
-    def -[R](that: Expr[R])(using
-        r: MinusOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Minus, that)
-
-    @targetName("minus")
-    def -(interval: TimeInterval)(using
-        d: DateTime[T],
-        r: ResultOperation[Unwrap[T, Option], LocalDateTime, IsOption[T]]
-    ): Expr[r.R] =
-        Binary(this, Minus, Interval(interval.value, interval.unit))
-
-    @targetName("times")
-    def *[R: Number](value: R)(using
-        n: Number[T],
-        a: AsSqlExpr[R],
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Times, Literal(value, a))
-
-    @targetName("times")
-    def *[R: Number](that: Expr[R])(using
-        n: Number[T],
-        r: ResultOperation[Unwrap[T, Option], Unwrap[R, Option], IsOption[T] || IsOption[R]]
-    ): Expr[r.R] =
-        Binary(this, Times, that)
-
-    @targetName("div")
-    def /[R: Number](value: R)(using
-        n: Number[T],
-        a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal]] =
-        Binary(this, Div, Literal(value, a))
-
-    @targetName("div")
-    def /[R: Number](that: Expr[R])(using
-        Number[T]
-    ): Expr[Option[BigDecimal]] =
-        Binary(this, Div, that)
-
-    @targetName("mod")
-    def %[R: Number](value: R)(using
-        n: Number[T],
-        a: AsSqlExpr[R]
-    ): Expr[Option[BigDecimal]] =
-        Binary(this, Mod, Literal(value, a))
-
-    @targetName("mod")
-    def %[R: Number](that: Expr[R])(using
-        Number[T]
-    ): Expr[Option[BigDecimal]] =
-        Binary(this, Mod, that)
-
-    @targetName("positive")
-    def unary_+(using Number[T]): Expr[T] = Unary(this, Positive)
-
-    @targetName("negative")
-    def unary_-(using Number[T]): Expr[T] = Unary(this, Negative)
-
-    @targetName("and")
-    def &&(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
-        Binary(this, And, that)
-
-    @targetName("or")
-    def ||(that: Expr[Boolean])(using T =:= Boolean): Expr[Boolean] =
-        Binary(this, Or, that)
-
-    @targetName("not")
-    def unary_!(using T =:= Boolean): Expr[Boolean] =
-        Unary(this, Not)
-
-    def like(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
-        Binary(this, Like, Literal(value, summon[AsSqlExpr[String]]))
-
-    def like[R <: String | Option[String]](that: Expr[R])(using T <:< (String | Option[String])): Expr[Boolean] =
-        Binary(this, Like, that)
-
-    def contains(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
-        like("%" + value + "%")
-
-    def startWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
-        like(value + "%")
-
-    def endWith(value: String)(using T <:< (String | Option[String])): Expr[Boolean] =
-        like("%" + value)
-
-    @targetName("json")
-    def ->(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
-        Binary(this, SqlBinaryOperator.Json, Literal(n, summon[AsSqlExpr[Int]]))
-
-    @targetName("json")
-    def ->(n: String)(using T <:< (Json | Option[Json])): Expr[Option[Json]] =
-        Binary(this, SqlBinaryOperator.Json, Literal(n, summon[AsSqlExpr[String]]))
-
-    @targetName("jsonText")
-    def ->>(n: Int)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
-        Binary(this, JsonText, Literal(n, summon[AsSqlExpr[Int]]))
-
-    @targetName("jsonText")
-    def ->>(n: String)(using T <:< (Json | Option[Json])): Expr[Option[String]] =
-        Binary(this, JsonText, Literal(n, summon[AsSqlExpr[String]]))
-
-    def asc: Sort[T] = Sort(this, Asc, None)
-
-    def desc: Sort[T] = Sort(this, Desc, None)
-
-    def ascNullsFirst: Sort[T] = Sort(this, Asc, Some(First))
-
-    def ascNullsLast: Sort[T] = Sort(this, Asc, Some(Last))
-
-    def descNullsFirst: Sort[T] = Sort(this, Desc, Some(First))
-
-    def descNullsLast: Sort[T] = Sort(this, Desc, Some(Last))
-
     infix def over(overValue: OverValue): Expr[T] =
         Expr.Window(this, overValue.partitionBy, overValue.sortBy, overValue.frame)
 
@@ -351,17 +99,11 @@ enum Expr[T]:
         Expr.Window(this, Nil, Nil, None)
 
     @targetName("to")
-    def :=(value: T)(using a: AsSqlExpr[T]): UpdatePair = this match
-        case Column(_, columnName) =>
-            UpdatePair(columnName, Literal(value, a).asSqlExpr)
-        case _ => throw MatchError(this)
-
-    @targetName("to")
-    def :=[R](updateExpr: Expr[R])(using
-        CompareOperation[T, R]
+    def :=[R: AsExpr as a](updateExpr: R)(using
+        CompareOperation[T, a.R]
     ): UpdatePair = this match
         case Column(_, columnName) =>
-            UpdatePair(columnName, updateExpr.asSqlExpr)
+            UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
         case _ => throw MatchError(this)
 
 object Expr:

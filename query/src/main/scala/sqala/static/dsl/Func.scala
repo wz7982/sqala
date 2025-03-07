@@ -13,38 +13,35 @@ class AggStar
 def * : AggStar = AggStar()
 
 @sqlAgg
-def count(): Expr[Long] = Expr.Func("COUNT", Nil)
+def count(stat: AggStar = *): Expr[Long] = Expr.Func("COUNT", Nil)
 
 @sqlAgg
-def count(stat: AggStar): Expr[Long] = Expr.Func("COUNT", Nil)
+def count[T: AsExpr as a](expr: T): Expr[Long] =
+    Expr.Func("COUNT", a.asExpr(expr) :: Nil, false)
 
 @sqlAgg
-def count[T](expr: Expr[T]): Expr[Long] =
-    Expr.Func("COUNT", expr :: Nil, false)
+def count[T: AsExpr as a](expr: T, distinct: Boolean): Expr[Long] =
+    Expr.Func("COUNT", a.asExpr(expr) :: Nil, distinct)
 
 @sqlAgg
-def count[T](expr: Expr[T], distinct: Boolean): Expr[Long] =
-    Expr.Func("COUNT", expr :: Nil, distinct)
+def sum[T: AsExpr as a](expr: T)(using n: Number[a.R], wo: WrapOption[a.R]): Expr[wo.R] =
+    Expr.Func("SUM", a.asExpr(expr) :: Nil)
 
 @sqlAgg
-def sum[T: Number](expr: Expr[T]): Expr[Wrap[T, Option]] =
-    Expr.Func("SUM", expr :: Nil)
+def avg[T: AsExpr as a](expr: T)(using Number[a.R]): Expr[Option[BigDecimal]] =
+    Expr.Func("AVG", a.asExpr(expr) :: Nil)
 
 @sqlAgg
-def avg[T: Number](expr: Expr[T]): Expr[Option[BigDecimal]] =
-    Expr.Func("AVG", expr :: Nil)
+def max[T: AsExpr as a](expr: T)(using wo: WrapOption[a.R]): Expr[wo.R] =
+    Expr.Func("MAX", a.asExpr(expr) :: Nil)
 
 @sqlAgg
-def max[T](expr: Expr[T]): Expr[Wrap[T, Option]] =
-    Expr.Func("MAX", expr :: Nil)
+def min[T: AsExpr as a](expr: T)(using wo: WrapOption[a.R]): Expr[wo.R] =
+    Expr.Func("MIN", a.asExpr(expr) :: Nil)
 
 @sqlAgg
-def min[T](expr: Expr[T]): Expr[Wrap[T, Option]] =
-    Expr.Func("MIN", expr :: Nil)
-
-@sqlAgg
-def anyValue[T](expr: Expr[T]): Expr[Wrap[T, Option]] =
-    Expr.Func("ANY_VALUE", expr :: Nil)
+def anyValue[T: AsExpr as a](expr: T)(using wo: WrapOption[a.R]): Expr[wo.R] =
+    Expr.Func("ANY_VALUE", a.asExpr(expr) :: Nil)
 
 @sqlAgg
 def percentileCont[N: Number](
@@ -96,8 +93,8 @@ def rowNumber(): Expr[Long] = Expr.Func("ROW_NUMBER", Nil)
 @sqlWindow
 def lag[T](
     expr: Expr[T],
-    offset: Int,
-    default: Option[Unwrap[T, Option]]
+    offset: Int = 1,
+    default: Option[Unwrap[T, Option]] = None
 )(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
     val defaultExpr = Expr.Literal(default, a)
     Expr.Func("LAG", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
@@ -105,8 +102,8 @@ def lag[T](
 @sqlWindow
 def lead[T](
     expr: Expr[T],
-    offset: Int,
-    default: Option[Unwrap[T, Option]]
+    offset: Int = 1,
+    default: Option[Unwrap[T, Option]] = None
 )(using a: AsSqlExpr[Option[Unwrap[T, Option]]]): Expr[Wrap[T, Option]] =
     val defaultExpr = Expr.Literal(default, a)
     Expr.Func("LEAD", expr :: Expr.Literal(offset, summon[AsSqlExpr[Int]]) :: defaultExpr :: Nil)
