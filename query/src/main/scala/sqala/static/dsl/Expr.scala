@@ -112,9 +112,9 @@ object Expr:
             case Literal(v, a) => a.asSqlExpr(v)
             case Column(tableName, columnName) =>
                 SqlExpr.Column(Some(tableName), columnName)
-            case Binary(left, SqlBinaryOperator.Equal, Literal(None, _) | Ref(SqlExpr.Null)) =>
+            case Binary(left, SqlBinaryOperator.Equal, right) if right.asSqlExpr == SqlExpr.Null =>
                 SqlExpr.NullTest(left.asSqlExpr, false)
-            case Binary(left, SqlBinaryOperator.NotEqual, Literal(None, _) | Ref(SqlExpr.Null)) =>
+            case Binary(left, SqlBinaryOperator.NotEqual, right) if right.asSqlExpr == SqlExpr.Null =>
                 SqlExpr.NullTest(left.asSqlExpr, true)
             case Binary(left, SqlBinaryOperator.NotEqual, right) =>
                 SqlExpr.Binary(
