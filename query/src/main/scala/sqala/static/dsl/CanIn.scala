@@ -10,8 +10,8 @@ trait CanIn[L, R]:
 
     def asExpr(x: R): Expr[?] =
         val exprList = exprs(x)
-        exprList match
-            case Expr.Ref(SqlExpr.SubQuery(ast)) :: Nil => Expr.SubQuery(ast)
+        exprList.map(_.asSqlExpr) match
+            case SqlExpr.SubQuery(ast) :: Nil => Expr.SubQuery(ast)
             case _ => Expr.Tuple(exprList)
 
 object CanIn:
