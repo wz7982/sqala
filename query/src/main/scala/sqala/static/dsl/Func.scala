@@ -8,12 +8,8 @@ import java.time.LocalDateTime
 def grouping[T: AsExpr as a](items: T): Expr[Int] =
     Expr.Func("GROUPING", a.exprs(items))
 
-class AggStar
-
-def * : AggStar = AggStar()
-
 @sqlAgg
-def count(stat: AggStar = *): Expr[Long] = Expr.Func("COUNT", Nil)
+def count(): Expr[Long] = Expr.Func("COUNT", Nil)
 
 @sqlAgg
 def count[T: AsExpr as a](expr: T): Expr[Long] =
