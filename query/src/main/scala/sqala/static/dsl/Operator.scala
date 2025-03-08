@@ -15,84 +15,84 @@ extension [T: AsExpr as at](self: T)
     @targetName("equal")
     def ===[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), Equal, ar.asExpr(that))
 
     @targetName("equal")
     def ===[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), Equal, Expr.SubLink(item.query, item.linkType))
 
     @targetName("notEqual")
     def <>[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), NotEqual, ar.asExpr(that))
 
     @targetName("notEqual")
     def <>[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), NotEqual, Expr.SubLink(item.query, item.linkType))
 
     @targetName("gt")
     def >[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), GreaterThan, ar.asExpr(that))
 
     @targetName("gt")
     def >[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), GreaterThan, Expr.SubLink(item.query, item.linkType))
 
     @targetName("ge")
     def >=[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), GreaterThanEqual, ar.asExpr(that))
 
     @targetName("ge")
     def >=[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), GreaterThanEqual, Expr.SubLink(item.query, item.linkType))
 
     @targetName("lt")
     def <[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), LessThan, ar.asExpr(that))
 
     @targetName("lt")
     def <[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), LessThan, Expr.SubLink(item.query, item.linkType))
 
     @targetName("le")
     def <=[R](that: R)(using
         ar: AsExpr[R],
-        c: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), LessThanEqual, ar.asExpr(that))
 
     @targetName("le")
     def <=[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[at.R, Option], Unwrap[R, Option]]
+        Compare[Unwrap[at.R, Option], Unwrap[R, Option]]
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), LessThanEqual, Expr.SubLink(item.query, item.linkType))
 
     def in[R](list: Seq[R])(using
         ar: AsExpr[R],
-        o: CompareOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
+        o: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
     ): Expr[Boolean] =
         Expr.In(at.asExpr(self), Expr.Tuple(list.toList.map(ar.asExpr(_))), false)
 
@@ -103,9 +103,9 @@ extension [T: AsExpr as at](self: T)
 
     def between[S, E](start: S, end: E)(using
         as: AsExpr[S],
-        cs: CompareOperation[Unwrap[at.R, Option], Unwrap[as.R, Option]],
+        cs: Compare[Unwrap[at.R, Option], Unwrap[as.R, Option]],
         ae: AsExpr[E],
-        ce: CompareOperation[Unwrap[at.R, Option], Unwrap[ae.R, Option]]
+        ce: Compare[Unwrap[at.R, Option], Unwrap[ae.R, Option]]
     ): Expr[Boolean] =
         Expr.Between(at.asExpr(self), as.asExpr(start), ae.asExpr(end), false)
 
@@ -114,28 +114,28 @@ extension [T: AsExpr as at](self: T)
         nt: Number[at.R],
         ar: AsExpr[R],
         nr: Number[ar.R],
-        r: ResultOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
+        r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
     ): Expr[r.R] =
         Expr.Binary(at.asExpr(self), Plus, ar.asExpr(that))
 
     @targetName("plus")
     def +(interval: TimeInterval)(using
         d: DateTime[at.R],
-        r: ResultOperation[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]]
+        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]]
     ): Expr[r.R] =
         Expr.Binary(at.asExpr(self), Plus, Expr.Interval(interval.value, interval.unit))
 
     @targetName("minus")
     def -[R](that: R)(using
         ar: AsExpr[R],
-        r: MinusOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
+        r: Minus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
     ): Expr[r.R] =
         Expr.Binary(at.asExpr(self), Minus, ar.asExpr(that))
 
     @targetName("minus")
     def -(interval: TimeInterval)(using
         d: DateTime[at.R],
-        r: ResultOperation[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]]
+        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]]
     ): Expr[r.R] =
         Expr.Binary(at.asExpr(self), Minus, Expr.Interval(interval.value, interval.unit))
 
@@ -144,7 +144,7 @@ extension [T: AsExpr as at](self: T)
         nt: Number[at.R],
         ar: AsExpr[R],
         nr: Number[ar.R],
-        r: ResultOperation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
+        r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]]
     ): Expr[r.R] =
         Expr.Binary(at.asExpr(self), Times, ar.asExpr(that))
 

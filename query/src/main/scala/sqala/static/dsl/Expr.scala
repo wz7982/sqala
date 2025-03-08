@@ -67,13 +67,13 @@ enum Expr[T]:
     @targetName("eq")
     def ==[R](that: R)(using
         a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
+        c: Compare[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
         Binary(this, Equal, a.asExpr(that))
 
     @targetName("eq")
     def ==[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
+        Compare[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, Equal, SubLink(item.query, item.linkType))
@@ -81,13 +81,13 @@ enum Expr[T]:
     @targetName("ne")
     def !=[R](that: R)(using
         a: AsExpr[R],
-        c: CompareOperation[Unwrap[T, Option], Unwrap[a.R, Option]]
+        c: Compare[Unwrap[T, Option], Unwrap[a.R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, a.asExpr(that))
 
     @targetName("ne")
     def !=[R](item: SubLinkItem[R])(using
-        CompareOperation[Unwrap[T, Option],
+        Compare[Unwrap[T, Option],
         Unwrap[R, Option]]
     ): Expr[Boolean] =
         Binary(this, NotEqual, SubLink(item.query, item.linkType))
@@ -100,7 +100,7 @@ enum Expr[T]:
 
     @targetName("to")
     def :=[R: AsExpr as a](updateExpr: R)(using
-        CompareOperation[T, a.R]
+        Compare[T, a.R]
     ): UpdatePair = this match
         case Column(_, columnName) =>
             UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)

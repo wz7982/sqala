@@ -44,13 +44,13 @@ class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
 
 class If[T](private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[R : AsExpr as a](expr: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
+        o: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): IfThen[o.R] =
         IfThen(exprs :+ a.asExpr(expr))
 
 class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
     infix def `else`[R : AsExpr as a](expr: R)(using
-        o: ResultOperation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
+        o: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]]
     ): Expr[o.R] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))

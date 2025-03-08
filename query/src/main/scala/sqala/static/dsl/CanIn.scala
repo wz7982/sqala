@@ -17,7 +17,7 @@ trait CanIn[L, R]:
 object CanIn:
     given in[L, R](using
         a: AsExpr[R],
-        c: CompareOperation[Unwrap[L, Option], Unwrap[a.R, Option]]
+        c: Compare[Unwrap[L, Option], Unwrap[a.R, Option]]
     ): CanIn[L, R] with
         def exprs(x: R): List[Expr[?]] =
             a.asExpr(x) :: Nil
@@ -25,7 +25,7 @@ object CanIn:
     given inTuple[L, H, T <: Tuple](using
         a: AsExpr[H],
         t: CanIn[L, T],
-        c: CompareOperation[Unwrap[L, Option], Unwrap[a.R, Option]]
+        c: Compare[Unwrap[L, Option], Unwrap[a.R, Option]]
     ): CanIn[L, H *: T] with
         def exprs(x: H *: T): List[Expr[?]] =
             a.asExpr(x.head) :: t.exprs(x.tail)
