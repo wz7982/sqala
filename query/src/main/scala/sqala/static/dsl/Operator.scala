@@ -90,12 +90,6 @@ extension [T: AsExpr as at](self: T)
     ): Expr[Boolean] =
         Expr.Binary(at.asExpr(self), LessThanEqual, Expr.SubLink(item.query, item.linkType))
 
-    def in[R](list: Seq[R])(using
-        ar: AsExpr[R],
-        o: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]]
-    ): Expr[Boolean] =
-        Expr.In(at.asExpr(self), Expr.Tuple(list.toList.map(ar.asExpr(_))), false)
-
     def in[R](exprs: R)(using
         c: CanIn[at.R, R]
     ): Expr[Boolean] =

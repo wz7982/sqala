@@ -32,3 +32,17 @@ object CanIn:
 
     given inEmptyTuple[L]: CanIn[L, EmptyTuple] with
         def exprs(x: EmptyTuple): List[Expr[?]] = Nil
+
+    given inSeq[L, R, S <: Seq[R]](using 
+        a: AsExpr[R], 
+        c: Compare[Unwrap[L, Option], Unwrap[a.R, Option]]
+    ): CanIn[L, S] with
+        def exprs(x: S): List[Expr[?]] =
+            x.toList.map(a.asExpr(_))
+
+    given inArray[L, R](using 
+        a: AsExpr[R], 
+        c: Compare[Unwrap[L, Option], Unwrap[a.R, Option]]
+    ): CanIn[L, Array[R]] with
+        def exprs(x: Array[R]): List[Expr[?]] =
+            x.toList.map(a.asExpr(_))
