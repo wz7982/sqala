@@ -13,8 +13,8 @@ case class ConnectBy[T](
     private[sqala] val mapAst: SqlQuery.Select =
         SqlQuery.Select(select = Nil, from = SqlTable.Range(tableCte, None) :: Nil)
 )(using private[sqala] val context: QueryContext):
-    def startWith(f: QueryContext ?=> Table[T] => Expr[Boolean]): ConnectBy[T] =
-        val cond = f(table)
+    def startWith[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using a.R =:= Boolean): ConnectBy[T] =
+        val cond = a.asExpr(f(table))
         copy(startWithAst = startWithAst.addWhere(cond.asSqlExpr))
 
     def sortBy[S](f: QueryContext ?=> Table[T] => S)(using s: AsSort[S]): ConnectBy[T] =

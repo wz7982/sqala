@@ -13,8 +13,8 @@ class Grouping[T](
 )(using
     private[sqala] val context: QueryContext
 ):
-    def having(f: QueryContext ?=> T => Expr[Boolean]): Grouping[T] =
-        val cond = f(queryParam)
+    def having[F: AsExpr as a](f: QueryContext ?=> T => F)(using a.R =:= Boolean): Grouping[T] =
+        val cond = a.asExpr(f(queryParam))
         Grouping(queryParam, ast.addHaving(cond.asSqlExpr))
 
     def sortBy[S](f: QueryContext ?=> T => S)(using s: AsSort[S]): Grouping[T] =

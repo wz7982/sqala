@@ -2,7 +2,7 @@ package sqala.static.statement.query
 
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
-import sqala.static.dsl.Expr
+import sqala.static.dsl.{AsExpr, Expr}
 
 class JoinPart[T](
     private[sqala] val queryParam: T,
@@ -11,7 +11,7 @@ class JoinPart[T](
 )(using 
     private[sqala] val context: QueryContext
 ):
-    def on(f: QueryContext ?=> T => Expr[Boolean]): JoinQuery[T] =
-        val cond = f(queryParam)
+    def on[F: AsExpr as a](f: QueryContext ?=> T => F)(using a.R =:= Boolean): JoinQuery[T] =
+        val cond = a.asExpr(f(queryParam))
         val newTable = joinTable.copy(condition = Some(SqlJoinCondition.On(cond.asSqlExpr)))
         JoinQuery(queryParam, ast.copy(from = newTable :: Nil))

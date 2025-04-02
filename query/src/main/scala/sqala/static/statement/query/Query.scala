@@ -102,25 +102,25 @@ sealed class Query[T](
         )
         Query(expr, outerQuery)
 
-    infix def union[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def union[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Union, query.ast)
 
-    infix def unionAll[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def unionAll[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.UnionAll, query.ast)
 
-    def ++[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    def ++[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.UnionAll, query.ast)
 
-    infix def except[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def except[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Except, query.ast)
 
-    infix def exceptAll[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def exceptAll[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.ExceptAll, query.ast)
 
-    infix def intersect[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def intersect[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.Intersect, query.ast)
 
-    infix def intersectAll[R](query:  QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
+    infix def intersectAll[R](query: QueryContext ?=> Query[R])(using u: Union[T, R]): Query[u.R] =
         UnionQuery(u.unionQueryItems(queryParam), this.ast, SqlUnionType.IntersectAll, query.ast)
 
 class SortQuery[T](
@@ -151,14 +151,14 @@ class SelectQuery[T](
 )(using
     private[sqala] override val context: QueryContext
 ) extends Query[T](queryParam, ast)(using context):
-    def filter(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
-        val cond = f(queryParam)
+    def filter[F: AsExpr as a](f: QueryContext ?=> T => F)(using a.R =:= Boolean): SelectQuery[T] =
+        val cond = a.asExpr(f(queryParam))
         SelectQuery(queryParam, ast.addWhere(cond.asSqlExpr))
 
-    def where(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
+    def where[F: AsExpr as a](f: QueryContext ?=> T => F)(using a.R =:= Boolean): SelectQuery[T] =
         filter(f)
 
-    def withFilter(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
+    def withFilter[F: AsExpr as a](f: QueryContext ?=> T => F)(using a.R =:= Boolean): SelectQuery[T] =
         filter(f)
 
     def filterIf(test: => Boolean)(f: QueryContext ?=> T => Expr[Boolean]): SelectQuery[T] =
@@ -221,9 +221,9 @@ class SelectQuery[T](
 
 object SelectQuery:
     extension [T](query: SelectQuery[Table[T]])
-        def connectBy(f: QueryContext ?=> Table[T] => Expr[Boolean]): ConnectBy[T] =
+        def connectBy[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using a.R =:= Boolean): ConnectBy[T] =
             given QueryContext = query.context
-            val cond = f(query.queryParam).asSqlExpr
+            val cond = a.asExpr(f(query.queryParam)).asSqlExpr
             val joinAst = query.ast
                 .copy(
                     select = query.ast.select :+ SqlSelectItem.Item(
