@@ -47,14 +47,3 @@ type NumericResult[L, R, N <: Boolean] = (L, R, N) match
     case (Int, _, false) => Int
     case (_, Int, true) => Option[Int]
     case (_, Int, false) => Int
-
-trait WrapOption[T]:
-    type R
-
-object WrapOption:
-    type Aux[T, O] = WrapOption[T]:
-        type R = O
-
-    given wrap[T]: Aux[T, Wrap[T, Option]] =
-        new WrapOption[T]:
-            type R = Wrap[T, Option]

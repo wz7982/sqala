@@ -60,10 +60,10 @@ class autoInc extends MacroAnnotation:
         definition :: Nil
 
 @scala.annotation.meta.field
-class sqlFunction extends StaticAnnotation
+class function extends StaticAnnotation
 
 @scala.annotation.meta.field
-class sqlAgg extends StaticAnnotation
+class agg extends StaticAnnotation
 
 @scala.annotation.meta.field
-class sqlWindow extends StaticAnnotation
+class window extends StaticAnnotation
