@@ -63,6 +63,10 @@ object JsonEncoder:
             val formatter = DateTimeFormatter.ofPattern(dateFormat.format)
             x.format(formatter)
 
+    given listEncoder[T](using e: JsonEncoder[T]): JsonEncoder[List[T]] with
+        override inline def encode(x: List[T])(using JsonDateFormat): String =
+            x.map(i => e.encode(i)).mkString("[", ", ", "]")
+
     given optionEncoder[T](using e: JsonEncoder[T]): JsonEncoder[Option[T]] with
         override inline def encode(x: Option[T])(using JsonDateFormat): String = x match
             case None => "null"
