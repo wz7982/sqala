@@ -66,11 +66,11 @@ private[sqala] object AnalysisMacroImpl:
         inConnectBy: Boolean = false
     )
 
-    def removeLimit(tree: SqlQuery): SqlQuery = 
+    def removeLimitAndOrderBy(tree: SqlQuery): SqlQuery = 
         tree match
-            case s: SqlQuery.Select => s.copy(limit = None)
+            case s: SqlQuery.Select => s.copy(limit = None, orderBy = Nil)
             case u: SqlQuery.Union => u.copy(limit = None)
-            case c: SqlQuery.Cte => c.copy(query = removeLimit(c.query))
+            case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
             case _ => tree
 
     def showQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
@@ -144,7 +144,7 @@ private[sqala] object AnalysisMacroImpl:
                     case _ =>
                         SqlQuery.Select(
                             select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                            from = SqlTable.SubQuery(removeLimit(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
+                            from = SqlTable.SubQuery(removeLimitAndOrderBy(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(sizeTree)
             catch 
@@ -300,7 +300,7 @@ private[sqala] object AnalysisMacroImpl:
                     case _ =>
                         SqlQuery.Select(
                             select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                            from = SqlTable.SubQuery(removeLimit(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
+                            from = SqlTable.SubQuery(removeLimitAndOrderBy(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(tree)
             catch 
