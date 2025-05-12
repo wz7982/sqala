@@ -1,7 +1,7 @@
 package sqala.jdbc
 
-import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
 import java.sql.Types.*
+import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
 import java.time.{LocalDate, LocalDateTime, ZoneId}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

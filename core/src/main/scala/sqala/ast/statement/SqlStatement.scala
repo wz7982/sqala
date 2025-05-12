@@ -1,11 +1,11 @@
 package sqala.ast.statement
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.table.SqlTable
-import sqala.ast.group.SqlGroupItem
 import sqala.ast.param.SqlParam
+import sqala.ast.table.{SqlJoinCondition, SqlTable}
 
 enum SqlStatement:
     case Delete(table: SqlTable, where: Option[SqlExpr])
@@ -54,3 +54,10 @@ object SqlQuery:
 
         def addHaving(condition: SqlExpr): Select =
             select.copy(having = select.having.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
+
+        def setJoinOnCondition(condition: SqlExpr): Select =
+            select.from.last match
+                case SqlTable.Join(left, joinType, right, _, alias) => 
+                    val newTable = SqlTable.Join(left, joinType, right, Some(SqlJoinCondition.On(condition)), alias)
+                    select.copy(from = select.from.init :+ newTable)
+                case _ => select

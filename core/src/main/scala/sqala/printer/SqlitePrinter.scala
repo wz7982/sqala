@@ -1,12 +1,11 @@
 package sqala.printer
 
 import sqala.ast.expr.*
-import sqala.ast.expr.SqlExpr.*
 import sqala.ast.limit.SqlLimit
-import sqala.ast.statement.SqlStatement
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.order.SqlOrderNullsOption.*
-import sqala.ast.order.SqlOrderOption.*
+import sqala.ast.order.SqlOrderNullsOption.{First, Last}
+import sqala.ast.order.SqlOrderOption.{Asc, Desc}
+import sqala.ast.statement.SqlStatement
 
 class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printLimit(limit: SqlLimit): Unit =
@@ -31,7 +30,7 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         val order = item.order match
             case None | Some(Asc) => Asc
             case _ => Desc
-        val orderExpr = Case(SqlCase(NullTest(item.expr, false), NumberLiteral(1)) :: Nil, NumberLiteral(0))
+        val orderExpr = SqlExpr.Case(SqlCase(SqlExpr.NullTest(item.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
         (order, item.nullsOrder) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(item.expr)

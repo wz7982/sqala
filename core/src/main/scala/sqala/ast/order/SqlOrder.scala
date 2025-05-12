@@ -2,7 +2,11 @@ package sqala.ast.order
 
 import sqala.ast.expr.SqlExpr
 
-case class SqlOrderItem(expr: SqlExpr, order: Option[SqlOrderOption], nullsOrder: Option[SqlOrderNullsOption])
+case class SqlOrderItem(
+    expr: SqlExpr, 
+    order: Option[SqlOrderOption], 
+    nullsOrder: Option[SqlOrderNullsOption]
+)
 
 enum SqlOrderOption(val order: String):
     case Asc extends SqlOrderOption("ASC")

@@ -7,7 +7,7 @@ import java.time.{LocalDate, LocalDateTime, ZoneId}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
-import scala.quoted.*
+import scala.quoted.{Expr, Quotes, Type}
 
 trait JdbcDecoder[T]:
     def offset: Int
