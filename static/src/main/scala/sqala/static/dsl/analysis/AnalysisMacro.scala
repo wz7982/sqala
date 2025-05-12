@@ -66,6 +66,13 @@ private[sqala] object AnalysisMacroImpl:
         inConnectBy: Boolean = false
     )
 
+    def removeLimit(tree: SqlQuery): SqlQuery = 
+        tree match
+            case s: SqlQuery.Select => s.copy(limit = None)
+            case u: SqlQuery.Union => u.copy(limit = None)
+            case c: SqlQuery.Cte => c.copy(query = removeLimit(c.query))
+            case _ => tree
+
     def showQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
@@ -137,7 +144,7 @@ private[sqala] object AnalysisMacroImpl:
                     case _ =>
                         SqlQuery.Select(
                             select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                            from = SqlTable.SubQuery(queryTree, false, Some(SqlTableAlias("t"))) :: Nil
+                            from = SqlTable.SubQuery(removeLimit(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(sizeTree)
             catch 
@@ -293,7 +300,7 @@ private[sqala] object AnalysisMacroImpl:
                     case _ =>
                         SqlQuery.Select(
                             select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
-                            from = SqlTable.SubQuery(queryTree, false, Some(SqlTableAlias("t"))) :: Nil
+                            from = SqlTable.SubQuery(removeLimit(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(tree)
             catch 

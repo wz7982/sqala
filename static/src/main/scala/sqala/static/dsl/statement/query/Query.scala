@@ -143,9 +143,15 @@ object Query:
                         )
                     )
                 case _ =>
+                    def removeLimit(tree: SqlQuery): SqlQuery = 
+                        tree match
+                            case s: SqlQuery.Select => s.copy(limit = None)
+                            case u: SqlQuery.Union => u.copy(limit = None)
+                            case c: SqlQuery.Cte => c.copy(query = removeLimit(c.query))
+                            case _ => tree
                     val outerQuery: SqlQuery.Select = SqlQuery.Select(
                         select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
-                        from = SqlTable.SubQuery(tree, false, Some(SqlTableAlias("t"))) :: Nil
+                        from = SqlTable.SubQuery(removeLimit(tree), false, Some(SqlTableAlias("t"))) :: Nil
                     )
                     Query(expr, outerQuery)
 
