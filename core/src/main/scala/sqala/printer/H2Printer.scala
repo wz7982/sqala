@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.*
+import sqala.ast.expr.{SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
 
 class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):

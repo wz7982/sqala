@@ -32,5 +32,5 @@ enum SqlExpr:
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, linkType: SqlSubLinkType)
     case Interval(value: Double, unit: SqlTimeUnit)
-    case Extract(unit: SqlTimeUnit, expr: SqlExpr)
+    case Extract(expr: SqlExpr, unit: SqlTimeUnit)
     case Custom(snippet: String)

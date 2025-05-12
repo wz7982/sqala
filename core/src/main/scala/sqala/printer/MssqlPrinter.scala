@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.*
+import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr, SqlTimeLiteralUnit}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 

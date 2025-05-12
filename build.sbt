@@ -1,9 +1,9 @@
 import xerial.sbt.Sonatype.*
 
 lazy val commonSettings = Seq(
-    scalaVersion := "3.6.2",
+    scalaVersion := "3.7.0",
 
-    version := "0.2.31",
+    version := "0.3.0",
 
     organization := "com.wz7982",
 
@@ -34,16 +34,20 @@ lazy val commonSettings = Seq(
         Developer(id = "wz7982", name = "wz7982", email = "1064967982@qq.com", url = url("https://github.com/wz7982/"))
     ),
 
-    scalacOptions += "-Wunused:all",
+    scalacOptions += "-Wunused:imports",
+    scalacOptions += "-Wunused:privates",
+    scalacOptions += "-Wunused:locals",
+    scalacOptions += "-Wunused:explicits",
     scalacOptions += "-Wsafe-init",
-    scalacOptions += "-experimental",
-    scalacOptions += "-Yexplicit-nulls",
-    libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
+    scalacOptions += "-Yexplicit-nulls"
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
-    .aggregate(core, query, jdbc, data)
+    .aggregate(core, static, dynamic, jdbc)
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
-lazy val query = project.in(file("query")).dependsOn(core).settings(commonSettings).settings(name := "sqala-query")
-lazy val jdbc = project.in(file("jdbc")).dependsOn(query).settings(commonSettings).settings(name := "sqala-jdbc")
-lazy val data = project.in(file("data")).settings(commonSettings).settings(name := "sqala-data")
+lazy val static = project.in(file("static")).dependsOn(core).settings(commonSettings).settings(name := "sqala-static")
+lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(
+    name := "sqala-dynamic",
+    libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
+)
+lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(name := "sqala-jdbc")

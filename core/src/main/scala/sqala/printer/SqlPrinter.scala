@@ -1,16 +1,14 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlBinaryOperator.*
-import sqala.ast.expr.{SqlExpr, SqlUnaryOperator, SqlWindowFrame}
+import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderItem, SqlOrderOption}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
-import sqala.util.*
+import sqala.util.|>
 
 import scala.collection.mutable.ArrayBuffer
-import sqala.ast.expr.SqlCastType
 
 abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
@@ -295,14 +293,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             child match
                 case SqlExpr.Binary(_, op, _)
                     if op.priority < parent.op.priority || op.priority == 0 => true
-                case SqlExpr.Binary(_, Custom(_), _) => true
+                case SqlExpr.Binary(_, SqlBinaryOperator.Custom(_), _) => true
                 case _ => false
 
         def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, op, _)
                     if op.priority <= parent.op.priority => true
-                case SqlExpr.Binary(_, Custom(_), _) => true
+                case SqlExpr.Binary(_, SqlBinaryOperator.Custom(_), _) => true
                 case _ => false
 
         if hasBracketsLeft(expr, expr.left) then
