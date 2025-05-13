@@ -757,9 +757,11 @@ private[sqala] object AnalysisMacroImpl:
             case Apply(TypeApply(Select(Ident(typeName), "apply"), _), terms) 
                 if typeName.startsWith("Tuple")
             =>
-                terms.map(t => createOrderBy(t, tables, baseInfo.inConnectBy, baseInfo.groupInfo))
+                terms
+                    .map: t => 
+                        createOrderBy(t, tables, baseInfo.inConnectBy, baseInfo.groupInfo, baseInfo.inConnectBy)
             case _ =>
-                createOrderBy(body, tables, baseInfo.inConnectBy, baseInfo.groupInfo) :: Nil
+                createOrderBy(body, tables, baseInfo.inConnectBy, baseInfo.groupInfo, baseInfo.inConnectBy) :: Nil
         
         checkUngrouped(infoList.map(_.info).flatMap(_.ungroupedPaths))
         
@@ -1364,7 +1366,7 @@ private[sqala] object AnalysisMacroImpl:
                 createCaseExpr(t, allTables, inConnectBy, groupInfo)
             case Apply(Apply(Ident("level"), _), _) =>
                 if !inConnectByMap then
-                    report.warning("LEVEL can only be used in the SELECT clause of CONNECT BY.")
+                    report.warning("LEVEL can only be used in the SELECT/ORDER BY clause of CONNECT BY.")
                 ExprInfo(
                     expr = SqlExpr.Column(Some(tableCte), columnPseudoLevel),
                     hasAgg = false,
@@ -2190,22 +2192,23 @@ private[sqala] object AnalysisMacroImpl:
         term: q.reflect.Term,
         allTables: List[(argName: String, tableName: String)],
         inConnectBy: Boolean,
-        groupInfo: List[GroupInfo]
+        groupInfo: List[GroupInfo],
+        inConnectByMap: Boolean = false
     ): (info: ExprInfo, order: SqlOrderOption, nullsOrder: Option[SqlOrderNullsOption]) =
         import q.reflect.*
 
         term match
             case Apply(Apply(Apply(TypeApply(Ident("asc"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Asc, None)
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, None)
             case Apply(Apply(Apply(TypeApply(Ident("ascNullsFirst"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Asc, Some(SqlOrderNullsOption.First))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, Some(SqlOrderNullsOption.First))
             case Apply(Apply(Apply(TypeApply(Ident("ascNullsLast"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Asc, Some(SqlOrderNullsOption.Last))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, Some(SqlOrderNullsOption.Last))
             case Apply(Apply(Apply(TypeApply(Ident("desc"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Desc, None)
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, None)
             case Apply(Apply(Apply(TypeApply(Ident("descNullsFirst"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Desc, Some(SqlOrderNullsOption.First))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, Some(SqlOrderNullsOption.First))
             case Apply(Apply(Apply(TypeApply(Ident("descNullsLast"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo), SqlOrderOption.Desc, Some(SqlOrderNullsOption.Last))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, Some(SqlOrderNullsOption.Last))
             case _ =>
-                (createExpr(term, allTables, inConnectBy, groupInfo), SqlOrderOption.Asc, None)
+                (createExpr(term, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, None)
