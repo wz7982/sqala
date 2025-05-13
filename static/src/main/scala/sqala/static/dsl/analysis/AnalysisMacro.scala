@@ -17,20 +17,20 @@ import scala.NamedTuple.NamedTuple
 import scala.quoted.{Expr, Quotes, Type}
 
 private[sqala] object AnalysisMacro:
-    inline def showQuery[T, D <: Dialect](inline query: Query[T]): Unit =
-        ${ AnalysisMacroImpl.showQuery[T, D]('query) }
+    inline def showQuery[D <: Dialect](inline query: Query[?]): Unit =
+        ${ AnalysisMacroImpl.showQuery[D]('query) }
 
-    inline def showSizeQuery[T, D <: Dialect](inline query: Query[T]): Unit =
-        ${ AnalysisMacroImpl.showSizeQuery[T, D]('query) }
+    inline def showSizeQuery[D <: Dialect](inline query: Query[?]): Unit =
+        ${ AnalysisMacroImpl.showSizeQuery[D]('query) }
 
-    inline def showExistsQuery[T, D <: Dialect](inline query: Query[T]): Unit =
-        ${ AnalysisMacroImpl.showExistsQuery[T, D]('query) }
+    inline def showExistsQuery[D <: Dialect](inline query: Query[?]): Unit =
+        ${ AnalysisMacroImpl.showExistsQuery[D]('query) }
 
-    inline def showLimitQuery[T, D <: Dialect](inline query: Query[T]): Unit =
-        ${ AnalysisMacroImpl.showLimitQuery[T, D]('query) }
+    inline def showLimitQuery[D <: Dialect](inline query: Query[?]): Unit =
+        ${ AnalysisMacroImpl.showLimitQuery[D]('query) }
 
-    inline def showPageQuery[T, D <: Dialect](inline query: Query[T]): Unit =
-        ${ AnalysisMacroImpl.showPageQuery[T, D]('query) }
+    inline def showPageQuery[D <: Dialect](inline query: Query[?]): Unit =
+        ${ AnalysisMacroImpl.showPageQuery[D]('query) }
 
 private[sqala] object AnalysisMacroImpl:
     case class ExprInfo(
@@ -73,15 +73,13 @@ private[sqala] object AnalysisMacroImpl:
             case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
             case _ => tree
 
-    def showQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
+    def showQuery[D <: Dialect : Type](query: Expr[Query[?]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
-        val term = query.asTerm
+        val term = removeEmptyInline(query.asTerm)
 
         val queryTerm = term match
-            case Inlined(_, _, Inlined(_, _, Inlined(_, _, Typed(Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)), _)))) =>
-                Some(t)
-            case Inlined(_, _, Inlined(_, _, Inlined(Some(Apply(_, Block(DefDef(_, _, _, Some(Block(_, t))) :: Nil, _) :: Nil)), _, _))) =>
+            case Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)) =>
                 Some(t)
             case _ =>
                 None
@@ -113,15 +111,13 @@ private[sqala] object AnalysisMacroImpl:
 
         '{ () }
 
-    def showSizeQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
+    def showSizeQuery[D <: Dialect : Type](query: Expr[Query[?]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
-        val term = query.asTerm
+        val term = removeEmptyInline(query.asTerm)
 
         val queryTerm = term match
-            case Inlined(_, _, Inlined(_, _, Inlined(_, _, Typed(Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)), _)))) =>
-                Some(t)
-            case Inlined(_, _, Inlined(_, _, Inlined(Some(Apply(_, Block(DefDef(_, _, _, Some(Block(_, t))) :: Nil, _) :: Nil)), _, _))) =>
+            case Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)) =>
                 Some(t)
             case _ =>
                 None
@@ -169,15 +165,13 @@ private[sqala] object AnalysisMacroImpl:
 
         '{ () }
 
-    def showExistsQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
+    def showExistsQuery[D <: Dialect : Type](query: Expr[Query[?]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
-        val term = query.asTerm
+        val term = removeEmptyInline(query.asTerm)
 
         val queryTerm = term match
-            case Inlined(_, _, Inlined(_, _, Inlined(_, _, Typed(Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)), _)))) =>
-                Some(t)
-            case Inlined(_, _, Inlined(_, _, Inlined(Some(Apply(_, Block(DefDef(_, _, _, Some(Block(_, t))) :: Nil, _) :: Nil)), _, _))) =>
+            case Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)) =>
                 Some(t)
             case _ =>
                 None
@@ -216,15 +210,13 @@ private[sqala] object AnalysisMacroImpl:
 
         '{ () }
 
-    def showLimitQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
+    def showLimitQuery[D <: Dialect : Type](query: Expr[Query[?]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
-        val term = query.asTerm
+        val term = removeEmptyInline(query.asTerm)
 
         val queryTerm = term match
-            case Inlined(_, _, Inlined(_, _, Inlined(_, _, Typed(Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)), _)))) =>
-                Some(t)
-            case Inlined(_, _, Inlined(_, _, Inlined(Some(Apply(_, Block(DefDef(_, _, _, Some(Block(_, t))) :: Nil, _) :: Nil)), _, _))) =>
+            case Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)) =>
                 Some(t)
             case _ =>
                 None
@@ -269,15 +261,13 @@ private[sqala] object AnalysisMacroImpl:
 
         '{ () }
 
-    def showPageQuery[T, D <: Dialect : Type](query: Expr[Query[T]])(using q: Quotes): Expr[Unit] =
+    def showPageQuery[D <: Dialect : Type](query: Expr[Query[?]])(using q: Quotes): Expr[Unit] =
         import q.reflect.*
 
-        val term = query.asTerm
+        val term = removeEmptyInline(query.asTerm)
 
         val queryTerm = term match
-            case Inlined(_, _, Inlined(_, _, Inlined(_, _, Typed(Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)), _)))) =>
-                Some(t)
-            case Inlined(_, _, Inlined(_, _, Inlined(Some(Apply(_, Block(DefDef(_, _, _, Some(Block(_, t))) :: Nil, _) :: Nil)), _, _))) =>
+            case Inlined(_, _, Typed(Block(_, Block(_, Inlined(_, _, t))), _)) =>
                 Some(t)
             case _ =>
                 None
