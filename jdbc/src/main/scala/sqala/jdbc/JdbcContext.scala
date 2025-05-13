@@ -191,11 +191,12 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
         jdbcCursorQuery(conn, sql, args, fetchSize, f)
         conn.close()
 
-    def transaction[T](block: JdbcTransactionContext[D] => T): T =
+    def transaction[T](block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         try
-            val result = block(new JdbcTransactionContext(conn, dialect))
+            given JdbcTransactionContext = new JdbcTransactionContext(conn, dialect)
+            val result = block
             conn.commit()
             result
         catch case e: Exception =>
@@ -205,12 +206,13 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
             conn.setAutoCommit(true)
             conn.close()
 
-    def transactionWithIsolation[T](isolation: Int)(block: JdbcTransactionContext[D] => T): T =
+    def transactionWithIsolation[T](isolation: Int)(block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         conn.setTransactionIsolation(isolation)
         try
-            val result = block(new JdbcTransactionContext(conn, dialect))
+            given JdbcTransactionContext = new JdbcTransactionContext(conn, dialect)
+            val result = block
             conn.commit()
             result
         catch case e: Exception =>
