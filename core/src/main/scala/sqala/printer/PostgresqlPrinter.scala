@@ -16,6 +16,10 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
+        sqlBuilder.append(" ON CONFLICT (")
+        printList(upsert.pkList)(printExpr)
+        sqlBuilder.append(")")
+
         sqlBuilder.append(" DO UPDATE SET ")
 
         printList(upsert.updateList): u =>
