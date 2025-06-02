@@ -3,7 +3,7 @@ import xerial.sbt.Sonatype.*
 lazy val commonSettings = Seq(
     scalaVersion := "3.7.0",
 
-    version := "0.3.4",
+    version := "0.3.5",
 
     organization := "com.wz7982",
 

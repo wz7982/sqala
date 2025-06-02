@@ -71,8 +71,8 @@ inline def from[T <: Product](data: Seq[T])(using
     )
     TableQuery(newTable, tree)
 
-inline def insert[T <: Product, I: AsExpr as a](f: Table[T] => I): Insert[a.R, InsertTable] =
-    Insert[T, I](f)
+inline def insert[T <: Product]: Insert[T, InsertTable] =
+    Insert[T]
 
 inline def insert[T <: Product](entity: T)(using 
     Mirror.ProductOf[T]
