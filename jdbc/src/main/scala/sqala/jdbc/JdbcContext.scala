@@ -5,7 +5,7 @@ import sqala.metadata.InsertMacro
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.analysis.AnalysisMacro
-import sqala.static.dsl.statement.dml.{Delete, Insert, Update}
+import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
 import sqala.util.{queryToString, statementToString}
 
@@ -43,21 +43,21 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
     inline def insert[A <: Product](entity: A)(using
         Mirror.ProductOf[A]
     ): Int =
-        val i = sqala.static.dsl.insert[A](entity)
+        val i = Insert[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
     inline def insertBatch[A <: Product](entities: List[A])(using
         Mirror.ProductOf[A]
     ): Int =
-        val i = sqala.static.dsl.insert[A](entities)
+        val i = Insert[A](entities)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
     inline def insertAndReturn[A <: Product](entity: A)(using
         Mirror.ProductOf[A]
     ): A =
-        val i = sqala.static.dsl.insert[A](entity)
+        val i = Insert[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
         val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
@@ -68,7 +68,7 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
     )(using
         Mirror.ProductOf[A]
     ): Int =
-        val u = sqala.static.dsl.update(entity, skipNone)
+        val u = Update[A](entity, skipNone)
         if u.tree.setList.isEmpty then
             0
         else
@@ -80,7 +80,7 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
     )(using
         Mirror.ProductOf[A]
     ): Int =
-        val s = sqala.static.dsl.save(entity)
+        val s = Save[A](entity)
         val (sql, args) = statementToString(s.tree, dialect, true)
         executeDml(sql, args)
 
@@ -191,7 +191,7 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
         jdbcCursorQuery(conn, sql, args, fetchSize, f)
         conn.close()
 
-    def transaction[T](block: JdbcTransactionContext ?=> T): T =
+    def executeTransaction[T](block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         try
@@ -206,10 +206,12 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
             conn.setAutoCommit(true)
             conn.close()
 
-    def transactionWithIsolation[T](isolation: Int)(block: JdbcTransactionContext ?=> T): T =
+    def executeTransactionWithIsolation[T](
+        isolation: TransactionIsolation
+    )(block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
-        conn.setTransactionIsolation(isolation)
+        conn.setTransactionIsolation(isolation.jdbcIsolation)
         try
             given JdbcTransactionContext = new JdbcTransactionContext(conn, dialect)
             val result = block

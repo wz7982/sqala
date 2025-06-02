@@ -27,6 +27,19 @@ type InsertQuery = InsertState.Query.type
 class Insert[T, S <: InsertState](
     val tree: SqlStatement.Insert
 ):
+    inline def apply[I: AsExpr as a](f: Table[T] => I): Insert[a.R, InsertTable] =
+        val tableName = TableMacro.tableName[T]
+        val metaData = TableMacro.tableMetaData[T]
+        val table = Table[T](tableName, tableName, metaData)
+        val insertItems = a.exprs(f(table))
+        val columns = insertItems.map: i =>
+            i match
+                case Expr(SqlExpr.Column(_, c)) => SqlExpr.Column(None, c)
+                case _ => throw MatchError(i)
+        val tree: SqlStatement.Insert = 
+            SqlStatement.Insert(SqlTable.Range(tableName, None), columns, Nil, None)
+        new Insert(tree)
+
     inline infix def values(rows: List[T])(using 
         S =:= InsertTable
     ): Insert[T, InsertValues] =
@@ -51,17 +64,10 @@ class Insert[T, S <: InsertState](
         new Insert(tree.copy(query = Some(query.tree)))
 
 object Insert:
-    inline def apply[T <: Product, I: AsExpr as a](f: Table[T] => I): Insert[a.R, InsertTable] =
+    inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
-        val metaData = TableMacro.tableMetaData[T]
-        val table = Table[T](tableName, tableName, metaData)
-        val insertItems = a.exprs(f(table))
-        val columns = insertItems.map: i =>
-            i match
-                case Expr(SqlExpr.Column(_, c)) => SqlExpr.Column(None, c)
-                case _ => throw MatchError(i)
         val tree: SqlStatement.Insert = 
-            SqlStatement.Insert(SqlTable.Range(tableName, None), columns, Nil, None)
+            SqlStatement.Insert(SqlTable.Range(tableName, None), Nil, Nil, None)
         new Insert(tree)
 
     inline def apply[T <: Product](entities: List[T])(using 
