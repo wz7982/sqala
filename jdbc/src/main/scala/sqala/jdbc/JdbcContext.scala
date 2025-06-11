@@ -13,49 +13,52 @@ import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
 
-class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(using val logger: Logger):
+class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D):
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
         val conn = dataSource.getConnection()
         val result = handler(conn)
         conn.close()
         result
 
-    private[sqala] def executeDml(sql: String, args: Array[Any]): Int =
-        logger(sql, args)
+    private[sqala] def executeDml(sql: String, args: Array[Any])(using l: Logger): Int =
+        l(sql, args)
         execute(c => jdbcExec(c, sql, args))
 
-    def execute(insert: Insert[?, ?]): Int =
+    def execute(insert: Insert[?, ?])(using Logger): Int =
         val (sql, args) = statementToString(insert.tree, dialect, true)
         executeDml(sql, args)
 
-    def execute(update: Update[?, ?]): Int =
+    def execute(update: Update[?, ?])(using Logger): Int =
         val (sql, args) = statementToString(update.tree, dialect, true)
         executeDml(sql, args)
 
-    def execute(delete: Delete[?]): Int =
+    def execute(delete: Delete[?])(using Logger): Int =
         val (sql, args) = statementToString(delete.tree, dialect, true)
         executeDml(sql, args)
 
-    def execute(nativeSql: NativeSql): Int =
+    def execute(nativeSql: NativeSql)(using Logger): Int =
         val NativeSql(sql, args) = nativeSql
         executeDml(sql, args)
 
     inline def insert[A <: Product](entity: A)(using
-        Mirror.ProductOf[A]
+        Mirror.ProductOf[A],
+        Logger
     ): Int =
         val i = Insert[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
-    inline def insertBatch[A <: Product](entities: List[A])(using
-        Mirror.ProductOf[A]
+    inline def insertBatch[A <: Product](entities: Seq[A])(using
+        Mirror.ProductOf[A],
+        Logger
     ): Int =
         val i = Insert[A](entities)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
     inline def insertAndReturn[A <: Product](entity: A)(using
-        Mirror.ProductOf[A]
+        Mirror.ProductOf[A],
+        Logger
     ): A =
         val i = Insert[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
@@ -66,7 +69,8 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
         entity: A,
         skipNone: Boolean = false
     )(using
-        Mirror.ProductOf[A]
+        Mirror.ProductOf[A],
+        Logger
     ): Int =
         val u = Update[A](entity, skipNone)
         if u.tree.setList.isEmpty then
@@ -78,64 +82,73 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
     inline def save[A <: Product](
         entity: A
     )(using
-        Mirror.ProductOf[A]
+        Mirror.ProductOf[A],
+        Logger
     ): Int =
         val s = Save[A](entity)
         val (sql, args) = statementToString(s.tree, dialect, true)
         executeDml(sql, args)
 
     inline def fetchTo[T](inline query: Query[?])(using 
-        JdbcDecoder[T]
+        d: JdbcDecoder[T],
+        l: Logger
     ): List[T] =
         AnalysisMacro.showQuery[D](query)
         val (sql, args) = queryToString(query.tree, dialect, true)
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     inline def fetch[T](inline query: Query[T])(using 
         r: Result[T], 
-        d: JdbcDecoder[r.R]
+        d: JdbcDecoder[r.R],
+        l: Logger
     ): List[r.R] =
         fetchTo[r.R](query)
 
     def fetchTo[T](nativeSql: NativeSql)(using 
-        JdbcDecoder[T]
+        d: JdbcDecoder[T],
+        l: Logger
     ): List[T] =
         val NativeSql(sql, args) = nativeSql
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap(nativeSql: NativeSql): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: NativeSql)(using l: Logger): List[Map[String, Any]] =
         val NativeSql(sql, args) = nativeSql
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
     def fetchTo[T](nativeSql: (String, Array[Any]))(using 
-        JdbcDecoder[T]
+        d: JdbcDecoder[T],
+        l: Logger
     ): List[T] =
         val (sql, args) = nativeSql
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap(nativeSql: (String, Array[Any])): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: (String, Array[Any]))(using l: Logger): List[Map[String, Any]] =
         val (sql, args) = nativeSql
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
     def fetchTo[T](query: DynamicQuery)(using 
-        JdbcDecoder[T]
+        d: JdbcDecoder[T],
+        l: Logger
     ): List[T] =
         val (sql, args) = queryToString(query.tree, dialect, true)
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap(query: DynamicQuery): List[Map[String, Any]] =
+    def fetchToMap(query: DynamicQuery)(using l: Logger): List[Map[String, Any]] =
         val (sql, args) = queryToString(query.tree, dialect, true)
-        logger(sql, args)
+        l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
-    inline def pageTo[T](inline query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using 
-        JdbcDecoder[T]
+    inline def pageTo[T]( 
+        inline query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    )(using 
+        JdbcDecoder[T],
+        Logger
     ): Page[T] =
         AnalysisMacro.showPageQuery[D](query)
         val data = if pageSize == 0 then Nil
@@ -144,32 +157,37 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
         val total = if count == 0 || pageSize == 0 then 0
             else if count % pageSize == 0 then (count / pageSize).toInt
             else (count / pageSize + 1).toInt
-        Page(total, count, pageNo, pageSize, data)
+        Page(total, count, pageSize, pageNo, data)
 
-    inline def page[T](inline query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true)(using 
+    inline def page[T](
+        inline query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    )(using 
         r: Result[T], 
-        d: JdbcDecoder[r.R]
+        d: JdbcDecoder[r.R],
+        l: Logger
     ): Page[r.R] =
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
     inline def findTo[T](inline query: Query[?])(using 
-        JdbcDecoder[T]
+        d: JdbcDecoder[T],
+        l: Logger
     ): Option[T] =
         AnalysisMacro.showLimitQuery[D](query)
         fetchTo[T](query.take(1)).headOption
 
     inline def find[T](inline query: Query[T])(using 
         r: Result[T], 
-        d: JdbcDecoder[r.R]
+        d: JdbcDecoder[r.R],
+        l: Logger
     ): Option[r.R] =
         findTo[r.R](query)
 
-    inline def fetchSize[T](inline query: Query[T]): Long =
+    inline def fetchSize[T](inline query: Query[T])(using Logger): Long =
         AnalysisMacro.showSizeQuery[D](query)
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    inline def fetchExists(inline query: Query[?]): Boolean =
+    inline def fetchExists(inline query: Query[?])(using Logger): Boolean =
         AnalysisMacro.showExistsQuery[D](query)
         val existsQuery = query.exists
         fetch(existsQuery).head
@@ -182,11 +200,12 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D)(usin
         fetchSize: Int
     )(using
         r: Result[T],
-        d: JdbcDecoder[r.R]
+        d: JdbcDecoder[r.R],
+        l: Logger
     )(f: Cursor[r.R] => R): Unit =
         AnalysisMacro.showQuery[D](query)
         val (sql, args) = queryToString(query.tree, dialect, true)
-        logger(sql, args)
+        l(sql, args)
         val conn = dataSource.getConnection()
         jdbcCursorQuery(conn, sql, args, fetchSize, f)
         conn.close()
