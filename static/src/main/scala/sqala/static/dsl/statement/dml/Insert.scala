@@ -70,7 +70,7 @@ object Insert:
             SqlStatement.Insert(SqlTable.Range(tableName, None), Nil, Nil, None)
         new Insert(tree)
 
-    inline def apply[T <: Product](entities: List[T])(using 
+    inline def apply[T <: Product](entities: Seq[T])(using 
         p: Mirror.ProductOf[T]
     ): Insert[T, InsertEntity] =
         val tableName = TableMacro.tableName[T]
@@ -88,4 +88,4 @@ object Insert:
                 .map(_._1)
             data.map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
-        new Insert(SqlStatement.Insert(SqlTable.Range(tableName, None), columns, values, None))
+        new Insert(SqlStatement.Insert(SqlTable.Range(tableName, None), columns, values.toList, None))

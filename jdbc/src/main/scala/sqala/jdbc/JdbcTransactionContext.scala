@@ -52,7 +52,7 @@ object Transaction:
         val (sql, args) = statementToString(i.tree, t.dialect, true)
         jdbcExec(t.connection, sql, args)
 
-    inline def insertBatch[A <: Product](entities: List[A])(using 
+    inline def insertBatch[A <: Product](entities: Seq[A])(using 
         m: Mirror.ProductOf[A],
         t: JdbcTransactionContext, 
         l: Logger
@@ -193,7 +193,7 @@ object Transaction:
         val total = if count == 0 || pageSize == 0 then 0
             else if count % pageSize == 0 then (count / pageSize).toInt
             else (count / pageSize + 1).toInt
-        Page(total, count, pageNo, pageSize, data)
+        Page(total, count, pageSize, pageNo, data)
 
     inline def page[T](
         inline query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
