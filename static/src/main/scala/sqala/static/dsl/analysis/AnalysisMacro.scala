@@ -359,6 +359,8 @@ private[sqala] object AnalysisMacroImpl:
                 createGroupByClause(query, group, "rollup", allTables, groupInfo)
             case Apply(Apply(TypeApply(Apply(TypeApply(Select(_, "groupBySets"), _), query :: Nil), _), group :: Nil), _) =>
                 createGroupByClause(query, group, "sets", allTables, groupInfo)
+            case Apply(Apply(Apply(TypeApply(Apply(TypeApply(Select(_, "having"), _), query :: Nil), _), cond :: Nil), _), _) =>
+                createHavingClause(query, cond, allTables, groupInfo)
             case Apply(Apply(TypeApply(Apply(TypeApply(Select(_, "sortBy" | "orderBy"), _), query :: Nil), _), order :: Nil), _) =>
                 createOrderByClause(query, order, allTables, groupInfo)
             case Apply(TypeApply(Select(_, "distinct"), _), query :: Nil) =>
@@ -439,6 +441,30 @@ private[sqala] object AnalysisMacroImpl:
 
         val newQuery =
             baseInfo.tree.asInstanceOf[SqlQuery.Select].addWhere(condInfo.expr)
+
+        baseInfo.copy(tree = newQuery)
+
+    def createHavingClause(using q: Quotes, c: QueryContext)(
+        query: q.reflect.Term,
+        cond: q.reflect.Term,
+        allTables: List[(argName: String, tableName: String)],
+        groupInfo: List[GroupInfo]
+    ): QueryInfo =
+        val baseInfo = 
+            createTree(query, allTables, groupInfo)
+
+        val (args, body) = splitFunc(cond)
+
+        val tables =
+            args.zip(baseInfo.currentTableAlias) ++
+            baseInfo.allTables
+
+        val condInfo = createExpr(body, tables, false, baseInfo.groupInfo)
+
+        checkUngrouped(condInfo.ungroupedPaths)
+
+        val newQuery =
+            baseInfo.tree.asInstanceOf[SqlQuery.Select].addHaving(condInfo.expr)
 
         baseInfo.copy(tree = newQuery)
 
@@ -648,7 +674,7 @@ private[sqala] object AnalysisMacroImpl:
 
         val resultSize = 
             if inGroup then ResultSize.Many
-            else if notInAgg.isEmpty then ResultSize.ZeroOrOne
+            else if notInAgg.isEmpty && infoList.forall(i => !i.isValue) then ResultSize.ZeroOrOne
             else ResultSize.Many
 
         val exprs = infoList.map(_.expr)

@@ -42,6 +42,7 @@ case class Expr[T](private[sqala] val expr: SqlExpr):
                         None
                     )
                 )
+                
     @targetName("to")
     def :=[R: AsExpr as a](updateExpr: R)(using
         Compare[T, a.R]
