@@ -1,6 +1,6 @@
 package sqala.ast.expr
 
-enum SqlBinaryOperator(val operator: String, val priority: Int):
+enum SqlBinaryOperator(val operator: String, val precedence: Int):
     case Times extends SqlBinaryOperator("*", 60)
     case Div extends SqlBinaryOperator("/", 60)
     case Mod extends SqlBinaryOperator("%", 60)
@@ -20,10 +20,10 @@ enum SqlBinaryOperator(val operator: String, val priority: Int):
     case NotLike extends SqlBinaryOperator("NOT LIKE", 30)
     case And extends SqlBinaryOperator("AND", 20)
     case Or extends SqlBinaryOperator("OR", 10)
-    case Custom(op: String) extends SqlBinaryOperator(op, 0)
+    case Custom(override val operator: String) extends SqlBinaryOperator(operator, 0)
 
 enum SqlUnaryOperator(val operator: String):
     case Positive extends SqlUnaryOperator("+")
     case Negative extends SqlUnaryOperator("-")
     case Not extends SqlUnaryOperator("NOT")
-    case Custom(op: String) extends SqlUnaryOperator(op)
+    case Custom(override val operator: String) extends SqlUnaryOperator(operator)
