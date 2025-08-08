@@ -269,9 +269,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("]")
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
-        expr.op match
+        expr.operator match
             case SqlUnaryOperator.Not =>
-                sqlBuilder.append(expr.op.operator)
+                sqlBuilder.append(expr.operator.operator)
                 sqlBuilder.append(" ")
                 printExpr(expr.expr)
             case _ =>
@@ -280,7 +280,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     case SqlExpr.Column(_, _) => false
                     case SqlExpr.NumberLiteral(_) => false
                     case _ => true
-                sqlBuilder.append(expr.op.operator)
+                sqlBuilder.append(expr.operator.operator)
                 if hasBrackets then
                     sqlBuilder.append("(")
                     printExpr(expr.expr)
@@ -292,14 +292,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, op, _)
-                    if op.priority < parent.op.priority || op.priority == 0 => true
+                    if op.precedence < parent.operator.precedence || op.precedence == 0 => true
                 case SqlExpr.Binary(_, SqlBinaryOperator.Custom(_), _) => true
                 case _ => false
 
         def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, op, _)
-                    if op.priority <= parent.op.priority => true
+                    if op.precedence <= parent.operator.precedence => true
                 case SqlExpr.Binary(_, SqlBinaryOperator.Custom(_), _) => true
                 case _ => false
 
@@ -310,7 +310,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         else
             printExpr(expr.left)
 
-        sqlBuilder.append(s" ${expr.op.operator} ")
+        sqlBuilder.append(s" ${expr.operator.operator} ")
 
         if hasBracketsRight(expr, expr.right) then
             sqlBuilder.append("(")
