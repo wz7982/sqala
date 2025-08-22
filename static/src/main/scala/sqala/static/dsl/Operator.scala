@@ -305,7 +305,7 @@ extension [T: AsExpr as at](self: T)
         ar: AsExpr[R],
         rr: ar.R <:< (String | Option[String]),
         qc: QueryContext
-    ): Expr[Option[Boolean]] =
+    ): Expr[Option[String]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 

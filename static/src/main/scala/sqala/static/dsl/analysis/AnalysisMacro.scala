@@ -1262,7 +1262,7 @@ private[sqala] object AnalysisMacroImpl:
     def binaryOperators: List[String] =
         List(
             "==", "!=", "===", "<>", ">", ">=", "<", "<=", "&&", "||",
-            "+", "-", "*", "/", "%", "->", "->>",
+            "+", "-", "*", "/", "%", "->", "->>", "++",
             "like", "contains", "startsWith", "endsWith"
         )
 
@@ -1787,6 +1787,8 @@ private[sqala] object AnalysisMacroImpl:
                     SqlExpr.Binary(leftExpr, SqlBinaryOperator.JsonText, rightExpr)
                 case "like" | "contains" | "startsWith" | "endsWith" =>
                     SqlExpr.Binary(leftExpr, SqlBinaryOperator.Like, rightExpr)
+                case "++" =>
+                    SqlExpr.Binary(leftExpr, SqlBinaryOperator.Concat, rightExpr)
 
         ExprInfo(
             expr = expr,
