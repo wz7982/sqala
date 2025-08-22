@@ -4,14 +4,14 @@ import sqala.ast.expr.SqlExpr
 
 case class SqlOrderItem(
     expr: SqlExpr, 
-    order: Option[SqlOrderOption], 
-    nullsOrder: Option[SqlOrderNullsOption]
+    ordering: Option[SqlOrdering], 
+    nullsOrdering: Option[SqlNullsOrdering]
 )
 
-enum SqlOrderOption(val order: String):
-    case Asc extends SqlOrderOption("ASC")
-    case Desc extends SqlOrderOption("DESC")
+enum SqlOrdering(val order: String):
+    case Asc extends SqlOrdering("ASC")
+    case Desc extends SqlOrdering("DESC")
 
-enum SqlOrderNullsOption(val order: String):
-    case First extends SqlOrderNullsOption("NULLS FIRST")
-    case Last extends SqlOrderNullsOption("NULLS LAST")
+enum SqlNullsOrdering(val order: String):
+    case First extends SqlNullsOrdering("NULLS FIRST")
+    case Last extends SqlNullsOrdering("NULLS LAST")

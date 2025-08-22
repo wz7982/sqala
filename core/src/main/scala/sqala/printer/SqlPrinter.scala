@@ -3,7 +3,7 @@ package sqala.printer
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlOrderItem, SqlOrderOption}
+import sqala.ast.order.{SqlOrderItem, SqlOrdering}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.|>
@@ -78,7 +78,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printQuery(query: SqlQuery): Unit = query match
         case select: SqlQuery.Select => printSelect(select)
-        case union: SqlQuery.Union => printUnion(union)
+        case set: SqlQuery.Set => printSet(set)
         case values: SqlQuery.Values => printValues(values)
         case cte: SqlQuery.Cte => printCte(cte)
 
@@ -86,7 +86,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printSpace()
         sqlBuilder.append("SELECT ")
 
-        select.param.foreach(p => sqlBuilder.append(p.param + " "))
+        select.quantifier.foreach(p => sqlBuilder.append(p.quantifier + " "))
 
         if select.select.isEmpty then sqlBuilder.append("*")
         else
@@ -128,11 +128,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printSpace()
             printLimit(l)
 
-    def printUnion(union: SqlQuery.Union): Unit =
+    def printSet(set: SqlQuery.Set): Unit =
         printSpace()
         sqlBuilder.append("(\n")
         push()
-        printQuery(union.left)
+        printQuery(set.left)
         pull()
         sqlBuilder.append("\n")
         printSpace()
@@ -140,25 +140,25 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("\n")
 
         printSpace()
-        sqlBuilder.append(union.unionType.unionType)
+        sqlBuilder.append(set.operator.operator)
         sqlBuilder.append("\n")
 
         printSpace()
         sqlBuilder.append("(\n")
         push()
-        printQuery(union.right)
+        printQuery(set.right)
         pull()
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
 
-        if union.orderBy.nonEmpty then
+        if set.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
-            printList(union.orderBy, ",\n")(printOrderItem |> printWithSpace)
+            printList(set.orderBy, ",\n")(printOrderItem |> printWithSpace)
 
-        for l <- union.limit do
+        for l <- set.limit do
             sqlBuilder.append("\n")
             printSpace()
             printLimit(l)
@@ -327,7 +327,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
-        expr.param.foreach(p => sqlBuilder.append(p.param + " "))
+        expr.quantifier.foreach(p => sqlBuilder.append(p.quantifier + " "))
         if expr.name.toUpperCase == "COUNT" && expr.args.isEmpty then sqlBuilder.append("*")
         printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
@@ -394,23 +394,20 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 sqlBuilder.append(" ")
             sqlBuilder.append("ORDER BY ")
             printList(expr.orderBy)(printOrderItem)
-        expr.frame match
-            case Some(SqlWindowFrame.Rows(start, end)) =>
-                sqlBuilder.append(" ROWS BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case Some(SqlWindowFrame.Range(start, end)) =>
-                sqlBuilder.append(" RANGE BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case Some(SqlWindowFrame.Groups(start, end)) =>
-                sqlBuilder.append(" GROUPS BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case None =>
+        for f <- expr.frame do
+            f match
+                case SqlWindowFrame.Start(unit, start) =>
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(unit.unit)
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(start.bound)
+                case SqlWindowFrame.Between(unit, start, end) =>
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(unit.unit)
+                    sqlBuilder.append(" BETWEEN ")
+                    sqlBuilder.append(start.bound)
+                    sqlBuilder.append(" AND ")
+                    sqlBuilder.append(end.bound)
         sqlBuilder.append(")")
 
     def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
@@ -424,7 +421,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printSubLinkExpr(expr: SqlExpr.SubLink): Unit =
         push()
-        sqlBuilder.append(expr.linkType.linkType)
+        sqlBuilder.append(expr.quantifier.quantifier)
         sqlBuilder.append("(\n")
         printQuery(expr.query)
         pull()
@@ -530,11 +527,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printOrderItem(item: SqlOrderItem): Unit =
         printExpr(item.expr)
-        val order = item.order match
-            case None | Some(SqlOrderOption.Asc) => SqlOrderOption.Asc
-            case _ => SqlOrderOption.Desc
+        val order = item.ordering match
+            case None | Some(SqlOrdering.Asc) => SqlOrdering.Asc
+            case _ => SqlOrdering.Desc
         sqlBuilder.append(s" ${order.order}")
-        for o <- item.nullsOrder do
+        for o <- item.nullsOrdering do
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =

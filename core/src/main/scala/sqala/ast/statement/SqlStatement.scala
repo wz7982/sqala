@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.param.SqlParam
+import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
 
 enum SqlStatement:
@@ -25,7 +25,7 @@ object SqlStatement:
 
 enum SqlQuery:
     case Select(
-        param: Option[SqlParam] = None,
+        quantifier: Option[SqlQuantifier] = None,
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr] = None,
@@ -34,9 +34,9 @@ enum SqlQuery:
         orderBy: List[SqlOrderItem] = Nil,
         limit: Option[SqlLimit] = None
     )
-    case Union(
+    case Set(
         left: SqlQuery,
-        unionType: SqlUnionType,
+        operator: SqlSetOperator,
         right: SqlQuery,
         orderBy: List[SqlOrderItem] = Nil,
         limit: Option[SqlLimit] = None

@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
-import sqala.ast.order.{SqlOrderNullsOption, SqlOrderOption}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.{AsSqlExpr, DateTime, Json, Number}
 
 import java.time.LocalDateTime
@@ -299,6 +299,21 @@ extension [T: AsExpr as at](self: T)
     ): Expr[Option[Boolean]] =
         like(s"%$value")
 
+    @targetName("concatString")
+    def ++[R](that: R)(using
+        rt: at.R <:< (String | Option[String]),
+        ar: AsExpr[R],
+        rr: ar.R <:< (String | Option[String]),
+        qc: QueryContext
+    ): Expr[Option[String]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.Concat, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
     @targetName("json")
     def ->(path: Int | String)(using 
         at.R <:< (Json | Option[Json]),
@@ -330,19 +345,19 @@ extension [T: AsExpr as at](self: T)
         )
 
     def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
-        Sort(at.asExpr(self), SqlOrderOption.Asc, None)
+        Sort(at.asExpr(self), SqlOrdering.Asc, None)
 
     def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
-        Sort(at.asExpr(self), SqlOrderOption.Asc, Some(SqlOrderNullsOption.First))
+        Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
     def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
-        Sort(at.asExpr(self), SqlOrderOption.Asc, Some(SqlOrderNullsOption.Last))
+        Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
     def desc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
-        Sort(at.asExpr(self), SqlOrderOption.Desc, None)
+        Sort(at.asExpr(self), SqlOrdering.Desc, None)
 
     def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
-        Sort(at.asExpr(self), SqlOrderOption.Desc, Some(SqlOrderNullsOption.First))
+        Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
     def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
-        Sort(at.asExpr(self), SqlOrderOption.Desc, Some(SqlOrderNullsOption.Last))
+        Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))

@@ -74,7 +74,11 @@ class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             sqlBuilder.append(", ")
             printExpr(left)
             sqlBuilder.append(")")
-        case _ => super.printBinaryExpr(expr)
+        case SqlExpr.Binary(left, SqlBinaryOperator.Concat, right) =>
+            val concat = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+            printExpr(concat)
+        case _ => 
+            super.printBinaryExpr(expr)
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
 

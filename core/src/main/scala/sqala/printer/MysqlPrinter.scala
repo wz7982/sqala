@@ -2,10 +2,11 @@ package sqala.printer
 
 import sqala.ast.expr.{SqlCase, SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
+import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.order.SqlOrderNullsOption.{First, Last}
-import sqala.ast.order.SqlOrderOption.{Asc, Desc}
+import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.expr.SqlBinaryOperator
 
 class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "`"
@@ -38,6 +39,14 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(u)
             sqlBuilder.append(")")
 
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+        expr.operator match
+            case SqlBinaryOperator.Concat =>
+                val concat = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+                printExpr(concat)
+            case _ =>
+                super.printBinaryExpr(expr) 
+
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")
         sqlBuilder.append(expr.value)
@@ -45,7 +54,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(expr.unit.unit)
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             val (args, separator) = if expr.args.size == 2 then
                 (expr.args.head :: Nil) -> expr.args.last
             else
@@ -81,11 +90,12 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(t)
 
     override def printOrderItem(orderBy: SqlOrderItem): Unit =
-        val order = orderBy.order match
+        val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
-        val orderExpr = SqlExpr.Case(SqlCase(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
-        (order, orderBy.nullsOrder) match
+        val orderExpr = 
+            SqlExpr.Case(SqlCase(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
+        (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)
                 sqlBuilder.append(s" ${order.order}")

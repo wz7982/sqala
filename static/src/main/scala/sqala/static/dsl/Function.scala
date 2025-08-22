@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.param.SqlParam
+import sqala.ast.quantifier.SqlQuantifier
 import sqala.metadata.{AsSqlExpr, Number, agg, function, window}
 
 import java.time.LocalDateTime
@@ -20,7 +20,7 @@ def count[T: AsExpr as a](expr: T)(using QueryContext): Expr[Long] =
 
 @agg("COUNT")
 def count[T: AsExpr as a](expr: T, distinct: Boolean)(using QueryContext): Expr[Long] =
-    Expr(SqlExpr.Func("COUNT", a.asExpr(expr).asSqlExpr :: Nil, if distinct then Some(SqlParam.Distinct) else None))
+    Expr(SqlExpr.Func("COUNT", a.asExpr(expr).asSqlExpr :: Nil, if distinct then Some(SqlQuantifier.Distinct) else None))
 
 @agg("SUM")
 def sum[T: AsExpr as a](expr: T)(using n: Number[a.R], to: ToOption[Expr[a.R]], c: QueryContext): to.R =

@@ -2,9 +2,9 @@ package sqala.printer
 
 import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
+import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.order.SqlOrderNullsOption.{First, Last}
-import sqala.ast.order.SqlOrderOption.{Asc, Desc}
+import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.statement.SqlStatement
 
 class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
@@ -27,11 +27,11 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         sqlBuilder.append(")")
 
     override def printOrderItem(item: SqlOrderItem): Unit =
-        val order = item.order match
+        val order = item.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
         val orderExpr = SqlExpr.Case(SqlCase(SqlExpr.NullTest(item.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
-        (order, item.nullsOrder) match
+        (order, item.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(item.expr)
                 sqlBuilder.append(s" ${order.order}")
@@ -68,7 +68,7 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         sqlBuilder.append(")")
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && expr.param.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.toUpperCase == "STRING_AGG" && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("GROUP_CONCAT")
             sqlBuilder.append("(")
             printList(expr.args)(printExpr)

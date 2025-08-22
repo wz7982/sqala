@@ -158,19 +158,19 @@ def `if`[E: AsExpr as a](expr: E)(using
     EmptyIf(a.asExpr(expr) :: Nil)
 
 def exists[T](query: Query[T])(using QueryContext): Expr[Option[Boolean]] =
-    Expr(SqlExpr.SubLink(query.tree, SqlSubLinkType.Exists))
+    Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
 
 def any[T](query: Query[T])(using
     a: AsExpr[T],
     c: QueryContext
 ): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkType.Any)
+    SubLink(query.tree, SqlSubLinkQuantifier.Any)
 
 def all[T](query: Query[T])(using
     a: AsExpr[T],
     c: QueryContext
 ): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkType.All)
+    SubLink(query.tree, SqlSubLinkQuantifier.All)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
 
@@ -248,21 +248,21 @@ extension [T: AsExpr as a](expr: T)
     def as[R](using cast: Cast[a.R, R], c: QueryContext): Expr[Option[R]] =
         Expr(SqlExpr.Cast(a.asExpr(expr).asSqlExpr, cast.castType))
 
-def currentRow(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.CurrentRow
+def currentRow(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.CurrentRow
 
-def unboundedPreceding(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.UnboundedPreceding
+def unboundedPreceding(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.UnboundedPreceding
 
-def unboundedFollowing(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.UnboundedFollowing
+def unboundedFollowing(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.UnboundedFollowing
 
 extension (n: Int)
-    def preceding(using QueryContext): SqlWindowFrameOption = 
-        SqlWindowFrameOption.Preceding(n)
+    def preceding(using QueryContext): SqlWindowFrameBound = 
+        SqlWindowFrameBound.Preceding(n)
 
-    def following(using QueryContext): SqlWindowFrameOption = 
-        SqlWindowFrameOption.Following(n)
+    def following(using QueryContext): SqlWindowFrameBound = 
+        SqlWindowFrameBound.Following(n)
 
 def partitionBy[T: AsGroup as a](partitionValue: T)(using QueryContext): Over =
     Over(partitionBy = a.exprs(partitionValue))

@@ -3,8 +3,8 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.param.SqlParam
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType, SqlWithItem}
+import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
 import sqala.dynamic.parser.SqlParser
 import sqala.printer.Dialect
 import sqala.util.queryToString
@@ -21,17 +21,17 @@ sealed trait DynamicQuery:
     def sql(dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
         queryToString(tree, dialect, enableJdbcPrepare)
 
-    infix def union(query: DynamicQuery): Union = Union(this, SqlUnionType.Union, query)
+    infix def union(query: DynamicQuery): Union = Union(this, SqlSetOperator.Union, query)
 
-    infix def unionAll(query: DynamicQuery): Union = Union(this, SqlUnionType.UnionAll, query)
+    infix def unionAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.UnionAll, query)
 
-    infix def except(query: DynamicQuery): Union = Union(this, SqlUnionType.Except, query)
+    infix def except(query: DynamicQuery): Union = Union(this, SqlSetOperator.Except, query)
 
-    infix def exceptAll(query: DynamicQuery): Union = Union(this, SqlUnionType.ExceptAll, query)
+    infix def exceptAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.ExceptAll, query)
 
-    infix def intersect(query: DynamicQuery): Union = Union(this, SqlUnionType.Intersect, query)
+    infix def intersect(query: DynamicQuery): Union = Union(this, SqlSetOperator.Intersect, query)
 
-    infix def intersectAll(query: DynamicQuery): Union = Union(this, SqlUnionType.IntersectAll, query)
+    infix def intersectAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.IntersectAll, query)
 
 case class LateralQuery(query: DynamicQuery):
     infix def as(name: String): SubQueryTable =
@@ -70,17 +70,17 @@ class Select(val tree: SqlQuery.Select) extends DynamicQuery:
         val sqlLimit = tree.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
         new Select(tree.copy(limit = sqlLimit))
 
-    def distinct: Select = new Select(tree.copy(param = Some(SqlParam.Distinct)))
+    def distinct: Select = new Select(tree.copy(quantifier = Some(SqlQuantifier.Distinct)))
 
 object Select:
     def apply(): Select = new Select(SqlQuery.Select(select = Nil, from = Nil))
 
 class Union(
     private[sqala] val left: DynamicQuery,
-    private[sqala] val unionType: SqlUnionType,
+    private[sqala] val operator: SqlSetOperator,
     private[sqala] val right: DynamicQuery
 ) extends DynamicQuery:
-    override def tree: SqlQuery = SqlQuery.Union(left.tree, unionType, right.tree)
+    override def tree: SqlQuery = SqlQuery.Set(left.tree, operator, right.tree)
 
 class With(val tree: SqlQuery.Cte) extends DynamicQuery:
     def recursive: With = new With(tree.copy(recursive = true))

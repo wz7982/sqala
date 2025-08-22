@@ -3,9 +3,9 @@ package sqala.dynamic.parser
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlOrderItem, SqlOrderOption}
-import sqala.ast.param.SqlParam
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType}
+import sqala.ast.order.{SqlOrderItem, SqlOrdering}
+import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 
 import scala.util.parsing.combinator.lexical.StdLexical
@@ -132,7 +132,7 @@ object SqlParser extends StandardTokenParsers:
         cast |
         windowFunction |
         function |
-        "(" ~> union <~ ")" |
+        "(" ~> set <~ ")" |
         column |
         subLink |
         interval |
@@ -145,7 +145,7 @@ object SqlParser extends StandardTokenParsers:
             case funcName ~ args => SqlExpr.Func(funcName.toUpperCase.nn, args, None, Nil)
         } |
         (ident | "COUNT") ~ ("(" ~ "DISTINCT" ~> expr <~ ")") ^^ {
-            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, Some(SqlParam.Distinct), Nil)
+            case funcName ~ arg => SqlExpr.Func(funcName.toUpperCase.nn, arg :: Nil, Some(SqlQuantifier.Distinct), Nil)
         }
 
     def over: Parser[(List[SqlExpr], List[SqlOrderItem])] =
@@ -162,23 +162,23 @@ object SqlParser extends StandardTokenParsers:
         }
 
     def subLink: Parser[SqlExpr] =
-        "ANY" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u.query, SqlSubLinkType.Any)
+        "ANY" ~> "(" ~> set <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkQuantifier.Any)
         } |
-        "SOME" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u.query, SqlSubLinkType.Some)
+        "SOME" ~> "(" ~> set <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkQuantifier.Some)
         } |
-        "ALL" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u.query, SqlSubLinkType.All)
+        "ALL" ~> "(" ~> set <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkQuantifier.All)
         } |
-        "EXISTS" ~> "(" ~> union <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u.query, SqlSubLinkType.Exists)
+        "EXISTS" ~> "(" ~> set <~ ")" ^^ { u =>
+            SqlExpr.SubLink(u.query, SqlSubLinkQuantifier.Exists)
         }
 
     def order: Parser[SqlOrderItem] =
         expr ~ opt("ASC" | "DESC") ^^ {
-            case e ~ Some("DESC") => SqlOrderItem(e, Some(SqlOrderOption.Desc), None)
-            case e ~ _ => SqlOrderItem(e, Some(SqlOrderOption.Asc), None)
+            case e ~ Some("DESC") => SqlOrderItem(e, Some(SqlOrdering.Desc), None)
+            case e ~ _ => SqlOrderItem(e, Some(SqlOrdering.Asc), None)
         }
 
     def cast: Parser[SqlExpr] =
@@ -229,38 +229,38 @@ object SqlParser extends StandardTokenParsers:
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
         "NULL" ^^ (_ => SqlExpr.Null)
 
-    def unionType: Parser[SqlUnionType] =
+    def setOperator: Parser[SqlSetOperator] =
         "UNION" ~> opt("ALL") ^^ {
-            case None => SqlUnionType.Union
-            case _ => SqlUnionType.UnionAll
+            case None => SqlSetOperator.Union
+            case _ => SqlSetOperator.UnionAll
         } |
         "EXCEPT" ~> opt("ALL") ^^ {
-            case None => SqlUnionType.Except
-            case _ => SqlUnionType.ExceptAll
+            case None => SqlSetOperator.Except
+            case _ => SqlSetOperator.ExceptAll
         } |
         "INTERSECT" ~> opt("ALL") ^^ {
-            case None => SqlUnionType.Intersect
-            case _ => SqlUnionType.IntersectAll
+            case None => SqlSetOperator.Intersect
+            case _ => SqlSetOperator.IntersectAll
         }
 
     def query: Parser[SqlExpr.SubQuery] =
         select |
-        "(" ~> union <~ ")"
+        "(" ~> set <~ ")"
 
-    def union: Parser[SqlExpr.SubQuery] =
+    def set: Parser[SqlExpr.SubQuery] =
         query ~ rep(
-            unionType ~ query ^^ {
+            setOperator ~ query ^^ {
                 case t ~ s => (t, s)
             }
         ) ^^ {
             case s ~ unions => unions.foldLeft(s):
-                case (l, r) => SqlExpr.SubQuery(SqlQuery.Union(l.query, r._1, r._2.query))
+                case (l, r) => SqlExpr.SubQuery(SqlQuery.Set(l.query, r._1, r._2.query))
         }
 
     def select: Parser[SqlExpr.SubQuery] =
         "SELECT" ~> opt("DISTINCT") ~ selectItems ~ opt(from) ~ opt(where) ~ opt(groupBy) ~ opt(orderBy) ~ opt(limit) ^^ {
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
-                val param = if distinct.isDefined then Some(SqlParam.Distinct) else None
+                val param = if distinct.isDefined then Some(SqlQuantifier.Distinct) else None
                 SqlExpr.SubQuery(
                     SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.flatMap(_._2), o.getOrElse(Nil), l)
                 )
@@ -285,7 +285,7 @@ object SqlParser extends StandardTokenParsers:
                     case ta ~ ca => SqlTableAlias(ta, ca.getOrElse(Nil))
                 SqlTable.Range(table, tableAlias)
         } |
-        opt("LATERAL") ~ ("(" ~> union <~ ")") ~ (opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
+        opt("LATERAL") ~ ("(" ~> set <~ ")") ~ (opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
             case lateral ~ s ~ (tableAlias ~ columnAlias) =>
                 SqlTable.SubQuery(s.query, lateral.isDefined, Some(SqlTableAlias(tableAlias, columnAlias.getOrElse(Nil))))
         }
@@ -356,7 +356,7 @@ object SqlParser extends StandardTokenParsers:
             case e => throw ParseException(e.toString)
 
     def parseQuery(text: String): SqlQuery =
-        phrase(union)(new lexical.Scanner(text)) match
+        phrase(set)(new lexical.Scanner(text)) match
             case Success(result, _) => result.query
             case e => throw ParseException(e.toString)
 
