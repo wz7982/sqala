@@ -248,21 +248,21 @@ extension [T: AsExpr as a](expr: T)
     def as[R](using cast: Cast[a.R, R], c: QueryContext): Expr[Option[R]] =
         Expr(SqlExpr.Cast(a.asExpr(expr).asSqlExpr, cast.castType))
 
-def currentRow(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.CurrentRow
+def currentRow(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.CurrentRow
 
-def unboundedPreceding(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.UnboundedPreceding
+def unboundedPreceding(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.UnboundedPreceding
 
-def unboundedFollowing(using QueryContext): SqlWindowFrameOption = 
-    SqlWindowFrameOption.UnboundedFollowing
+def unboundedFollowing(using QueryContext): SqlWindowFrameBound = 
+    SqlWindowFrameBound.UnboundedFollowing
 
 extension (n: Int)
-    def preceding(using QueryContext): SqlWindowFrameOption = 
-        SqlWindowFrameOption.Preceding(n)
+    def preceding(using QueryContext): SqlWindowFrameBound = 
+        SqlWindowFrameBound.Preceding(n)
 
-    def following(using QueryContext): SqlWindowFrameOption = 
-        SqlWindowFrameOption.Following(n)
+    def following(using QueryContext): SqlWindowFrameBound = 
+        SqlWindowFrameBound.Following(n)
 
 def partitionBy[T: AsGroup as a](partitionValue: T)(using QueryContext): Over =
     Over(partitionBy = a.exprs(partitionValue))

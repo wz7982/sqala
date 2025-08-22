@@ -2124,31 +2124,40 @@ private[sqala] object AnalysisMacroImpl:
                     notInAggPaths = funcNotInAggPaths
                 )
             case _ =>
+                def fetchFrameBound(item: Term): SqlWindowFrameBound =
+                    item match
+                        case Apply(Apply(Ident("preceding"), n :: Nil), _) =>
+                            val value = n.asExprOf[Int].value.getOrElse(0)
+                            SqlWindowFrameBound.Preceding(value)
+                        case Apply(Apply(Ident("following"), n :: Nil), _) =>
+                            val value = n.asExprOf[Int].value.getOrElse(0)
+                            SqlWindowFrameBound.Following(value)
+                        case Apply(Ident("currentRow"), _) =>
+                            SqlWindowFrameBound.CurrentRow
+                        case Apply(Ident("unboundedPreceding"), _) =>
+                            SqlWindowFrameBound.UnboundedPreceding
+                        case Apply(Ident("unboundedFollowing"), _) =>
+                            SqlWindowFrameBound.UnboundedFollowing
+
                 val (frame, remaining) =
                     over match
                         case Apply(Select(o, name@("rowsBetween" | "rangeBetween" | "groupsBetween")), start :: end :: Nil) =>
-                            def fetchFrameOption(item: Term): SqlWindowFrameOption =
-                                item match
-                                    case Apply(Apply(Ident("preceding"), n :: Nil), _) =>
-                                        val value = n.asExprOf[Int].value.getOrElse(0)
-                                        SqlWindowFrameOption.Preceding(value)
-                                    case Apply(Apply(Ident("following"), n :: Nil), _) =>
-                                        val value = n.asExprOf[Int].value.getOrElse(0)
-                                        SqlWindowFrameOption.Following(value)
-                                    case Apply(Ident("currentRow"), _) =>
-                                        SqlWindowFrameOption.CurrentRow
-                                    case Apply(Ident("unboundedPreceding"), _) =>
-                                        SqlWindowFrameOption.UnboundedPreceding
-                                    case Apply(Ident("unboundedFollowing"), _) =>
-                                        SqlWindowFrameOption.UnboundedFollowing
-                            
-                            val startOption = fetchFrameOption(start)
-                            val endOption = fetchFrameOption(end)
+                            val startBound = fetchFrameBound(start)
+                            val endBound = fetchFrameBound(end)
 
                             val frame = name match
-                                case "rowsBetween" => SqlWindowFrame.Rows(startOption, endOption)
-                                case "rangeBetween" => SqlWindowFrame.Range(startOption, endOption)
-                                case "groupsBetween" => SqlWindowFrame.Groups(startOption, endOption)
+                                case "rowsBetween" => SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, startBound, endBound)
+                                case "rangeBetween" => SqlWindowFrame.Between(SqlWindowFrameUnit.Range, startBound, endBound)
+                                case "groupsBetween" => SqlWindowFrame.Between(SqlWindowFrameUnit.Groups, startBound, endBound)
+
+                            (Some(frame), o)
+                        case Apply(Select(o, name@("rows" | "range" | "groups")), start :: Nil) =>
+                            val startBound = fetchFrameBound(start)
+
+                            val frame = name match
+                                case "rows" => SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, startBound)
+                                case "range" => SqlWindowFrame.Start(SqlWindowFrameUnit.Range, startBound)
+                                case "groups" => SqlWindowFrame.Start(SqlWindowFrameUnit.Groups, startBound)
 
                             (Some(frame), o)
                         case _ => (None, over)

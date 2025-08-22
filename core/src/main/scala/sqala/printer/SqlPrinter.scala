@@ -394,23 +394,20 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 sqlBuilder.append(" ")
             sqlBuilder.append("ORDER BY ")
             printList(expr.orderBy)(printOrderItem)
-        expr.frame match
-            case Some(SqlWindowFrame.Rows(start, end)) =>
-                sqlBuilder.append(" ROWS BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case Some(SqlWindowFrame.Range(start, end)) =>
-                sqlBuilder.append(" RANGE BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case Some(SqlWindowFrame.Groups(start, end)) =>
-                sqlBuilder.append(" GROUPS BETWEEN ")
-                sqlBuilder.append(start.showString)
-                sqlBuilder.append(" AND ")
-                sqlBuilder.append(end.showString)
-            case None =>
+        for f <- expr.frame do
+            f match
+                case SqlWindowFrame.Start(unit, start) =>
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(unit.unit)
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(start.bound)
+                case SqlWindowFrame.Between(unit, start, end) =>
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(unit.unit)
+                    sqlBuilder.append(" BETWEEN ")
+                    sqlBuilder.append(start.bound)
+                    sqlBuilder.append(" AND ")
+                    sqlBuilder.append(end.bound)
         sqlBuilder.append(")")
 
     def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
