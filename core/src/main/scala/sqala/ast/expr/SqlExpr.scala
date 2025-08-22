@@ -1,7 +1,7 @@
 package sqala.ast.expr
 
 import sqala.ast.order.SqlOrderItem
-import sqala.ast.param.SqlParam
+import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
 
 enum SqlExpr:
@@ -19,7 +19,7 @@ enum SqlExpr:
     case Func(
         name: String,
         args: List[SqlExpr],
-        param: Option[SqlParam] = None,
+        quantifier: Option[SqlQuantifier] = None,
         orderBy: List[SqlOrderItem] = Nil,
         withinGroup: List[SqlOrderItem] = Nil,
         filter: Option[SqlExpr] = None
@@ -30,7 +30,7 @@ enum SqlExpr:
     case Cast(expr: SqlExpr, castType: SqlCastType)
     case Window(expr: SqlExpr, partitionBy: List[SqlExpr], orderBy: List[SqlOrderItem], frame: Option[SqlWindowFrame])
     case SubQuery(query: SqlQuery)
-    case SubLink(query: SqlQuery, linkType: SqlSubLinkType)
+    case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
     case Interval(value: Double, unit: SqlTimeUnit)
     case Extract(expr: SqlExpr, unit: SqlTimeUnit)
     case Custom(snippet: String)

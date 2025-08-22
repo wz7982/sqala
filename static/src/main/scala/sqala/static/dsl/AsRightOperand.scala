@@ -23,4 +23,4 @@ object AsRightOperand:
             type R = T
 
             def asExpr(x: SubLink[T]): Expr[T] =
-                Expr(SqlExpr.SubLink(x.tree, x.subLinkType))
+                Expr(SqlExpr.SubLink(x.tree, x.quantifier))

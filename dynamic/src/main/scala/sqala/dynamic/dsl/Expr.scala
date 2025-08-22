@@ -3,7 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Not, Positive}
-import sqala.ast.order.{SqlOrderItem, SqlOrderNullsOption, SqlOrderOption}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrderItem, SqlOrdering}
 import sqala.ast.statement.SqlSelectItem
 import sqala.dynamic.parser.SqlParser
 import sqala.metadata.AsSqlExpr
@@ -113,17 +113,17 @@ case class Expr(sqlExpr: SqlExpr):
             Expr(SqlExpr.Window(expr, partitionBy, items.toList.map(i => i.asSqlOrderBy), frame))
         case _ => this
 
-    def asc: OrderBy = OrderBy(this, SqlOrderOption.Asc, None)
+    def asc: OrderBy = OrderBy(this, SqlOrdering.Asc, None)
 
-    def ascNullsFirst: OrderBy = OrderBy(this, SqlOrderOption.Asc, Some(SqlOrderNullsOption.First))
+    def ascNullsFirst: OrderBy = OrderBy(this, SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
-    def ascNullsLast: OrderBy = OrderBy(this, SqlOrderOption.Asc, Some(SqlOrderNullsOption.Last))
+    def ascNullsLast: OrderBy = OrderBy(this, SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
-    def desc: OrderBy = OrderBy(this, SqlOrderOption.Desc, None)
+    def desc: OrderBy = OrderBy(this, SqlOrdering.Desc, None)
 
-    def descNullsFirst: OrderBy = OrderBy(this, SqlOrderOption.Desc, Some(SqlOrderNullsOption.First))
+    def descNullsFirst: OrderBy = OrderBy(this, SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
-    def descNullsLast: OrderBy = OrderBy(this, SqlOrderOption.Desc, Some(SqlOrderNullsOption.Last))
+    def descNullsLast: OrderBy = OrderBy(this, SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
     infix def as(name: String): SelectItem =
         SqlParser.parseIdent(name)
@@ -141,8 +141,8 @@ object Expr:
 
     given exprToSelectItem: Conversion[Expr, SelectItem] = SelectItem(_, None)
 
-case class OrderBy(expr: Expr, order: SqlOrderOption, nullsOrder: Option[SqlOrderNullsOption]):
-    def asSqlOrderBy: SqlOrderItem = SqlOrderItem(expr.sqlExpr, Some(order), nullsOrder)
+case class OrderBy(expr: Expr, ordering: SqlOrdering, nullsOrdering: Option[SqlNullsOrdering]):
+    def asSqlOrderBy: SqlOrderItem = SqlOrderItem(expr.sqlExpr, Some(ordering), nullsOrdering)
 
 case class SelectItem(expr: Expr, alias: Option[String]):
     def toSqlSelectItem: SqlSelectItem = SqlSelectItem.Item(expr.sqlExpr, alias)

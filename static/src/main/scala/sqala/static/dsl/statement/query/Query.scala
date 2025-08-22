@@ -1,10 +1,10 @@
 package sqala.static.dsl.statement.query
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkType}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkQuantifier}
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.param.SqlParam
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType, SqlWithItem}
+import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.metadata.TableMacro
 import sqala.printer.Dialect
@@ -30,7 +30,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.Union, 
+                SqlSetOperator.Union, 
                 unionQuery.tree
             )(using query.context)
 
@@ -38,7 +38,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.UnionAll, 
+                SqlSetOperator.UnionAll, 
                 unionQuery.tree
             )(using query.context)
 
@@ -46,7 +46,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.UnionAll, 
+                SqlSetOperator.UnionAll, 
                 unionQuery.tree
             )(using query.context)
 
@@ -54,7 +54,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.Except, 
+                SqlSetOperator.Except, 
                 unionQuery.tree
             )(using query.context)
 
@@ -62,7 +62,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.ExceptAll, 
+                SqlSetOperator.ExceptAll, 
                 unionQuery.tree
             )(using query.context)
 
@@ -70,7 +70,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.Intersect, 
+                SqlSetOperator.Intersect, 
                 unionQuery.tree
             )(using query.context)
 
@@ -78,27 +78,27 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlUnionType.IntersectAll, 
+                SqlSetOperator.IntersectAll, 
                 unionQuery.tree
             )(using query.context)
 
         def drop(n: Int): Query[T] =
             val limit = query.tree match
                 case s: SqlQuery.Select => s.limit
-                case u: SqlQuery.Union => u.limit
+                case s: SqlQuery.Set => s.limit
                 case SqlQuery.Cte(_, _, s: SqlQuery.Select) => s.limit
-                case SqlQuery.Cte(_, _, u: SqlQuery.Union) => u.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Set) => s.limit
                 case _ => None
             val sqlLimit = limit
                 .map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n)))
                 .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
             val newTree = query.tree match
                 case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-                case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+                case s: SqlQuery.Set => s.copy(limit = sqlLimit)
                 case SqlQuery.Cte(w, r, s: SqlQuery.Select) =>
                     SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
-                case SqlQuery.Cte(w, r, u: SqlQuery.Union) =>
-                    SqlQuery.Cte(w, r, u.copy(limit = sqlLimit))
+                case SqlQuery.Cte(w, r, s: SqlQuery.Set) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
                 case _ => query.tree
             Query(query.params, newTree)(using query.context)
 
@@ -107,20 +107,20 @@ object Query:
         def take(n: Int): Query[T] =
             val limit = query.tree match
                 case s: SqlQuery.Select => s.limit
-                case u: SqlQuery.Union => u.limit
+                case s: SqlQuery.Set => s.limit
                 case SqlQuery.Cte(_, _, s: SqlQuery.Select) => s.limit
-                case SqlQuery.Cte(_, _, u: SqlQuery.Union) => u.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Set) => s.limit
                 case _ => None
             val sqlLimit = limit
                 .map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset))
                 .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
             val newTree = query.tree match
                 case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-                case u: SqlQuery.Union => u.copy(limit = sqlLimit)
+                case s: SqlQuery.Set => s.copy(limit = sqlLimit)
                 case SqlQuery.Cte(w, r, s: SqlQuery.Select) =>
                     SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
-                case SqlQuery.Cte(w, r, u: SqlQuery.Union) =>
-                    SqlQuery.Cte(w, r, u.copy(limit = sqlLimit))
+                case SqlQuery.Cte(w, r, s: SqlQuery.Set) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit))
                 case _ => query.tree
             Query(query.params, newTree)(using query.context)
 
@@ -132,7 +132,7 @@ object Query:
             val tree = query.tree
             tree match
                 case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
-                    if p != Some(SqlParam.Distinct) 
+                    if p != Some(SqlQuantifier.Distinct) 
                 =>
                     Query(
                         expr, 
@@ -146,7 +146,7 @@ object Query:
                     def removeLimitAndOrderBy(tree: SqlQuery): SqlQuery = 
                         tree match
                             case s: SqlQuery.Select => s.copy(limit = None, orderBy = Nil)
-                            case u: SqlQuery.Union => u.copy(limit = None)
+                            case s: SqlQuery.Set => s.copy(limit = None)
                             case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
                             case _ => tree
                     val outerQuery: SqlQuery.Select = SqlQuery.Select(
@@ -157,7 +157,7 @@ object Query:
 
         private[sqala] def exists: Query[Expr[Boolean]] =
             given QueryContext = query.context
-            val expr = Expr[Boolean](SqlExpr.SubLink(query.tree, SqlSubLinkType.Exists))
+            val expr = Expr[Boolean](SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
             val outerQuery: SqlQuery.Select = SqlQuery.Select(
                 select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
                 from = Nil
@@ -174,7 +174,7 @@ final class ProjectionQuery[T](
 object ProjectionQuery:
     extension [T](query: ProjectionQuery[T])
         def distinct: Query[T] =
-            val newTree = query.tree.copy(param = Some(SqlParam.Distinct))
+            val newTree = query.tree.copy(quantifier = Some(SqlQuantifier.Distinct))
             Query(query.params, newTree)(using query.context)
 
 final class ConnectByProjectionQuery[T](
@@ -188,7 +188,7 @@ object ConnectByProjectionQuery:
     extension [T](query: ConnectByProjectionQuery[T])
         def distinct: Query[T] =
             val finalTree = query.tree.query.asInstanceOf[SqlQuery.Select]
-            val newTree = finalTree.copy(param = Some(SqlParam.Distinct))
+            val newTree = finalTree.copy(quantifier = Some(SqlQuantifier.Distinct))
             val cteTree = query.tree.copy(query = newTree)
             Query(query.params, cteTree)(using query.context)
 
@@ -495,11 +495,11 @@ sealed class TableQuery[T](
 class UnionQuery[T](
     private[sqala] override val params: T,
     private[sqala] val left: SqlQuery,
-    private[sqala] val unionType: SqlUnionType,
+    private[sqala] val operator: SqlSetOperator,
     private[sqala] val right: SqlQuery
 )(using QueryContext) extends Query[T](
     params,
-    SqlQuery.Union(left, unionType, right)
+    SqlQuery.Set(left, operator, right)
 )
 
 final class JoinPart[T](
@@ -601,7 +601,7 @@ object ConnectBy:
             val mapped = f(Table[T](query.table.__tableName__, tableCte, query.table.__metaData__))
             val sqlSelect = m.selectItems(mapped, 1)
             val metaData = query.table.__metaData__
-            val unionQuery = SqlQuery.Union(query.startWithTree, SqlUnionType.UnionAll, query.connectByTree)
+            val unionQuery = SqlQuery.Set(query.startWithTree, SqlSetOperator.UnionAll, query.connectByTree)
             val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(withItem :: Nil, true, query.mapTree.copy(select = sqlSelect))
             ConnectByProjectionQuery(m.transform(mapped), cteTree)(using query.context)

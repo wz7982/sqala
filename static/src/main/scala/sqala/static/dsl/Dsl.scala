@@ -158,19 +158,19 @@ def `if`[E: AsExpr as a](expr: E)(using
     EmptyIf(a.asExpr(expr) :: Nil)
 
 def exists[T](query: Query[T])(using QueryContext): Expr[Option[Boolean]] =
-    Expr(SqlExpr.SubLink(query.tree, SqlSubLinkType.Exists))
+    Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
 
 def any[T](query: Query[T])(using
     a: AsExpr[T],
     c: QueryContext
 ): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkType.Any)
+    SubLink(query.tree, SqlSubLinkQuantifier.Any)
 
 def all[T](query: Query[T])(using
     a: AsExpr[T],
     c: QueryContext
 ): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkType.All)
+    SubLink(query.tree, SqlSubLinkQuantifier.All)
 
 case class IntervalValue(n: Double, unit: SqlTimeUnit)
 

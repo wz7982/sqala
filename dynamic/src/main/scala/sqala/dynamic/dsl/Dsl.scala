@@ -1,6 +1,6 @@
 package sqala.dynamic.dsl
 
-import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubLinkType}
+import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubLinkQuantifier}
 import sqala.dynamic.parser.SqlParser
 import sqala.metadata.{AsSqlExpr, TableMacro}
 
@@ -49,8 +49,8 @@ def denseRank(): Expr = Expr(SqlExpr.Func("DENSE_RANK", Nil))
 
 def rowNumber(): Expr = Expr(SqlExpr.Func("ROW_NUMBER", Nil))
 
-def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkType.Any))
+def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Any))
 
-def all(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkType.All))
+def all(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.All))
 
-def exists(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkType.Exists))
+def exists(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))

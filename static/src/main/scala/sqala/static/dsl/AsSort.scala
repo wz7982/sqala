@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.order.SqlOrderOption
+import sqala.ast.order.SqlOrdering
 import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
 
@@ -14,7 +14,7 @@ trait AsSortItem[T]:
 object AsSortItem:
     given expr[T: AsSqlExpr]: AsSortItem[Expr[T]] with
         def asSort(x: Expr[T]): Sort[?] =
-            Sort(x, SqlOrderOption.Asc, None)
+            Sort(x, SqlOrdering.Asc, None)
 
     given sort[T: AsSqlExpr]: AsSortItem[Sort[T]] with
         def asSort(x: Sort[T]): Sort[?] =
@@ -22,7 +22,7 @@ object AsSortItem:
 
     given query[T: AsSqlExpr, Q <: Query[Expr[T]]]: AsSortItem[Q] with
         def asSort(x: Q): Sort[?] =
-            Sort(Expr(SqlExpr.SubQuery(x.tree)), SqlOrderOption.Asc, None)
+            Sort(Expr(SqlExpr.SubQuery(x.tree)), SqlOrdering.Asc, None)
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSort[T]:

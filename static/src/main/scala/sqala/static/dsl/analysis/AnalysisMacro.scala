@@ -3,9 +3,9 @@ package sqala.static.dsl.analysis
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlOrderItem, SqlOrderNullsOption, SqlOrderOption}
-import sqala.ast.param.SqlParam
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlUnionType, SqlWithItem}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrderItem, SqlOrdering}
+import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExpr, TableMacroImpl}
 import sqala.printer.*
@@ -69,7 +69,7 @@ private[sqala] object AnalysisMacroImpl:
     def removeLimitAndOrderBy(tree: SqlQuery): SqlQuery = 
         tree match
             case s: SqlQuery.Select => s.copy(limit = None, orderBy = Nil)
-            case u: SqlQuery.Union => u.copy(limit = None)
+            case s: SqlQuery.Set => s.copy(limit = None)
             case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
             case _ => tree
 
@@ -129,7 +129,7 @@ private[sqala] object AnalysisMacroImpl:
                 val queryTree = createTree(q, Nil, Nil).tree
                 val sizeTree = queryTree match
                     case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
-                        if p != Some(SqlParam.Distinct) 
+                        if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
                             select = 
@@ -182,7 +182,7 @@ private[sqala] object AnalysisMacroImpl:
             val tree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val sizeTree =
-                    val expr = SqlExpr.SubLink(queryTree, SqlSubLinkType.Exists)
+                    val expr = SqlExpr.SubLink(queryTree, SqlSubLinkQuantifier.Exists)
                     SqlQuery.Select(
                         select = SqlSelectItem.Item(expr, None) :: Nil,
                         from = Nil
@@ -235,8 +235,8 @@ private[sqala] object AnalysisMacroImpl:
                                 c.query.asInstanceOf[SqlQuery.Select]
                                 .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                             )
-                    case u: SqlQuery.Union =>
-                        u.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                    case s: SqlQuery.Set =>
+                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                     case _ => throw MatchError(())
                 Some(limitTree)
             catch 
@@ -279,7 +279,7 @@ private[sqala] object AnalysisMacroImpl:
                 val queryTree = createTree(q, Nil, Nil).tree
                 val tree = queryTree match
                     case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
-                        if p != Some(SqlParam.Distinct) 
+                        if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
                             select = 
@@ -308,8 +308,8 @@ private[sqala] object AnalysisMacroImpl:
                                 c.query.asInstanceOf[SqlQuery.Select]
                                 .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                             )
-                    case u: SqlQuery.Union =>
-                        u.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                    case s: SqlQuery.Set =>
+                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                     case _ => throw MatchError(())
                 Some(tree)
             catch 
@@ -560,8 +560,8 @@ private[sqala] object AnalysisMacroImpl:
                     None
                 ) :: Nil
         )
-        val unionQuery = SqlQuery.Union(
-            startTree, SqlUnionType.UnionAll, joinTree
+        val setQuery = SqlQuery.Set(
+            startTree, SqlSetOperator.UnionAll, joinTree
         )
         val metaData = query.tpe.widen.asType match
             case '[Query[t]] =>
@@ -570,7 +570,7 @@ private[sqala] object AnalysisMacroImpl:
                         tpr.asType match
                             case '[tpe] =>
                                 TableMacroImpl.tableMetaDataMacro[tpe]
-        val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
+        val withItem = SqlWithItem(tableCte, setQuery, metaData.columnNames :+ columnPseudoLevel)
         val newQuery =
             SqlQuery.Cte(
                 withItem :: Nil,
@@ -609,7 +609,7 @@ private[sqala] object AnalysisMacroImpl:
 
         val baseQuery = baseInfo.tree.asInstanceOf[SqlQuery.Cte]
 
-        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Union]
+        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Set]
         
         val newQuery = baseQuery.copy(
             queryItems = 
@@ -796,7 +796,7 @@ private[sqala] object AnalysisMacroImpl:
             report.warning("Constant are not allowed in ORDER BY.")
         
         val orderBy = infoList
-            .map(i => SqlOrderItem(i.info.expr, Some(i.order), i.nullsOrder))
+            .map(i => SqlOrderItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
 
         val newQuery =
             baseInfo.tree match
@@ -849,11 +849,11 @@ private[sqala] object AnalysisMacroImpl:
             report.warning("Constant are not allowed in ORDER SIBLINGS BY.")
         
         val orderBy = infoList
-            .map(i => SqlOrderItem(i.info.expr, Some(i.order), i.nullsOrder))
+            .map(i => SqlOrderItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
 
         val baseQuery = baseInfo.tree.asInstanceOf[SqlQuery.Cte]
 
-        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Union]
+        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Set]
 
         val rightQuery = withQuery.right.asInstanceOf[SqlQuery.Select]
         
@@ -901,13 +901,13 @@ private[sqala] object AnalysisMacroImpl:
         val newQuery =
             baseInfo.tree match
                 case s: SqlQuery.Select => 
-                    s.copy(param = Some(SqlParam.Distinct))
+                    s.copy(quantifier = Some(SqlQuantifier.Distinct))
                 case c: SqlQuery.Cte => 
                     c.copy(
                         query = 
                             c.query.asInstanceOf[SqlQuery.Select]
                             .copy(
-                                param = Some(SqlParam.Distinct)
+                                quantifier = Some(SqlQuantifier.Distinct)
                             )
                     )
                 case _ => 
@@ -937,8 +937,8 @@ private[sqala] object AnalysisMacroImpl:
                         c.query.asInstanceOf[SqlQuery.Select]
                         .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                     )
-            case u: SqlQuery.Union =>
-                u.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+            case s: SqlQuery.Set =>
+                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
             case _ => throw MatchError(())
 
         baseInfo.copy(tree = newQuery, resultSize = resultSize)
@@ -960,8 +960,8 @@ private[sqala] object AnalysisMacroImpl:
                         c.query.asInstanceOf[SqlQuery.Select]
                         .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
                     )
-            case u: SqlQuery.Union =>
-                u.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+            case s: SqlQuery.Set =>
+                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
             case _ => throw MatchError(())
         
         baseInfo.copy(tree = newQuery)
@@ -982,7 +982,7 @@ private[sqala] object AnalysisMacroImpl:
         
         val baseQuery = baseInfo.tree.asInstanceOf[SqlQuery.Cte]
 
-        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Union]
+        val withQuery = baseQuery.queryItems.head.query.asInstanceOf[SqlQuery.Set]
         
         val newQuery = baseQuery.copy(
             queryItems = 
@@ -1204,31 +1204,31 @@ private[sqala] object AnalysisMacroImpl:
 
     def createUnionClause(using q: Quotes, c: QueryContext)(
         left: q.reflect.Term,
-        unionType: "union" | "unionAll" | "except" | "exceptAll" | "intersect" | "intersectAll",
+        operator: "union" | "unionAll" | "except" | "exceptAll" | "intersect" | "intersectAll",
         right: q.reflect.Term,
         allTables: List[(argName: String, tableName: String)],
         groupInfo: List[GroupInfo]
     ): QueryInfo =
         val leftInfo = createTree(left, allTables, groupInfo)
 
-        val sqlUnionType = unionType match
-            case "union" => SqlUnionType.Union
-            case "unionAll" => SqlUnionType.UnionAll
-            case "except" => SqlUnionType.Except
-            case "exceptAll" => SqlUnionType.ExceptAll
-            case "intersect" => SqlUnionType.Intersect
-            case "intersectAll" => SqlUnionType.IntersectAll
+        val sqlSetOperator = operator match
+            case "union" => SqlSetOperator.Union
+            case "unionAll" => SqlSetOperator.UnionAll
+            case "except" => SqlSetOperator.Except
+            case "exceptAll" => SqlSetOperator.ExceptAll
+            case "intersect" => SqlSetOperator.Intersect
+            case "intersectAll" => SqlSetOperator.IntersectAll
 
         val rightInfo = createTree(right, allTables, groupInfo)
 
-        val newQuery = SqlQuery.Union(leftInfo.tree, sqlUnionType, rightInfo.tree)
+        val newQuery = SqlQuery.Set(leftInfo.tree, sqlSetOperator, rightInfo.tree)
 
         QueryInfo(newQuery, Nil, leftInfo.table, leftInfo.selectItems, allTables, groupInfo, ResultSize.Many)
 
     def selectItemSize(query: SqlQuery): Int = 
         query match
             case s: SqlQuery.Select => s.select.size
-            case u: SqlQuery.Union => selectItemSize(u.left)
+            case s: SqlQuery.Set => selectItemSize(s.left)
             case c: SqlQuery.Cte => selectItemSize(c.query)
             case v: SqlQuery.Values => v.values.head.size
 
@@ -1598,11 +1598,11 @@ private[sqala] object AnalysisMacroImpl:
         groupInfo: List[GroupInfo]
     ): ExprInfo =
         val queryInfo = createTree(term, allTables, groupInfo)
-        val linkType = op match
-            case "exists" => SqlSubLinkType.Exists
-            case "any" => SqlSubLinkType.Any
-            case "all" => SqlSubLinkType.All
-        val expr = SqlExpr.SubLink(queryInfo.tree, linkType)
+        val quantifier = op match
+            case "exists" => SqlSubLinkQuantifier.Exists
+            case "any" => SqlSubLinkQuantifier.Any
+            case "all" => SqlSubLinkQuantifier.All
+        val expr = SqlExpr.SubLink(queryInfo.tree, quantifier)
         ExprInfo(
             expr = expr,
             hasAgg = false,
@@ -1916,7 +1916,7 @@ private[sqala] object AnalysisMacroImpl:
                 .map(d => d.asExprOf[Boolean].value)
                 .flatten
                 .getOrElse(false)
-            val param = if distinct then Some(SqlParam.Distinct) else None
+            val param = if distinct then Some(SqlQuantifier.Distinct) else None
             
             var hasAgg = false
             var hasWindow = false
@@ -1930,7 +1930,7 @@ private[sqala] object AnalysisMacroImpl:
                 hasWindow = hasWindow || o.info.hasWindow
             val orderBy = orderByInfo
                 .map: o => 
-                    SqlOrderItem(o.info.expr, Some(o.order), o.nullsOrder)
+                    SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
 
             val withinGroupInfo = argsMap
                 .get("withinGroup")
@@ -1940,7 +1940,7 @@ private[sqala] object AnalysisMacroImpl:
                 hasWindow = hasWindow || w.info.hasWindow
             val withinGroup = withinGroupInfo 
                 .map: o => 
-                    SqlOrderItem(o.info.expr, Some(o.order), o.nullsOrder)
+                    SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
 
             val filterInfo = argsMap
                 .get("filter")
@@ -2184,7 +2184,7 @@ private[sqala] object AnalysisMacroImpl:
                             createOrderBy(o, allTables, inConnectBy, groupInfo) :: Nil
                 .getOrElse(Nil)
                 val orderList = orderInfo
-                    .map(o => SqlOrderItem(o.info.expr, Some(o.order), o.nullsOrder))
+                    .map(o => SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering))
 
                 val hasWindow = 
                     partitionInfo.map(_.hasWindow).fold(false)(_ || _) ||
@@ -2220,21 +2220,21 @@ private[sqala] object AnalysisMacroImpl:
         inConnectBy: Boolean,
         groupInfo: List[GroupInfo],
         inConnectByMap: Boolean = false
-    ): (info: ExprInfo, order: SqlOrderOption, nullsOrder: Option[SqlOrderNullsOption]) =
+    ): (info: ExprInfo, ordering: SqlOrdering, nullsOrdering: Option[SqlNullsOrdering]) =
         import q.reflect.*
 
         term match
             case Apply(Apply(Apply(TypeApply(Ident("asc"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, None)
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Asc, None)
             case Apply(Apply(Apply(TypeApply(Ident("ascNullsFirst"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, Some(SqlOrderNullsOption.First))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
             case Apply(Apply(Apply(TypeApply(Ident("ascNullsLast"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, Some(SqlOrderNullsOption.Last))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
             case Apply(Apply(Apply(TypeApply(Ident("desc"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, None)
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Desc, None)
             case Apply(Apply(Apply(TypeApply(Ident("descNullsFirst"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, Some(SqlOrderNullsOption.First))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
             case Apply(Apply(Apply(TypeApply(Ident("descNullsLast"), _), expr :: Nil), _), _) => 
-                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Desc, Some(SqlOrderNullsOption.Last))
+                (createExpr(expr, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
             case _ =>
-                (createExpr(term, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrderOption.Asc, None)
+                (createExpr(term, allTables, inConnectBy, groupInfo, inConnectByMap), SqlOrdering.Asc, None)
