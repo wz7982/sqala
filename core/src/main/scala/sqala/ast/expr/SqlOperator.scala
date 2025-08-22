@@ -8,6 +8,7 @@ enum SqlBinaryOperator(val operator: String, val precedence: Int):
     case Minus extends SqlBinaryOperator("-", 50)
     case Json extends SqlBinaryOperator("->", 40)
     case JsonText extends SqlBinaryOperator("->>", 40)
+    case Concat extends SqlBinaryOperator("||", 40)
     case Equal extends SqlBinaryOperator("=", 30)
     case NotEqual extends SqlBinaryOperator("<>", 30)
     case In extends SqlBinaryOperator("IN", 30)

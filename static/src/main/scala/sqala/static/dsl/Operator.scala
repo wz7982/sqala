@@ -299,6 +299,21 @@ extension [T: AsExpr as at](self: T)
     ): Expr[Option[Boolean]] =
         like(s"%$value")
 
+    @targetName("concatString")
+    def ++[R](that: R)(using
+        rt: at.R <:< (String | Option[String]),
+        ar: AsExpr[R],
+        rr: ar.R <:< (String | Option[String]),
+        qc: QueryContext
+    ): Expr[Option[Boolean]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.Concat, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
     @targetName("json")
     def ->(path: Int | String)(using 
         at.R <:< (Json | Option[Json]),

@@ -6,6 +6,7 @@ import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrderItem
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.expr.SqlBinaryOperator
 
 class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "`"
@@ -37,6 +38,14 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             sqlBuilder.append(" = VALUES (")
             printExpr(u)
             sqlBuilder.append(")")
+
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+        expr.operator match
+            case SqlBinaryOperator.Concat =>
+                val concat = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+                printExpr(concat)
+            case _ =>
+                super.printBinaryExpr(expr) 
 
     override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
         sqlBuilder.append("INTERVAL '")
