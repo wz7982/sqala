@@ -2,7 +2,7 @@ package sqala.ast.order
 
 import sqala.ast.expr.SqlExpr
 
-case class SqlOrderItem(
+case class SqlOrderingItem(
     expr: SqlExpr, 
     ordering: Option[SqlOrdering], 
     nullsOrdering: Option[SqlNullsOrdering]

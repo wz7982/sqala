@@ -3,7 +3,7 @@ package sqala.static.dsl.analysis
 import sqala.ast.expr.*
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
-import sqala.ast.order.{SqlNullsOrdering, SqlOrderItem, SqlOrdering}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
@@ -796,7 +796,7 @@ private[sqala] object AnalysisMacroImpl:
             report.warning("Constant are not allowed in ORDER BY.")
         
         val orderBy = infoList
-            .map(i => SqlOrderItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
+            .map(i => SqlOrderingItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
 
         val newQuery =
             baseInfo.tree match
@@ -849,7 +849,7 @@ private[sqala] object AnalysisMacroImpl:
             report.warning("Constant are not allowed in ORDER SIBLINGS BY.")
         
         val orderBy = infoList
-            .map(i => SqlOrderItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
+            .map(i => SqlOrderingItem(i.info.expr, Some(i.ordering), i.nullsOrdering))
 
         val baseQuery = baseInfo.tree.asInstanceOf[SqlQuery.Cte]
 
@@ -1932,7 +1932,7 @@ private[sqala] object AnalysisMacroImpl:
                 hasWindow = hasWindow || o.info.hasWindow
             val orderBy = orderByInfo
                 .map: o => 
-                    SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
+                    SqlOrderingItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
 
             val withinGroupInfo = argsMap
                 .get("withinGroup")
@@ -1942,7 +1942,7 @@ private[sqala] object AnalysisMacroImpl:
                 hasWindow = hasWindow || w.info.hasWindow
             val withinGroup = withinGroupInfo 
                 .map: o => 
-                    SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
+                    SqlOrderingItem(o.info.expr, Some(o.ordering), o.nullsOrdering)
 
             val filterInfo = argsMap
                 .get("filter")
@@ -2195,7 +2195,7 @@ private[sqala] object AnalysisMacroImpl:
                             createOrderBy(o, allTables, inConnectBy, groupInfo) :: Nil
                 .getOrElse(Nil)
                 val orderList = orderInfo
-                    .map(o => SqlOrderItem(o.info.expr, Some(o.ordering), o.nullsOrdering))
+                    .map(o => SqlOrderingItem(o.info.expr, Some(o.ordering), o.nullsOrdering))
 
                 val hasWindow = 
                     partitionInfo.map(_.hasWindow).fold(false)(_ || _) ||

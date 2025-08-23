@@ -3,8 +3,8 @@ package sqala.printer
 import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
-import sqala.ast.order.SqlOrderItem
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
+import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.SqlStatement
 
 class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
@@ -26,7 +26,7 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printOrderItem(item: SqlOrderItem): Unit =
+    override def printOrderingItem(item: SqlOrderingItem): Unit =
         val order = item.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
@@ -74,7 +74,7 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             printList(expr.args)(printExpr)
             if expr.orderBy.nonEmpty then
                 sqlBuilder.append(" ORDER BY ")
-                printList(expr.orderBy)(printOrderItem)
+                printList(expr.orderBy)(printOrderingItem)
             sqlBuilder.append(")")
         else super.printFuncExpr(expr)
 

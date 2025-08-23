@@ -3,8 +3,8 @@ package sqala.printer
 import sqala.ast.expr.{SqlCase, SqlCastType, SqlExpr}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
-import sqala.ast.order.SqlOrderItem
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
+import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.ast.expr.SqlBinaryOperator
 
@@ -64,7 +64,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printList(args)(printExpr)
             if expr.orderBy.nonEmpty then
                 sqlBuilder.append(" ORDER BY ")
-                printList(expr.orderBy)(printOrderItem)
+                printList(expr.orderBy)(printOrderingItem)
             sqlBuilder.append(" SEPARATOR ")
             printExpr(separator)
             sqlBuilder.append(")")
@@ -89,7 +89,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
 
-    override def printOrderItem(orderBy: SqlOrderItem): Unit =
+    override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
