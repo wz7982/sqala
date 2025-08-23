@@ -462,7 +462,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             case SqlTable.Range(tableName, _) =>
                 sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
             case SqlTable.Func(functionName, args, _) =>
-                sqlBuilder.append(s"$functionName")
+                sqlBuilder.append(functionName)
                 sqlBuilder.append("(")
                 printList(args)(printExpr)
                 sqlBuilder.append(")")
