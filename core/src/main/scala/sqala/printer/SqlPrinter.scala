@@ -366,8 +366,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(branch.whenExpr)
             sqlBuilder.append(" THEN ")
             printExpr(branch.thenExpr)
-        sqlBuilder.append(" ELSE ")
-        printExpr(expr.default)
+        for d <- expr.default do
+            sqlBuilder.append(" ELSE ")
+            printExpr(d)
         sqlBuilder.append(" END")
 
     def printMatchExpr(expr: SqlExpr.Match): Unit =
@@ -378,8 +379,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(branch.whenExpr)
             sqlBuilder.append(" THEN ")
             printExpr(branch.thenExpr)
-        sqlBuilder.append(" ELSE ")
-        printExpr(expr.default)
+        for d <- expr.default do
+            sqlBuilder.append(" ELSE ")
+            printExpr(d)
         sqlBuilder.append(" END")
 
     def printCastExpr(expr: SqlExpr.Cast): Unit =
@@ -514,7 +516,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case SqlSelectItem.Wildcard(table) =>
             table.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
             sqlBuilder.append("*")
-        case SqlSelectItem.Item(expr, alias) =>
+        case SqlSelectItem.Expr(expr, alias) =>
             printExpr(expr)
             alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 

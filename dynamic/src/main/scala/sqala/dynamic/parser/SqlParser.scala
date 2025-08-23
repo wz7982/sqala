@@ -188,9 +188,9 @@ object SqlParser extends StandardTokenParsers:
 
     def caseWhen: Parser[SqlExpr] =
         "CASE" ~>
-            rep1("WHEN" ~> expr ~ "THEN" ~ expr ^^ { case e ~ _ ~ te => SqlCase(e, te) }) ~
+            rep1("WHEN" ~> expr ~ "THEN" ~ expr ^^ { case e ~ _ ~ te => SqlWhen(e, te) }) ~
             opt("ELSE" ~> expr) <~ "END" ^^ {
-                case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.NullLiteral))
+                case branches ~ default => SqlExpr.Case(branches, default.orElse(Some(SqlExpr.NullLiteral)))
             }
 
     def interval: Parser[SqlExpr] =
@@ -289,7 +289,7 @@ object SqlParser extends StandardTokenParsers:
             case e ~ _ ~ _ => SqlSelectItem.Wildcard(Some(e))
         } |
         expr ~ opt(opt("AS") ~> ident) ^^ {
-            case expr ~ alias => SqlSelectItem.Item(expr, alias)
+            case expr ~ alias => SqlSelectItem.Expr(expr, alias)
         }
 
     def simpleTable: Parser[SqlTable] =

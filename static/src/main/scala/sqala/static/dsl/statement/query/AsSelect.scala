@@ -17,7 +17,7 @@ trait AsSelect[T]:
 
     def offset(x: T): Int
 
-    def selectItems(x: T, cursor: Int): List[SqlSelectItem.Item]
+    def selectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
 
 object AsSelect:
     type Aux[T, O] = AsSelect[T]:
@@ -30,12 +30,12 @@ object AsSelect:
 
         def offset(x: Table[T]): Int = x.__metaData__.fieldNames.size
 
-        def selectItems(x: Table[T], cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: Table[T], cursor: Int): List[SqlSelectItem.Expr] =
             var tmpCursor = cursor
-            val items = ListBuffer[SqlSelectItem.Item]()
+            val items = ListBuffer[SqlSelectItem.Expr]()
             for field <- x.__metaData__.columnNames do
                 items.addOne(
-                    SqlSelectItem.Item(
+                    SqlSelectItem.Expr(
                         SqlExpr.Column(Some(x.__aliasName__), field), Some(s"c${tmpCursor}")
                     )
                 )
@@ -53,7 +53,7 @@ object AsSelect:
 
         def offset(x: SubQuery[N, V]): Int = s.offset(x.__items__)
 
-        def selectItems(x: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using 
@@ -69,7 +69,7 @@ object AsSelect:
         def offset(x: H *: T): Int = 
             sh.offset(x.head) + st.offset(x.tail)
 
-        def selectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Expr] =
             sh.selectItems(x.head, cursor) ++ st.selectItems(x.tail, cursor + sh.offset(x.head))
 
     given tuple1[H](using 
@@ -82,7 +82,7 @@ object AsSelect:
 
         def offset(x: H *: EmptyTuple): Int = sh.offset(x.head)
 
-        def selectItems(x: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Expr] =
             sh.selectItems(x.head, cursor)
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
@@ -93,7 +93,7 @@ trait AsMap[T]:
 
     def offset(x: T): Int
 
-    def selectItems(x: T, cursor: Int): List[SqlSelectItem.Item]
+    def selectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
 
 object AsMap:
     type Aux[T, O] = AsMap[T]:
@@ -106,8 +106,8 @@ object AsMap:
 
         def offset(x: Expr[T]): Int = 1
 
-        def selectItems(x: Expr[T], cursor: Int): List[SqlSelectItem.Item] =
-            SqlSelectItem.Item(x.asSqlExpr, Some(s"c${cursor}")) :: Nil
+        def selectItems(x: Expr[T], cursor: Int): List[SqlSelectItem.Expr] =
+            SqlSelectItem.Expr(x.asSqlExpr, Some(s"c${cursor}")) :: Nil
 
     given value[T: AsSqlExpr as a]: Aux[T, Expr[T]] = new AsMap[T]:
         type R = Expr[T]
@@ -116,8 +116,8 @@ object AsMap:
 
         def offset(x: T): Int = 1
 
-        def selectItems(x: T, cursor: Int): List[SqlSelectItem.Item] =
-            SqlSelectItem.Item(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
+        def selectItems(x: T, cursor: Int): List[SqlSelectItem.Expr] =
+            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
 
     given scalarQuery[T: AsSqlExpr, Q <: Query[Expr[T]]]: Aux[Q, Expr[T]] = new AsMap[Q]:
         type R = Expr[T]
@@ -126,8 +126,8 @@ object AsMap:
 
         def offset(x: Q): Int = 1
 
-        def selectItems(x: Q, cursor: Int): List[SqlSelectItem.Item] =
-            SqlSelectItem.Item(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
+        def selectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
+            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
 
     given tuple[H, T <: Tuple](using 
         sh: AsMap[H],
@@ -144,7 +144,7 @@ object AsMap:
         def offset(x: H *: T): Int = 
             sh.offset(x.head) + st.offset(x.tail)
 
-        def selectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Expr] =
             sh.selectItems(x.head, cursor) ++ st.selectItems(x.tail, cursor + sh.offset(x.head))
 
     given tuple1[H](using 
@@ -159,7 +159,7 @@ object AsMap:
 
         def offset(x: H *: EmptyTuple): Int = sh.offset(x.head)
 
-        def selectItems(x: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Expr] =
             sh.selectItems(x.head, cursor)
 
     given namedTuple[N <: Tuple, V <: Tuple](using
@@ -173,5 +173,5 @@ object AsMap:
 
         def offset(x: NamedTuple[N, V]): Int = s.offset(x.toTuple)
 
-        def selectItems(x: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Item] =
+        def selectItems(x: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.toTuple, cursor)
