@@ -1,7 +1,7 @@
 package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkQuantifier}
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
@@ -123,8 +123,8 @@ object Query:
             val expr = count()
             val tree = query.tree
             tree match
-                case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
-                    if p != Some(SqlQuantifier.Distinct) 
+                case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
+                    if p != Some(SqlQuantifier.Distinct)
                 =>
                     Query(
                         expr, 
@@ -244,7 +244,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 query.params, 
-                query.tree.copy(groupBy = group.map(g => SqlGroupItem.Singleton(g.asSqlExpr)))
+                query.tree.copy(groupBy = Some(SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)))
             )(using query.context)
 
         def groupByCube[G](f: T => G)(using
@@ -254,7 +254,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.Cube(group.map(_.asSqlExpr)) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.Cube(group.map(_.asSqlExpr)) :: Nil, None)))
             )(using query.context)
 
         def groupByRollup[G](f: T => G)(using
@@ -264,7 +264,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.Rollup(group.map(_.asSqlExpr)) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.Rollup(group.map(_.asSqlExpr)) :: Nil, None)))
             )(using query.context)
 
         def groupBySets[G](f: T => G)(using
@@ -274,7 +274,7 @@ object SelectQuery:
             val group = g.asSqlExprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.GroupingSets(group) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.GroupingSets(group) :: Nil, None)))
             )(using query.context)
 
     extension [T](query: SelectQuery[Table[T]])

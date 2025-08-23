@@ -1,7 +1,7 @@
 package sqala.dynamic.parser
 
 import sqala.ast.expr.*
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderItem, SqlOrdering}
 import sqala.ast.quantifier.SqlQuantifier
@@ -260,9 +260,23 @@ object SqlParser extends StandardTokenParsers:
     def select: Parser[SqlExpr.SubQuery] =
         "SELECT" ~> opt("DISTINCT") ~ selectItems ~ opt(from) ~ opt(where) ~ opt(groupBy) ~ opt(orderBy) ~ opt(limit) ^^ {
             case distinct ~ s ~ f ~ w ~ g ~ o ~ l =>
-                val param = if distinct.isDefined then Some(SqlQuantifier.Distinct) else None
+                val quantifier = if distinct.isDefined then Some(SqlQuantifier.Distinct) else None
+                val grouping = g.map(_._1.map(i => SqlGroupingItem.Expr(i))).getOrElse(Nil)
+                val groupBy =
+                    if grouping.isEmpty then None
+                    else Some(SqlGroupBy(grouping, None))
+
                 SqlExpr.SubQuery(
-                    SqlQuery.Select(param, s, f.getOrElse(Nil), w, g.map(_._1.map(i => SqlGroupItem.Singleton(i))).getOrElse(Nil), g.flatMap(_._2), o.getOrElse(Nil), l)
+                    SqlQuery.Select(
+                        quantifier, 
+                        s, 
+                        f.getOrElse(Nil), 
+                        w, 
+                        groupBy, 
+                        g.flatMap(_._2), 
+                        o.getOrElse(Nil), 
+                        l
+                    )
                 )
         }
 

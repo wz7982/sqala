@@ -1,7 +1,7 @@
 package sqala.printer
 
 import sqala.ast.expr.*
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.SqlGroupingItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderItem, SqlOrdering}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
@@ -105,11 +105,16 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("WHERE\n")
             w |> printWithSpace(printExpr)
 
-        if select.groupBy.nonEmpty then
+        for g <- select.groupBy do
             sqlBuilder.append("\n")
             printSpace()
-            sqlBuilder.append("GROUP BY\n")
-            printList(select.groupBy, ",\n")(printGroupItem |> printWithSpace)
+            sqlBuilder.append("GROUP BY")
+            for q <- g.quantifier do
+                sqlBuilder.append(" ")
+                sqlBuilder.append(q.quantifier)
+                sqlBuilder.append(" ")
+            sqlBuilder.append("\n")
+            printList(g.items, ",\n")(printGroupingItem |> printWithSpace)
 
         for h <- select.having do
             sqlBuilder.append("\n")
@@ -513,17 +518,17 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(expr)
             alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 
-    def printGroupItem(item: SqlGroupItem): Unit = item match
-        case SqlGroupItem.Singleton(item) => printExpr(item)
-        case SqlGroupItem.Cube(items) =>
+    def printGroupingItem(item: SqlGroupingItem): Unit = item match
+        case SqlGroupingItem.Expr(item) => printExpr(item)
+        case SqlGroupingItem.Cube(items) =>
             sqlBuilder.append("CUBE(")
             printList(items)(printExpr)
             sqlBuilder.append(")")
-        case SqlGroupItem.Rollup(items) =>
+        case SqlGroupingItem.Rollup(items) =>
             sqlBuilder.append("ROLLUP(")
             printList(items)(printExpr)
             sqlBuilder.append(")")
-        case SqlGroupItem.GroupingSets(items) =>
+        case SqlGroupingItem.GroupingSets(items) =>
             sqlBuilder.append("GROUPING SETS(")
             printList(items)(printExpr)
             sqlBuilder.append(")")

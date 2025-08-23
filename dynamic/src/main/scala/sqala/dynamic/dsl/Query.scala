@@ -1,7 +1,7 @@
 package sqala.dynamic.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.SqlGroupingItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
@@ -57,8 +57,8 @@ class Select(val tree: SqlQuery.Select) extends DynamicQuery:
         new Select(tree.copy(orderBy = tree.orderBy ++ orderByItems))
 
     infix def groupBy(items: List[Expr]): Select =
-        val groupByItems = items.map(i => SqlGroupItem.Singleton(i.sqlExpr))
-        new Select(tree.copy(groupBy = tree.groupBy ++ groupByItems))
+        val groupByItems = items.map(i => SqlGroupingItem.Expr(i.sqlExpr))
+        new Select(tree.copy(groupBy = tree.groupBy.map(g => g.copy(items = g.items ++ groupByItems))))
 
     infix def having(expr: Expr): Select = new Select(tree.addHaving(expr.sqlExpr))
 

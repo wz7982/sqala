@@ -1,7 +1,7 @@
 package sqala.static.dsl.analysis
 
 import sqala.ast.expr.*
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlNullsOrdering, SqlOrderItem, SqlOrdering}
 import sqala.ast.quantifier.SqlQuantifier
@@ -128,7 +128,7 @@ private[sqala] object AnalysisMacroImpl:
             val tree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val sizeTree = queryTree match
-                    case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
+                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
                         if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
@@ -278,7 +278,7 @@ private[sqala] object AnalysisMacroImpl:
             val sizeTree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val tree = queryTree match
-                    case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
+                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
                         if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
@@ -743,15 +743,15 @@ private[sqala] object AnalysisMacroImpl:
                     case _ => e :: Nil
         )
 
-        val groupBy = groupType match
-            case "" => exprs.map(e => SqlGroupItem.Singleton(e))
-            case "cube" => SqlGroupItem.Cube(exprs) :: Nil
-            case "rollup" => SqlGroupItem.Rollup(exprs) :: Nil
-            case "sets" => SqlGroupItem.GroupingSets(exprs) :: Nil
+        val grouping = groupType match
+            case "" => exprs.map(e => SqlGroupingItem.Expr(e))
+            case "cube" => SqlGroupingItem.Cube(exprs) :: Nil
+            case "rollup" => SqlGroupingItem.Rollup(exprs) :: Nil
+            case "sets" => SqlGroupingItem.GroupingSets(exprs) :: Nil
 
         val newQuery =
             baseInfo.tree.asInstanceOf[SqlQuery.Select]
-                .copy(groupBy = groupBy)
+                .copy(groupBy = Some(SqlGroupBy(grouping, None)))
 
         baseInfo.copy(
             tree = newQuery, 
