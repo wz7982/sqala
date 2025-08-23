@@ -3,7 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.SqlBinaryOperator.*
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Not, Positive}
-import sqala.ast.order.{SqlNullsOrdering, SqlOrderItem, SqlOrdering}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.SqlSelectItem
 import sqala.dynamic.parser.SqlParser
 import sqala.metadata.AsSqlExpr
@@ -142,7 +142,7 @@ object Expr:
     given exprToSelectItem: Conversion[Expr, SelectItem] = SelectItem(_, None)
 
 case class OrderBy(expr: Expr, ordering: SqlOrdering, nullsOrdering: Option[SqlNullsOrdering]):
-    def asSqlOrderBy: SqlOrderItem = SqlOrderItem(expr.sqlExpr, Some(ordering), nullsOrdering)
+    def asSqlOrderBy: SqlOrderingItem = SqlOrderingItem(expr.sqlExpr, Some(ordering), nullsOrdering)
 
 case class SelectItem(expr: Expr, alias: Option[String]):
     def toSqlSelectItem: SqlSelectItem = SqlSelectItem.Item(expr.sqlExpr, alias)
