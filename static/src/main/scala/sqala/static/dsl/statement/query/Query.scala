@@ -1,7 +1,7 @@
 package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkQuantifier}
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
@@ -30,7 +30,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Union, 
+                SqlSetOperator.Union(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -38,15 +38,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.UnionAll, 
-                unionQuery.tree
-            )(using query.context)
-
-        def ++[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
-            UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.UnionAll, 
+                SqlSetOperator.Union(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -54,7 +46,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Except, 
+                SqlSetOperator.Except(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -62,7 +54,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.ExceptAll, 
+                SqlSetOperator.Except(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -70,7 +62,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Intersect, 
+                SqlSetOperator.Intersect(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -78,7 +70,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.IntersectAll, 
+                SqlSetOperator.Intersect(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -131,8 +123,8 @@ object Query:
             val expr = count()
             val tree = query.tree
             tree match
-                case s@SqlQuery.Select(p, _, _, _, Nil, _, _, _) 
-                    if p != Some(SqlQuantifier.Distinct) 
+                case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
+                    if p != Some(SqlQuantifier.Distinct)
                 =>
                     Query(
                         expr, 
@@ -252,7 +244,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 query.params, 
-                query.tree.copy(groupBy = group.map(g => SqlGroupItem.Singleton(g.asSqlExpr)))
+                query.tree.copy(groupBy = Some(SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)))
             )(using query.context)
 
         def groupByCube[G](f: T => G)(using
@@ -262,7 +254,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.Cube(group.map(_.asSqlExpr)) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.Cube(group.map(_.asSqlExpr)) :: Nil, None)))
             )(using query.context)
 
         def groupByRollup[G](f: T => G)(using
@@ -272,7 +264,7 @@ object SelectQuery:
             val group = a.exprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.Rollup(group.map(_.asSqlExpr)) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.Rollup(group.map(_.asSqlExpr)) :: Nil, None)))
             )(using query.context)
 
         def groupBySets[G](f: T => G)(using
@@ -282,7 +274,7 @@ object SelectQuery:
             val group = g.asSqlExprs(f(query.params))
             Grouping(
                 o.toOption(query.params), 
-                query.tree.copy(groupBy = SqlGroupItem.GroupingSets(group) :: Nil)
+                query.tree.copy(groupBy = Some(SqlGroupBy(SqlGroupingItem.GroupingSets(group) :: Nil, None)))
             )(using query.context)
 
     extension [T](query: SelectQuery[Table[T]])
@@ -601,7 +593,7 @@ object ConnectBy:
             val mapped = f(Table[T](query.table.__tableName__, tableCte, query.table.__metaData__))
             val sqlSelect = m.selectItems(mapped, 1)
             val metaData = query.table.__metaData__
-            val unionQuery = SqlQuery.Set(query.startWithTree, SqlSetOperator.UnionAll, query.connectByTree)
+            val unionQuery = SqlQuery.Set(query.startWithTree, SqlSetOperator.Union(Some(SqlQuantifier.All)), query.connectByTree)
             val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(withItem :: Nil, true, query.mapTree.copy(select = sqlSelect))
             ConnectByProjectionQuery(m.transform(mapped), cteTree)(using query.context)

@@ -6,7 +6,7 @@ import sqala.ast.statement.SqlQuery
 
 enum SqlExpr:
     case Column(tableName: Option[String], columnName: String)
-    case Null
+    case NullLiteral
     case StringLiteral(string: String)
     case NumberLiteral[N: Numeric](number: N)
     case BooleanLiteral(boolean: Boolean)

@@ -1,7 +1,7 @@
 package sqala.printer
 
 import sqala.ast.expr.*
-import sqala.ast.group.SqlGroupItem
+import sqala.ast.group.SqlGroupingItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrderItem, SqlOrdering}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
@@ -105,11 +105,16 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("WHERE\n")
             w |> printWithSpace(printExpr)
 
-        if select.groupBy.nonEmpty then
+        for g <- select.groupBy do
             sqlBuilder.append("\n")
             printSpace()
-            sqlBuilder.append("GROUP BY\n")
-            printList(select.groupBy, ",\n")(printGroupItem |> printWithSpace)
+            sqlBuilder.append("GROUP BY")
+            for q <- g.quantifier do
+                sqlBuilder.append(" ")
+                sqlBuilder.append(q.quantifier)
+                sqlBuilder.append(" ")
+            sqlBuilder.append("\n")
+            printList(g.items, ",\n")(printGroupingItem |> printWithSpace)
 
         for h <- select.having do
             sqlBuilder.append("\n")
@@ -141,6 +146,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
         printSpace()
         sqlBuilder.append(set.operator.operator)
+        for q <- set.operator.quantifier do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(q.quantifier)
         sqlBuilder.append("\n")
 
         printSpace()
@@ -197,7 +205,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printExpr(expr: SqlExpr): Unit = expr match
         case c: SqlExpr.Column => printColumnExpr(c)
-        case SqlExpr.Null => printNullExpr()
+        case SqlExpr.NullLiteral => printNullLiteralExpr()
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
@@ -223,7 +231,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
         sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
 
-    def printNullExpr(): Unit = sqlBuilder.append("NULL")
+    def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         if enableJdbcPrepare then
@@ -276,7 +284,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 printExpr(expr.expr)
             case _ =>
                 val hasBrackets = expr.expr match
-                    case SqlExpr.Null => false
+                    case SqlExpr.NullLiteral => false
                     case SqlExpr.Column(_, _) => false
                     case SqlExpr.NumberLiteral(_) => false
                     case _ => true
@@ -510,17 +518,17 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(expr)
             alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 
-    def printGroupItem(item: SqlGroupItem): Unit = item match
-        case SqlGroupItem.Singleton(item) => printExpr(item)
-        case SqlGroupItem.Cube(items) =>
+    def printGroupingItem(item: SqlGroupingItem): Unit = item match
+        case SqlGroupingItem.Expr(item) => printExpr(item)
+        case SqlGroupingItem.Cube(items) =>
             sqlBuilder.append("CUBE(")
             printList(items)(printExpr)
             sqlBuilder.append(")")
-        case SqlGroupItem.Rollup(items) =>
+        case SqlGroupingItem.Rollup(items) =>
             sqlBuilder.append("ROLLUP(")
             printList(items)(printExpr)
             sqlBuilder.append(")")
-        case SqlGroupItem.GroupingSets(items) =>
+        case SqlGroupingItem.GroupingSets(items) =>
             sqlBuilder.append("GROUPING SETS(")
             printList(items)(printExpr)
             sqlBuilder.append(")")

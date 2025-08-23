@@ -1,9 +1,8 @@
 package sqala.ast.statement
 
-enum SqlSetOperator(val operator: String):
-    case Union extends SqlSetOperator("UNION")
-    case UnionAll extends SqlSetOperator("UNION ALL")
-    case Except extends SqlSetOperator("EXCEPT")
-    case ExceptAll extends SqlSetOperator("EXCEPT ALL")
-    case Intersect extends SqlSetOperator("INTERSECT")
-    case IntersectAll extends SqlSetOperator("INTERSECT ALL")
+import sqala.ast.quantifier.SqlQuantifier
+
+enum SqlSetOperator(val operator: String, val quantifier: Option[SqlQuantifier]):
+    case Union(override val quantifier: Option[SqlQuantifier]) extends SqlSetOperator("UNION", quantifier)
+    case Except(override val quantifier: Option[SqlQuantifier]) extends SqlSetOperator("EXCEPT", quantifier)
+    case Intersect(override val quantifier: Option[SqlQuantifier]) extends SqlSetOperator("INTERSECT", quantifier)

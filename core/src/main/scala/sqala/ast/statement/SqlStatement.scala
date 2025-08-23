@@ -1,11 +1,11 @@
 package sqala.ast.statement
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.group.SqlGroupItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
+import sqala.ast.group.SqlGroupBy
 
 enum SqlStatement:
     case Delete(table: SqlTable, where: Option[SqlExpr])
@@ -29,7 +29,7 @@ enum SqlQuery:
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr] = None,
-        groupBy: List[SqlGroupItem] = Nil,
+        groupBy: Option[SqlGroupBy] = None,
         having: Option[SqlExpr] = None,
         orderBy: List[SqlOrderItem] = Nil,
         limit: Option[SqlLimit] = None
