@@ -88,10 +88,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
         select.quantifier.foreach(q => sqlBuilder.append(q.quantifier + " "))
 
-        if select.select.isEmpty then sqlBuilder.append("*")
-        else
-            sqlBuilder.append("\n")
-            printList(select.select, ",\n")(printSelectItem |> printWithSpace)
+        sqlBuilder.append("\n")
+        printList(select.select, ",\n")(printSelectItem |> printWithSpace)
 
         if select.from.nonEmpty then
             sqlBuilder.append("\n")
