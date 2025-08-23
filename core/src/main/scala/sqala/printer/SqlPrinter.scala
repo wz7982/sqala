@@ -111,7 +111,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             for q <- g.quantifier do
                 sqlBuilder.append(" ")
                 sqlBuilder.append(q.quantifier)
-                sqlBuilder.append(" ")
             sqlBuilder.append("\n")
             printList(g.items, ",\n")(printGroupingItem |> printWithSpace)
 
