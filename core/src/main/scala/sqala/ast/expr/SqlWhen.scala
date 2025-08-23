@@ -1,3 +1,3 @@
 package sqala.ast.expr
 
-case class SqlWhen(whenExpr: SqlExpr, thenExpr: SqlExpr)
+case class SqlWhen(when: SqlExpr, `then`: SqlExpr)
