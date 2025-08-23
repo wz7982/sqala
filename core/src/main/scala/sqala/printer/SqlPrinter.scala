@@ -363,9 +363,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("CASE")
         for branch <- expr.branches do
             sqlBuilder.append(" WHEN ")
-            printExpr(branch.whenExpr)
+            printExpr(branch.when)
             sqlBuilder.append(" THEN ")
-            printExpr(branch.thenExpr)
+            printExpr(branch.`then`)
         for d <- expr.default do
             sqlBuilder.append(" ELSE ")
             printExpr(d)
@@ -376,9 +376,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printExpr(expr.expr)
         for branch <- expr.branches do
             sqlBuilder.append(" WHEN ")
-            printExpr(branch.whenExpr)
+            printExpr(branch.when)
             sqlBuilder.append(" THEN ")
-            printExpr(branch.thenExpr)
+            printExpr(branch.`then`)
         for d <- expr.default do
             sqlBuilder.append(" ELSE ")
             printExpr(d)
