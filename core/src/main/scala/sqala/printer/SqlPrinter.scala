@@ -332,9 +332,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
-        expr.quantifier.foreach(q => sqlBuilder.append(q.quantifier + " "))
-        if expr.name.toUpperCase == "COUNT" && expr.args.isEmpty then sqlBuilder.append("*")
-        printList(expr.args)(printExpr)
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        if expr.name.equalsIgnoreCase("COUNT") && expr.args.isEmpty then sqlBuilder.append("*")
+        else printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
             sqlBuilder.append(" ORDER BY ")
             printList(expr.orderBy)(printOrderingItem)
