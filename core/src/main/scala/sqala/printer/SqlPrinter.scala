@@ -184,9 +184,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         def printWithItem(item: SqlWithItem): Unit =
             printSpace()
             sqlBuilder.append(s"$leftQuote${item.name}$rightQuote")
-            if item.columns.nonEmpty then
+            if item.columnNames.nonEmpty then
                 sqlBuilder.append("(")
-                printList(item.columns)(c => sqlBuilder.append(s"$leftQuote$c$rightQuote"))
+                printList(item.columnNames)(c => sqlBuilder.append(s"$leftQuote$c$rightQuote"))
                 sqlBuilder.append(")")
             sqlBuilder.append(" AS ")
             push()
