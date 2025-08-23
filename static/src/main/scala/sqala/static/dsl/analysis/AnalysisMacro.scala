@@ -133,13 +133,13 @@ private[sqala] object AnalysisMacroImpl:
                     =>
                         s.copy(
                             select = 
-                                SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil, 
+                                SqlSelectItem.Expr(SqlExpr.Func("COUNT", Nil), None) :: Nil, 
                             limit = None,
                             orderBy = Nil
                         )
                     case _ =>
                         SqlQuery.Select(
-                            select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
+                            select = SqlSelectItem.Expr(SqlExpr.Func("COUNT", Nil), None) :: Nil,
                             from = SqlTable.SubQuery(removeLimitAndOrderBy(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(sizeTree)
@@ -184,7 +184,7 @@ private[sqala] object AnalysisMacroImpl:
                 val sizeTree =
                     val expr = SqlExpr.SubLink(queryTree, SqlSubLinkQuantifier.Exists)
                     SqlQuery.Select(
-                        select = SqlSelectItem.Item(expr, None) :: Nil,
+                        select = SqlSelectItem.Expr(expr, None) :: Nil,
                         from = Nil
                     )
                 Some(sizeTree)
@@ -283,13 +283,13 @@ private[sqala] object AnalysisMacroImpl:
                     =>
                         s.copy(
                             select = 
-                                SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil, 
+                                SqlSelectItem.Expr(SqlExpr.Func("COUNT", Nil), None) :: Nil, 
                             limit = None,
                             orderBy = Nil
                         )
                     case _ =>
                         SqlQuery.Select(
-                            select = SqlSelectItem.Item(SqlExpr.Func("COUNT", Nil), None) :: Nil,
+                            select = SqlSelectItem.Expr(SqlExpr.Func("COUNT", Nil), None) :: Nil,
                             from = SqlTable.SubQuery(removeLimitAndOrderBy(queryTree), false, Some(SqlTableAlias("t"))) :: Nil
                         )
                 Some(tree)
@@ -537,12 +537,12 @@ private[sqala] object AnalysisMacroImpl:
         val startTree = baseTree.copy(
             select = 
                 baseTree.select :+ 
-                SqlSelectItem.Item(SqlExpr.NumberLiteral(1), Some(columnPseudoLevel))
+                SqlSelectItem.Expr(SqlExpr.NumberLiteral(1), Some(columnPseudoLevel))
         )
         val joinTree = baseTree.copy(
             select =
                 baseTree.select :+ 
-                SqlSelectItem.Item(
+                SqlSelectItem.Expr(
                     SqlExpr.Binary(
                         SqlExpr.Column(Some(tableCte), columnPseudoLevel),
                         SqlBinaryOperator.Plus,
@@ -680,7 +680,7 @@ private[sqala] object AnalysisMacroImpl:
         val exprs = infoList.map(_.expr)
 
         val selectItems = exprs.zipWithIndex
-            .map((e, i) => SqlSelectItem.Item(e, Some(s"c${i + 1}")))
+            .map((e, i) => SqlSelectItem.Expr(e, Some(s"c${i + 1}")))
 
         val newQuery =
             baseInfo.tree match
@@ -886,7 +886,7 @@ private[sqala] object AnalysisMacroImpl:
             case _ => throw MatchError(())
 
         val select = selectItems.flatMap:
-            case SqlSelectItem.Item(expr, _) => expr :: Nil
+            case SqlSelectItem.Expr(expr, _) => expr :: Nil
             case _ => Nil
 
         val orderBy = baseInfo.tree match
@@ -1007,7 +1007,7 @@ private[sqala] object AnalysisMacroImpl:
                 val alias = s"t${c.tableIndex}"
 
                 val selectItems = metaData.columnNames.zipWithIndex.map: (c, i) =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
+                    SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
                 
                 val table = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
                 
@@ -1031,7 +1031,7 @@ private[sqala] object AnalysisMacroImpl:
                 val alias = s"t${c.tableIndex}"
                 
                 val selectItems = (1 to selectItemSize(innerQuery.tree)).map: i =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some(alias), s"c$i"), Some(s"c$i"))
+                    SqlSelectItem.Expr(SqlExpr.Column(Some(alias), s"c$i"), Some(s"c$i"))
                 .toList
                 
                 val table = SqlTable.SubQuery(innerQuery.tree, false, Some(SqlTableAlias(alias)))
@@ -1051,7 +1051,7 @@ private[sqala] object AnalysisMacroImpl:
                 val innerQuery = SqlQuery.Values(metaData.fieldNames.map(_ => SqlExpr.StringLiteral("")) :: Nil)
                 
                 val selectItems = metaData.columnNames.zipWithIndex.map: (c, i) =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
+                    SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
                 .toList
                 
                 val table = SqlTable.SubQuery(
@@ -1095,7 +1095,7 @@ private[sqala] object AnalysisMacroImpl:
                 
                 val baseQuerySize = queryInfo.selectItems.size
                 val joinSelectItems = metaData.columnNames.zipWithIndex.map: (c, i) =>
-                    SqlSelectItem.Item(SqlExpr.Column(Some(alias), c), Some(s"c${i + baseQuerySize + 1}"))
+                    SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + baseQuerySize + 1}"))
                 val selectItems = queryInfo.selectItems ++ joinSelectItems
                 
                 val joinTable = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
@@ -1135,7 +1135,7 @@ private[sqala] object AnalysisMacroImpl:
         
         val baseQuerySize = queryInfo.selectItems.size
         val joinSelectItems = (1 + baseQuerySize to selectItemSize(joinQueryInfo.tree) + baseQuerySize).map: i =>
-            SqlSelectItem.Item(SqlExpr.Column(Some(alias), s"c${i - baseQuerySize}"), Some(s"c$i"))
+            SqlSelectItem.Expr(SqlExpr.Column(Some(alias), s"c${i - baseQuerySize}"), Some(s"c$i"))
         .toList
         val selectItems = queryInfo.selectItems ++ joinSelectItems
         
@@ -1182,7 +1182,7 @@ private[sqala] object AnalysisMacroImpl:
 
         val baseQuerySize = queryInfo.selectItems.size
         val joinSelectItems = (1 + baseQuerySize to selectItemSize(joinQueryInfo.tree) + baseQuerySize).map: i =>
-            SqlSelectItem.Item(SqlExpr.Column(Some(alias), s"c${i - baseQuerySize}"), Some(s"c$i"))
+            SqlSelectItem.Expr(SqlExpr.Column(Some(alias), s"c${i - baseQuerySize}"), Some(s"c$i"))
         .toList
         val selectItems = queryInfo.selectItems ++ joinSelectItems
         

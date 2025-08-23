@@ -514,7 +514,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case SqlSelectItem.Wildcard(table) =>
             table.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
             sqlBuilder.append("*")
-        case SqlSelectItem.Item(expr, alias) =>
+        case SqlSelectItem.Expr(expr, alias) =>
             printExpr(expr)
             alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
 

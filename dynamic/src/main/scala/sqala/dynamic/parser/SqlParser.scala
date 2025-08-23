@@ -289,7 +289,7 @@ object SqlParser extends StandardTokenParsers:
             case e ~ _ ~ _ => SqlSelectItem.Wildcard(Some(e))
         } |
         expr ~ opt(opt("AS") ~> ident) ^^ {
-            case expr ~ alias => SqlSelectItem.Item(expr, alias)
+            case expr ~ alias => SqlSelectItem.Expr(expr, alias)
         }
 
     def simpleTable: Parser[SqlTable] =

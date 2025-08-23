@@ -43,7 +43,7 @@ class Select(val tree: SqlQuery.Select) extends DynamicQuery:
 
     infix def select(items: List[SelectItem]): Select =
         val selectItems = items.map: s =>
-            SqlSelectItem.Item(s.expr.sqlExpr, s.alias)
+            SqlSelectItem.Expr(s.expr.sqlExpr, s.alias)
         new Select(tree.copy(select = tree.select ++ selectItems))
 
     infix def select(items: SelectItem*): Select =

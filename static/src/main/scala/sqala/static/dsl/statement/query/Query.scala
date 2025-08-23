@@ -129,7 +129,7 @@ object Query:
                     Query(
                         expr, 
                         s.copy(
-                            select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil, 
+                            select = SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil, 
                             limit = None,
                             orderBy = Nil
                         )
@@ -142,7 +142,7 @@ object Query:
                             case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
                             case _ => tree
                     val outerQuery: SqlQuery.Select = SqlQuery.Select(
-                        select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
+                        select = SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
                         from = SqlTable.SubQuery(removeLimitAndOrderBy(tree), false, Some(SqlTableAlias("t"))) :: Nil
                     )
                     Query(expr, outerQuery)
@@ -151,7 +151,7 @@ object Query:
             given QueryContext = query.context
             val expr = Expr[Boolean](SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
             val outerQuery: SqlQuery.Select = SqlQuery.Select(
-                select = SqlSelectItem.Item(expr.asSqlExpr, None) :: Nil,
+                select = SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
                 from = Nil
             )
             Query(expr, outerQuery)
@@ -283,7 +283,7 @@ object SelectQuery:
             val cond = a.asExpr(f(query.params)).asSqlExpr
             val joinTree = query.tree
                 .copy(
-                    select = query.tree.select :+ SqlSelectItem.Item(
+                    select = query.tree.select :+ SqlSelectItem.Expr(
                         SqlExpr.Binary(
                             SqlExpr.Column(Some(tableCte), columnPseudoLevel),
                             SqlBinaryOperator.Plus,
@@ -301,7 +301,7 @@ object SelectQuery:
                 )
             val startTree = query.tree
                 .copy(
-                    select = query.tree.select :+ SqlSelectItem.Item(
+                    select = query.tree.select :+ SqlSelectItem.Expr(
                         SqlExpr.NumberLiteral(1),
                         Some(columnPseudoLevel)
                     )
