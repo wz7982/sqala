@@ -384,7 +384,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printCastExpr(expr: SqlExpr.Cast): Unit =
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
-        sqlBuilder.append(s" AS ")
+        sqlBuilder.append(" AS ")
         printCastType(expr.castType)
         sqlBuilder.append(")")
 
