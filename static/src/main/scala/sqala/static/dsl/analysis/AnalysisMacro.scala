@@ -1661,10 +1661,10 @@ private[sqala] object AnalysisMacroImpl:
         val caseBranches = exprList
             .dropRight(1)
             .grouped(2)
-            .map(b => SqlCase(b(0), b(1)))
+            .map(b => SqlWhen(b(0), b(1)))
             .toList
 
-        val expr = SqlExpr.Case(caseBranches, exprList.last)
+        val expr = SqlExpr.Case(caseBranches, Some(exprList.last))
 
         ExprInfo(
             expr = expr,

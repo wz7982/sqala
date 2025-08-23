@@ -30,7 +30,7 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         val order = item.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
-        val orderExpr = SqlExpr.Case(SqlCase(SqlExpr.NullTest(item.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
+        val orderExpr = SqlExpr.Case(SqlWhen(SqlExpr.NullTest(item.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, Some(SqlExpr.NumberLiteral(0)))
         (order, item.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(item.expr)

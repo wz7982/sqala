@@ -1,6 +1,6 @@
 package sqala.dynamic.dsl
 
-import sqala.ast.expr.{SqlCase, SqlExpr, SqlSubLinkQuantifier}
+import sqala.ast.expr.{SqlExpr, SqlSubLinkQuantifier, SqlWhen}
 import sqala.dynamic.parser.SqlParser
 import sqala.metadata.{AsSqlExpr, TableMacro}
 
@@ -29,7 +29,7 @@ def select(items: SelectItem*): Select = Select().select(items.toList)
 def `with`(items: List[SubQueryTable]): With = With(items)
 
 def `case`(branches: List[(Expr, Expr)], default: Expr): Expr =
-    Expr(SqlExpr.Case(branches.toList.map(b => SqlCase(b._1.sqlExpr, b._2.sqlExpr)), default.sqlExpr))
+    Expr(SqlExpr.Case(branches.toList.map(b => SqlWhen(b._1.sqlExpr, b._2.sqlExpr)), Some(default.sqlExpr)))
 
 def count(): Expr = Expr(SqlExpr.Func("COUNT", Nil))
 

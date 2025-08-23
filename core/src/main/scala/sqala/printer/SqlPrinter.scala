@@ -366,8 +366,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(branch.whenExpr)
             sqlBuilder.append(" THEN ")
             printExpr(branch.thenExpr)
-        sqlBuilder.append(" ELSE ")
-        printExpr(expr.default)
+        for d <- expr.default do
+            sqlBuilder.append(" ELSE ")
+            printExpr(d)
         sqlBuilder.append(" END")
 
     def printMatchExpr(expr: SqlExpr.Match): Unit =
@@ -378,8 +379,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(branch.whenExpr)
             sqlBuilder.append(" THEN ")
             printExpr(branch.thenExpr)
-        sqlBuilder.append(" ELSE ")
-        printExpr(expr.default)
+        for d <- expr.default do
+            sqlBuilder.append(" ELSE ")
+            printExpr(d)
         sqlBuilder.append(" END")
 
     def printCastExpr(expr: SqlExpr.Cast): Unit =

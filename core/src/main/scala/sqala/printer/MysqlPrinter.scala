@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCase, SqlCastType, SqlExpr}
+import sqala.ast.expr.{SqlCastType, SqlExpr, SqlWhen}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
@@ -94,7 +94,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case None | Some(Asc) => Asc
             case _ => Desc
         val orderExpr = 
-            SqlExpr.Case(SqlCase(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, SqlExpr.NumberLiteral(0))
+            SqlExpr.Case(SqlWhen(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, Some(SqlExpr.NumberLiteral(0)))
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)

@@ -140,8 +140,8 @@ class IfThen[T](private[sqala] val exprs: List[Expr[?]]):
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr(
             SqlExpr.Case(
-                caseBranches.map((i, t) => SqlCase(i.asSqlExpr, t.asSqlExpr)), 
-                a.asExpr(expr).asSqlExpr
+                caseBranches.map((i, t) => SqlWhen(i.asSqlExpr, t.asSqlExpr)), 
+                Some(a.asExpr(expr).asSqlExpr)
             )
         )
 

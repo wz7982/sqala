@@ -25,8 +25,8 @@ enum SqlExpr:
         filter: Option[SqlExpr] = None
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
-    case Case(branches: List[SqlCase], default: SqlExpr)
-    case Match(expr: SqlExpr, branches: List[SqlCase], default: SqlExpr)
+    case Case(branches: List[SqlWhen], default: Option[SqlExpr])
+    case Match(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
     case Cast(expr: SqlExpr, castType: SqlCastType)
     case Window(
         expr: SqlExpr, 
