@@ -86,12 +86,10 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printSpace()
         sqlBuilder.append("SELECT ")
 
-        select.quantifier.foreach(p => sqlBuilder.append(p.quantifier + " "))
+        select.quantifier.foreach(q => sqlBuilder.append(q.quantifier + " "))
 
-        if select.select.isEmpty then sqlBuilder.append("*")
-        else
-            sqlBuilder.append("\n")
-            printList(select.select, ",\n")(printSelectItem |> printWithSpace)
+        sqlBuilder.append("\n")
+        printList(select.select, ",\n")(printSelectItem |> printWithSpace)
 
         if select.from.nonEmpty then
             sqlBuilder.append("\n")
@@ -335,7 +333,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
-        expr.quantifier.foreach(p => sqlBuilder.append(p.quantifier + " "))
+        expr.quantifier.foreach(q => sqlBuilder.append(q.quantifier + " "))
         if expr.name.toUpperCase == "COUNT" && expr.args.isEmpty then sqlBuilder.append("*")
         printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
