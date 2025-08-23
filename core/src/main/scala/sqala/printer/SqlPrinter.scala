@@ -457,59 +457,54 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
             sqlBuilder.append(")")
 
-    def printTable(table: SqlTable): Unit = table match
-        case SqlTable.Range(tableName, alias) =>
-            sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
-            for a <- alias do
-                printTableAlias(a)
-        case SqlTable.Func(functionName, args, alias) =>
-            sqlBuilder.append(s"$functionName")
-            sqlBuilder.append("(")
-            printList(args)(printExpr)
-            sqlBuilder.append(")")
-            for a <- alias do
-                printTableAlias(a)
-        case SqlTable.SubQuery(query, lateral, alias) =>
-            if lateral then sqlBuilder.append("LATERAL ")
-            sqlBuilder.append("(\n")
-            push()
-            printQuery(query)
-            pull()
-            sqlBuilder.append("\n")
-            printSpace()
-            sqlBuilder.append(")")
-            for a <- alias do
-                printTableAlias(a)
-        case SqlTable.Join(left, joinType, right, condition, alias) =>
-            printTable(left)
-            sqlBuilder.append("\n")
-            printSpace()
-            sqlBuilder.append(s"${joinType.joinType} ")
-            right match
-                case _: SqlTable.Join =>
-                    sqlBuilder.append("(")
-                    sqlBuilder.append("\n")
-                    push()
-                    printSpace()
-                    printTable(right)
-                    printSpace()
-                    pull()
-                    sqlBuilder.append("\n")
-                    printSpace()
-                    sqlBuilder.append(")")
-                case _ =>
-                    printTable(right)
-            for c <- condition do
-                c match
-                    case SqlJoinCondition.On(onCondition) =>
-                        sqlBuilder.append(" ON ")
-                        printExpr(onCondition)
-                    case SqlJoinCondition.Using(usingCondition) =>
-                        sqlBuilder.append(" USING (")
-                        printList(usingCondition)(printExpr)
+    def printTable(table: SqlTable): Unit = 
+        table match
+            case SqlTable.Range(tableName, _) =>
+                sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
+            case SqlTable.Func(functionName, args, _) =>
+                sqlBuilder.append(s"$functionName")
+                sqlBuilder.append("(")
+                printList(args)(printExpr)
+                sqlBuilder.append(")")
+            case SqlTable.SubQuery(query, lateral, _) =>
+                if lateral then sqlBuilder.append("LATERAL ")
+                sqlBuilder.append("(\n")
+                push()
+                printQuery(query)
+                pull()
+                sqlBuilder.append("\n")
+                printSpace()
+                sqlBuilder.append(")")
+            case SqlTable.Join(left, joinType, right, condition, _) =>
+                printTable(left)
+                sqlBuilder.append("\n")
+                printSpace()
+                sqlBuilder.append(s"${joinType.joinType} ")
+                right match
+                    case _: SqlTable.Join =>
+                        sqlBuilder.append("(")
+                        sqlBuilder.append("\n")
+                        push()
+                        printSpace()
+                        printTable(right)
+                        printSpace()
+                        pull()
+                        sqlBuilder.append("\n")
+                        printSpace()
                         sqlBuilder.append(")")
-            for a <- alias do
-                printTableAlias(a)
+                    case _ =>
+                        printTable(right)
+                for c <- condition do
+                    c match
+                        case SqlJoinCondition.On(onCondition) =>
+                            sqlBuilder.append(" ON ")
+                            printExpr(onCondition)
+                        case SqlJoinCondition.Using(usingCondition) =>
+                            sqlBuilder.append(" USING (")
+                            printList(usingCondition)(printExpr)
+                            sqlBuilder.append(")")
+        for a <- table.alias do
+            printTableAlias(a)
 
     def printSelectItem(item: SqlSelectItem): Unit = item match
         case SqlSelectItem.Wildcard(table) =>
