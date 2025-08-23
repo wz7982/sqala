@@ -54,7 +54,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(expr.unit.unit)
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             val (args, separator) = if expr.args.size == 2 then
                 (expr.args.head :: Nil) -> expr.args.last
             else
