@@ -60,7 +60,7 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         sqlBuilder.append(")")
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.toUpperCase == "STRING_AGG" && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
+        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("LISTAGG")
             sqlBuilder.append("(")
             printList(expr.args)(printExpr)
