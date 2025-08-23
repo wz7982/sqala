@@ -84,12 +84,13 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printSelect(select: SqlQuery.Select): Unit =
         printSpace()
-        sqlBuilder.append("SELECT ")
+        sqlBuilder.append("SELECT")
 
-        select.quantifier.foreach(q => sqlBuilder.append(q.quantifier + " "))
+        select.quantifier.foreach(q => sqlBuilder.append(" " + q.quantifier))
 
-        sqlBuilder.append("\n")
-        printList(select.select, ",\n")(printSelectItem |> printWithSpace)
+        if select.select.nonEmpty then
+            sqlBuilder.append("\n")
+            printList(select.select, ",\n")(printSelectItem |> printWithSpace)
 
         if select.from.nonEmpty then
             sqlBuilder.append("\n")
