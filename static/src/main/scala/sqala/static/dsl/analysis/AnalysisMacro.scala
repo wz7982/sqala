@@ -561,7 +561,7 @@ private[sqala] object AnalysisMacroImpl:
                 ) :: Nil
         )
         val setQuery = SqlQuery.Set(
-            startTree, SqlSetOperator.UnionAll, joinTree
+            startTree, SqlSetOperator.Union(Some(SqlQuantifier.All)), joinTree
         )
         val metaData = query.tpe.widen.asType match
             case '[Query[t]] =>
@@ -1212,12 +1212,12 @@ private[sqala] object AnalysisMacroImpl:
         val leftInfo = createTree(left, allTables, groupInfo)
 
         val sqlSetOperator = operator match
-            case "union" => SqlSetOperator.Union
-            case "unionAll" => SqlSetOperator.UnionAll
-            case "except" => SqlSetOperator.Except
-            case "exceptAll" => SqlSetOperator.ExceptAll
-            case "intersect" => SqlSetOperator.Intersect
-            case "intersectAll" => SqlSetOperator.IntersectAll
+            case "union" => SqlSetOperator.Union(None)
+            case "unionAll" => SqlSetOperator.Union(Some(SqlQuantifier.All))
+            case "except" => SqlSetOperator.Except(None)
+            case "exceptAll" => SqlSetOperator.Except(Some(SqlQuantifier.All))
+            case "intersect" => SqlSetOperator.Intersect(None)
+            case "intersectAll" => SqlSetOperator.Intersect(Some(SqlQuantifier.All))
 
         val rightInfo = createTree(right, allTables, groupInfo)
 
@@ -1418,7 +1418,7 @@ private[sqala] object AnalysisMacroImpl:
                         )
                     case '[None.type] =>
                         ExprInfo(
-                            expr = SqlExpr.Null,
+                            expr = SqlExpr.NullLiteral,
                             hasAgg = false,
                             isAgg = false,
                             hasWindow = false,
@@ -1745,13 +1745,13 @@ private[sqala] object AnalysisMacroImpl:
             op match
                 case "==" | "===" =>
                     rightExpr match
-                        case SqlExpr.Null =>
+                        case SqlExpr.NullLiteral =>
                             SqlExpr.NullTest(leftExpr, false)
                         case _ =>
                             SqlExpr.Binary(leftExpr, SqlBinaryOperator.Equal, rightExpr)
                 case "!=" | "<>" =>
                     rightExpr match
-                        case SqlExpr.Null =>
+                        case SqlExpr.NullLiteral =>
                             SqlExpr.NullTest(leftExpr, true)
                         case _ =>
                             SqlExpr.Binary(

@@ -13,7 +13,7 @@ import scala.annotation.targetName
 case class Expr(sqlExpr: SqlExpr):
     @targetName("eq")
     def ==(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.NullTest(sqlExpr, false))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.NullTest(sqlExpr, false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, Equal, expr.sqlExpr))
 
     @targetName("eq")
@@ -22,7 +22,7 @@ case class Expr(sqlExpr: SqlExpr):
 
     @targetName("ne")
     def !=(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.NullTest(sqlExpr, true))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.NullTest(sqlExpr, true))
         case _ => Expr(SqlExpr.Binary(sqlExpr, NotEqual, expr.sqlExpr))
 
     @targetName("ne")
@@ -31,22 +31,22 @@ case class Expr(sqlExpr: SqlExpr):
 
     @targetName("gt")
     def >(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.BooleanLiteral(false))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.BooleanLiteral(false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, GreaterThan, expr.sqlExpr))
 
     @targetName("ge")
     def >=(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.BooleanLiteral(false))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.BooleanLiteral(false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, GreaterThanEqual, expr.sqlExpr))
 
     @targetName("lt")
     def <(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.BooleanLiteral(false))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.BooleanLiteral(false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, LessThan, expr.sqlExpr))
 
     @targetName("le")
     def <=(expr: Expr): Expr = expr match
-        case Expr(SqlExpr.Null) => Expr(SqlExpr.BooleanLiteral(false))
+        case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.BooleanLiteral(false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, LessThanEqual, expr.sqlExpr))
 
     def in(seq: Seq[Expr]): Expr =

@@ -141,6 +141,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
         printSpace()
         sqlBuilder.append(set.operator.operator)
+        for q <- set.operator.quantifier do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(q.quantifier)
         sqlBuilder.append("\n")
 
         printSpace()
@@ -197,7 +200,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printExpr(expr: SqlExpr): Unit = expr match
         case c: SqlExpr.Column => printColumnExpr(c)
-        case SqlExpr.Null => printNullExpr()
+        case SqlExpr.NullLiteral => printNullLiteralExpr()
         case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
         case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
@@ -223,7 +226,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
         sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
 
-    def printNullExpr(): Unit = sqlBuilder.append("NULL")
+    def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         if enableJdbcPrepare then
@@ -276,7 +279,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 printExpr(expr.expr)
             case _ =>
                 val hasBrackets = expr.expr match
-                    case SqlExpr.Null => false
+                    case SqlExpr.NullLiteral => false
                     case SqlExpr.Column(_, _) => false
                     case SqlExpr.NumberLiteral(_) => false
                     case _ => true

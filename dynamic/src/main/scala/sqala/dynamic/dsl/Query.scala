@@ -21,17 +21,17 @@ sealed trait DynamicQuery:
     def sql(dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
         queryToString(tree, dialect, enableJdbcPrepare)
 
-    infix def union(query: DynamicQuery): Union = Union(this, SqlSetOperator.Union, query)
+    infix def union(query: DynamicQuery): Union = Union(this, SqlSetOperator.Union(None), query)
 
-    infix def unionAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.UnionAll, query)
+    infix def unionAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.Union(Some(SqlQuantifier.All)), query)
 
-    infix def except(query: DynamicQuery): Union = Union(this, SqlSetOperator.Except, query)
+    infix def except(query: DynamicQuery): Union = Union(this, SqlSetOperator.Except(None), query)
 
-    infix def exceptAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.ExceptAll, query)
+    infix def exceptAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.Except(Some(SqlQuantifier.All)), query)
 
-    infix def intersect(query: DynamicQuery): Union = Union(this, SqlSetOperator.Intersect, query)
+    infix def intersect(query: DynamicQuery): Union = Union(this, SqlSetOperator.Intersect(None), query)
 
-    infix def intersectAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.IntersectAll, query)
+    infix def intersectAll(query: DynamicQuery): Union = Union(this, SqlSetOperator.Intersect(Some(SqlQuantifier.All)), query)
 
 case class LateralQuery(query: DynamicQuery):
     infix def as(name: String): SubQueryTable =

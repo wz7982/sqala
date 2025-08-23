@@ -103,7 +103,7 @@ object SqlParser extends StandardTokenParsers:
                 case (acc, (true, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, SqlExpr.Tuple(in.asInstanceOf[List[SqlExpr]]))
                 case (acc, (false, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.Like, expr)
                 case (acc, (true, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotLike, expr)
-                case _ => SqlExpr.Null
+                case _ => SqlExpr.NullLiteral
             }
         }
 
@@ -190,7 +190,7 @@ object SqlParser extends StandardTokenParsers:
         "CASE" ~>
             rep1("WHEN" ~> expr ~ "THEN" ~ expr ^^ { case e ~ _ ~ te => SqlCase(e, te) }) ~
             opt("ELSE" ~> expr) <~ "END" ^^ {
-                case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.Null))
+                case branches ~ default => SqlExpr.Case(branches, default.getOrElse(SqlExpr.NullLiteral))
             }
 
     def interval: Parser[SqlExpr] =
@@ -227,20 +227,20 @@ object SqlParser extends StandardTokenParsers:
         stringLit ^^ (xs => SqlExpr.StringLiteral(xs)) |
         "TRUE" ^^ (_ => SqlExpr.BooleanLiteral(true)) |
         "FALSE" ^^ (_ => SqlExpr.BooleanLiteral(false)) |
-        "NULL" ^^ (_ => SqlExpr.Null)
+        "NULL" ^^ (_ => SqlExpr.NullLiteral)
 
     def setOperator: Parser[SqlSetOperator] =
         "UNION" ~> opt("ALL") ^^ {
-            case None => SqlSetOperator.Union
-            case _ => SqlSetOperator.UnionAll
+            case None => SqlSetOperator.Union(None)
+            case _ => SqlSetOperator.Union(Some(SqlQuantifier.All))
         } |
         "EXCEPT" ~> opt("ALL") ^^ {
-            case None => SqlSetOperator.Except
-            case _ => SqlSetOperator.ExceptAll
+            case None => SqlSetOperator.Except(None)
+            case _ => SqlSetOperator.Except(Some(SqlQuantifier.All))
         } |
         "INTERSECT" ~> opt("ALL") ^^ {
-            case None => SqlSetOperator.Intersect
-            case _ => SqlSetOperator.IntersectAll
+            case None => SqlSetOperator.Intersect(None)
+            case _ => SqlSetOperator.Intersect(Some(SqlQuantifier.All))
         }
 
     def query: Parser[SqlExpr.SubQuery] =

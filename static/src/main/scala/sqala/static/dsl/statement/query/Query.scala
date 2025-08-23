@@ -30,7 +30,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Union, 
+                SqlSetOperator.Union(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -38,15 +38,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.UnionAll, 
-                unionQuery.tree
-            )(using query.context)
-
-        def ++[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
-            UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.UnionAll, 
+                SqlSetOperator.Union(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -54,7 +46,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Except, 
+                SqlSetOperator.Except(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -62,7 +54,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.ExceptAll, 
+                SqlSetOperator.Except(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -70,7 +62,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.Intersect, 
+                SqlSetOperator.Intersect(None), 
                 unionQuery.tree
             )(using query.context)
 
@@ -78,7 +70,7 @@ object Query:
             UnionQuery(
                 u.unionQueryItems(query.params), 
                 query.tree, 
-                SqlSetOperator.IntersectAll, 
+                SqlSetOperator.Intersect(Some(SqlQuantifier.All)), 
                 unionQuery.tree
             )(using query.context)
 
@@ -601,7 +593,7 @@ object ConnectBy:
             val mapped = f(Table[T](query.table.__tableName__, tableCte, query.table.__metaData__))
             val sqlSelect = m.selectItems(mapped, 1)
             val metaData = query.table.__metaData__
-            val unionQuery = SqlQuery.Set(query.startWithTree, SqlSetOperator.UnionAll, query.connectByTree)
+            val unionQuery = SqlQuery.Set(query.startWithTree, SqlSetOperator.Union(Some(SqlQuantifier.All)), query.connectByTree)
             val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(withItem :: Nil, true, query.mapTree.copy(select = sqlSelect))
             ConnectByProjectionQuery(m.transform(mapped), cteTree)(using query.context)

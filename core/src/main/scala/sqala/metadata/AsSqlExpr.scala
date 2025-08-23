@@ -54,7 +54,7 @@ object AsSqlExpr:
 
     given optionAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Option[T]] with
         def asSqlExpr(x: Option[T]): SqlExpr = x match
-            case None => SqlExpr.Null
+            case None => SqlExpr.NullLiteral
             case Some(v) => a.asSqlExpr(v)
 
     given someAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Some[T]] with
@@ -63,4 +63,4 @@ object AsSqlExpr:
 
     given noneAsSqlExpr: AsSqlExpr[None.type] with
         def asSqlExpr(x: None.type): SqlExpr =
-            SqlExpr.Null
+            SqlExpr.NullLiteral
