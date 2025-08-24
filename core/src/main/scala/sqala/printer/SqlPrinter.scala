@@ -350,12 +350,31 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(")")
 
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
+        def hasBrackets(expr: SqlExpr): Boolean = 
+            expr match
+                case SqlExpr.Binary(l, SqlBinaryOperator.And, r) =>
+                    true
+                case SqlExpr.Binary(l, o, r) =>
+                    hasBrackets(l) || hasBrackets(r)
+                case _ => 
+                    false
+
         printExpr(expr.expr)
         if expr.not then sqlBuilder.append(" NOT")
         sqlBuilder.append(" BETWEEN ")
-        printExpr(expr.start)
+        if hasBrackets(expr.start) then
+            sqlBuilder.append("(")
+            printExpr(expr.start)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.start)
         sqlBuilder.append(" AND ")
-        printExpr(expr.end)
+        if hasBrackets(expr.end) then
+            sqlBuilder.append("(")
+            printExpr(expr.end)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.end)
 
     def printCaseExpr(expr: SqlExpr.Case): Unit =
         sqlBuilder.append("CASE")
