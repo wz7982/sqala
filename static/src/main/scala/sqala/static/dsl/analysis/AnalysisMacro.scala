@@ -5,7 +5,7 @@ import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
+import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExpr, TableMacroImpl}
 import sqala.printer.*
@@ -128,7 +128,7 @@ private[sqala] object AnalysisMacroImpl:
             val tree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val sizeTree = queryTree match
-                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
+                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _) 
                         if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
@@ -278,7 +278,7 @@ private[sqala] object AnalysisMacroImpl:
             val sizeTree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val tree = queryTree match
-                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _) 
+                    case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _) 
                         if p != Some(SqlQuantifier.Distinct) 
                     =>
                         s.copy(
@@ -369,6 +369,8 @@ private[sqala] object AnalysisMacroImpl:
                 createLimitClause(query, n, allTables, groupInfo)
             case Apply(Apply(TypeApply(Select(_, "drop" | "offset"), _), query :: Nil), _) =>
                 createOffsetClause(query, allTables, groupInfo)
+            case Apply(TypeApply(Select(_, name@("forUpdate" | "forUpdateNoWait" | "forUpdateSkipLocked" | "forShare" | "forShareNoWait" | "forShareSkipLocked")), _), query :: Nil) =>
+                createLockClause(query, name, allTables, groupInfo)
             case Inlined(Some(Apply(TypeApply(Ident("from"), t :: Nil), _)), _, _) =>
                 createFromTableClause(t, allTables, groupInfo)
             case Inlined(Some(Apply(Apply(TypeApply(Ident("from"), _), subquery :: Nil), _)), _, _) =>
@@ -555,7 +557,7 @@ private[sqala] object AnalysisMacroImpl:
                 SqlTable.Join(
                     baseTree.from.head,
                     SqlJoinType.Inner,
-                    SqlTable.Range(tableCte, None),
+                    SqlTable.Standard(tableCte, None),
                     Some(SqlJoinCondition.On(condInfo.expr)),
                     None
                 ) :: Nil
@@ -575,7 +577,7 @@ private[sqala] object AnalysisMacroImpl:
             SqlQuery.Cte(
                 withItem :: Nil,
                 true,
-                SqlQuery.Select(select = Nil, from = SqlTable.Range(tableCte, None) :: Nil)
+                SqlQuery.Select(select = Nil, from = SqlTable.Standard(tableCte, None) :: Nil)
             )
 
         baseInfo.copy(tree = newQuery, inConnectBy = true)
@@ -966,6 +968,32 @@ private[sqala] object AnalysisMacroImpl:
         
         baseInfo.copy(tree = newQuery)
 
+    def createLockClause(using q: Quotes, c: QueryContext)(
+        query: q.reflect.Term,
+        methodName: "forUpdate" | "forUpdateNoWait" | "forUpdateSkipLocked" | "forShare" | "forShareNoWait" | "forShareSkipLocked",
+        allTables: List[(argName: String, tableName: String)],
+        groupInfo: List[GroupInfo]
+    ): QueryInfo =
+        val baseInfo =
+            createTree(query, allTables, groupInfo)
+
+        val lock = methodName match
+            case "forUpdate" => SqlLock.Update(None)
+            case "forUpdateNoWait" => SqlLock.Update(Some(SqlLockWaitMode.NoWait))
+            case "forUpdateSkipLocked" => SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))
+            case "forShare" => SqlLock.Share(None)
+            case "forShareNoWait" => SqlLock.Share(Some(SqlLockWaitMode.NoWait))
+            case "forShareSkipLocked" => SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))
+
+        val newQuery =
+            baseInfo.tree match
+                case s: SqlQuery.Select => s.copy(lock = Some(lock))
+                case s: SqlQuery.Set => s.copy(lock = Some(lock))
+                case c: SqlQuery.Cte => c.copy(lock = Some(lock))
+                case v: SqlQuery.Values => v.copy(lock = Some(lock))
+
+        baseInfo.copy(tree = newQuery)
+
     def createMaxDepthClause(using q: Quotes, c: QueryContext)(
         query: q.reflect.Term,
         allTables: List[(argName: String, tableName: String)],
@@ -1009,7 +1037,7 @@ private[sqala] object AnalysisMacroImpl:
                 val selectItems = metaData.columnNames.zipWithIndex.map: (c, i) =>
                     SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
                 
-                val table = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
+                val table = SqlTable.Standard(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
                 
                 val query = SqlQuery.Select(
                     select = selectItems,
@@ -1098,7 +1126,7 @@ private[sqala] object AnalysisMacroImpl:
                     SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + baseQuerySize + 1}"))
                 val selectItems = queryInfo.selectItems ++ joinSelectItems
                 
-                val joinTable = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
+                val joinTable = SqlTable.Standard(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
                 val table = SqlTable.Join(
                     queryInfo.table,
                     sqlJoinType,

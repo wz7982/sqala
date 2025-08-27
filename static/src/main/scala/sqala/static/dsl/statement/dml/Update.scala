@@ -41,7 +41,7 @@ object Update:
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val table = Table[T](tableName, tableName, metaData)
-        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Range(tableName, None), Nil, None)
+        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Standard(tableName, None), Nil, None)
         new Update(table, tree)
 
     inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using 
@@ -69,5 +69,5 @@ object Update:
         val condition = 
             if conditions.isEmpty then None 
             else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
-        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Range(tableName, None), updateColumns, condition)
+        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Standard(tableName, None), updateColumns, condition)
         new Update(table, tree)

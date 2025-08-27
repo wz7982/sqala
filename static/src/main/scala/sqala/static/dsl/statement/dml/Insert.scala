@@ -37,7 +37,7 @@ class Insert[T, S <: InsertState](
                 case Expr(SqlExpr.Column(_, c)) => SqlExpr.Column(None, c)
                 case _ => throw MatchError(i)
         val tree: SqlStatement.Insert = 
-            SqlStatement.Insert(SqlTable.Range(tableName, None), columns, Nil, None)
+            SqlStatement.Insert(SqlTable.Standard(tableName, None), columns, Nil, None)
         new Insert(tree)
 
     inline infix def values(rows: List[T])(using 
@@ -67,7 +67,7 @@ object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree: SqlStatement.Insert = 
-            SqlStatement.Insert(SqlTable.Range(tableName, None), Nil, Nil, None)
+            SqlStatement.Insert(SqlTable.Standard(tableName, None), Nil, Nil, None)
         new Insert(tree)
 
     inline def apply[T <: Product](entities: Seq[T])(using 
@@ -88,4 +88,4 @@ object Insert:
                 .map(_._1)
             data.map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
-        new Insert(SqlStatement.Insert(SqlTable.Range(tableName, None), columns, values.toList, None))
+        new Insert(SqlStatement.Insert(SqlTable.Standard(tableName, None), columns, values.toList, None))

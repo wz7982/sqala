@@ -17,8 +17,8 @@ sealed trait AnyTable:
     infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Full, table, None)
 
     def toSqlTable: SqlTable = this match
-        case Table(name, alias) => SqlTable.Range(name, alias.map(a => SqlTableAlias(a)))
-        case EntityTable(name, alias, _) => SqlTable.Range(name, Some(SqlTableAlias(alias)))
+        case Table(name, alias) => SqlTable.Standard(name, alias.map(a => SqlTableAlias(a)))
+        case EntityTable(name, alias, _) => SqlTable.Standard(name, Some(SqlTableAlias(alias)))
         case SubQueryTable(query, alias, lateral) => SqlTable.SubQuery(query.tree, lateral, Some(SqlTableAlias(alias, Nil)))
         case JoinTable(left, joinType, right, condition) => 
             SqlTable.Join(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)), None)
