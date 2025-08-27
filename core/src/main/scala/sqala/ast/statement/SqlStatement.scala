@@ -23,7 +23,7 @@ object SqlStatement:
         def addWhere(condition: SqlExpr): Update =
             update.copy(where = update.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
-enum SqlQuery:
+enum SqlQuery(val lock: Option[SqlLock] = None):
     case Select(
         quantifier: Option[SqlQuantifier] = None,
         select: List[SqlSelectItem],
@@ -32,17 +32,27 @@ enum SqlQuery:
         groupBy: Option[SqlGroupBy] = None,
         having: Option[SqlExpr] = None,
         orderBy: List[SqlOrderingItem] = Nil,
-        limit: Option[SqlLimit] = None
+        limit: Option[SqlLimit] = None,
+        override val lock: Option[SqlLock] = None
     )
     case Set(
         left: SqlQuery,
         operator: SqlSetOperator,
         right: SqlQuery,
         orderBy: List[SqlOrderingItem] = Nil,
-        limit: Option[SqlLimit] = None
+        limit: Option[SqlLimit] = None,
+        override val lock: Option[SqlLock] = None
     )
-    case Values(values: List[List[SqlExpr]])
-    case Cte(queryItems: List[SqlWithItem], recursive: Boolean, query: SqlQuery)
+    case Values(
+        values: List[List[SqlExpr]], 
+        override val lock: Option[SqlLock] = None
+    )
+    case Cte(
+        queryItems: List[SqlWithItem], 
+        recursive: Boolean, 
+        query: SqlQuery, 
+        override val lock: Option[SqlLock] = None
+    )
 
 object SqlQuery:
     extension (select: Select)

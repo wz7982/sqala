@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupingItem
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
-import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement, SqlWithItem}
+import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.|>
 
@@ -76,11 +76,17 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("TRUNCATE ")
         printTable(truncate.table)
 
-    def printQuery(query: SqlQuery): Unit = query match
-        case select: SqlQuery.Select => printSelect(select)
-        case set: SqlQuery.Set => printSet(set)
-        case values: SqlQuery.Values => printValues(values)
-        case cte: SqlQuery.Cte => printCte(cte)
+    def printQuery(query: SqlQuery): Unit = 
+        query match
+            case select: SqlQuery.Select => printSelect(select)
+            case set: SqlQuery.Set => printSet(set)
+            case values: SqlQuery.Values => printValues(values)
+            case cte: SqlQuery.Cte => printCte(cte)
+
+        for l <- query.lock do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLock(l)
 
     def printSelect(select: SqlQuery.Select): Unit =
         printSpace()
@@ -561,6 +567,12 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printExpr(limit.limit)
         sqlBuilder.append(" OFFSET ")
         printExpr(limit.offset)
+
+    def printLock(lock: SqlLock): Unit =
+        sqlBuilder.append(lock.lockMode)
+        for w <- lock.waitMode do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(w.waitMode)
 
     def printCteRecursive(): Unit = sqlBuilder.append(" RECURSIVE")
 
