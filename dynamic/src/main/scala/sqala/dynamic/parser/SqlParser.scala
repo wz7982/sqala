@@ -297,7 +297,7 @@ object SqlParser extends StandardTokenParsers:
             case table ~ alias =>
                 val tableAlias = alias.map:
                     case ta ~ ca => SqlTableAlias(ta, ca.getOrElse(Nil))
-                SqlTable.Range(table, tableAlias)
+                SqlTable.Standard(table, tableAlias)
         } |
         opt("LATERAL") ~ ("(" ~> set <~ ")") ~ (opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")")) ^^ {
             case lateral ~ s ~ (tableAlias ~ columnAlias) =>

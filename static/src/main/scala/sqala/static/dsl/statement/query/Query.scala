@@ -294,7 +294,7 @@ object SelectQuery:
                     from = SqlTable.Join(
                         query.tree.from.head,
                         SqlJoinType.Inner,
-                        SqlTable.Range(tableCte, None),
+                        SqlTable.Standard(tableCte, None),
                         Some(SqlJoinCondition.On(cond)),
                         None
                     ) :: Nil
@@ -332,7 +332,7 @@ object JoinQuery:
             val sqlTable: SqlTable.Join = SqlTable.Join(
                 query.tree.from.head,
                 joinType,
-                SqlTable.Range(joinTableName, Some(SqlTableAlias(joinAliasName))),
+                SqlTable.Standard(joinTableName, Some(SqlTableAlias(joinAliasName))),
                 None,
                 None
             )
@@ -548,7 +548,7 @@ final case class ConnectBy[T](
     private[sqala] val connectByTree: SqlQuery.Select,
     private[sqala] val startWithTree: SqlQuery.Select,
     private[sqala] val mapTree: SqlQuery.Select =
-        SqlQuery.Select(select = Nil, from = SqlTable.Range(tableCte, None) :: Nil)
+        SqlQuery.Select(select = Nil, from = SqlTable.Standard(tableCte, None) :: Nil)
 )(using private[sqala] val context: QueryContext)
 
 object ConnectBy:

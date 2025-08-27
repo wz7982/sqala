@@ -25,5 +25,5 @@ object Save:
             .filterNot((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => SqlExpr.Column(None, c))
         val tree: SqlStatement.Upsert = 
-            SqlStatement.Upsert(SqlTable.Range(tableName, None), columns, values, primaryKeys, updateColumns)
+            SqlStatement.Upsert(SqlTable.Standard(tableName, None), columns, values, primaryKeys, updateColumns)
         new Save(tree)

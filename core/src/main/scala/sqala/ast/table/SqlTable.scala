@@ -4,7 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlQuery
 
 enum SqlTable(val alias: Option[SqlTableAlias]):
-    case Range(
+    case Standard(
         name: String, 
         override val alias: Option[SqlTableAlias]
     ) extends SqlTable(alias)

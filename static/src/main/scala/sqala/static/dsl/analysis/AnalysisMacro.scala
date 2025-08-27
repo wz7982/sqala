@@ -555,7 +555,7 @@ private[sqala] object AnalysisMacroImpl:
                 SqlTable.Join(
                     baseTree.from.head,
                     SqlJoinType.Inner,
-                    SqlTable.Range(tableCte, None),
+                    SqlTable.Standard(tableCte, None),
                     Some(SqlJoinCondition.On(condInfo.expr)),
                     None
                 ) :: Nil
@@ -575,7 +575,7 @@ private[sqala] object AnalysisMacroImpl:
             SqlQuery.Cte(
                 withItem :: Nil,
                 true,
-                SqlQuery.Select(select = Nil, from = SqlTable.Range(tableCte, None) :: Nil)
+                SqlQuery.Select(select = Nil, from = SqlTable.Standard(tableCte, None) :: Nil)
             )
 
         baseInfo.copy(tree = newQuery, inConnectBy = true)
@@ -1009,7 +1009,7 @@ private[sqala] object AnalysisMacroImpl:
                 val selectItems = metaData.columnNames.zipWithIndex.map: (c, i) =>
                     SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + 1}"))
                 
-                val table = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
+                val table = SqlTable.Standard(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
                 
                 val query = SqlQuery.Select(
                     select = selectItems,
@@ -1098,7 +1098,7 @@ private[sqala] object AnalysisMacroImpl:
                     SqlSelectItem.Expr(SqlExpr.Column(Some(alias), c), Some(s"c${i + baseQuerySize + 1}"))
                 val selectItems = queryInfo.selectItems ++ joinSelectItems
                 
-                val joinTable = SqlTable.Range(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
+                val joinTable = SqlTable.Standard(metaData.tableName, Some(SqlTableAlias(alias, Nil)))
                 val table = SqlTable.Join(
                     queryInfo.table,
                     sqlJoinType,

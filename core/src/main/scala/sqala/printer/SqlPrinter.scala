@@ -477,7 +477,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printTable(table: SqlTable): Unit = 
         table match
-            case SqlTable.Range(tableName, _) =>
+            case SqlTable.Standard(tableName, _) =>
                 sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
             case SqlTable.Func(functionName, args, _) =>
                 sqlBuilder.append(functionName)

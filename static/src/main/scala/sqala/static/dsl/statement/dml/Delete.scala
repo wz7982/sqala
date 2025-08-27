@@ -21,5 +21,5 @@ object Delete:
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val table = Table[T](tableName, tableName, metaData)
-        val tree: SqlStatement.Delete = SqlStatement.Delete(SqlTable.Range(tableName, None), None)
+        val tree: SqlStatement.Delete = SqlStatement.Delete(SqlTable.Standard(tableName, None), None)
         new Delete(table, tree)

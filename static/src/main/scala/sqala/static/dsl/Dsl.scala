@@ -27,7 +27,7 @@ inline def from[T](using
     val table = Table[T](tableName, aliasName, metaData)
     val tree = SqlQuery.Select(
         select = s.selectItems(table, 1),
-        from = SqlTable.Range(tableName, Some(SqlTableAlias(aliasName))) :: Nil
+        from = SqlTable.Standard(tableName, Some(SqlTableAlias(aliasName))) :: Nil
     )
     TableQuery(table, tree)
 
