@@ -116,6 +116,15 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
+    transparent inline def fetch(inline nativeSql: NativeSql)(using l: Logger): Any =
+        val exec = (c: Connection) => (n: NativeSql) =>
+            val NativeSql(sql, args) = n
+            l(sql, args)
+            val result = jdbcQueryToMap(c, sql, args)
+            c.close()
+            result
+        GenerateRecord.run[Url, Username, Password, Driver](dataSource.getConnection, exec, nativeSql)
+
     def fetchToMap(nativeSql: NativeSql)(using l: Logger): List[Map[String, Any]] =
         val NativeSql(sql, args) = nativeSql
         l(sql, args)
@@ -213,11 +222,14 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         jdbcCursorQuery(conn, sql, args, fetchSize, f)
         conn.close()
 
-    def executeTransaction[T](block: JdbcTransactionContext ?=> T): T =
+    transparent inline def executeTransaction[T](
+        block: JdbcTransactionContext ?=> T
+    ): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         try
-            given JdbcTransactionContext = new JdbcTransactionContext(conn, dialect)
+            given JdbcTransactionContext = 
+                new JdbcTransactionContext(conn, dialect)
             val result = block
             conn.commit()
             result
@@ -228,14 +240,15 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
             conn.setAutoCommit(true)
             conn.close()
 
-    def executeTransactionWithIsolation[T](
+    transparent inline def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
     )(block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         conn.setTransactionIsolation(isolation.jdbcIsolation)
         try
-            given JdbcTransactionContext = new JdbcTransactionContext(conn, dialect)
+            given JdbcTransactionContext = 
+                new JdbcTransactionContext(conn, dialect)
             val result = block
             conn.commit()
             result
@@ -255,15 +268,3 @@ object JdbcContext:
         driverClassName: String
     )(using c: JdbcConnection[S]): JdbcContext[dialect.type, url.type, username.type, password.type, driverClassName.type] =
         new JdbcContext(c.init(url, username, password, driverClassName), dialect)
-
-    extension [D <: Dialect, Url <: String, Username <: String, Password <: String, Driver <: String](
-        inline context: JdbcContext[D, Url, Username, Password, Driver]
-    )
-        transparent inline def fetch(inline nativeSql: NativeSql)(using l: Logger): Any =
-            val exec = (c: Connection) => (n: NativeSql) =>
-                val NativeSql(sql, args) = n
-                l(sql, args)
-                val result = jdbcQueryToMap(c, sql, args)
-                c.close()
-                result
-            GenerateRecord.run[Url, Username, Password, Driver](context.dataSource.getConnection, exec, nativeSql)
