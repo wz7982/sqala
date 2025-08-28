@@ -162,28 +162,3 @@ private[sqala] object GenerateRecord:
                         $exec($conn)($sql).map(i => new Record(i).asInstanceOf[r])
                     records
                 }
-
-        
-
-        
-
-        // refinement.asType match
-        //     case '[r] =>
-        //         '{
-        //             val strings = $s.parts.iterator
-        //             val argArray = ArrayBuffer[Any]()
-        //             val argIterator = $args.iterator
-        //             val builder = new StringBuilder(strings.next())
-        //             while strings.hasNext do
-        //                 val arg = argIterator.next()
-        //                 arg match
-        //                     case l: List[_] => 
-        //                         builder.append(l.map(_ => "?").mkString("(", ", ", ")"))
-        //                         argArray.appendAll(l)
-        //                     case _ => 
-        //                         builder.append("?")
-        //                         argArray.append(arg)
-        //                 builder.append(strings.next())
-
-        //             StaticNativeSql[r](builder.toString, argArray.toArray)
-        //         }
