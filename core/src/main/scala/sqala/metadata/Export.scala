@@ -1,7 +1,7 @@
 package sqala.metadata
 
 export sqala.printer.{
-    DB2Dialect,
+    Db2Dialect,
     H2Dialect,
     MssqlDialect,
     MysqlDialect,

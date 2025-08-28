@@ -13,7 +13,10 @@ import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
 
-class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D):
+class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: String, Driver <: String](
+    val dataSource: DataSource, 
+    val dialect: D
+):
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
         val conn = dataSource.getConnection()
         val result = handler(conn)
@@ -242,3 +245,25 @@ class JdbcContext[D <: Dialect](val dataSource: DataSource, val dialect: D):
         finally
             conn.setAutoCommit(true)
             conn.close()
+
+object JdbcContext:
+    inline def apply[S <: DataSource](
+        dialect: Dialect,
+        url: String, 
+        username: String, 
+        password: String, 
+        driverClassName: String
+    )(using c: JdbcConnection[S]): JdbcContext[dialect.type, url.type, username.type, password.type, driverClassName.type] =
+        new JdbcContext(c.init(url, username, password, driverClassName), dialect)
+
+    extension [D <: Dialect, Url <: String, Username <: String, Password <: String, Driver <: String](
+        inline context: JdbcContext[D, Url, Username, Password, Driver]
+    )
+        transparent inline def fetch(inline nativeSql: NativeSql)(using l: Logger): Any =
+            val exec = (c: Connection) => (n: NativeSql) =>
+                val NativeSql(sql, args) = n
+                l(sql, args)
+                val result = jdbcQueryToMap(c, sql, args)
+                c.close()
+                result
+            GenerateRecord.run[Url, Username, Password, Driver](context.dataSource.getConnection, exec, nativeSql)
