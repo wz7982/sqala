@@ -11,7 +11,10 @@ import sqala.util.{queryToString, statementToString}
 import java.sql.Connection
 import scala.deriving.Mirror
 
-class JdbcTransactionContext(val connection: Connection, val dialect: Dialect)
+class JdbcTransactionContext(
+    val connection: Connection, 
+    val dialect: Dialect
+)
 
 enum TransactionIsolation(val jdbcIsolation: Int):
     case None extends TransactionIsolation(Connection.TRANSACTION_NONE)

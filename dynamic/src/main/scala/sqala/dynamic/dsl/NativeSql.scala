@@ -10,7 +10,7 @@ case class NativeSql(sql: String, args: Array[Any]):
         NativeSql(sql + s, args)
 
 extension (s: StringContext)
-    def sql(args: Any*): NativeSql =
+    inline def sql(inline args: Any*): NativeSql =
         val strings = s.parts.iterator
         val argArray = ArrayBuffer[Any]()
         val argIterator = args.iterator
