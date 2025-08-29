@@ -126,7 +126,7 @@ case class Expr(sqlExpr: SqlExpr):
     def descNullsLast: OrderBy = OrderBy(this, SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
     infix def as(name: String): SelectItem =
-        SqlParser.parseIdent(name)
+        new SqlParser().parseIdent(name)
         SelectItem(this, Some(name))
 
 object Expr:

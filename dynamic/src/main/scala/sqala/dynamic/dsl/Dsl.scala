@@ -4,15 +4,15 @@ import sqala.ast.expr.{SqlExpr, SqlSubLinkQuantifier, SqlWhen}
 import sqala.dynamic.parser.SqlParser
 import sqala.metadata.{AsSqlExpr, TableMacro}
 
-def dynamicColumn(name: String): Expr = Expr(SqlParser.parseColumn(name))
+def dynamicColumn(name: String): Expr = Expr(new SqlParser().parseColumn(name))
 
-def unsafeExpr(snippet: String): Expr = Expr(SqlParser.parseExpr(snippet))
+def unsafeExpr(snippet: String): Expr = Expr(new SqlParser().parseExpr(snippet))
 
 extension [T](value: T)(using a: AsSqlExpr[T])
     def asExpr: Expr = Expr(a.asSqlExpr(value))
 
 def dynamicTable(name: String): Table =
-    SqlParser.parseIdent(name)
+    new SqlParser().parseIdent(name)
     Table(name, None)
 
 inline def asTable[T]: EntityTable =
