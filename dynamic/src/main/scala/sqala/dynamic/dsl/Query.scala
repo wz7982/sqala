@@ -13,7 +13,7 @@ sealed trait DynamicQuery:
     def tree: SqlQuery
 
     infix def as(name: String): SubQueryTable =
-        SqlParser.parseIdent(name)
+        new SqlParser().parseIdent(name)
         SubQueryTable(this, name, false)
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(tree))
@@ -35,7 +35,7 @@ sealed trait DynamicQuery:
 
 case class LateralQuery(query: DynamicQuery):
     infix def as(name: String): SubQueryTable =
-        SqlParser.parseIdent(name)
+        new SqlParser().parseIdent(name)
         SubQueryTable(query, name, true)
 
 class Select(val tree: SqlQuery.Select) extends DynamicQuery:

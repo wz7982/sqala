@@ -28,7 +28,7 @@ case class Table(
     private[sqala] val alias: Option[String]
 ) extends AnyTable:
     infix def as(name: String): Table =
-        SqlParser.parseIdent(name)
+        new SqlParser().parseIdent(name)
         copy(alias = Some(name))
 
 case class EntityTable(
@@ -37,7 +37,7 @@ case class EntityTable(
     private[sqala] val __metaData__ : TableMetaData 
 ) extends AnyTable with Dynamic:
     infix def as(name: String): EntityTable =
-        SqlParser.parseIdent(name) 
+        new SqlParser().parseIdent(name) 
         copy(__alias__ = name)
 
     def selectDynamic(name: String): Expr =
