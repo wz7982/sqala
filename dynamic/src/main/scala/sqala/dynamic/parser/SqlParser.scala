@@ -112,7 +112,8 @@ class SqlParser extends StandardTokenParsers:
             "ARRAY", "ONLY", "NEXT", "FETCH",
             "CURRENT", "ROW", "UNBOUNDED", "PRECEDING", "FOLLOWING",
             "ROWS", "RANGE", "GROUPS",
-            "CUBE", "ROLLUP", "GROUPING", "SETS"
+            "CUBE", "ROLLUP", "GROUPING", "SETS",
+            "VALUES"
         )
     )
 
@@ -244,7 +245,7 @@ class SqlParser extends StandardTokenParsers:
         tuple |
         array
 
-    def tuple: Parser[SqlExpr] =
+    def tuple: Parser[SqlExpr.Tuple] =
         "(" ~> repsep(expr, ",") <~ ")" ^^ (SqlExpr.Tuple(_))
 
     def array: Parser[SqlExpr] =
@@ -464,6 +465,7 @@ class SqlParser extends StandardTokenParsers:
 
     def query: Parser[SqlQuery] =
         select |
+        values |
         "(" ~> set <~ ")"
 
     def set: Parser[SqlQuery] =
@@ -504,6 +506,12 @@ class SqlParser extends StandardTokenParsers:
                     o.getOrElse(Nil), 
                     l
                 )
+        }
+
+    def values: Parser[SqlQuery] =
+        "VALUES" ~> rep1sep(opt("ROW") ~> tuple, ",") ^^ {
+            case v =>
+                SqlQuery.Values(v.map(_.items))
         }
 
     def selectItems: Parser[List[SqlSelectItem]] =
