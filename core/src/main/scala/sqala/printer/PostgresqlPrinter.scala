@@ -1,9 +1,27 @@
 package sqala.printer
 
 import sqala.ast.expr.{SqlCastType, SqlExpr}
+import sqala.ast.limit.*
 import sqala.ast.statement.SqlStatement
 
 class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
+    override def printLimit(limit: SqlLimit): Unit =
+        val standardMode = limit.fetch match
+            case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>
+                false
+            case _ =>
+                true
+        if standardMode then super.printLimit(limit)
+        else
+            for f <- limit.fetch do
+                sqlBuilder.append("LIMIT ")
+                printExpr(f.limit)
+            for o <- limit.offset do
+                if limit.fetch.isDefined then
+                    sqlBuilder.append(" ")
+                sqlBuilder.append("OFFSET ")
+                printExpr(o)
+
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
         printTable(upsert.table)

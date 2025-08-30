@@ -9,6 +9,7 @@ import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.|>
 
 import scala.collection.mutable.ArrayBuffer
+import sqala.ast.limit.SqlFetchUnit
 
 abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
@@ -563,10 +564,24 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(s" ${o.order}")
 
     def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append("LIMIT ")
-        printExpr(limit.limit)
-        sqlBuilder.append(" OFFSET ")
-        printExpr(limit.offset)
+        for o <- limit.offset do
+            sqlBuilder.append("OFFSET ")
+            printExpr(o)
+            sqlBuilder.append(" ROWS")
+        for f <- limit.fetch do
+            if limit.offset.isDefined then
+                sqlBuilder.append(" ")
+            sqlBuilder.append("FETCH")
+            if limit.offset.isDefined then
+                sqlBuilder.append(" NEXT ")
+            else
+                sqlBuilder.append(" FIRST ")
+            printExpr(f.limit)
+            if f.unit == SqlFetchUnit.Percentage then
+                sqlBuilder.append(" ")
+            sqlBuilder.append(f.unit.unit)
+            sqlBuilder.append(" ROWS ")
+            sqlBuilder.append(f.mode.mode)
 
     def printLock(lock: SqlLock): Unit =
         sqlBuilder.append(lock.lockMode)

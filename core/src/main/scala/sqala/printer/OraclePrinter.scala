@@ -1,18 +1,10 @@
 package sqala.printer
 
 import sqala.ast.expr.{SqlCastType, SqlExpr}
-import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 
 class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
-    override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append("OFFSET ")
-        printExpr(limit.offset)
-        sqlBuilder.append(" ROWS FETCH FIRST ")
-        printExpr(limit.limit)
-        sqlBuilder.append(" ROWS ONLY")
-
     override def printCteRecursive(): Unit = {}
 
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
