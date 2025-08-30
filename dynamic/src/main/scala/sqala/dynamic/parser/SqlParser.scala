@@ -256,16 +256,12 @@ class SqlParser extends StandardTokenParsers:
             case f => 
                 SqlExpr.Func("COUNT", Nil, None, Nil, Nil, f)
         } |
-        ident ~ ("(" ~> opt("ALL" | "DISTINCT") ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
+        ident ~ ("(" ~> opt(quantifier) ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
             ~ opt("WITHIN" ~ "GROUP" ~ "(" ~> orderBy <~ ")")
             ~ opt("FILTER" ~ "(" ~> where <~ ")") 
         ^^ {
             case ident ~ (quantifier ~ args ~ orderBy) ~ withinGroup ~ filter =>
-                val sqlQuantifier = quantifier match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-                SqlExpr.Func(ident.toUpperCase, args, sqlQuantifier, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
+                SqlExpr.Func(ident.toUpperCase, args, quantifier, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
         }
 
     def frameBound: Parser[SqlWindowFrameBound] =
@@ -447,30 +443,22 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def setOperator: Parser[SqlSetOperator] =
-        "UNION" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Union(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Union(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Union(None)
-        } |
-        "EXCEPT" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Except(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Except(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Except(None)
-        } |
-        "INTERSECT" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Intersect(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Intersect(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Intersect(None)
+        "UNION" ~> opt(quantifier) ^^ (SqlSetOperator.Union(_)) |
+        "EXCEPT" ~> opt(quantifier) ^^ (SqlSetOperator.Except(_)) |
+        "INTERSECT" ~> opt(quantifier) ^^ (SqlSetOperator.Intersect(_))
+
+    def quantifier: Parser[SqlQuantifier] =
+        ("ALL" | "DISTINCT") ^^ {
+            case "ALL" => SqlQuantifier.All
+            case _ => SqlQuantifier.Distinct
         }
 
     def query: Parser[SqlQuery] =
-        select |
-        values |
-        "(" ~> set <~ ")"
+        set
 
     def set: Parser[SqlQuery] =
-        query ~ rep(
-            setOperator ~ query ^^ {
+        simpleQuery ~ rep(
+            setOperator ~ simpleQuery ^^ {
                 case t ~ s => (t, s)
             }
         ) ^^ {
@@ -479,9 +467,14 @@ class SqlParser extends StandardTokenParsers:
             }
         }
 
+    def simpleQuery: Parser[SqlQuery] =
+        select |
+        values |
+        "(" ~> query <~ ")"
+
     def select: Parser[SqlQuery] =
         "SELECT" ~> 
-            opt("ALL" | "DISTINCT") ~ 
+            opt(quantifier) ~ 
             selectItems ~ 
             opt(from) ~ 
             opt(where) ~ 
@@ -491,13 +484,8 @@ class SqlParser extends StandardTokenParsers:
             opt(limit) 
         ^^ {
             case q ~ s ~ f ~ w ~ g ~ h ~ o ~ l =>
-                val quantifier = q match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-
                 SqlQuery.Select(
-                    quantifier, 
+                    q, 
                     s, 
                     f.getOrElse(Nil), 
                     w, 
@@ -579,13 +567,9 @@ class SqlParser extends StandardTokenParsers:
         expr ^^ (g => SqlGroupingItem.Expr(g))
 
     def groupBy: Parser[SqlGroupBy] =
-        "GROUP" ~ "BY" ~> opt("ALL" | "DISTINCT") ~ rep1sep(groupingItem, ",") ^^ {
+        "GROUP" ~ "BY" ~> opt(quantifier) ~ rep1sep(groupingItem, ",") ^^ {
             case q ~ g =>
-                val quantifier = q match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-                SqlGroupBy(g, quantifier)
+                SqlGroupBy(g, q)
         }
 
     def having: Parser[SqlExpr] =
