@@ -2,7 +2,7 @@ package sqala.dynamic.dsl
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.group.SqlGroupingItem
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator, SqlWithItem}
 import sqala.dynamic.parser.SqlParser
@@ -63,11 +63,17 @@ class Select(val tree: SqlQuery.Select) extends DynamicQuery:
     infix def having(expr: Expr): Select = new Select(tree.addHaving(expr.sqlExpr))
 
     infix def limit(n: Int): Select =
-        val sqlLimit = tree.limit.map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset)).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
+        val limitExpr = SqlExpr.NumberLiteral(n)
+        val sqlLimit = tree.limit
+            .map(l => SqlLimit(l.offset, Some(SqlFetch(limitExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only))))
+            .orElse(Some(SqlLimit(None, Some(SqlFetch(limitExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)))))
         new Select(tree.copy(limit = sqlLimit))
 
     infix def offset(n: Int): Select =
-        val sqlLimit = tree.limit.map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n))).orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
+        val offsetExpr = SqlExpr.NumberLiteral(n)
+        val sqlLimit = tree.limit
+            .map(l => SqlLimit(Some(offsetExpr), l.fetch))
+            .orElse(Some(SqlLimit(Some(offsetExpr), None)))
         new Select(tree.copy(limit = sqlLimit))
 
     def distinct: Select = new Select(tree.copy(quantifier = Some(SqlQuantifier.Distinct)))

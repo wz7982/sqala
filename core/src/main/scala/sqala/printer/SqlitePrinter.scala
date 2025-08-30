@@ -10,9 +10,9 @@ import sqala.ast.statement.SqlStatement
 class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")
-        printExpr(limit.offset)
+        printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
         sqlBuilder.append(", ")
-        printExpr(limit.limit)
+        printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
 
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT OR REPLACE INTO ")

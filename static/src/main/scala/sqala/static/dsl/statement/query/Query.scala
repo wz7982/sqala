@@ -2,7 +2,7 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkQuantifier}
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
@@ -28,50 +28,62 @@ object Query:
 
         infix def union[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Union(None), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Union(None), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         infix def unionAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Union(Some(SqlQuantifier.All)), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Union(Some(SqlQuantifier.All)), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         infix def except[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Except(None), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Except(None), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         infix def exceptAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Except(Some(SqlQuantifier.All)), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Except(Some(SqlQuantifier.All)), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         infix def intersect[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Intersect(None), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Intersect(None), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         infix def intersectAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params), 
-                query.tree, 
-                SqlSetOperator.Intersect(Some(SqlQuantifier.All)), 
-                unionQuery.tree
+                u.unionQueryItems(query.params),
+                SqlQuery.Set(
+                    query.tree, 
+                    SqlSetOperator.Intersect(Some(SqlQuantifier.All)), 
+                    unionQuery.tree
+                )
             )(using query.context)
 
         def drop(n: Int): Query[T] =
@@ -82,8 +94,8 @@ object Query:
                 case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
                 case _ => None
             val sqlLimit = limit
-                .map(l => SqlLimit(l.limit, SqlExpr.NumberLiteral(n)))
-                .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(Long.MaxValue), SqlExpr.NumberLiteral(n))))
+                .map(l => SqlLimit(Some(SqlExpr.NumberLiteral(n)), l.fetch))
+                .orElse(Some(SqlLimit(Some(SqlExpr.NumberLiteral(n)), None)))
             val newTree = query.tree match
                 case s: SqlQuery.Select => s.copy(limit = sqlLimit)
                 case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -96,7 +108,7 @@ object Query:
 
         def offset(n: Int): Query[T] = drop(n)
 
-        def take(n: Int): Query[T] =
+        private[sqala] def take(n: Int, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T] =
             val limit = query.tree match
                 case s: SqlQuery.Select => s.limit
                 case s: SqlQuery.Set => s.limit
@@ -104,8 +116,8 @@ object Query:
                 case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
                 case _ => None
             val sqlLimit = limit
-                .map(l => SqlLimit(SqlExpr.NumberLiteral(n), l.offset))
-                .orElse(Some(SqlLimit(SqlExpr.NumberLiteral(n), SqlExpr.NumberLiteral(0))))
+                .map(l => SqlLimit(l.offset, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode))))
+                .orElse(Some(SqlLimit(None, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode)))))
             val newTree = query.tree match
                 case s: SqlQuery.Select => s.copy(limit = sqlLimit)
                 case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -116,7 +128,23 @@ object Query:
                 case _ => query.tree
             Query(query.params, newTree)(using query.context)
 
+        def take(n: Int): Query[T] = take(n, SqlFetchUnit.RowCount, SqlFetchMode.Only)
+
         def limit(n: Int): Query[T] = take(n)
+
+        def fetch(n: Int): Query[T] = take(n)
+
+        def takeWithTies(n: Int): Query[T] = take(n, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
+
+        def fetchWithTies(n: Int): Query[T] = takeWithTies(n)
+
+        def takePercent(n: Int): Query[T] = take(n, SqlFetchUnit.Percentage, SqlFetchMode.Only)
+
+        def fetchPercent(n: Int): Query[T] = takePercent(n)
+
+        def takePercentWithTies(n: Int): Query[T] = take(n, SqlFetchUnit.Percentage, SqlFetchMode.WithTies)
+
+        def fetchPercentWithTies(n: Int): Query[T] = takePercentWithTies(n)
 
         def forUpdate: Query[T] =
             val newTree = query.tree match
@@ -534,13 +562,8 @@ sealed class TableQuery[T](
 
 class UnionQuery[T](
     private[sqala] override val params: T,
-    private[sqala] val left: SqlQuery,
-    private[sqala] val operator: SqlSetOperator,
-    private[sqala] val right: SqlQuery
-)(using QueryContext) extends Query[T](
-    params,
-    SqlQuery.Set(left, operator, right)
-)
+    override val tree: SqlQuery.Set
+)(using QueryContext) extends Query[T](params, tree)
 
 final class JoinPart[T](
     private[sqala] val params: T,

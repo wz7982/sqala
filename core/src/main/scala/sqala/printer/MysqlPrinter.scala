@@ -1,12 +1,11 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCastType, SqlExpr, SqlWhen}
+import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
-import sqala.ast.expr.SqlBinaryOperator
 
 class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "`"
@@ -15,9 +14,9 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
 
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")
-        printExpr(limit.offset)
+        printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
         sqlBuilder.append(", ")
-        printExpr(limit.limit)
+        printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
 
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")

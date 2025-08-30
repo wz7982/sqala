@@ -2,7 +2,7 @@ package sqala.static.dsl.analysis
 
 import sqala.ast.expr.*
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
@@ -221,6 +221,12 @@ private[sqala] object AnalysisMacroImpl:
             case _ =>
                 None
 
+        val sqlLimit =
+            SqlLimit(
+                Some(SqlExpr.NumberLiteral(1)), 
+                Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.RowCount, SqlFetchMode.Only))
+            )
+
         for q <- queryTerm do
             given QueryContext = QueryContext(0)
 
@@ -228,15 +234,15 @@ private[sqala] object AnalysisMacroImpl:
                 val queryTree = createTree(q, Nil, Nil).tree
                 val limitTree = queryTree match
                     case s: SqlQuery.Select =>
-                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        s.copy(limit = Some(sqlLimit))
                     case c: SqlQuery.Cte =>
                         c.copy(
                             query = 
                                 c.query.asInstanceOf[SqlQuery.Select]
-                                .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                                .copy(limit = Some(sqlLimit))
                             )
                     case s: SqlQuery.Set =>
-                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        s.copy(limit = Some(sqlLimit))
                     case _ => throw MatchError(())
                 Some(limitTree)
             catch 
@@ -297,19 +303,25 @@ private[sqala] object AnalysisMacroImpl:
                 case e: Exception => 
                     None
 
+            val sqlLimit =
+                SqlLimit(
+                    Some(SqlExpr.NumberLiteral(1)), 
+                    Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.RowCount, SqlFetchMode.Only))
+                )
+
             val limitTree = try
                 val queryTree = createTree(q, Nil, Nil).tree
                 val tree = queryTree match
                     case s: SqlQuery.Select =>
-                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        s.copy(limit = Some(sqlLimit))
                     case c: SqlQuery.Cte =>
                         c.copy(
                             query = 
                                 c.query.asInstanceOf[SqlQuery.Select]
-                                .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                                .copy(limit = Some(sqlLimit))
                             )
                     case s: SqlQuery.Set =>
-                        s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        s.copy(limit = Some(sqlLimit))
                     case _ => throw MatchError(())
                 Some(tree)
             catch 
@@ -365,8 +377,8 @@ private[sqala] object AnalysisMacroImpl:
                 createOrderByClause(query, order, allTables, groupInfo)
             case Apply(TypeApply(Select(_, "distinct"), _), query :: Nil) =>
                 createDistinctClause(query, allTables, groupInfo)
-            case Apply(Apply(TypeApply(Select(_, "take" | "limit"), _), query :: Nil), n :: Nil) =>
-                createLimitClause(query, n, allTables, groupInfo)
+            case Apply(Apply(TypeApply(Select(_, name@("take" | "limit" | "fetch" | "takeWithTies" | "fetchWithTies" | "takePercent" | "fetchPercent" | "takePercentWithTies" | "fetchPercentWithTies")), _), query :: Nil), n :: Nil) =>
+                createLimitClause(query, n, name, allTables, groupInfo)
             case Apply(Apply(TypeApply(Select(_, "drop" | "offset"), _), query :: Nil), _) =>
                 createOffsetClause(query, allTables, groupInfo)
             case Apply(TypeApply(Select(_, name@("forUpdate" | "forUpdateNoWait" | "forUpdateSkipLocked" | "forShare" | "forShareNoWait" | "forShareSkipLocked")), _), query :: Nil) =>
@@ -377,7 +389,7 @@ private[sqala] object AnalysisMacroImpl:
                 createFromSubqueryClause(subquery, allTables, groupInfo)
             case Apply(Apply(TypeApply(Apply(TypeApply(Select(Ident(_), "union"), _), left :: Nil), _), right :: Nil), _) =>
                 createUnionClause(left, "union", right, allTables, groupInfo)
-            case Apply(Apply(TypeApply(Apply(TypeApply(Select(Ident(_), "unionAll" | "++"), _), left :: Nil), _), right :: Nil), _) =>
+            case Apply(Apply(TypeApply(Apply(TypeApply(Select(Ident(_), "unionAll"), _), left :: Nil), _), right :: Nil), _) =>
                 createUnionClause(left, "unionAll", right, allTables, groupInfo)
             case Apply(Apply(TypeApply(Apply(TypeApply(Select(Ident(_), "except"), _), left :: Nil), _), right :: Nil), _) =>
                 createUnionClause(left, "except", right, allTables, groupInfo)
@@ -920,27 +932,61 @@ private[sqala] object AnalysisMacroImpl:
     def createLimitClause(using q: Quotes, c: QueryContext)(
         query: q.reflect.Term,
         n: q.reflect.Term,
+        name: "take" | "limit" | "fetch" | "takeWithTies" | "fetchWithTies" | "takePercent" | "fetchPercent" | "takePercentWithTies" | "fetchPercentWithTies",
         allTables: List[(argName: String, tableName: String)],
         groupInfo: List[GroupInfo]
     ): QueryInfo =
+        import q.reflect.*
+
         val baseInfo =
             createTree(query, allTables, groupInfo)
         
         val resultSize = n.asExprOf[Int].value match
             case Some(0 | 1) => ResultSize.ZeroOrOne
             case _ => ResultSize.Many
+
+        val sqlLimit =
+            name match
+                case "take" | "limit" | "fetch" => 
+                    SqlLimit(
+                        Some(SqlExpr.NumberLiteral(1)), 
+                        Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.RowCount, SqlFetchMode.Only))
+                    )
+                case "takeWithTies" | "fetchWithTies" =>
+                    SqlLimit(
+                        Some(SqlExpr.NumberLiteral(1)), 
+                        Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.RowCount, SqlFetchMode.WithTies))
+                    )
+                case "takePercent" | "fetchPercent" =>
+                    SqlLimit(
+                        Some(SqlExpr.NumberLiteral(1)), 
+                        Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.Percentage, SqlFetchMode.Only))
+                    )
+                case _ =>
+                    SqlLimit(
+                        Some(SqlExpr.NumberLiteral(1)), 
+                        Some(SqlFetch(SqlExpr.NumberLiteral(1), SqlFetchUnit.Percentage, SqlFetchMode.WithTies))
+                    )
+            
+        val check = name.contains("WithTies")
         
         val newQuery = baseInfo.tree match
             case s: SqlQuery.Select =>
-                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                if check && s.orderBy.isEmpty then
+                    report.warning("WITH TIES cannot be specified without ORDER BY clause.")
+                s.copy(limit = Some(sqlLimit))
             case c: SqlQuery.Cte =>
+                if check && c.query.asInstanceOf[SqlQuery.Select].orderBy.isEmpty then
+                    report.warning("WITH TIES cannot be specified without ORDER BY clause.")
                 c.copy(
                     query = 
                         c.query.asInstanceOf[SqlQuery.Select]
-                        .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        .copy(limit = Some(sqlLimit))
                     )
             case s: SqlQuery.Set =>
-                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                if check && s.orderBy.isEmpty then
+                    report.warning("WITH TIES cannot be specified without ORDER BY clause.")
+                s.copy(limit = Some(sqlLimit))
             case _ => throw MatchError(())
 
         baseInfo.copy(tree = newQuery, resultSize = resultSize)
@@ -955,15 +1001,15 @@ private[sqala] object AnalysisMacroImpl:
         
         val newQuery = baseInfo.tree match
             case s: SqlQuery.Select =>
-                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                s.copy(limit = Some(SqlLimit(Some(SqlExpr.NumberLiteral(1)), None)))
             case c: SqlQuery.Cte =>
                 c.copy(
                     query = 
                         c.query.asInstanceOf[SqlQuery.Select]
-                        .copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                        .copy(limit = Some(SqlLimit(Some(SqlExpr.NumberLiteral(1)), None)))
                     )
             case s: SqlQuery.Set =>
-                s.copy(limit = Some(SqlLimit(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(1))))
+                s.copy(limit = Some(SqlLimit(Some(SqlExpr.NumberLiteral(1)), None)))
             case _ => throw MatchError(())
         
         baseInfo.copy(tree = newQuery)

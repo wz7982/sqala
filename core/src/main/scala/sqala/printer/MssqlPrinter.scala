@@ -1,20 +1,12 @@
 package sqala.printer
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr, SqlTimeLiteralUnit}
-import sqala.ast.limit.SqlLimit
 import sqala.ast.statement.SqlStatement
 
 class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override val leftQuote: String = "["
 
     override val rightQuote: String = "]"
-
-    override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append("OFFSET ")
-        printExpr(limit.offset)
-        sqlBuilder.append(" ROWS FETCH NEXT ")
-        printExpr(limit.limit)
-        sqlBuilder.append(" ROWS ONLY")
 
     override def printCteRecursive(): Unit = {}
 

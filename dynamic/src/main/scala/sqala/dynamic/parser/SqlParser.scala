@@ -2,7 +2,7 @@ package sqala.dynamic.parser
 
 import sqala.ast.expr.*
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlSetOperator}
@@ -104,11 +104,11 @@ class SqlParser extends StandardTokenParsers:
             "BETWEEN", "IN", "LIKE", "IS",
             "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "LIMIT", "OFFSET",
             "JOIN", "OUTER", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "ON", "LATERAL",
-            "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME", "COUNT",
+            "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME",
             "INTERVAL", "EXTRACT", "YEAR", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE", "SECOND",
             "TIMESTAMP", "DATE", "TIME",
             "FILTER", "WITHIN", 
-            "ASC", "DESC", "NULLS", "FIRST", "LAST",
+            "ASC", "DESC", "NULLS", "FIRST", "LAST", "PERCENT", "WITH", "TIES",
             "ARRAY", "ONLY", "NEXT", "FETCH",
             "CURRENT", "ROW", "UNBOUNDED", "PRECEDING", "FOLLOWING",
             "ROWS", "RANGE", "GROUPS",
@@ -256,16 +256,12 @@ class SqlParser extends StandardTokenParsers:
             case f => 
                 SqlExpr.Func("COUNT", Nil, None, Nil, Nil, f)
         } |
-        ident ~ ("(" ~> opt("ALL" | "DISTINCT") ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
+        ident ~ ("(" ~> opt(quantifier) ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
             ~ opt("WITHIN" ~ "GROUP" ~ "(" ~> orderBy <~ ")")
             ~ opt("FILTER" ~ "(" ~> where <~ ")") 
         ^^ {
             case ident ~ (quantifier ~ args ~ orderBy) ~ withinGroup ~ filter =>
-                val sqlQuantifier = quantifier match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-                SqlExpr.Func(ident.toUpperCase, args, sqlQuantifier, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
+                SqlExpr.Func(ident.toUpperCase, args, quantifier, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
         }
 
     def frameBound: Parser[SqlWindowFrameBound] =
@@ -447,30 +443,22 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def setOperator: Parser[SqlSetOperator] =
-        "UNION" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Union(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Union(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Union(None)
-        } |
-        "EXCEPT" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Except(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Except(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Except(None)
-        } |
-        "INTERSECT" ~> opt("ALL" | "DISTINCT") ^^ {
-            case Some("ALL") => SqlSetOperator.Intersect(Some(SqlQuantifier.All))
-            case Some("DISTINCT") => SqlSetOperator.Intersect(Some(SqlQuantifier.Distinct))
-            case _ => SqlSetOperator.Intersect(None)
+        "UNION" ~> opt(quantifier) ^^ (SqlSetOperator.Union(_)) |
+        "EXCEPT" ~> opt(quantifier) ^^ (SqlSetOperator.Except(_)) |
+        "INTERSECT" ~> opt(quantifier) ^^ (SqlSetOperator.Intersect(_))
+
+    def quantifier: Parser[SqlQuantifier] =
+        ("ALL" | "DISTINCT") ^^ {
+            case "ALL" => SqlQuantifier.All
+            case _ => SqlQuantifier.Distinct
         }
 
     def query: Parser[SqlQuery] =
-        select |
-        values |
-        "(" ~> set <~ ")"
+        set
 
     def set: Parser[SqlQuery] =
-        query ~ rep(
-            setOperator ~ query ^^ {
+        simpleQuery ~ rep(
+            setOperator ~ simpleQuery ^^ {
                 case t ~ s => (t, s)
             }
         ) ^^ {
@@ -479,9 +467,14 @@ class SqlParser extends StandardTokenParsers:
             }
         }
 
+    def simpleQuery: Parser[SqlQuery] =
+        select |
+        values |
+        "(" ~> query <~ ")"
+
     def select: Parser[SqlQuery] =
         "SELECT" ~> 
-            opt("ALL" | "DISTINCT") ~ 
+            opt(quantifier) ~ 
             selectItems ~ 
             opt(from) ~ 
             opt(where) ~ 
@@ -491,20 +484,15 @@ class SqlParser extends StandardTokenParsers:
             opt(limit) 
         ^^ {
             case q ~ s ~ f ~ w ~ g ~ h ~ o ~ l =>
-                val quantifier = q match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-
                 SqlQuery.Select(
-                    quantifier, 
+                    q, 
                     s, 
                     f.getOrElse(Nil), 
                     w, 
                     g, 
                     h, 
                     o.getOrElse(Nil), 
-                    l
+                    l.flatten
                 )
         }
 
@@ -579,13 +567,9 @@ class SqlParser extends StandardTokenParsers:
         expr ^^ (g => SqlGroupingItem.Expr(g))
 
     def groupBy: Parser[SqlGroupBy] =
-        "GROUP" ~ "BY" ~> opt("ALL" | "DISTINCT") ~ rep1sep(groupingItem, ",") ^^ {
+        "GROUP" ~ "BY" ~> opt(quantifier) ~ rep1sep(groupingItem, ",") ^^ {
             case q ~ g =>
-                val quantifier = q match
-                    case Some("ALL") => Some(SqlQuantifier.All)
-                    case Some("DISTINCT") => Some(SqlQuantifier.Distinct)
-                    case _ => None
-                SqlGroupBy(g, quantifier)
+                SqlGroupBy(g, q)
         }
 
     def having: Parser[SqlExpr] =
@@ -594,29 +578,55 @@ class SqlParser extends StandardTokenParsers:
     def orderBy: Parser[List[SqlOrderingItem]] =
         "ORDER" ~> "BY" ~> rep1sep(order, ",")
 
-    def limit: Parser[SqlLimit] =
-        def create(limit: Option[String], offset: Option[String]): SqlLimit =
-            val limitValue = limit
-                .map(BigDecimal(_).setScale(0, BigDecimal.RoundingMode.HALF_UP).toLong)
-                .getOrElse(Long.MaxValue)
+    def limit: Parser[Option[SqlLimit]] =
+        def create(
+            limit: Option[String], 
+            offset: Option[String],
+            percent: Boolean = false,
+            withTies: Boolean = false
+        ): Option[SqlLimit] =
+            val fetchValue = limit
+                .map { v =>
+                    val unit = 
+                        if percent then SqlFetchUnit.Percentage
+                        else SqlFetchUnit.RowCount
+                    val mode =
+                        if withTies then SqlFetchMode.WithTies
+                        else SqlFetchMode.Only
+                    SqlFetch(SqlExpr.NumberLiteral(BigDecimal(v)), unit, mode)
+                }
             val offsetValue = offset
-                .map(BigDecimal(_).setScale(0, BigDecimal.RoundingMode.HALF_UP).toLong)
-                .getOrElse(0L)
-            SqlLimit(
-                SqlExpr.NumberLiteral(limitValue),
-                SqlExpr.NumberLiteral(offsetValue)
-            )
-        "LIMIT" ~ numericLit ~ opt(("OFFSET" | ",") ~ numericLit) ^^ {
-            case _ ~ limit ~ Some("OFFSET" ~ offset) =>
+                .map(v => SqlExpr.NumberLiteral(BigDecimal(v)))
+            if fetchValue.isEmpty && offsetValue.isEmpty then None
+            else
+                Some(SqlLimit(offsetValue, fetchValue))
+        "LIMIT" ~> numericLit ~ opt(("OFFSET" | ",") ~ numericLit) ^^ {
+            case limit ~ Some("OFFSET" ~ offset) => 
                 create(Some(limit), Some(offset))
-            case _ ~ offset ~ Some("," ~ limit) =>
+            case offset ~ Some("," ~ limit) =>
                 create(Some(limit), Some(offset))
-            case _ ~ limit ~ _ =>
+            case limit ~ _ =>
                 create(Some(limit), None)
         } |
-        "OFFSET" ~ numericLit ~ ("ROW" | "ROWS") ~ "FETCH" ~ ("FIRST" | "NEXT") ~ numericLit ~ ("ROW" | "ROWS") ~ "ONLY" ^^ {
-            case _ ~ offset ~ _ ~ _ ~ _ ~ limit ~ _ ~ _ =>
-                create(Some(limit), Some(offset))
+        opt("OFFSET" ~> numericLit <~ ("ROW" | "ROWS")) ~
+        opt(
+            "FETCH" ~ ("FIRST" | "NEXT") ~> numericLit ~ 
+            opt("PERCENT") ~ ("ROW" | "ROWS") ~ ("ONLY" | ("WITH" ~ "TIES"))
+        ) ^^ {
+            case offset ~ fetch =>
+                val fetchInfo = fetch.map {
+                    case limit ~ percent ~ _ ~ mode =>
+                        val withTies = mode match
+                            case _ ~ _ => true
+                            case _ => false
+                        (limit, percent.isDefined, withTies)
+                }
+                create(
+                    fetchInfo.map(_._1),
+                    offset,
+                    fetchInfo.map(_._2).getOrElse(false),
+                    fetchInfo.map(_._3).getOrElse(false)
+                )
         }
 
     def parseExpr(text: String): SqlExpr =
