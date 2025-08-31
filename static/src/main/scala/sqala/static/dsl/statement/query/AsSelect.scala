@@ -107,7 +107,7 @@ object AsMap:
         def offset(x: Expr[T]): Int = 1
 
         def selectItems(x: Expr[T], cursor: Int): List[SqlSelectItem.Expr] =
-            SqlSelectItem.Expr(x.asSqlExpr, Some(s"c${cursor}")) :: Nil
+            SqlSelectItem.Expr(x.asSqlExpr, Some(s"c$cursor")) :: Nil
 
     given value[T: AsSqlExpr as a]: Aux[T, Expr[T]] = new AsMap[T]:
         type R = Expr[T]
@@ -117,7 +117,7 @@ object AsMap:
         def offset(x: T): Int = 1
 
         def selectItems(x: T, cursor: Int): List[SqlSelectItem.Expr] =
-            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
+            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c$cursor")) :: Nil
 
     given scalarQuery[T: AsSqlExpr, Q <: Query[Expr[T]]]: Aux[Q, Expr[T]] = new AsMap[Q]:
         type R = Expr[T]
@@ -127,7 +127,7 @@ object AsMap:
         def offset(x: Q): Int = 1
 
         def selectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
-            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c${cursor}")) :: Nil
+            SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c$cursor")) :: Nil
 
     given tuple[H, T <: Tuple](using 
         sh: AsMap[H],
