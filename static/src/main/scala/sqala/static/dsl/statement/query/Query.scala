@@ -26,9 +26,9 @@ object Query:
         def sql(dialect: Dialect): (String, Array[Any]) =
             queryToString(query.tree, dialect, true)
 
-        infix def union[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def union[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Union(None), 
@@ -36,9 +36,9 @@ object Query:
                 )
             )(using query.context)
 
-        infix def unionAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def unionAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Union(Some(SqlQuantifier.All)), 
@@ -46,9 +46,9 @@ object Query:
                 )
             )(using query.context)
 
-        infix def except[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def except[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Except(None), 
@@ -56,9 +56,9 @@ object Query:
                 )
             )(using query.context)
 
-        infix def exceptAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def exceptAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Except(Some(SqlQuantifier.All)), 
@@ -66,9 +66,9 @@ object Query:
                 )
             )(using query.context)
 
-        infix def intersect[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def intersect[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Intersect(None), 
@@ -76,9 +76,9 @@ object Query:
                 )
             )(using query.context)
 
-        infix def intersectAll[R](unionQuery: Query[R])(using u: Union[T, R]): Query[u.R] =
+        infix def intersectAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
-                u.unionQueryItems(query.params),
+                u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
                     query.tree, 
                     SqlSetOperator.Intersect(Some(SqlQuantifier.All)), 
@@ -564,6 +564,24 @@ class UnionQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Set
 )(using QueryContext) extends Query[T](params, tree)
+
+object UnionQuery:
+    extension [T](query: UnionQuery[T])
+        def sortBy[S: AsSort as s](f: T => S): UnionQuery[T] =
+            val sort = s.asSort(f(query.params))
+            UnionQuery(
+                query.params, 
+                query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            )(using query.context)
+
+        def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
+            sortBy(f)
+
+        def sortByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
+            if test then sortBy(f) else query
+
+        def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
+            if test then sortBy(f) else query
 
 final class JoinPart[T](
     private[sqala] val params: T,

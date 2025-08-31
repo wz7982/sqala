@@ -1,12 +1,12 @@
 package sqala.static.dsl
 
+import sqala.ast.expr.SqlExpr
 import sqala.metadata.{AsSqlExpr, DateTime, Interval, Number}
 
 import java.time.LocalDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.*
-import scala.deriving.Mirror
 import scala.util.NotGiven
 
 @implicitNotFound("Types ${A} and ${B} be cannot compared.")
@@ -130,7 +130,9 @@ object Return:
 trait Union[A, B]:
     type R
 
-    def unionQueryItems(x: A): R
+    def offset: Int
+
+    def unionQueryItems(x: A, cursor: Int): R
 
 object Union:
     type Aux[A, B, O] = Union[A, B]:
@@ -142,18 +144,10 @@ object Union:
         new Union[Expr[A], Expr[B]]:
             type R = Expr[r.R]
 
-            def unionQueryItems(x: Expr[A]): R =
-                Expr(x.asSqlExpr)
+            def offset: Int = 1
 
-    given tableUnion[A, B](using
-        ma: Mirror.ProductOf[A],
-        mb: Mirror.ProductOf[B],
-        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
-    ): Aux[Table[A], Table[B], Table[A]] =
-        new Union[Table[A], Table[B]]:
-            type R = Table[A]
-
-            def unionQueryItems(x: Table[A]): R = x
+            def unionQueryItems(x: Expr[A], cursor: Int): R =
+                Expr(SqlExpr.Column(None, s"c$cursor"))
 
     given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using
         h: Union[LH, RH],
@@ -163,8 +157,11 @@ object Union:
         new Union[LH *: LT, RH *: RT]:
             type R = h.R *: tt.R
 
-            def unionQueryItems(x: LH *: LT): R =
-                h.unionQueryItems(x.head) *: tt.toTuple(t.unionQueryItems(x.tail))
+            def offset: Int = h.offset + t.offset
+
+            def unionQueryItems(x: LH *: LT, cursor: Int): R =
+                h.unionQueryItems(x.head, cursor) *: 
+                    tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset))
 
     given tuple1Union[LH, RH](using
         h: Union[LH, RH]
@@ -172,8 +169,10 @@ object Union:
         new Union[LH *: EmptyTuple, RH *: EmptyTuple]:
             type R = h.R *: EmptyTuple
 
-            def unionQueryItems(x: LH *: EmptyTuple): R =
-                h.unionQueryItems(x.head) *: EmptyTuple
+            def offset: Int = h.offset
+
+            def unionQueryItems(x: LH *: EmptyTuple, cursor: Int): R =
+                h.unionQueryItems(x.head, cursor) *: EmptyTuple
 
     given namedTupleUnion[LN <: Tuple, LV <: Tuple, RN <: Tuple, RV <: Tuple](using
         u: Union[LV, RV],
@@ -182,8 +181,10 @@ object Union:
         new Union[NamedTuple[LN, LV], NamedTuple[RN, RV]]:
             type R = NamedTuple[LN, t.R]
 
-            def unionQueryItems(x: NamedTuple[LN, LV]): R =
-                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple)))
+            def offset: Int = u.offset
+
+            def unionQueryItems(x: NamedTuple[LN, LV], cursor: Int): R =
+                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
 
     given namedTupleUnionTuple[LN <: Tuple, LV <: Tuple, RV <: Tuple](using
         u: Union[LV, RV],
@@ -192,5 +193,7 @@ object Union:
         new Union[NamedTuple[LN, LV], RV]:
             type R = NamedTuple[LN, t.R]
 
-            def unionQueryItems(x: NamedTuple[LN, LV]): R =
-                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple)))
+            def offset: Int = u.offset
+
+            def unionQueryItems(x: NamedTuple[LN, LV], cursor: Int): R =
+                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
