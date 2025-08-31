@@ -40,9 +40,21 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
 
     override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         expr.operator match
+            case SqlBinaryOperator.EuclideanDistance =>
+                val func = 
+                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil)
+                printExpr(func)
+            case SqlBinaryOperator.CosineDistance =>
+                val func =
+                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil)
+                printExpr(func)
+            case SqlBinaryOperator.DotDistance =>
+                val func =
+                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil)
+                printExpr(func)
             case SqlBinaryOperator.Concat =>
-                val concat = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
-                printExpr(concat)
+                val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+                printExpr(func)
             case _ =>
                 super.printBinaryExpr(expr) 
 
@@ -51,6 +63,11 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(expr.value)
         sqlBuilder.append("' ")
         sqlBuilder.append(expr.unit.unit)
+
+    override def printVectorExpr(expr: SqlExpr.Vector): Unit =
+        sqlBuilder.append("STRING_TO_VECTOR(")
+        super.printVectorExpr(expr)
+        sqlBuilder.append(")")
 
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
         if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then

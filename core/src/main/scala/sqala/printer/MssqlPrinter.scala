@@ -67,8 +67,20 @@ class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(left)
             sqlBuilder.append(")")
         case SqlExpr.Binary(left, SqlBinaryOperator.Concat, right) =>
-            val concat = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
-            printExpr(concat)
+            val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+            printExpr(func)
+        case SqlExpr.Binary(left, SqlBinaryOperator.EuclideanDistance, right) =>
+            val func = 
+                SqlExpr.Func("VECTOR_DISTANCE", SqlExpr.StringLiteral("euclidean") :: expr.left :: expr.right :: Nil)
+            printExpr(func)
+        case SqlExpr.Binary(left, SqlBinaryOperator.CosineDistance, right) =>
+            val func = 
+                SqlExpr.Func("VECTOR_DISTANCE", SqlExpr.StringLiteral("cosine") :: expr.left :: expr.right :: Nil)
+            printExpr(func)
+        case SqlExpr.Binary(left, SqlBinaryOperator.DotDistance, right) =>
+            val func = 
+                SqlExpr.Func("VECTOR_DISTANCE", SqlExpr.StringLiteral("dot") :: expr.left :: expr.right :: Nil)
+            printExpr(func)
         case _ => 
             super.printBinaryExpr(expr)
 

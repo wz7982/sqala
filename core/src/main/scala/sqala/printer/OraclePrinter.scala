@@ -1,8 +1,8 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCastType, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr}
 import sqala.ast.statement.SqlStatement
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlTable, SqlTableAlias}
 
 class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printCteRecursive(): Unit = {}
@@ -51,6 +51,23 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+        expr.operator match
+            case SqlBinaryOperator.EuclideanDistance =>
+                val func = 
+                    SqlExpr.Func("L2_DISTANCE", expr.left :: expr.right :: Nil)
+                printExpr(func)
+            case SqlBinaryOperator.CosineDistance =>
+                val func =
+                    SqlExpr.Func("COSINE_DISTANCE", expr.left :: expr.right :: Nil)
+                printExpr(func)
+            case SqlBinaryOperator.DotDistance =>
+                val func =
+                    SqlExpr.Func("INNER_PRODUCT", expr.left :: expr.right :: Nil)
+                printExpr(SqlExpr.Binary(func, SqlBinaryOperator.Times, SqlExpr.NumberLiteral(-1)))
+            case _ =>
+                super.printBinaryExpr(expr) 
+
     override def printFuncExpr(expr: SqlExpr.Func): Unit =
         if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
             sqlBuilder.append("LISTAGG")
@@ -80,6 +97,13 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         sqlBuilder.append(expr.value)
         sqlBuilder.append("' ")
         sqlBuilder.append(expr.unit.unit)
+
+    override def printTableAlias(alias: SqlTableAlias): Unit =
+        sqlBuilder.append(s" $leftQuote${alias.tableAlias}$rightQuote")
+        if alias.columnAlias.nonEmpty then
+            sqlBuilder.append("(")
+            printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            sqlBuilder.append(")")
 
     override def printTable(table: SqlTable): Unit =
         table match

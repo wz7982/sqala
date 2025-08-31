@@ -40,3 +40,12 @@ object Json:
     def apply(value: String): Json = value
 
 opaque type Interval = Long
+
+case class Vector(items: List[Float]):
+    override def toString =
+        items.mkString("[", ", ", "]")
+
+object Vector:
+    def apply(string: String): Vector =
+        val items = string.drop(1).dropRight(1).split(",")
+        new Vector(items.toList.map(i => i.trim.toFloat))
