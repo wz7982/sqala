@@ -13,6 +13,7 @@ enum SqlExpr:
     case TimeLiteral(unit: SqlTimeLiteralUnit, time: String)
     case Tuple(items: List[SqlExpr])
     case Array(items: List[SqlExpr])
+    case Vector(items: List[Float])
     case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)

@@ -1337,7 +1337,8 @@ private[sqala] object AnalysisMacroImpl:
         List(
             "==", "!=", "===", "<>", ">", ">=", "<", "<=", "&&", "||",
             "+", "-", "*", "/", "%", "->", "->>", "++",
-            "like", "contains", "startsWith", "endsWith"
+            "like", "contains", "startsWith", "endsWith",
+            "<->", "<=>", "<#>"
         )
 
     def unaryOperators: List[String] =
@@ -1863,6 +1864,12 @@ private[sqala] object AnalysisMacroImpl:
                     SqlExpr.Binary(leftExpr, SqlBinaryOperator.Like, rightExpr)
                 case "++" =>
                     SqlExpr.Binary(leftExpr, SqlBinaryOperator.Concat, rightExpr)
+                case "<->" =>
+                    SqlExpr.Binary(leftExpr, SqlBinaryOperator.EuclideanDistance, rightExpr)
+                case "<=>" =>
+                    SqlExpr.Binary(leftExpr, SqlBinaryOperator.CosineDistance, rightExpr)
+                case "<#>" =>
+                    SqlExpr.Binary(leftExpr, SqlBinaryOperator.DotDistance, rightExpr)
 
         ExprInfo(
             expr = expr,

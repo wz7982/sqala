@@ -2,7 +2,7 @@ package sqala.static.dsl
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
-import sqala.metadata.{AsSqlExpr, DateTime, Json, Number}
+import sqala.metadata.{AsSqlExpr, DateTime, Json, Number, Vector}
 
 import java.time.LocalDateTime
 import scala.annotation.targetName
@@ -341,6 +341,90 @@ extension [T: AsExpr as at](self: T)
                 path match
                     case p: Int => SqlExpr.NumberLiteral(p)
                     case p: String => SqlExpr.StringLiteral(p)
+            )
+        )
+
+    @targetName("euclideanDistance")
+    def <->[R](that: R)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        ar: AsExpr[R],
+        rr: ar.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.EuclideanDistance, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    @targetName("euclideanDistance")
+    def <->(that: String)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.EuclideanDistance, 
+                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
+            )
+        )
+
+    @targetName("cosineDistance")
+    def <=>[R](that: R)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        ar: AsExpr[R],
+        rr: ar.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.CosineDistance, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    @targetName("cosineDistance")
+    def <=>(that: String)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.CosineDistance, 
+                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
+            )
+        )
+
+    @targetName("dotDistance")
+    def <#>[R](that: R)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        ar: AsExpr[R],
+        rr: ar.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.DotDistance, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    @targetName("dotDistance")
+    def <#>(that: String)(using
+        rt: at.R <:< (Vector | Option[Vector]),
+        qc: QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.DotDistance, 
+                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
             )
         )
 
