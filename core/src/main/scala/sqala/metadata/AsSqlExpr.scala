@@ -53,7 +53,7 @@ object AsSqlExpr:
         def asSqlExpr(x: Json): SqlExpr = SqlExpr.StringLiteral(x.toString)
 
     given vectorAsSqlExpr: AsSqlExpr[Vector] with
-        def asSqlExpr(x: Vector): SqlExpr = SqlExpr.Vector(x.items)
+        def asSqlExpr(x: Vector): SqlExpr = SqlExpr.Vector(SqlExpr.StringLiteral(x.toString))
 
     given optionAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Option[T]] with
         def asSqlExpr(x: Option[T]): SqlExpr = x match

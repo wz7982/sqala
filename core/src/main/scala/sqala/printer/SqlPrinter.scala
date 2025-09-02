@@ -295,12 +295,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("]")
 
     def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        val string = expr.items.mkString("[", ", ", "]")
-        if enableJdbcPrepare then
-            sqlBuilder.append("?")
-            args.addOne(string)
-        else
-            sqlBuilder.append(s"'$string'")
+        printExpr(expr.expr)
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
         expr.operator match

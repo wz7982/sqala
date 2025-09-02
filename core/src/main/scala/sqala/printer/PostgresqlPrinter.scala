@@ -54,5 +54,5 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
                 super.printType(`type`)
 
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        super.printVectorExpr(expr)
+        printExpr(expr.expr)
         sqlBuilder.append(" :: VECTOR")

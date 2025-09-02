@@ -348,7 +348,7 @@ extension [T: AsExpr as at](self: T)
     def <->[R](that: R)(using
         rt: at.R <:< (Vector | Option[Vector]),
         ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
+        rr: ar.R <:< (Vector | Option[Vector] | String | Option[String]),
         qc: QueryContext
     ): Expr[Option[Float]] =
         Expr(
@@ -356,19 +356,6 @@ extension [T: AsExpr as at](self: T)
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.EuclideanDistance, 
                 ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    @targetName("euclideanDistance")
-    def <->(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.EuclideanDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
             )
         )
 
@@ -376,7 +363,7 @@ extension [T: AsExpr as at](self: T)
     def <=>[R](that: R)(using
         rt: at.R <:< (Vector | Option[Vector]),
         ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
+        rr: ar.R <:< (Vector | Option[Vector] | String | Option[String]),
         qc: QueryContext
     ): Expr[Option[Float]] =
         Expr(
@@ -384,19 +371,6 @@ extension [T: AsExpr as at](self: T)
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.CosineDistance, 
                 ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    @targetName("cosineDistance")
-    def <=>(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.CosineDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
             )
         )
 
@@ -404,7 +378,7 @@ extension [T: AsExpr as at](self: T)
     def <#>[R](that: R)(using
         rt: at.R <:< (Vector | Option[Vector]),
         ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
+        rr: ar.R <:< (Vector | Option[Vector] | String | Option[String]),
         qc: QueryContext
     ): Expr[Option[Float]] =
         Expr(
@@ -412,19 +386,6 @@ extension [T: AsExpr as at](self: T)
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.DotDistance, 
                 ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    @targetName("dotDistance")
-    def <#>(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.DotDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
             )
         )
 
