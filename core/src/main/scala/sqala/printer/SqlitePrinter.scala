@@ -62,15 +62,3 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
                 printList(expr.orderBy)(printOrderingItem)
             sqlBuilder.append(")")
         else super.printFuncExpr(expr)
-
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "TEXT"
-            case SqlCastType.Int4 => "INTEGER"
-            case SqlCastType.Int8 => "INTEGER"
-            case SqlCastType.Float4 => "REAL"
-            case SqlCastType.Float8 => "REAL"
-            case SqlCastType.DateTime => "TEXT"
-            case SqlCastType.Json => "TEXT"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)

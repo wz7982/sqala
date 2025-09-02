@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr, SqlTimeLiteralUnit}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlTimeLiteralUnit, SqlType}
 import sqala.ast.statement.SqlStatement
 
 class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
@@ -84,17 +84,12 @@ class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(cast)
         sqlBuilder.append(")")
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INT"
-            case SqlCastType.Int8 => "BIGINT"
-            case SqlCastType.Float4 => "FLOAT"
-            case SqlCastType.Float8 => "REAL"
-            case SqlCastType.DateTime => "DATETIME2"
-            case SqlCastType.Json => "VARCHAR"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Timestamp => 
+                sqlBuilder.append("DATETIME2")
+            case _ =>
+                super.printType(`type`)
 
     override def printExtractExpr(expr: SqlExpr.Extract): Unit =
         sqlBuilder.append("DATEPART(")

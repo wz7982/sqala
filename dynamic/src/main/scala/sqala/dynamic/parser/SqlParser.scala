@@ -220,7 +220,7 @@ class SqlParser extends StandardTokenParsers:
             case expr ~ types =>
                 types.foldLeft(expr) {
                     case (acc, castType) =>
-                        SqlExpr.Cast(acc, SqlCastType.Custom(castType.toUpperCase))
+                        SqlExpr.Cast(acc, SqlType.Custom(castType.toUpperCase))
                 }
         }
 
@@ -329,7 +329,7 @@ class SqlParser extends StandardTokenParsers:
     def cast: Parser[SqlExpr] =
         "CAST" ~> ("(" ~> expr ~ "AS" ~ ident <~ ")") ^^ {
             case expr ~ _ ~ castType => 
-                SqlExpr.Cast(expr, SqlCastType.Custom(castType.toUpperCase))
+                SqlExpr.Cast(expr, SqlType.Custom(castType.toUpperCase))
         }
 
     def caseWhen: Parser[SqlExpr] =

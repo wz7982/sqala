@@ -29,7 +29,7 @@ enum SqlExpr:
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
     case Match(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
-    case Cast(expr: SqlExpr, castType: SqlCastType)
+    case Cast(expr: SqlExpr, castType: SqlType)
     case Window(
         expr: SqlExpr, 
         partitionBy: List[SqlExpr], 

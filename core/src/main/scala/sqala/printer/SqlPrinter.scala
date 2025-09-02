@@ -433,10 +433,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
         sqlBuilder.append(" AS ")
-        printCastType(expr.castType)
+        printType(expr.castType)
         sqlBuilder.append(")")
 
-    def printCastType(castType: SqlCastType): Unit
+    def printType(`type`: SqlType): Unit =
+        sqlBuilder.append(`type`.`type`)
 
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)

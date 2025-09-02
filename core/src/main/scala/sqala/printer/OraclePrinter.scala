@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 
@@ -80,17 +80,14 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
                 sqlBuilder.append(")")
         else super.printFuncExpr(expr)
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INTEGER"
-            case SqlCastType.Int8 => "NUMBER"
-            case SqlCastType.Float4 => "FLOAT"
-            case SqlCastType.Float8 => "BINARY_DOUBLE"
-            case SqlCastType.DateTime => "TIMESTAMP"
-            case SqlCastType.Json => "JSON"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(None) => 
+                sqlBuilder.append("VARCHAR(4000)")
+            case SqlType.Long =>
+                sqlBuilder.append("INT")
+            case _ =>
+                super.printType(`type`)
 
     override def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" $leftQuote${alias.tableAlias}$rightQuote")

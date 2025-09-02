@@ -87,17 +87,16 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             sqlBuilder.append("ROW")
             printExpr(v)
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "CHAR"
-            case SqlCastType.Int4 => "SIGNED"
-            case SqlCastType.Int8 => "SIGNED"
-            case SqlCastType.Float4 => "FLOAT"
-            case SqlCastType.Float8 => "DOUBLE"
-            case SqlCastType.DateTime => "DATETIME"
-            case SqlCastType.Json => "JSON"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(maxLength) =>
+                sqlBuilder.append(s"CHAR${maxLength.map(l => s"($l)").getOrElse("")}")
+            case SqlType.Int => 
+                sqlBuilder.append("SIGNED")
+            case SqlType.Long => 
+                sqlBuilder.append("SIGNED")
+            case _ =>
+                super.printType(`type`)
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         val order = orderBy.ordering match

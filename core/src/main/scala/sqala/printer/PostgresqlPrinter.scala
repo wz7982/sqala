@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCastType, SqlExpr}
+import sqala.ast.expr.{SqlExpr, SqlType}
 import sqala.ast.limit.*
 import sqala.ast.statement.SqlStatement
 
@@ -46,17 +46,12 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
             sqlBuilder.append("EXCLUDED.")
             printExpr(u)
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INT4"
-            case SqlCastType.Int8 => "INT8"
-            case SqlCastType.Float4 => "FLOAT4"
-            case SqlCastType.Float8 => "FLOAT8"
-            case SqlCastType.DateTime => "TIMESTAMP"
-            case SqlCastType.Json => "JSONB"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Json => 
+                sqlBuilder.append("JSONB")
+            case _ =>
+                super.printType(`type`)
 
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         super.printVectorExpr(expr)

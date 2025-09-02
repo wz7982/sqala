@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlCastType
+import sqala.ast.expr.SqlType
 import sqala.metadata.{AsSqlExpr, Json, Number}
 
 import java.time.LocalDateTime
@@ -8,26 +8,29 @@ import scala.annotation.implicitNotFound
 
 @implicitNotFound("Cannot cast type ${T} to ${R}.")
 trait Cast[T, R]:
-    def castType: SqlCastType
+    def castType: SqlType
 
 object Cast:
     given castString[T: AsSqlExpr]: Cast[T, String] with
-        def castType: SqlCastType = SqlCastType.Varchar
+        def castType: SqlType = SqlType.Varchar(None)
 
     given castInt[T: Number]: Cast[T, Int] with
-        def castType: SqlCastType = SqlCastType.Int4
+        def castType: SqlType = SqlType.Int
 
     given castLong[T: Number]: Cast[T, Long] with
-        def castType: SqlCastType = SqlCastType.Int8
+        def castType: SqlType = SqlType.Long
 
     given castFloat[T: Number]: Cast[T, Float] with
-        def castType: SqlCastType = SqlCastType.Float4
+        def castType: SqlType = SqlType.Float
 
     given castDouble[T: Number]: Cast[T, Double] with
-        def castType: SqlCastType = SqlCastType.Float8
+        def castType: SqlType = SqlType.Double
+
+    given castDecimal[T: Number]: Cast[T, Double] with
+        def castType: SqlType = SqlType.Decimal(None)
 
     given castJson[T <: String | Option[String]]: Cast[T, Json] with
-        def castType: SqlCastType = SqlCastType.Json
+        def castType: SqlType = SqlType.Json
 
-    given castDate[T <: String | Option[String]]: Cast[T, LocalDateTime] with
-        def castType: SqlCastType = SqlCastType.DateTime
+    given castTimestamp[T <: String | Option[String]]: Cast[T, LocalDateTime] with
+        def castType: SqlType = SqlType.Timestamp

@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCastType, SqlExpr}
+import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 
 class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
@@ -63,15 +63,3 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
                 printList(expr.orderBy)(printOrderingItem)
                 sqlBuilder.append(")")
         else super.printFuncExpr(expr)
-
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INT4"
-            case SqlCastType.Int8 => "INT8"
-            case SqlCastType.Float4 => "FLOAT4"
-            case SqlCastType.Float8 => "FLOAT8"
-            case SqlCastType.DateTime => "TIMESTAMP"
-            case SqlCastType.Json => "JSON"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
