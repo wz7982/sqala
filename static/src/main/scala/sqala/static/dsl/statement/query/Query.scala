@@ -483,6 +483,76 @@ object JoinQuery:
                 true
             )
 
+        inline def crossJoin[J](using 
+            tt: ToTuple[T],
+            s: AsSelect[Append[tt.R, Table[J]]]
+        ): JoinQuery[Append[tt.R, Table[J]]] =
+            val joinTableName = TableMacro.tableName[J]
+            query.context.tableIndex += 1
+            val joinAliasName = s"t${query.context.tableIndex}"
+            val joinMetaData = TableMacro.tableMetaData[J]
+            val joinTable = Table[J](joinTableName, joinAliasName, joinMetaData)
+            val params = tt.toTuple(query.params) :* joinTable
+            val sqlTable: SqlTable.Join = SqlTable.Join(
+                query.tree.from.head,
+                SqlJoinType.Cross,
+                SqlTable.Standard(joinTableName, Some(SqlTableAlias(joinAliasName))),
+                None,
+                None
+            )
+            val tree = SqlQuery.Select(
+                select = s.selectItems(params, 1),
+                from = sqlTable :: Nil
+            )
+            JoinQuery(params, tree)(using query.context)
+
+        inline def crossJoin[N <: Tuple, V <: Tuple](
+            joinQuery: Query[NamedTuple[N, V]]
+        )(using 
+            tt: ToTuple[T],
+            s: AsSelect[Append[tt.R, SubQuery[N, V]]],
+            sq: AsSubQuery[V]
+        ): JoinQuery[Append[tt.R, SubQuery[N, V]]] =
+            given QueryContext = query.context
+            val rightTable = SubQuery[N, V](joinQuery.params)
+            val params = tt.toTuple(query.params) :* rightTable
+            val sqlTable: SqlTable.Join = SqlTable.Join(
+                query.tree.from.head,
+                SqlJoinType.Cross,
+                SqlTable.SubQuery(joinQuery.tree, false, Some(SqlTableAlias(rightTable.__alias__))),
+                None,
+                None
+            )
+            val tree = SqlQuery.Select(
+                select = s.selectItems(params, 1),
+                from = sqlTable :: Nil
+            )
+            JoinQuery(params, tree)
+
+        inline def crossJoinLateral[N <: Tuple, V <: Tuple](
+            joinQuery: T => Query[NamedTuple[N, V]]
+        )(using 
+            tt: ToTuple[T],
+            s: AsSelect[Append[tt.R, SubQuery[N, V]]],
+            sq: AsSubQuery[V]
+        ): JoinQuery[Append[tt.R, SubQuery[N, V]]] =
+            given QueryContext = query.context
+            val joinSubQuery = joinQuery(query.params)
+            val rightTable = SubQuery[N, V](joinSubQuery.params)
+            val params = tt.toTuple(query.params) :* rightTable
+            val sqlTable: SqlTable.Join = SqlTable.Join(
+                query.tree.from.head,
+                SqlJoinType.Cross,
+                SqlTable.SubQuery(joinSubQuery.tree, true, Some(SqlTableAlias(rightTable.__alias__))),
+                None,
+                None
+            )
+            val tree = SqlQuery.Select(
+                select = s.selectItems(params, 1),
+                from = sqlTable :: Nil
+            )
+            JoinQuery(params, tree)
+
         inline def leftJoin[J](using 
             o: ToOption[Table[J]], 
             tt: ToTuple[T],
