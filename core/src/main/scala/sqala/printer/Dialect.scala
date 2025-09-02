@@ -33,12 +33,6 @@ object MssqlDialect extends Dialect:
 
 type MssqlDialect = MssqlDialect.type
 
-object Db2Dialect extends Dialect:
-    def printer(enableJdbcPrepare: Boolean): SqlPrinter =
-        new Db2Printer(enableJdbcPrepare)
-
-type Db2Dialect = Db2Dialect.type
-
 object H2Dialect extends Dialect:
     def printer(enableJdbcPrepare: Boolean): SqlPrinter =
         new H2Printer(enableJdbcPrepare)
