@@ -100,7 +100,6 @@ private[sqala] object AnalysisMacroImpl:
                 case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
                 case '[MssqlDialect.type] => Some(MssqlDialect)
-                case '[Db2Dialect.type] => Some(Db2Dialect)
                 case _ => None
 
             for 
@@ -154,7 +153,6 @@ private[sqala] object AnalysisMacroImpl:
                 case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
                 case '[MssqlDialect.type] => Some(MssqlDialect)
-                case '[Db2Dialect.type] => Some(Db2Dialect)
                 case _ => None
                 
             for 
@@ -199,7 +197,6 @@ private[sqala] object AnalysisMacroImpl:
                 case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
                 case '[MssqlDialect.type] => Some(MssqlDialect)
-                case '[Db2Dialect.type] => Some(Db2Dialect)
                 case _ => None
                 
             for 
@@ -256,7 +253,6 @@ private[sqala] object AnalysisMacroImpl:
                 case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
                 case '[MssqlDialect.type] => Some(MssqlDialect)
-                case '[Db2Dialect.type] => Some(Db2Dialect)
                 case _ => None
                 
             for 
@@ -335,7 +331,6 @@ private[sqala] object AnalysisMacroImpl:
                 case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
                 case '[MssqlDialect.type] => Some(MssqlDialect)
-                case '[Db2Dialect.type] => Some(Db2Dialect)
                 case _ => None
                 
             for 
