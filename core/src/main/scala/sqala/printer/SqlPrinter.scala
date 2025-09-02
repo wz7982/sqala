@@ -215,6 +215,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
         case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
         case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
+        case i: SqlExpr.IntervalLiteral => printIntervalLiteralExpr(i)
         case v: SqlExpr.Tuple => printTupleExpr(v)
         case a: SqlExpr.Array => printArrayExpr(a)
         case v: SqlExpr.Vector => printVectorExpr(v)
@@ -229,7 +230,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case w: SqlExpr.Window => printWindowExpr(w)
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
-        case i: SqlExpr.Interval => printIntervalExpr(i)
         case e: SqlExpr.Extract => printExtractExpr(e)
         case c: SqlExpr.Custom => printCustomExpr(c)
 
@@ -271,6 +271,18 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(expr.unit.unit)
             sqlBuilder.append(" ")
             sqlBuilder.append(s"'${expr.time}'")
+
+    def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
+        sqlBuilder.append("INTERVAL '")
+        sqlBuilder.append(expr.value)
+        sqlBuilder.append("' ")
+        expr.field match
+            case SqlIntervalField.To(s, e) =>
+                sqlBuilder.append(s.unit)
+                sqlBuilder.append(" TO ")
+                sqlBuilder.append(e.unit)
+            case SqlIntervalField.Single(u) =>
+                sqlBuilder.append(u.unit)
 
     def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
@@ -471,8 +483,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
-
-    def printIntervalExpr(expr: SqlExpr.Interval): Unit
 
     def printExtractExpr(expr: SqlExpr.Extract): Unit =
         sqlBuilder.append("EXTRACT(")

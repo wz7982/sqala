@@ -1620,13 +1620,15 @@ private[sqala] object AnalysisMacroImpl:
         val unit = op match
             case "year" => SqlTimeUnit.Year
             case "month" => SqlTimeUnit.Month
-            case "week" => SqlTimeUnit.Week
             case "day" => SqlTimeUnit.Day
             case "hour" => SqlTimeUnit.Hour
             case "minute" => SqlTimeUnit.Minute
             case "second" => SqlTimeUnit.Second
         ExprInfo(
-            expr = SqlExpr.Interval(term.asExprOf[Double].value.getOrElse(0), unit),
+            expr = SqlExpr.IntervalLiteral(
+                term.asExprOf[Double].value.getOrElse(0).toString, 
+                SqlIntervalField.Single(unit)
+            ),
             hasAgg = false,
             isAgg = false,
             hasWindow = false,
@@ -1645,7 +1647,6 @@ private[sqala] object AnalysisMacroImpl:
         val unit = op match
             case "year" => SqlTimeUnit.Year
             case "month" => SqlTimeUnit.Month
-            case "week" => SqlTimeUnit.Week
             case "day" => SqlTimeUnit.Day
             case "hour" => SqlTimeUnit.Hour
             case "minute" => SqlTimeUnit.Minute

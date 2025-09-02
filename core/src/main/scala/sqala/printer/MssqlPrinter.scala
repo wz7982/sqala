@@ -55,17 +55,6 @@ class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         sqlBuilder.append(")")
 
     override def printBinaryExpr(expr: SqlExpr.Binary): Unit = expr match
-        case SqlExpr.Binary(left, op, SqlExpr.Interval(value, unit)) =>
-            val printValue = op match
-                case SqlBinaryOperator.Minus => value * -1
-                case _ => value
-            sqlBuilder.append("DATEADD(")
-            sqlBuilder.append(unit.unit)
-            sqlBuilder.append(", ")
-            sqlBuilder.append(printValue)
-            sqlBuilder.append(", ")
-            printExpr(left)
-            sqlBuilder.append(")")
         case SqlExpr.Binary(left, SqlBinaryOperator.Concat, right) =>
             val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
             printExpr(func)
@@ -83,8 +72,6 @@ class MssqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(func)
         case _ => 
             super.printBinaryExpr(expr)
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}
 
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit = 
         val cast = expr.unit match

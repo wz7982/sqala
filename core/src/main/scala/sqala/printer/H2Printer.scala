@@ -75,9 +75,3 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
             case SqlCastType.Json => "JSON"
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.unit)

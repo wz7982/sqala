@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
+import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.{AsSqlExpr, DateTime, Json, Number, Vector}
 
@@ -147,7 +147,7 @@ extension [T: AsExpr as at](self: T)
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Plus, 
-                SqlExpr.Interval(interval.value, interval.unit)
+                SqlExpr.IntervalLiteral(interval.value, SqlIntervalField.Single(interval.unit))
             )
         )
 
@@ -175,7 +175,7 @@ extension [T: AsExpr as at](self: T)
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Minus, 
-                SqlExpr.Interval(interval.value, interval.unit)
+                SqlExpr.IntervalLiteral(interval.value, SqlIntervalField.Single(interval.unit))
             )
         )
 

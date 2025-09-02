@@ -92,12 +92,6 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.unit)
-
     override def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(s" $leftQuote${alias.tableAlias}$rightQuote")
         if alias.columnAlias.nonEmpty then

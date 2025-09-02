@@ -58,12 +58,6 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case _ =>
                 super.printBinaryExpr(expr) 
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.unit)
-
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("STRING_TO_VECTOR(")
         super.printVectorExpr(expr)

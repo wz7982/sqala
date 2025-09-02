@@ -42,21 +42,6 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
                 printExpr(item.expr)
                 sqlBuilder.append(s" ${order.order}")
 
-    override def printBinaryExpr(expr: SqlExpr.Binary): Unit = expr match
-        case SqlExpr.Binary(left, op, SqlExpr.Interval(value, unit)) =>
-            val intervalValue = op match
-                case SqlBinaryOperator.Minus => value * -1
-                case _ => value
-            val printValue =
-                if intervalValue >= 0 then
-                    "+" + intervalValue
-                else intervalValue.toString
-            sqlBuilder.append("DATETIME(")
-            printExpr(left)
-            sqlBuilder.append(", ")
-            sqlBuilder.append(s"'$printValue ${unit.unit.toLowerCase + "s"}')")
-        case _ => super.printBinaryExpr(expr)
-
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         val name = expr.unit match
             case SqlTimeLiteralUnit.Timestamp => "DATETIME"
@@ -89,5 +74,3 @@ class SqlitePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             case SqlCastType.Json => "TEXT"
             case SqlCastType.Custom(c) => c
         sqlBuilder.append(t)
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit = {}

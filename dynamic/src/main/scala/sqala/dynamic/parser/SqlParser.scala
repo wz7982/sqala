@@ -344,26 +344,24 @@ class SqlParser extends StandardTokenParsers:
             }
 
     def interval: Parser[SqlExpr] =
-        "INTERVAL" ~> numericLit ~ ("YEAR" | "MONTH" | "WEEK" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ^^ {
+        "INTERVAL" ~> stringLit ~ ("YEAR" | "MONTH" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ^^ {
             case n ~ u =>
                 val timeUnit = u match
                     case "YEAR" => SqlTimeUnit.Year
                     case "MONTH" => SqlTimeUnit.Month
-                    case "WEEK" => SqlTimeUnit.Week
                     case "DAY" => SqlTimeUnit.Day
                     case "HOUR" => SqlTimeUnit.Hour
                     case "MINUTE" => SqlTimeUnit.Minute
                     case "SECOND" => SqlTimeUnit.Second
-                SqlExpr.Interval(n.toDouble, timeUnit)
+                SqlExpr.IntervalLiteral(n, SqlIntervalField.Single(timeUnit))
         }
 
     def extract: Parser[SqlExpr] =
-        "EXTRACT" ~> "(" ~> ("YEAR" | "MONTH" | "WEEK" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ~ "FROM" ~ expr <~ ")" ^^ {
+        "EXTRACT" ~> "(" ~> ("YEAR" | "MONTH" | "DAY" | "HOUR" | "MINUTE" | "SECOND") ~ "FROM" ~ expr <~ ")" ^^ {
             case u ~ _ ~ e =>
                 val timeUnit = u match
                     case "YEAR" => SqlTimeUnit.Year
                     case "MONTH" => SqlTimeUnit.Month
-                    case "WEEK" => SqlTimeUnit.Week
                     case "DAY" => SqlTimeUnit.Day
                     case "HOUR" => SqlTimeUnit.Hour
                     case "MINUTE" => SqlTimeUnit.Minute

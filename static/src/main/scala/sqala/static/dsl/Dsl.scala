@@ -181,9 +181,6 @@ extension (n: Double)
     def month(using QueryContext): IntervalValue = 
         IntervalValue(n, SqlTimeUnit.Month)
 
-    def week(using QueryContext): IntervalValue = 
-        IntervalValue(n, SqlTimeUnit.Week)
-
     def day(using QueryContext): IntervalValue = 
         IntervalValue(n, SqlTimeUnit.Day)
 
@@ -197,14 +194,13 @@ extension (n: Double)
         IntervalValue(n, SqlTimeUnit.Second)
 
 def interval(value: IntervalValue)(using QueryContext): TimeInterval =
-    TimeInterval(value.n, value.unit)
+    TimeInterval(value.n.toString, value.unit)
 
 case class ExtractValue[T](unit: SqlTimeUnit, expr: Expr[?])
 
 private enum TimeUnit(val unit: SqlTimeUnit):
     case Year extends TimeUnit(SqlTimeUnit.Year)
     case Month extends TimeUnit(SqlTimeUnit.Month)
-    case Week extends TimeUnit(SqlTimeUnit.Week)
     case Day extends TimeUnit(SqlTimeUnit.Day)
     case Hour extends TimeUnit(SqlTimeUnit.Hour)
     case Minute extends TimeUnit(SqlTimeUnit.Minute)
@@ -218,9 +214,6 @@ def year(using QueryContext): TimeUnit =
 
 def month(using QueryContext): TimeUnit = 
     TimeUnit.Month
-
-def week(using QueryContext): TimeUnit = 
-    TimeUnit.Week
 
 def day(using QueryContext): TimeUnit = 
     TimeUnit.Day

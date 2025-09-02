@@ -61,10 +61,3 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         super.printVectorExpr(expr)
         sqlBuilder.append(" :: VECTOR")
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append(" ")
-        sqlBuilder.append(expr.unit.unit)
-        sqlBuilder.append("'")
