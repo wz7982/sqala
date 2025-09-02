@@ -10,7 +10,8 @@ enum SqlTable(val alias: Option[SqlTableAlias]):
     ) extends SqlTable(alias)
     case Func(
         name: String, 
-        args: List[SqlExpr], 
+        args: List[SqlExpr],
+        lateral: Boolean,
         override val alias: Option[SqlTableAlias]
     ) extends SqlTable(alias)
     case SubQuery(

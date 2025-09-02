@@ -505,7 +505,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         table match
             case SqlTable.Standard(tableName, _) =>
                 sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
-            case SqlTable.Func(functionName, args, _) =>
+            case SqlTable.Func(functionName, args, lateral, _) =>
+                if lateral then sqlBuilder.append("LATERAL ")
                 sqlBuilder.append(functionName)
                 sqlBuilder.append("(")
                 printList(args)(printExpr)

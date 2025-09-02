@@ -101,7 +101,9 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
 
     override def printTable(table: SqlTable): Unit =
         table match
-            case SqlTable.Func(functionName, args, alias) =>
+            case SqlTable.Func(functionName, args, lateral, alias) =>
+                if lateral then
+                    sqlBuilder.append("LITERAL ")
                 sqlBuilder.append("TABLE(")
                 sqlBuilder.append(s"$functionName")
                 sqlBuilder.append("(")
