@@ -97,9 +97,7 @@ private[sqala] object AnalysisMacroImpl:
                 case '[MysqlDialect.type] => Some(MysqlDialect)
                 case '[PostgresqlDialect.type] => Some(PostgresqlDialect)
                 case '[OracleDialect.type] => Some(OracleDialect)
-                case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
-                case '[MssqlDialect.type] => Some(MssqlDialect)
                 case _ => None
 
             for 
@@ -150,9 +148,7 @@ private[sqala] object AnalysisMacroImpl:
                 case '[MysqlDialect.type] => Some(MysqlDialect)
                 case '[PostgresqlDialect.type] => Some(PostgresqlDialect)
                 case '[OracleDialect.type] => Some(OracleDialect)
-                case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
-                case '[MssqlDialect.type] => Some(MssqlDialect)
                 case _ => None
                 
             for 
@@ -194,9 +190,7 @@ private[sqala] object AnalysisMacroImpl:
                 case '[MysqlDialect.type] => Some(MysqlDialect)
                 case '[PostgresqlDialect.type] => Some(PostgresqlDialect)
                 case '[OracleDialect.type] => Some(OracleDialect)
-                case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
-                case '[MssqlDialect.type] => Some(MssqlDialect)
                 case _ => None
                 
             for 
@@ -250,9 +244,7 @@ private[sqala] object AnalysisMacroImpl:
                 case '[MysqlDialect.type] => Some(MysqlDialect)
                 case '[PostgresqlDialect.type] => Some(PostgresqlDialect)
                 case '[OracleDialect.type] => Some(OracleDialect)
-                case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
-                case '[MssqlDialect.type] => Some(MssqlDialect)
                 case _ => None
                 
             for 
@@ -328,9 +320,7 @@ private[sqala] object AnalysisMacroImpl:
                 case '[MysqlDialect.type] => Some(MysqlDialect)
                 case '[PostgresqlDialect.type] => Some(PostgresqlDialect)
                 case '[OracleDialect.type] => Some(OracleDialect)
-                case '[SqliteDialect.type] => Some(SqliteDialect)
                 case '[H2Dialect.type] => Some(H2Dialect)
-                case '[MssqlDialect.type] => Some(MssqlDialect)
                 case _ => None
                 
             for 
