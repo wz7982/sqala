@@ -504,9 +504,9 @@ class SqlParser extends StandardTokenParsers:
         rep1sep(selectItem, ",")
 
     def selectItem: Parser[SqlSelectItem] =
-        "*" ^^ (_ => SqlSelectItem.Wildcard(None)) |
+        "*" ^^ (_ => SqlSelectItem.Asterisk(None)) |
         ident ~ "." ~ "*" ^^ {
-            case e ~ _ ~ _ => SqlSelectItem.Wildcard(Some(e))
+            case e ~ _ ~ _ => SqlSelectItem.Asterisk(Some(e))
         } |
         expr ~ opt(opt("AS") ~> ident) ^^ {
             case expr ~ alias => SqlSelectItem.Expr(expr, alias)

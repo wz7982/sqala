@@ -548,7 +548,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printTableAlias(a)
 
     def printSelectItem(item: SqlSelectItem): Unit = item match
-        case SqlSelectItem.Wildcard(table) =>
+        case SqlSelectItem.Asterisk(table) =>
             table.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
             sqlBuilder.append("*")
         case SqlSelectItem.Expr(expr, alias) =>
