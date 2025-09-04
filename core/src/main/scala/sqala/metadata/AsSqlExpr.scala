@@ -1,9 +1,8 @@
 package sqala.metadata
 
-import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit}
+import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit, SqlTimeZoneMode, SqlType}
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
@@ -19,41 +18,52 @@ object AsSqlExpr:
             case _ => summonInline[AsSqlExpr[T]] :: Nil
 
     given intAsSqlExpr: AsSqlExpr[Int] with
-        def asSqlExpr(x: Int): SqlExpr = SqlExpr.NumberLiteral(x)
+        def asSqlExpr(x: Int): SqlExpr = 
+            SqlExpr.NumberLiteral(x)
 
     given longAsSqlExpr: AsSqlExpr[Long] with
-        def asSqlExpr(x: Long): SqlExpr = SqlExpr.NumberLiteral(x)
+        def asSqlExpr(x: Long): SqlExpr = 
+            SqlExpr.NumberLiteral(x)
 
     given floatAsSqlExpr: AsSqlExpr[Float] with
-        def asSqlExpr(x: Float): SqlExpr = SqlExpr.NumberLiteral(x)
+        def asSqlExpr(x: Float): SqlExpr = 
+            SqlExpr.NumberLiteral(x)
 
     given doubleAsSqlExpr: AsSqlExpr[Double] with
-        def asSqlExpr(x: Double): SqlExpr = SqlExpr.NumberLiteral(x)
+        def asSqlExpr(x: Double): SqlExpr = 
+            SqlExpr.NumberLiteral(x)
 
     given decimalAsSqlExpr: AsSqlExpr[BigDecimal] with
-        def asSqlExpr(x: BigDecimal): SqlExpr = SqlExpr.NumberLiteral(x)
+        def asSqlExpr(x: BigDecimal): SqlExpr = 
+            SqlExpr.NumberLiteral(x)
 
     given stringAsSqlExpr: AsSqlExpr[String] with
-        def asSqlExpr(x: String): SqlExpr = SqlExpr.StringLiteral(x)
+        def asSqlExpr(x: String): SqlExpr = 
+            SqlExpr.StringLiteral(x)
 
     given booleanAsSqlExpr: AsSqlExpr[Boolean] with
-        def asSqlExpr(x: Boolean): SqlExpr = SqlExpr.BooleanLiteral(x)
+        def asSqlExpr(x: Boolean): SqlExpr = 
+            SqlExpr.BooleanLiteral(x)
 
     given localDateAsSqlExpr: AsSqlExpr[LocalDate] with
         def asSqlExpr(x: LocalDate): SqlExpr =
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, x.toString)
 
     given localDateTimeAsSqlExpr: AsSqlExpr[LocalDateTime] with
         def asSqlExpr(x: LocalDateTime): SqlExpr =
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, x.toString)
+
+    given offsetDateTimeAsSqlExpr: AsSqlExpr[OffsetDateTime] with
+        def asSqlExpr(x: OffsetDateTime): SqlExpr =
+            SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Timestamp(Some(SqlTimeZoneMode.With)))
 
     given jsonAsSqlExpr: AsSqlExpr[Json] with
-        def asSqlExpr(x: Json): SqlExpr = SqlExpr.StringLiteral(x.toString)
+        def asSqlExpr(x: Json): SqlExpr = 
+            SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Json)
 
     given vectorAsSqlExpr: AsSqlExpr[Vector] with
-        def asSqlExpr(x: Vector): SqlExpr = SqlExpr.Vector(SqlExpr.StringLiteral(x.toString))
+        def asSqlExpr(x: Vector): SqlExpr = 
+            SqlExpr.Vector(SqlExpr.StringLiteral(x.toString))
 
     given optionAsSqlExpr[T](using a: AsSqlExpr[T]): AsSqlExpr[Option[T]] with
         def asSqlExpr(x: Option[T]): SqlExpr = x match

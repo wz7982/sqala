@@ -3,7 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.{AsSqlExpr, DateTime, Interval, Number}
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.*
@@ -100,31 +100,31 @@ object Return:
 
     given timeResult[A: DateTime, B: DateTime](using
         NotGiven[A =:= B]
-    ): Aux[A, B, false, LocalDateTime] =
+    ): Aux[A, B, false, OffsetDateTime] =
         new Return[A, B, false]:
-            type R = LocalDateTime
+            type R = OffsetDateTime
 
     given timeOptionResult[A: DateTime, B: DateTime](using
         NotGiven[A =:= B]
-    ): Aux[A, B, true, Option[LocalDateTime]] =
+    ): Aux[A, B, true, Option[OffsetDateTime]] =
         new Return[A, B, true]:
-            type R = Option[LocalDateTime]
+            type R = Option[OffsetDateTime]
 
-    given timeAndStringResult[A: DateTime]: Aux[A, String, false, LocalDateTime] =
+    given timeAndStringResult[A: DateTime]: Aux[A, String, false, OffsetDateTime] =
         new Return[A, String, false]:
-            type R = LocalDateTime
+            type R = OffsetDateTime
 
-    given timeAndStringOptionResult[A: DateTime]: Aux[A, String, true, Option[LocalDateTime]] =
+    given timeAndStringOptionResult[A: DateTime]: Aux[A, String, true, Option[OffsetDateTime]] =
         new Return[A, String, true]:
-            type R = Option[LocalDateTime]
+            type R = Option[OffsetDateTime]
 
-    given stringAndTimeResult[A: DateTime]: Aux[String, A, false, LocalDateTime] =
+    given stringAndTimeResult[A: DateTime]: Aux[String, A, false, OffsetDateTime] =
         new Return[String, A, false]:
-            type R = LocalDateTime
+            type R = OffsetDateTime
 
-    given stringAndTimeOptionResult[A: DateTime]: Aux[String, A, true, Option[LocalDateTime]] =
+    given stringAndTimeOptionResult[A: DateTime]: Aux[String, A, true, Option[OffsetDateTime]] =
         new Return[String, A, true]:
-            type R = Option[LocalDateTime]
+            type R = Option[OffsetDateTime]
 
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait Union[A, B]:

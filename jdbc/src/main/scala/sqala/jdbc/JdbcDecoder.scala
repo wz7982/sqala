@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.metadata.{CustomField, Json, Vector}
 
 import java.sql.ResultSet
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
@@ -59,13 +59,19 @@ object JdbcDecoder:
         override inline def offset: Int = 1
 
         override inline def decode(data: ResultSet, cursor: Int): LocalDate =
-            LocalDate.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
+            data.getObject(cursor, classOf[LocalDate])
 
     given localDateTimeDecoder: JdbcDecoder[LocalDateTime] with
         override inline def offset: Int = 1
 
         override inline def decode(data: ResultSet, cursor: Int): LocalDateTime =
-            LocalDateTime.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
+            data.getObject(cursor, classOf[LocalDateTime])
+
+    given offsetDateTimeDecoder: JdbcDecoder[OffsetDateTime] with
+        override inline def offset: Int = 1
+
+        override inline def decode(data: ResultSet, cursor: Int): OffsetDateTime =
+            data.getObject(cursor, classOf[OffsetDateTime])
 
     given jsonDecoder: JdbcDecoder[Json] with
         override inline def offset: Int = 1

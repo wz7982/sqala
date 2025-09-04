@@ -123,28 +123,50 @@ private[sqala] object GenerateRecord:
                 import java.sql.Types.*
 
                 val tpr = (columnType, columnNullable) match
-                    case (SMALLINT, true) => TypeRepr.of[Option[Int]]
-                    case (SMALLINT, false) => TypeRepr.of[Int]
-                    case (INTEGER, true) => TypeRepr.of[Option[Int]]
-                    case (INTEGER, false) => TypeRepr.of[Int]
-                    case (BIGINT, true) => TypeRepr.of[Option[Long]]
-                    case (BIGINT, false) => TypeRepr.of[Long]
-                    case (FLOAT, true) => TypeRepr.of[Option[Float]]
-                    case (FLOAT, false) => TypeRepr.of[Float]
-                    case (DOUBLE, true) => TypeRepr.of[Option[Double]]
-                    case (DOUBLE, false) => TypeRepr.of[Double]
-                    case (DECIMAL | NUMERIC, true) => TypeRepr.of[Option[BigDecimal]]
-                    case (DECIMAL | NUMERIC, false) => TypeRepr.of[BigDecimal]
-                    case (BOOLEAN, true) => TypeRepr.of[Option[Boolean]]
-                    case (BOOLEAN, false) => TypeRepr.of[Boolean]
-                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => TypeRepr.of[Option[String]]
-                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => TypeRepr.of[String]
-                    case (DATE, true) => TypeRepr.of[Option[java.time.LocalDate]]
-                    case (DATE, false) => TypeRepr.of[java.time.LocalDate]
-                    case (TIMESTAMP, true) => TypeRepr.of[Option[java.time.LocalDateTime]]
-                    case (TIMESTAMP, false) => TypeRepr.of[java.time.LocalDateTime]
-                    case (_, true) => TypeRepr.of[Option[Any]]
-                    case (_, false) => TypeRepr.of[Any]
+                    case (SMALLINT, true) => 
+                        TypeRepr.of[Option[Int]]
+                    case (SMALLINT, false) => 
+                        TypeRepr.of[Int]
+                    case (INTEGER, true) => 
+                        TypeRepr.of[Option[Int]]
+                    case (INTEGER, false) => 
+                        TypeRepr.of[Int]
+                    case (BIGINT, true) => 
+                        TypeRepr.of[Option[Long]]
+                    case (BIGINT, false) => 
+                        TypeRepr.of[Long]
+                    case (FLOAT, true) => 
+                        TypeRepr.of[Option[Float]]
+                    case (FLOAT, false) => 
+                        TypeRepr.of[Float]
+                    case (DOUBLE, true) => 
+                        TypeRepr.of[Option[Double]]
+                    case (DOUBLE, false) => 
+                        TypeRepr.of[Double]
+                    case (DECIMAL | NUMERIC, true) => 
+                        TypeRepr.of[Option[BigDecimal]]
+                    case (DECIMAL | NUMERIC, false) => 
+                        TypeRepr.of[BigDecimal]
+                    case (BOOLEAN, true) => 
+                        TypeRepr.of[Option[Boolean]]
+                    case (BOOLEAN, false) => 
+                        TypeRepr.of[Boolean]
+                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => 
+                        TypeRepr.of[Option[String]]
+                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => 
+                        TypeRepr.of[String]
+                    case (DATE, true) => 
+                        TypeRepr.of[Option[java.util.Date]]
+                    case (DATE, false) => 
+                        TypeRepr.of[java.util.Date]
+                    case (TIMESTAMP, true) => 
+                        TypeRepr.of[Option[java.util.Date]]
+                    case (TIMESTAMP, false) => 
+                        TypeRepr.of[java.util.Date]
+                    case (_, true) => 
+                        TypeRepr.of[Option[Any]]
+                    case (_, false) => 
+                        TypeRepr.of[Any]
 
                 columnLabel -> tpr
         finally

@@ -95,6 +95,8 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
                 sqlBuilder.append("SIGNED")
             case SqlType.Long => 
                 sqlBuilder.append("SIGNED")
+            case SqlType.Timestamp(None | Some(SqlTimeZoneMode.Without)) =>
+                sqlBuilder.append("DATETIME")
             case _ =>
                 super.printType(`type`)
 
@@ -103,7 +105,13 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case None | Some(Asc) => Asc
             case _ => Desc
         val orderExpr = 
-            SqlExpr.Case(SqlWhen(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, Some(SqlExpr.NumberLiteral(0)))
+            SqlExpr.Case(
+                SqlWhen(
+                    SqlExpr.NullTest(orderBy.expr, false), 
+                    SqlExpr.NumberLiteral(1)
+                ) :: Nil, 
+                Some(SqlExpr.NumberLiteral(0))
+            )
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)

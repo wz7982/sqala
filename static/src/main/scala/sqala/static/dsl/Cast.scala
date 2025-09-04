@@ -33,4 +33,4 @@ object Cast:
         def castType: SqlType = SqlType.Json
 
     given castTimestamp[T <: String | Option[String]]: Cast[T, LocalDateTime] with
-        def castType: SqlType = SqlType.Timestamp
+        def castType: SqlType = SqlType.Timestamp(None)

@@ -2,7 +2,6 @@ package sqala.jdbc
 
 import java.sql.Types.*
 import java.sql.{Connection, PreparedStatement, ResultSet, Statement}
-import java.time.{LocalDate, LocalDateTime, ZoneId}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.unsafeNulls
@@ -99,28 +98,50 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
             for i <- 1 to columnCount do
                 val key = metaData.getColumnLabel(i)
                 val value: Any = metaData.getColumnType(i) -> (metaData.isNullable(i) != java.sql.ResultSetMetaData.columnNoNulls) match
-                    case (SMALLINT, true) => Option(rs.getInt(i))
-                    case (SMALLINT, false) => rs.getInt(i)
-                    case (INTEGER, true) => Option(rs.getInt(i))
-                    case (INTEGER, false) => rs.getInt(i)
-                    case (BIGINT, true) => Option(rs.getLong(i))
-                    case (BIGINT, false) => rs.getLong(i)
-                    case (FLOAT, true) => Option(rs.getFloat(i))
-                    case (FLOAT, false) => rs.getFloat(i)
-                    case (DOUBLE, true) => Option(rs.getDouble(i))
-                    case (DOUBLE, false) => rs.getDouble(i)
-                    case (DECIMAL | NUMERIC, true) => Option(rs.getBigDecimal(i)).map(BigDecimal(_))
-                    case (DECIMAL | NUMERIC, false) => BigDecimal(rs.getBigDecimal(i))
-                    case (BOOLEAN, true) => Option(rs.getBoolean(i))
-                    case (BOOLEAN, false) => rs.getBoolean(i)
-                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => Option(rs.getString(i))
-                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => rs.getString(i)
-                    case (DATE, true) => Option(LocalDate.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault()))
-                    case (DATE, false) => LocalDate.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault())
-                    case (TIMESTAMP, true) => Option(LocalDateTime.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault()))
-                    case (TIMESTAMP, false) => LocalDateTime.ofInstant(rs.getTimestamp(i).toInstant(), ZoneId.systemDefault())
-                    case (_, true) => Option(rs.getObject(i))
-                    case (_, false) => rs.getObject(i)
+                    case (SMALLINT, true) => 
+                        Option(rs.getInt(i))
+                    case (SMALLINT, false) => 
+                        rs.getInt(i)
+                    case (INTEGER, true) => 
+                        Option(rs.getInt(i))
+                    case (INTEGER, false) => 
+                        rs.getInt(i)
+                    case (BIGINT, true) => 
+                        Option(rs.getLong(i))
+                    case (BIGINT, false) => 
+                        rs.getLong(i)
+                    case (FLOAT, true) => 
+                        Option(rs.getFloat(i))
+                    case (FLOAT, false) => 
+                        rs.getFloat(i)
+                    case (DOUBLE, true) => 
+                        Option(rs.getDouble(i))
+                    case (DOUBLE, false) => 
+                        rs.getDouble(i)
+                    case (DECIMAL | NUMERIC, true) => 
+                        Option(rs.getBigDecimal(i)).map(BigDecimal(_))
+                    case (DECIMAL | NUMERIC, false) => 
+                        BigDecimal(rs.getBigDecimal(i))
+                    case (BOOLEAN, true) => 
+                        Option(rs.getBoolean(i))
+                    case (BOOLEAN, false) => 
+                        rs.getBoolean(i)
+                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => 
+                        Option(rs.getString(i))
+                    case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => 
+                        rs.getString(i)
+                    case (DATE, true) => 
+                        Option(rs.getDate(i))
+                    case (DATE, false) => 
+                        rs.getDate(i)
+                    case (TIMESTAMP, true) => 
+                        Option(rs.getTimestamp(i))
+                    case (TIMESTAMP, false) => 
+                        rs.getTimestamp(i)
+                    case (_, true) => 
+                        Option(rs.getObject(i))
+                    case (_, false) => 
+                        rs.getObject(i)
                 map.put(key, value)
             result.addOne(map.toMap)
         result.toList
