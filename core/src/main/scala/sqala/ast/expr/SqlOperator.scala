@@ -23,6 +23,7 @@ enum SqlBinaryOperator(val operator: String, val precedence: Int):
     case NotLike extends SqlBinaryOperator("NOT LIKE", 30)
     case SimilarTo extends SqlBinaryOperator("SIMILAR TO", 30)
     case NotSimilarTo extends SqlBinaryOperator("NOT SIMILAR TO", 30)
+    case Overlaps extends SqlBinaryOperator("OVERLAPS", 30)
     case And extends SqlBinaryOperator("AND", 20)
     case Or extends SqlBinaryOperator("OR", 10)
     case Custom(override val operator: String) extends SqlBinaryOperator(operator, 0)

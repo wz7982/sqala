@@ -405,3 +405,27 @@ extension [T: AsExpr as at](self: T)
 
     def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
+
+extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))
+    def overlaps[C: AsExpr as ac, D: AsExpr as ad](that: (C, D))(using
+        DateTime[aa.R],
+        DateTime[ab.R],
+        DateTime[ac.R],
+        DateTime[ad.R],
+        QueryContext
+    ): Expr[Option[Boolean]] =
+        Expr(
+            SqlExpr.Binary(
+                SqlExpr.Tuple(
+                    aa.asExpr(self._1).asSqlExpr :: 
+                    ab.asExpr(self._2).asSqlExpr ::
+                    Nil
+                ), 
+                SqlBinaryOperator.Overlaps, 
+                SqlExpr.Tuple(
+                    ac.asExpr(that._1).asSqlExpr :: 
+                    ad.asExpr(that._2).asSqlExpr ::
+                    Nil
+                )
+            )
+        )
