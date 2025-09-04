@@ -391,7 +391,7 @@ extension [T: AsExpr as at](self: T)
     def isJson(using
         at.R <:< (String | Option[String]),
         QueryContext
-    ): Expr[Option[Float]] =
+    ): Expr[Option[Boolean]] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, None)
         )
@@ -399,7 +399,7 @@ extension [T: AsExpr as at](self: T)
     def isJsonObject(using
         at.R <:< (String | Option[String]),
         QueryContext
-    ): Expr[Option[Float]] =
+    ): Expr[Option[Boolean]] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Object))
         )
@@ -407,7 +407,7 @@ extension [T: AsExpr as at](self: T)
     def isJsonArray(using
         at.R <:< (String | Option[String]),
         QueryContext
-    ): Expr[Option[Float]] =
+    ): Expr[Option[Boolean]] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Array))
         )
@@ -415,7 +415,7 @@ extension [T: AsExpr as at](self: T)
     def isJsonScalar(using
         at.R <:< (String | Option[String]),
         QueryContext
-    ): Expr[Option[Float]] =
+    ): Expr[Option[Boolean]] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Scalar))
         )
