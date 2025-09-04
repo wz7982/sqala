@@ -218,10 +218,9 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[Option[BigDecimal]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Mod, 
-                ar.asExpr(that).asSqlExpr
+            SqlExpr.Func(
+                "MOD",
+                at.asExpr(self).asSqlExpr :: ar.asExpr(that).asSqlExpr :: Nil
             )
         )
 

@@ -5,7 +5,6 @@ enum SqlBinaryOperator(val operator: String, val precedence: Int):
     case JsonText extends SqlBinaryOperator("->>", 80)
     case Times extends SqlBinaryOperator("*", 70)
     case Div extends SqlBinaryOperator("/", 70)
-    case Mod extends SqlBinaryOperator("%", 70)
     case Plus extends SqlBinaryOperator("+", 60)
     case Minus extends SqlBinaryOperator("-", 60)
     case EuclideanDistance extends SqlBinaryOperator("<->", 50)

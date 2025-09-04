@@ -200,8 +200,7 @@ class SqlParser extends StandardTokenParsers:
     def mul: Parser[SqlExpr] =
         sign * (
             "*" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Times, b)) |
-            "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b)) |
-            "%" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Mod, b))
+            "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b))
         )
     
     def sign: Parser[SqlExpr] = 

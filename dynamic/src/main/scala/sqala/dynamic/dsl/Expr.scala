@@ -68,7 +68,7 @@ case class Expr(sqlExpr: SqlExpr):
     def /(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Div, expr.sqlExpr))
 
     @targetName("mod")
-    def %(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Mod, expr.sqlExpr))
+    def %(expr: Expr): Expr = Expr(SqlExpr.Func("MOD", sqlExpr :: expr.sqlExpr :: Nil))
 
     @targetName("positive")
     def unary_+ : Expr = Expr(SqlExpr.Unary(sqlExpr, Positive))
