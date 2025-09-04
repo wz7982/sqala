@@ -1,9 +1,9 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlType
+import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
 import sqala.metadata.{AsSqlExpr, Json, Number}
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, OffsetDateTime}
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("Cannot cast type ${T} to ${R}.")
@@ -32,5 +32,8 @@ object Cast:
     given castJson[T <: String | Option[String]]: Cast[T, Json] with
         def castType: SqlType = SqlType.Json
 
-    given castTimestamp[T <: String | Option[String]]: Cast[T, LocalDateTime] with
+    given castLocalDateTime[T <: String | Option[String]]: Cast[T, LocalDateTime] with
         def castType: SqlType = SqlType.Timestamp(None)
+
+    given castOffsetDateTime[T <: String | Option[String]]: Cast[T, OffsetDateTime] with
+        def castType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
