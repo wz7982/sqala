@@ -388,6 +388,38 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
+    def isJson(using
+        at.R <:< (String | Option[String]),
+        QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, None)
+        )
+
+    def isJsonObject(using
+        at.R <:< (String | Option[String]),
+        QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Object))
+        )
+
+    def isJsonArray(using
+        at.R <:< (String | Option[String]),
+        QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Array))
+        )
+
+    def isJsonScalar(using
+        at.R <:< (String | Option[String]),
+        QueryContext
+    ): Expr[Option[Float]] =
+        Expr(
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Scalar))
+        )
+
     def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
         Sort(at.asExpr(self), SqlOrdering.Asc, None)
 

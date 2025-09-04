@@ -18,6 +18,7 @@ enum SqlExpr:
     case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
+    case JsonTest(expr: SqlExpr, not: Boolean, nodeType: Option[SqlJsonNodeType])
     case Func(
         name: String,
         args: List[SqlExpr],

@@ -222,6 +222,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case n: SqlExpr.NullTest => printNullTestExpr(n)
+        case j: SqlExpr.JsonTest => printJsonTestExpr(j)
         case f: SqlExpr.Func => printFuncExpr(f)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
@@ -350,6 +351,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printExpr(expr.expr)
         if expr.not then sqlBuilder.append(" IS NOT NULL")
         else sqlBuilder.append(" IS NULL")
+
+    def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
+        printExpr(expr.expr)
+        if expr.not then sqlBuilder.append(" IS NOT JSON")
+        else sqlBuilder.append(" IS JSON")
+        for t <- expr.nodeType do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(t.`type`)
 
     def printFuncExpr(expr: SqlExpr.Func): Unit =
         sqlBuilder.append(expr.name)
