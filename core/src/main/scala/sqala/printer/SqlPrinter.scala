@@ -2,14 +2,13 @@ package sqala.printer
 
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupingItem
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.{SqlFetchUnit, SqlLimit}
 import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlTable, SqlTableAlias}
 import sqala.util.|>
 
 import scala.collection.mutable.ArrayBuffer
-import sqala.ast.limit.SqlFetchUnit
 
 abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
@@ -223,15 +222,18 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case n: SqlExpr.NullTest => printNullTestExpr(n)
         case j: SqlExpr.JsonTest => printJsonTestExpr(j)
-        case f: SqlExpr.Func => printFuncExpr(f)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
         case m: SqlExpr.Match => printMatchExpr(m)
+        case c: SqlExpr.Coalesce => printCoalesceExpr(c)
+        case n: SqlExpr.NullIf => printNullIfExpr(n)
         case c: SqlExpr.Cast => printCastExpr(c)
         case w: SqlExpr.Window => printWindowExpr(w)
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
-        case e: SqlExpr.Extract => printExtractExpr(e)
+        case g: SqlExpr.Grouping => printGroupingExpr(g)
+        case f: SqlExpr.Func => printFuncExpr(f)
+        case e: SqlExpr.ExtractValueFunc => printExtractValueFuncExpr(e)
         case c: SqlExpr.Custom => printCustomExpr(c)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
@@ -433,6 +435,21 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(d)
         sqlBuilder.append(" END")
 
+    def printCoalesceExpr(expr: SqlExpr.Coalesce): Unit =
+        sqlBuilder.append("COALESCE(")
+        printExpr(expr.expr)
+        if expr.thenItems.nonEmpty then
+            sqlBuilder.append(", ")
+            printList(expr.thenItems)(printExpr)
+        sqlBuilder.append(")")
+
+    def printNullIfExpr(expr: SqlExpr.NullIf): Unit =
+        sqlBuilder.append("NULLIF(")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.`then`)
+        sqlBuilder.append(")")
+
     def printCastExpr(expr: SqlExpr.Cast): Unit =
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
@@ -489,7 +506,15 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printSpace()
         sqlBuilder.append(")")
 
-    def printExtractExpr(expr: SqlExpr.Extract): Unit =
+    def printGroupingExpr(expr: SqlExpr.Grouping): Unit =
+        sqlBuilder.append("GROUPING(")
+        printExpr(expr.expr)
+        if expr.items.nonEmpty then
+            sqlBuilder.append(", ")
+            printList(expr.items)(printExpr)
+        sqlBuilder.append(")")
+
+    def printExtractValueFuncExpr(expr: SqlExpr.ExtractValueFunc): Unit =
         sqlBuilder.append("EXTRACT(")
         sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" FROM ")

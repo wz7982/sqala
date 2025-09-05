@@ -19,17 +19,11 @@ enum SqlExpr:
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
     case JsonTest(expr: SqlExpr, not: Boolean, nodeType: Option[SqlJsonNodeType])
-    case Func(
-        name: String,
-        args: List[SqlExpr],
-        quantifier: Option[SqlQuantifier] = None,
-        orderBy: List[SqlOrderingItem] = Nil,
-        withinGroup: List[SqlOrderingItem] = Nil,
-        filter: Option[SqlExpr] = None
-    )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
     case Match(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
+    case Coalesce(expr: SqlExpr, thenItems: List[SqlExpr])
+    case NullIf(expr: SqlExpr, `then`: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlType)
     case Window(
         expr: SqlExpr, 
@@ -39,5 +33,14 @@ enum SqlExpr:
     )
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
-    case Extract(expr: SqlExpr, unit: SqlTimeUnit)
+    case Grouping(expr: SqlExpr, items: List[SqlExpr])
+    case Func(
+        name: String,
+        args: List[SqlExpr],
+        quantifier: Option[SqlQuantifier] = None,
+        orderBy: List[SqlOrderingItem] = Nil,
+        withinGroup: List[SqlOrderingItem] = Nil,
+        filter: Option[SqlExpr] = None
+    )
+    case ExtractValueFunc(expr: SqlExpr, unit: SqlTimeUnit)
     case Custom(snippet: String)
