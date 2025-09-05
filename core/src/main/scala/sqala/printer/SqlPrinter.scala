@@ -232,8 +232,30 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case g: SqlExpr.Grouping => printGroupingExpr(g)
-        case f: SqlExpr.Func => printFuncExpr(f)
+        case s: SqlExpr.StandardValueFunc => printStandardValueFuncExpr(s)
+        case i: SqlExpr.IdentValueFunc => printIdentValueFuncExpr(i)
+        case s: SqlExpr.SubstringValueFunc => printSubstringValueFuncExpr(s)
+        case t: SqlExpr.TrimValueFunc => printTrimValueFuncExpr(t)
+        case o: SqlExpr.OverlayValueFunc => printOverlayValueFuncExpr(o)
+        case p: SqlExpr.PositionValueFunc => printPositionValueFuncExpr(p)
         case e: SqlExpr.ExtractValueFunc => printExtractValueFuncExpr(e)
+        case v: SqlExpr.VectorDistanceFunc => printVectorDistanceFuncExpr(v)
+        case j: SqlExpr.JsonSerializeValueFunc => printJsonSerializeValueFuncExpr(j)
+        case j: SqlExpr.JsonParseValueFunc => printJsonParseValueFuncExpr(j)
+        case j: SqlExpr.JsonQueryValueFunc => printJsonQueryValueFuncExpr(j)
+        case j: SqlExpr.JsonValueValueFunc => printJsonValueValueFuncExpr(j)
+        case j: SqlExpr.JsonObjectValueFunc => printJsonObjectValueFuncExpr(j)
+        case j: SqlExpr.JsonArrayValueFunc => printJsonArrayValueFuncExpr(j)
+        case j: SqlExpr.JsonExistsValueFunc => printJsonExistsValueFuncExpr(j)
+        case s: SqlExpr.StandardAggFunc => printStandardAggFuncExpr(s)
+        case c: SqlExpr.CountAsteriskAggFunc => printCountAsteriskAggFuncExpr(c)
+        case l: SqlExpr.ListAggAggFunc => printListAggAggFuncExpr(l)
+        case j: SqlExpr.JsonObjectAggAggFunc => printJsonObjectAggAggFuncExpr(j)
+        case j: SqlExpr.JsonArrayAggAggFunc => printJsonArrayAggAggFuncExpr(j)
+        case s: SqlExpr.StandardWindowFunc => printStandardWindowFuncExpr(s)
+        case n: SqlExpr.NullsTreatmentWindowFunc => printNullsTreatmentWindowFuncExpr(n)
+        case n: SqlExpr.NthValueWindowFunc => printNthValueWindowFuncExpr(n)
+        case s: SqlExpr.StandardMatchFunc => printStandardMatchFuncExpr(s)
         case c: SqlExpr.Custom => printCustomExpr(c)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
@@ -361,27 +383,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         for t <- expr.nodeType do
             sqlBuilder.append(" ")
             sqlBuilder.append(t.`type`)
-
-    def printFuncExpr(expr: SqlExpr.Func): Unit =
-        sqlBuilder.append(expr.name)
-        sqlBuilder.append("(")
-        expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
-            sqlBuilder.append(" ")
-        if expr.name.equalsIgnoreCase("COUNT") && expr.args.isEmpty then sqlBuilder.append("*")
-        else printList(expr.args)(printExpr)
-        if expr.orderBy.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(expr.orderBy)(printOrderingItem)
-        sqlBuilder.append(")")
-        if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
-            sqlBuilder.append(")")
-        if expr.filter.nonEmpty then
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(expr.filter.get)
-            sqlBuilder.append(")")
 
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         def hasBrackets(expr: SqlExpr): Boolean = 
@@ -514,11 +515,412 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
+    def printStandardValueFuncExpr(expr: SqlExpr.StandardValueFunc): Unit =
+        sqlBuilder.append(expr.name)
+        sqlBuilder.append("(")
+        printList(expr.args)(printExpr)
+        sqlBuilder.append(")")
+
+    def printIdentValueFuncExpr(expr: SqlExpr.IdentValueFunc): Unit =
+        sqlBuilder.append(expr.name)
+
+    def printSubstringValueFuncExpr(expr: SqlExpr.SubstringValueFunc): Unit =
+        sqlBuilder.append("SUBSTRING(")
+        printExpr(expr.expr)
+        sqlBuilder.append(" FROM ")
+        printExpr(expr.from)
+        for f <- expr.`for` do
+            sqlBuilder.append(" FOR ")
+            printExpr(f)
+        sqlBuilder.append(")")
+
+    def printTrimValueFuncExpr(expr: SqlExpr.TrimValueFunc): Unit =
+        sqlBuilder.append("TRIM(")
+        for t <- expr.trim do
+            for m <- t._1 do
+                sqlBuilder.append(m.mode)
+            for e <- t._2 do
+                if t._1.nonEmpty then
+                    sqlBuilder.append(" ")
+                printExpr(e)
+            sqlBuilder.append(" FROM ")
+        printExpr(expr.expr)
+        sqlBuilder.append(")")
+
+    def printOverlayValueFuncExpr(expr: SqlExpr.OverlayValueFunc): Unit =
+        sqlBuilder.append("OVERLAY(")
+        printExpr(expr.expr)
+        sqlBuilder.append(" PLACING ")
+        printExpr(expr.placing)
+        sqlBuilder.append(" FROM ")
+        printExpr(expr.from)
+        for f <- expr.`for` do
+            sqlBuilder.append(" FOR ")
+            printExpr(f)
+        sqlBuilder.append(")")
+
+    def printPositionValueFuncExpr(expr: SqlExpr.PositionValueFunc): Unit =
+        sqlBuilder.append("POSITION(")
+        printExpr(expr.expr)
+        sqlBuilder.append(" IN ")
+        printExpr(expr.in)
+        sqlBuilder.append(")")
+
     def printExtractValueFuncExpr(expr: SqlExpr.ExtractValueFunc): Unit =
         sqlBuilder.append("EXTRACT(")
         sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
+        sqlBuilder.append(")")
+
+    def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit
+
+    def printJsonSerializeValueFuncExpr(expr: SqlExpr.JsonSerializeValueFunc): Unit =
+        sqlBuilder.append("JSON_SERIALIZE(")
+        printExpr(expr)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        sqlBuilder.append(")")
+
+    def printJsonParseValueFuncExpr(expr: SqlExpr.JsonParseValueFunc): Unit =
+        sqlBuilder.append("JSON(")
+        printExpr(expr)
+        for i <- expr.input do
+            sqlBuilder.append(" ")
+            printJsonInput(i)
+        for u <- expr.uniqueness do
+            sqlBuilder.append(" ")
+            printJsonUniqueness(u)
+        sqlBuilder.append(")")
+
+    def printJsonQueryValueFuncExpr(expr: SqlExpr.JsonQueryValueFunc): Unit =
+        sqlBuilder.append("JSON_QUERY(")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.path)
+        if expr.passingItems.nonEmpty then
+            sqlBuilder.append(" PASSING ")
+            printList(expr.passingItems)(printJsonPassing)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        for w <- expr.wrapper do
+            sqlBuilder.append(" ")
+            printJsonQueryWrapperBehavior(w)
+        for q <- expr.quotes do
+            sqlBuilder.append(" ")
+            printJsonQueryQuotesBehavior(q)
+        for e <- expr.onEmpty do
+            sqlBuilder.append(" ")
+            printJsonQueryEmptyBehavior(e)
+        for e <- expr.onError do
+            sqlBuilder.append(" ")
+            printJsonQueryErrorBehavior(e)
+        sqlBuilder.append(")")
+
+    def printJsonValueValueFuncExpr(expr: SqlExpr.JsonValueValueFunc): Unit =
+        sqlBuilder.append("JSON_VALUE(")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.path)
+        if expr.passingItems.nonEmpty then
+            sqlBuilder.append(" PASSING ")
+            printList(expr.passingItems)(printJsonPassing)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        for e <- expr.onEmpty do
+            sqlBuilder.append(" ")
+            printJsonValueEmptyBehavior(e)
+        for e <- expr.onError do
+            sqlBuilder.append(" ")
+            printJsonValueErrorBehavior(e)
+        sqlBuilder.append(")")
+
+    def printJsonObjectValueFuncExpr(expr: SqlExpr.JsonObjectValueFunc): Unit =
+        def printItem(item: (SqlExpr, SqlExpr)): Unit =
+            printExpr(item._1)
+            sqlBuilder.append(" VALUE ")
+            printExpr(item._2)
+        sqlBuilder.append("JSON_OBJECT(")
+        printList(expr.items)(printItem)
+        for n <- expr.nullConstructor do
+            sqlBuilder.append(" ")
+            printJsonNullConstructor(n)
+        for u <- expr.uniqueness do
+            sqlBuilder.append(" ")
+            printJsonUniqueness(u)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        sqlBuilder.append(")")
+
+    def printJsonArrayValueFuncExpr(expr: SqlExpr.JsonArrayValueFunc): Unit =
+        def printItem(item: (SqlExpr, Option[SqlJsonInput])): Unit =
+            printExpr(item._1)
+            for i <- item._2 do
+                sqlBuilder.append(" ")
+                printJsonInput(i)
+        sqlBuilder.append("JSON_ARRAY(")
+        printList(expr.items)(printItem)
+        for n <- expr.nullConstructor do
+            sqlBuilder.append(" ")
+            printJsonNullConstructor(n)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        sqlBuilder.append(")")
+
+    def printJsonExistsValueFuncExpr(expr: SqlExpr.JsonExistsValueFunc): Unit =
+        sqlBuilder.append("JSON_EXISTS(")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.path)
+        if expr.passingItems.nonEmpty then
+            sqlBuilder.append(" PASSING ")
+            printList(expr.passingItems)(printJsonPassing)
+        for e <- expr.onError do
+            sqlBuilder.append(" ")
+            printJsonExistsErrorBehavior(e)
+        sqlBuilder.append(")")
+
+    def printJsonEncoding(encoding: SqlJsonEncoding): Unit =
+        sqlBuilder.append("ENCODING ")
+        sqlBuilder.append(encoding.encoding)
+
+    def printJsonInput(input: SqlJsonInput): Unit =
+        sqlBuilder.append("FORMAT JSON")
+        for e <- input.format do
+            sqlBuilder.append(" ENCODING ")
+            sqlBuilder.append(e.encoding)
+
+    def printJsonOutput(output: SqlJsonOutput): Unit =
+        sqlBuilder.append("RETURNING ")
+        printType(output.`type`)
+        for f <- output.format do
+            sqlBuilder.append(" FORMAT JSON")
+            for e <- f do
+                sqlBuilder.append(" ENCODING ")
+                sqlBuilder.append(e.encoding)
+
+    def printJsonUniqueness(uniqueness: SqlJsonUniqueness): Unit =
+        sqlBuilder.append(uniqueness.uniqueness)
+
+    def printJsonPassing(passing: SqlJsonPassing): Unit =
+        printExpr(passing.expr)
+        sqlBuilder.append(s" AS $leftQuote${passing.alias}$rightQuote")
+
+    def printJsonNullConstructor(cons: SqlJsonNullConstructor): Unit =
+        sqlBuilder.append(cons.constructor)
+
+    def printJsonQueryWrapperBehavior(behavior: SqlJsonQueryWrapperBehavior): Unit =
+        behavior match
+            case SqlJsonQueryWrapperBehavior.Without(a) =>
+                sqlBuilder.append("WITHOUT")
+                if a then
+                    sqlBuilder.append(" ARRAY")
+                sqlBuilder.append(" WRAPPER")
+            case SqlJsonQueryWrapperBehavior.With(mode, a) =>
+                sqlBuilder.append("WITH")
+                for m <- mode do
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(m.mode)
+                if a then
+                    sqlBuilder.append(" ARRAY")
+                sqlBuilder.append(" WRAPPER")
+
+    def printJsonQueryQuotesBehavior(behavior: SqlJsonQueryQuotesBehavior): Unit =
+        sqlBuilder.append(behavior.mode.mode)
+        sqlBuilder.append(" QUOTES")
+        if behavior.onScalarString then
+            sqlBuilder.append(" ON SCALAR STRING")
+
+    def printJsonQueryEmptyBehavior(behavior: SqlJsonQueryEmptyBehavior): Unit =
+        behavior match
+            case SqlJsonQueryEmptyBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonQueryEmptyBehavior.Null =>
+                sqlBuilder.append("NULL")
+            case SqlJsonQueryEmptyBehavior.EmptyObject =>
+                sqlBuilder.append("EMPTY OBJECT")
+            case SqlJsonQueryEmptyBehavior.EmptyArray =>
+                sqlBuilder.append("EMPTY ARRAY")
+            case SqlJsonQueryEmptyBehavior.Default(expr) =>
+                sqlBuilder.append("DEFAULT ")
+                printExpr(expr)
+        sqlBuilder.append(" ON EMPTY")
+
+    def printJsonQueryErrorBehavior(behavior: SqlJsonQueryErrorBehavior): Unit =
+        behavior match
+            case SqlJsonQueryErrorBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonQueryErrorBehavior.Null =>
+                sqlBuilder.append("NULL")
+            case SqlJsonQueryErrorBehavior.EmptyObject =>
+                sqlBuilder.append("EMPTY OBJECT")
+            case SqlJsonQueryErrorBehavior.EmptyArray =>
+                sqlBuilder.append("EMPTY ARRAY")
+            case SqlJsonQueryErrorBehavior.Default(expr) =>
+                sqlBuilder.append("DEFAULT ")
+                printExpr(expr)
+        sqlBuilder.append(" ON ERROR")
+
+    def printJsonValueEmptyBehavior(behavior: SqlJsonValueEmptyBehavior): Unit =
+        behavior match
+            case SqlJsonValueEmptyBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonValueEmptyBehavior.Null =>
+                sqlBuilder.append("NULL")
+            case SqlJsonValueEmptyBehavior.Default(expr) =>
+                sqlBuilder.append("DEFAULT ")
+                printExpr(expr)
+        sqlBuilder.append(" ON EMPTY")
+
+    def printJsonValueErrorBehavior(behavior: SqlJsonValueErrorBehavior): Unit =
+        behavior match
+            case SqlJsonValueErrorBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonValueErrorBehavior.Null =>
+                sqlBuilder.append("NULL")
+            case SqlJsonValueErrorBehavior.Default(expr) =>
+                sqlBuilder.append("DEFAULT ")
+                printExpr(expr)
+        sqlBuilder.append(" ON ERROR")
+
+    def printJsonExistsErrorBehavior(behavior: SqlJsonExistsErrorBehavior): Unit =
+        sqlBuilder.append(behavior.mode)
+        sqlBuilder.append(" ON ERROR")
+
+    def printStandardAggFuncExpr(expr: SqlExpr.StandardAggFunc): Unit =
+        sqlBuilder.append(expr.name)
+        sqlBuilder.append("(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        printList(expr.args)(printExpr)
+        if expr.orderBy.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.orderBy)(printOrderingItem)
+        sqlBuilder.append(")")
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+            sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    def printCountAsteriskAggFuncExpr(expr: SqlExpr.CountAsteriskAggFunc): Unit =
+        sqlBuilder.append("COUNT(")
+        for n <- expr.tableName do
+            sqlBuilder.append(s"$leftQuote$n$rightQuote.")
+        sqlBuilder.append("*)")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    def printListAggAggFuncExpr(expr: SqlExpr.ListAggAggFunc): Unit =
+        sqlBuilder.append("LISTAGG(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.separator)
+        for o <- expr.onOverflow do
+            sqlBuilder.append(" ON OVERFLOW ")
+            o.mode match
+                case SqlListAggOnOverflowMode.Error =>
+                    sqlBuilder.append("ERROR")
+                case SqlListAggOnOverflowMode.Truncate(e) =>
+                    sqlBuilder.append("TRUNCATE ")
+                    printExpr(e)
+            sqlBuilder.append(" ")
+            sqlBuilder.append(o.countMode.mode)
+        sqlBuilder.append(")")
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+            sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    def printJsonObjectAggAggFuncExpr(expr: SqlExpr.JsonObjectAggAggFunc): Unit =
+        sqlBuilder.append("JSON_OBJECTAGG(")
+        printExpr(expr.item._1)
+        sqlBuilder.append(" VALUE ")
+        printExpr(expr.item._2)
+        for n <- expr.nullConstructor do
+            sqlBuilder.append(" ")
+            printJsonNullConstructor(n)
+        for u <- expr.uniqueness do
+            sqlBuilder.append(" ")
+            printJsonUniqueness(u)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    def printJsonArrayAggAggFuncExpr(expr: SqlExpr.JsonArrayAggAggFunc): Unit =
+        sqlBuilder.append("JSON_ARRAYAGG(")
+        printExpr(expr.item._1)
+        for i <- expr.item._2 do
+            sqlBuilder.append(" ")
+            printJsonInput(i)
+        if expr.orderBy.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.orderBy)(printOrderingItem)
+        for n <- expr.nullConstructor do
+            sqlBuilder.append(" ")
+            printJsonNullConstructor(n)
+        for o <- expr.output do
+            sqlBuilder.append(" ")
+            printJsonOutput(o)
+        sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    def printStandardWindowFuncExpr(expr: SqlExpr.StandardWindowFunc): Unit =
+        sqlBuilder.append(expr.name)
+        sqlBuilder.append("(")
+        printList(expr.args)(printExpr)
+        sqlBuilder.append(")")
+
+    def printNullsTreatmentWindowFuncExpr(expr: SqlExpr.NullsTreatmentWindowFunc): Unit =
+        sqlBuilder.append(expr.name)
+        sqlBuilder.append("(")
+        printList(expr.args)(printExpr)
+        sqlBuilder.append(")")
+        for m <- expr.nullsMode do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(m.mode)
+
+    def printNthValueWindowFuncExpr(expr: SqlExpr.NthValueWindowFunc): Unit =
+        sqlBuilder.append("NTH_VALUE(")
+        printExpr(expr.arg)
+        sqlBuilder.append(")")
+        for m <- expr.fromMode do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(m.mode)
+        for m <- expr.nullsMode do
+            sqlBuilder.append(" ")
+            sqlBuilder.append(m.mode)
+
+    def printStandardMatchFuncExpr(expr: SqlExpr.StandardMatchFunc): Unit =
+        sqlBuilder.append(expr.name)
+        sqlBuilder.append("(")
+        printList(expr.args)(printExpr)
         sqlBuilder.append(")")
 
     def printCustomExpr(expr: SqlExpr.Custom): Unit =

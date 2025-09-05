@@ -38,47 +38,31 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(u)
             sqlBuilder.append(")")
 
-    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
-        expr.operator match
-            case SqlBinaryOperator.EuclideanDistance =>
-                val func = 
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.CosineDistance =>
-                val func =
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.DotDistance =>
-                val func =
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.Concat =>
-                val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
-                printExpr(func)
-            case _ =>
-                super.printBinaryExpr(expr) 
+    // TODO 向量
+    // override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+    //     expr.operator match
+    //         case SqlBinaryOperator.EuclideanDistance =>
+    //             val func = 
+    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil)
+    //             printExpr(func)
+    //         case SqlBinaryOperator.CosineDistance =>
+    //             val func =
+    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil)
+    //             printExpr(func)
+    //         case SqlBinaryOperator.DotDistance =>
+    //             val func =
+    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil)
+    //             printExpr(func)
+    //         case SqlBinaryOperator.Concat =>
+    //             val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
+    //             printExpr(func)
+    //         case _ =>
+    //             super.printBinaryExpr(expr) 
 
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("STRING_TO_VECTOR(")
         printExpr(expr.expr)
         sqlBuilder.append(")")
-
-    override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
-            val (args, separator) = if expr.args.size == 2 then
-                (expr.args.head :: Nil) -> expr.args.last
-            else
-                expr.args -> SqlExpr.StringLiteral("")
-            sqlBuilder.append("GROUP_CONCAT")
-            sqlBuilder.append("(")
-            printList(args)(printExpr)
-            if expr.orderBy.nonEmpty then
-                sqlBuilder.append(" ORDER BY ")
-                printList(expr.orderBy)(printOrderingItem)
-            sqlBuilder.append(" SEPARATOR ")
-            printExpr(separator)
-            sqlBuilder.append(")")
-        else super.printFuncExpr(expr)
 
     override def printValues(values: SqlQuery.Values): Unit =
         printSpace()
@@ -99,6 +83,48 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
                 sqlBuilder.append("DATETIME")
             case _ =>
                 super.printType(`type`)
+
+    override def printListAggAggFuncExpr(expr: SqlExpr.ListAggAggFunc): Unit =
+        sqlBuilder.append("GROUP_CONCAT(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        printExpr(expr.expr)
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+        sqlBuilder.append(" SEPARATOR ")
+        printExpr(expr.separator)
+        sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
+        expr.mode match
+            case SqlVectorDistanceMode.Euclidean =>
+                printExpr(
+                    SqlExpr.StandardValueFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil
+                    )
+                )
+            case SqlVectorDistanceMode.Cosine =>
+                printExpr(
+                    SqlExpr.StandardValueFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil
+                    )
+                )
+            case SqlVectorDistanceMode.Dot =>
+                printExpr(
+                    SqlExpr.StandardValueFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil
+                    )
+                )
+            case SqlVectorDistanceMode.Manhattan =>
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         val order = orderBy.ordering match

@@ -34,13 +34,96 @@ enum SqlExpr:
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
     case Grouping(expr: SqlExpr, items: List[SqlExpr])
-    case Func(
+    case StandardValueFunc(name: String, args: List[SqlExpr])
+    case IdentValueFunc(name: String)
+    case SubstringValueFunc(expr: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
+    case TrimValueFunc(expr: SqlExpr, trim: Option[(Option[SqlTrimMode], Option[SqlExpr])])
+    case OverlayValueFunc(expr: SqlExpr, placing: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
+    case PositionValueFunc(expr: SqlExpr, in: SqlExpr)
+    case ExtractValueFunc(expr: SqlExpr, unit: SqlTimeUnit)
+    case VectorDistanceFunc(left: SqlExpr, right: SqlExpr, mode: SqlVectorDistanceMode)
+    case JsonSerializeValueFunc(expr: SqlExpr, output: Option[SqlJsonOutput])
+    case JsonParseValueFunc(
+        expr: SqlExpr,
+        input: Option[SqlJsonInput],
+        uniqueness: Option[SqlJsonUniqueness]
+    )
+    case JsonQueryValueFunc(
+        expr: SqlExpr,
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        output: Option[SqlJsonOutput],
+        wrapper: Option[SqlJsonQueryWrapperBehavior],
+        quotes: Option[SqlJsonQueryQuotesBehavior],
+        onEmpty: Option[SqlJsonQueryEmptyBehavior],
+        onError: Option[SqlJsonQueryErrorBehavior]
+    )
+    case JsonValueValueFunc(
+        expr: SqlExpr, 
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        output: Option[SqlJsonOutput],
+        onEmpty: Option[SqlJsonValueEmptyBehavior],
+        onError: Option[SqlJsonValueErrorBehavior]
+    )
+    case JsonObjectValueFunc(
+        items: List[(SqlExpr, SqlExpr)],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        uniqueness: Option[SqlJsonUniqueness],
+        output: Option[SqlJsonOutput]
+    )
+    case JsonArrayValueFunc(
+        items: List[(SqlExpr, Option[SqlJsonInput])],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        output: Option[SqlJsonOutput]
+    )
+    case JsonExistsValueFunc(
+        expr: SqlExpr, 
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        onError: Option[SqlJsonExistsErrorBehavior]
+    )
+    case StandardAggFunc(
         name: String,
         args: List[SqlExpr],
-        quantifier: Option[SqlQuantifier] = None,
-        orderBy: List[SqlOrderingItem] = Nil,
-        withinGroup: List[SqlOrderingItem] = Nil,
-        filter: Option[SqlExpr] = None
+        quantifier: Option[SqlQuantifier],
+        orderBy: List[SqlOrderingItem],
+        withinGroup: List[SqlOrderingItem],
+        filter: Option[SqlExpr]
     )
-    case ExtractValueFunc(expr: SqlExpr, unit: SqlTimeUnit)
+    case CountAsteriskAggFunc(tableName: Option[String], filter: Option[SqlExpr])
+    case ListAggAggFunc(
+        expr: SqlExpr,
+        separator: SqlExpr,
+        quantifier: Option[SqlQuantifier],
+        onOverflow: Option[SqlListAggOnOverflow],
+        withinGroup: List[SqlOrderingItem],
+        filter: Option[SqlExpr]
+    )
+    case JsonObjectAggAggFunc(
+        item: (SqlExpr, SqlExpr),
+        nullConstructor: Option[SqlJsonNullConstructor],
+        uniqueness: Option[SqlJsonUniqueness],
+        output: Option[SqlJsonOutput],
+        filter: Option[SqlExpr]
+    )
+    case JsonArrayAggAggFunc(
+        item: (SqlExpr, Option[SqlJsonInput]),
+        orderBy: List[SqlOrderingItem],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        output: Option[SqlJsonOutput],
+        filter: Option[SqlExpr]
+    )
+    case StandardWindowFunc(name: String, args: List[SqlExpr])
+    case NullsTreatmentWindowFunc(
+        name: String, 
+        args: List[SqlExpr], 
+        nullsMode: Option[SqlWindowNullsMode]
+    )
+    case NthValueWindowFunc(
+        arg: SqlExpr,
+        fromMode: Option[SqlNthValueFromMode],
+        nullsMode: Option[SqlWindowNullsMode]
+    )
+    case StandardMatchFunc(name: String, args: List[SqlExpr])
     case Custom(snippet: String)

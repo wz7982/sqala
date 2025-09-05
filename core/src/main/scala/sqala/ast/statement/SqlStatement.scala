@@ -23,36 +23,36 @@ object SqlStatement:
         def addWhere(condition: SqlExpr): Update =
             update.copy(where = update.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
-enum SqlQuery(val lock: Option[SqlLock] = None):
+enum SqlQuery(val lock: Option[SqlLock]):
     case Select(
-        quantifier: Option[SqlQuantifier] = None,
+        quantifier: Option[SqlQuantifier],
         select: List[SqlSelectItem],
         from: List[SqlTable],
-        where: Option[SqlExpr] = None,
-        groupBy: Option[SqlGroupBy] = None,
-        having: Option[SqlExpr] = None,
-        orderBy: List[SqlOrderingItem] = Nil,
-        limit: Option[SqlLimit] = None,
-        override val lock: Option[SqlLock] = None
-    )
+        where: Option[SqlExpr],
+        groupBy: Option[SqlGroupBy],
+        having: Option[SqlExpr],
+        orderBy: List[SqlOrderingItem],
+        limit: Option[SqlLimit],
+        override val lock: Option[SqlLock]
+    ) extends SqlQuery(lock)
     case Set(
         left: SqlQuery,
         operator: SqlSetOperator,
         right: SqlQuery,
-        orderBy: List[SqlOrderingItem] = Nil,
-        limit: Option[SqlLimit] = None,
-        override val lock: Option[SqlLock] = None
-    )
+        orderBy: List[SqlOrderingItem],
+        limit: Option[SqlLimit],
+        override val lock: Option[SqlLock]
+    ) extends SqlQuery(lock)
     case Values(
         values: List[List[SqlExpr]], 
-        override val lock: Option[SqlLock] = None
-    )
+        override val lock: Option[SqlLock]
+    ) extends SqlQuery(lock)
     case Cte(
         queryItems: List[SqlWithItem], 
         recursive: Boolean, 
         query: SqlQuery, 
-        override val lock: Option[SqlLock] = None
-    )
+        override val lock: Option[SqlLock]
+    ) extends SqlQuery(lock)
 
 object SqlQuery:
     extension (select: Select)

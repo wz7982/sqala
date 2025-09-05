@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType}
+import sqala.ast.expr.*
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 
@@ -51,34 +51,28 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
-        expr.operator match
-            case SqlBinaryOperator.EuclideanDistance =>
-                val func = 
-                    SqlExpr.Func("L2_DISTANCE", expr.left :: expr.right :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.CosineDistance =>
-                val func =
-                    SqlExpr.Func("COSINE_DISTANCE", expr.left :: expr.right :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.DotDistance =>
-                val func =
-                    SqlExpr.Func("INNER_PRODUCT", expr.left :: expr.right :: Nil)
-                printExpr(SqlExpr.Binary(func, SqlBinaryOperator.Times, SqlExpr.NumberLiteral(-1)))
-            case _ =>
-                super.printBinaryExpr(expr) 
-
-    override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
-            sqlBuilder.append("LISTAGG")
-            sqlBuilder.append("(")
-            printList(expr.args)(printExpr)
-            sqlBuilder.append(")")
-            if expr.orderBy.nonEmpty then
-                sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-                printList(expr.orderBy)(printOrderingItem)
-                sqlBuilder.append(")")
-        else super.printFuncExpr(expr)
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
+        expr.mode match
+            case SqlVectorDistanceMode.Euclidean =>
+                printExpr(
+                    SqlExpr.StandardValueFunc("L2_DISTANCE", expr.left :: expr.right :: Nil)
+                )
+            case SqlVectorDistanceMode.Cosine =>
+                printExpr(
+                    SqlExpr.StandardValueFunc("COSINE_DISTANCE", expr.left :: expr.right :: Nil)
+                )
+            case SqlVectorDistanceMode.Dot =>
+                printExpr(
+                    SqlExpr.Binary(
+                        SqlExpr.StandardValueFunc("INNER_PRODUCT", expr.left :: expr.right :: Nil),
+                        SqlBinaryOperator.Times,
+                        SqlExpr.NumberLiteral(-1)
+                    )
+                )
+            case SqlVectorDistanceMode.Manhattan =>
+                printExpr(
+                    SqlExpr.StandardValueFunc("L1_DISTANCE", expr.left :: expr.right :: Nil)
+                )
 
     override def printType(`type`: SqlType): Unit =
         `type` match

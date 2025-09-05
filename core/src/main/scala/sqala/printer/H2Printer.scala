@@ -52,14 +52,4 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
-            sqlBuilder.append("LISTAGG")
-            sqlBuilder.append("(")
-            printList(expr.args)(printExpr)
-            sqlBuilder.append(")")
-            if expr.orderBy.nonEmpty then
-                sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-                printList(expr.orderBy)(printOrderingItem)
-                sqlBuilder.append(")")
-        else super.printFuncExpr(expr)
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit = {}

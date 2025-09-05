@@ -1,8 +1,21 @@
 package sqala.ast.expr
 
-enum SqlUniqueness(val uniqueness: String):
-    case WithUnique extends SqlUniqueness("WITH UNIQUE KEYS")
-    case WithoutUnique extends SqlUniqueness("WITHOUT UNIQUE KEYS")
+enum SqlVectorDistanceMode:
+    case Euclidean
+    case Cosine
+    case Dot
+    case Manhattan
+
+enum SqlTrimMode(val mode: String):
+    case Both extends SqlTrimMode("BOTH")
+    case Leading extends SqlTrimMode("LEADING")
+    case Trailing extends SqlTrimMode("TRAILING")
+
+enum SqlJsonUniqueness(val uniqueness: String):
+    case With extends SqlJsonUniqueness("WITH UNIQUE KEYS")
+    case Without extends SqlJsonUniqueness("WITHOUT UNIQUE KEYS")
+
+case class SqlJsonPassing(expr: SqlExpr, alias: String)
 
 enum SqlJsonNodeType(val `type`: String):
     case Value extends SqlJsonNodeType("VALUE")
@@ -20,8 +33,8 @@ enum SqlJsonNullConstructor(val constructor: String):
     case Absent extends SqlJsonNullConstructor("ABSENT ON NULL")
 
 enum SqlJsonQueryWrapperBehavior:
-    case Without(array: Boolean)
     case With(mode: Option[SqlJsonQueryWrapperBehaviorMode], array: Boolean)
+    case Without(array: Boolean)
 
 enum SqlJsonQueryWrapperBehaviorMode(val mode: String):
     case Conditional extends SqlJsonQueryWrapperBehaviorMode("CONDITIONAL")
@@ -33,14 +46,26 @@ enum SqlJsonQueryQuotesBehaviorMode(val mode: String):
     case Keep extends SqlJsonQueryQuotesBehaviorMode("KEEP")
     case Omit extends SqlJsonQueryQuotesBehaviorMode("OMIT")
 
-enum SqlJsonQueryEmptyOrErrorBehavior:
+enum SqlJsonQueryEmptyBehavior:
     case Error
     case Null
     case EmptyObject
     case EmptyArray
     case Default(expr: SqlExpr)
 
-enum SqlJsonValueEmptyOrErrorBehavior:
+enum SqlJsonQueryErrorBehavior:
+    case Error
+    case Null
+    case EmptyObject
+    case EmptyArray
+    case Default(expr: SqlExpr)
+
+enum SqlJsonValueEmptyBehavior:
+    case Error
+    case Null
+    case Default(expr: SqlExpr)
+
+enum SqlJsonValueErrorBehavior:
     case Error
     case Null
     case Default(expr: SqlExpr)
@@ -50,5 +75,28 @@ enum SqlJsonExistsErrorBehavior(val mode: String):
     case True extends SqlJsonExistsErrorBehavior("TRUE")
     case False extends SqlJsonExistsErrorBehavior("FALSE")
     case Unknown extends SqlJsonExistsErrorBehavior("UNKNOWN")
+
+case class SqlJsonInput(format: Option[SqlJsonEncoding])
     
-case class SqlJsonReturning(`type`: SqlType, format: Option[Option[SqlJsonEncoding]])
+case class SqlJsonOutput(`type`: SqlType, format: Option[Option[SqlJsonEncoding]])
+
+case class SqlListAggOnOverflow(
+    mode: SqlListAggOnOverflowMode,
+    countMode: SqlListAggCountMode
+)
+
+enum SqlListAggOnOverflowMode:
+    case Error
+    case Truncate(expr: SqlExpr)
+
+enum SqlListAggCountMode(val mode: String):
+    case With extends SqlListAggCountMode("WITH COUNT")
+    case Without extends SqlListAggCountMode("WITHOUT COUNT")
+
+enum SqlWindowNullsMode(val mode: String):
+    case Respect extends SqlWindowNullsMode("RESPECT NULLS")
+    case Ignore extends SqlWindowNullsMode("IGNORE NULLS")
+
+enum SqlNthValueFromMode(val mode: String):
+    case First extends SqlNthValueFromMode("FROM FIRST")
+    case Last extends SqlNthValueFromMode("FROM LAST")
