@@ -2,7 +2,7 @@ package sqala.printer
 
 import sqala.ast.expr.*
 import sqala.ast.statement.SqlStatement
-import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.ast.table.SqlTableAlias
 
 class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printCteRecursive(): Unit = {}
@@ -89,15 +89,3 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             sqlBuilder.append("(")
             printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
             sqlBuilder.append(")")
-
-    override def printTable(table: SqlTable): Unit =
-        table match
-            case SqlTable.Func(functionName, args, alias) =>
-                sqlBuilder.append("TABLE(")
-                sqlBuilder.append(s"$functionName")
-                sqlBuilder.append("(")
-                printList(args)(printExpr)
-                sqlBuilder.append("))")
-                for a <- alias do
-                    printTableAlias(a)
-            case _ => super.printTable(table)

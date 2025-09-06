@@ -939,11 +939,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
                 for a <- alias do
                     printTableAlias(a)
-            case SqlTable.Func(functionName, args, alias) =>
+            case SqlTable.Func(functionName, args, lateral, withOrd, alias) =>
+                if lateral then sqlBuilder.append("LATERAL ")
                 sqlBuilder.append(functionName)
                 sqlBuilder.append("(")
                 printList(args)(printExpr)
                 sqlBuilder.append(")")
+                if withOrd then
+                    sqlBuilder.append(" WITH ORDINALITY")
                 for a <- alias do
                     printTableAlias(a)
             case SqlTable.SubQuery(query, lateral, alias) =>

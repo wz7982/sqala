@@ -5,18 +5,20 @@ import sqala.ast.statement.SqlQuery
 
 enum SqlTable:
     case Standard(
-        name: String, 
-        val alias: Option[SqlTableAlias]
+        name: String,
+        alias: Option[SqlTableAlias]
     )
     case Func(
         name: String, 
         args: List[SqlExpr],
-        val alias: Option[SqlTableAlias]
+        lateral: Boolean,
+        withOrd: Boolean,
+        alias: Option[SqlTableAlias]
     )
     case SubQuery(
         query: SqlQuery, 
         lateral: Boolean, 
-        val alias: Option[SqlTableAlias]
+        alias: Option[SqlTableAlias]
     )
     case Join(
         left: SqlTable, 
