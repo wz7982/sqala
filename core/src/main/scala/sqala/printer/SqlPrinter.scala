@@ -474,18 +474,24 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printList(expr.orderBy)(printOrderingItem)
         for f <- expr.frame do
             f match
-                case SqlWindowFrame.Start(unit, start) =>
+                case SqlWindowFrame.Start(unit, start, exclude) =>
                     sqlBuilder.append(" ")
                     sqlBuilder.append(unit.unit)
                     sqlBuilder.append(" ")
                     sqlBuilder.append(start.bound)
-                case SqlWindowFrame.Between(unit, start, end) =>
+                    for e <- exclude do
+                        sqlBuilder.append(" ")
+                        sqlBuilder.append(e.mode)
+                case SqlWindowFrame.Between(unit, start, end, exclude) =>
                     sqlBuilder.append(" ")
                     sqlBuilder.append(unit.unit)
                     sqlBuilder.append(" BETWEEN ")
                     sqlBuilder.append(start.bound)
                     sqlBuilder.append(" AND ")
                     sqlBuilder.append(end.bound)
+                    for e <- exclude do
+                        sqlBuilder.append(" ")
+                        sqlBuilder.append(e.mode)
         sqlBuilder.append(")")
 
     def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
