@@ -21,7 +21,7 @@ enum SqlExpr:
     case JsonTest(expr: SqlExpr, not: Boolean, nodeType: Option[SqlJsonNodeType])
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
-    case Match(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
+    case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
     case Coalesce(expr: SqlExpr, thenItems: List[SqlExpr])
     case NullIf(expr: SqlExpr, `then`: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlType)

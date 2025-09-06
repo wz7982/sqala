@@ -224,7 +224,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case j: SqlExpr.JsonTest => printJsonTestExpr(j)
         case b: SqlExpr.Between => printBetweenExpr(b)
         case c: SqlExpr.Case => printCaseExpr(c)
-        case m: SqlExpr.Match => printMatchExpr(m)
+        case s: SqlExpr.SimpleCase => printSimpleCaseExpr(s)
         case c: SqlExpr.Coalesce => printCoalesceExpr(c)
         case n: SqlExpr.NullIf => printNullIfExpr(n)
         case c: SqlExpr.Cast => printCastExpr(c)
@@ -423,7 +423,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(d)
         sqlBuilder.append(" END")
 
-    def printMatchExpr(expr: SqlExpr.Match): Unit =
+    def printSimpleCaseExpr(expr: SqlExpr.SimpleCase): Unit =
         sqlBuilder.append("CASE ")
         printExpr(expr.expr)
         for branch <- expr.branches do
