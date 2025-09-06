@@ -3,28 +3,26 @@ package sqala.ast.table
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlQuery
 
-enum SqlTable(val alias: Option[SqlTableAlias]):
+enum SqlTable:
     case Standard(
         name: String, 
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        val alias: Option[SqlTableAlias]
+    )
     case Func(
         name: String, 
         args: List[SqlExpr],
-        lateral: Boolean,
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        val alias: Option[SqlTableAlias]
+    )
     case SubQuery(
         query: SqlQuery, 
         lateral: Boolean, 
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        val alias: Option[SqlTableAlias]
+    )
     case Join(
         left: SqlTable, 
         joinType: SqlJoinType, 
         right: SqlTable, 
-        condition: Option[SqlJoinCondition],
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        condition: Option[SqlJoinCondition]
+    )
 
-case class SqlTableAlias(tableAlias: String, columnAlias: List[String] = Nil)
+case class SqlTableAlias(tableAlias: String, columnAlias: List[String])

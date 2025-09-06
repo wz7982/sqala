@@ -67,7 +67,7 @@ object SqlQuery:
 
         def setJoinOnCondition(condition: SqlExpr): Select =
             select.from.last match
-                case SqlTable.Join(left, joinType, right, _, alias) => 
-                    val newTable = SqlTable.Join(left, joinType, right, Some(SqlJoinCondition.On(condition)), alias)
+                case SqlTable.Join(left, joinType, right, _) => 
+                    val newTable = SqlTable.Join(left, joinType, right, Some(SqlJoinCondition.On(condition)))
                     select.copy(from = select.from.init :+ newTable)
                 case _ => select
