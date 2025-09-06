@@ -259,7 +259,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case c: SqlExpr.Custom => printCustomExpr(c)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
-        expr.tableName.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
+        for n <- expr.tableName do
+            sqlBuilder.append(s"$leftQuote$n$rightQuote.")
         sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
 
     def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
@@ -941,10 +942,20 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printTable(table: SqlTable): Unit = 
         table match
-            case SqlTable.Standard(tableName, alias) =>
+            case SqlTable.Standard(tableName, alias, sample) =>
                 sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
                 for a <- alias do
                     printTableAlias(a)
+                for s <- sample do
+                    sqlBuilder.append(" TABLESAMPLE ")
+                    sqlBuilder.append(s.mode.mode)
+                    sqlBuilder.append(" (")
+                    printExpr(s.percentage)
+                    sqlBuilder.append(")")
+                    for r <- s.repeatable do
+                        sqlBuilder.append(" REPEATABLE (")
+                        printExpr(r)
+                        sqlBuilder.append(")")
             case SqlTable.Func(functionName, args, lateral, withOrd, alias) =>
                 if lateral then sqlBuilder.append("LATERAL ")
                 sqlBuilder.append(functionName)

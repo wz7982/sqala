@@ -6,7 +6,8 @@ import sqala.ast.statement.SqlQuery
 enum SqlTable:
     case Standard(
         name: String,
-        alias: Option[SqlTableAlias]
+        alias: Option[SqlTableAlias],
+        sample: Option[SqlTableSample]
     )
     case Func(
         name: String, 
@@ -28,3 +29,9 @@ enum SqlTable:
     )
 
 case class SqlTableAlias(tableAlias: String, columnAlias: List[String])
+
+case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
+
+enum SqlTableSampleMode(val mode: String):
+    case Bernoulli extends SqlTableSampleMode("BERNOULLI")
+    case System extends SqlTableSampleMode("SYSTEM")
