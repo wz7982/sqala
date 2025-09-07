@@ -7,6 +7,7 @@ enum SqlTable:
     case Standard(
         name: String,
         alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize],
         sample: Option[SqlTableSample]
     )
     case Func(
@@ -14,12 +15,14 @@ enum SqlTable:
         args: List[SqlExpr],
         lateral: Boolean,
         withOrd: Boolean,
-        alias: Option[SqlTableAlias]
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
     )
     case SubQuery(
         query: SqlQuery, 
         lateral: Boolean, 
-        alias: Option[SqlTableAlias]
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
     )
     case Join(
         left: SqlTable, 

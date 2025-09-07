@@ -100,3 +100,7 @@ enum SqlWindowNullsMode(val mode: String):
 enum SqlNthValueFromMode(val mode: String):
     case First extends SqlNthValueFromMode("FROM FIRST")
     case Last extends SqlNthValueFromMode("FROM LAST")
+
+enum SqlMatchPhase(val phase: String):
+    case Final extends SqlMatchPhase("FINAL")
+    case Running extends SqlMatchPhase("RUNNING")

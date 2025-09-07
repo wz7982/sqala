@@ -126,4 +126,5 @@ enum SqlExpr:
         nullsMode: Option[SqlWindowNullsMode]
     )
     case StandardMatchFunc(name: String, args: List[SqlExpr])
+    case MatchPhase(expr: SqlExpr, phase: SqlMatchPhase)
     case Custom(snippet: String)
