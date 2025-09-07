@@ -55,23 +55,51 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         expr.mode match
             case SqlVectorDistanceMode.Euclidean =>
                 printExpr(
-                    SqlExpr.StandardValueFunc("L2_DISTANCE", expr.left :: expr.right :: Nil)
+                    SqlExpr.StandardFunc(
+                        "L2_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
                 )
             case SqlVectorDistanceMode.Cosine =>
                 printExpr(
-                    SqlExpr.StandardValueFunc("COSINE_DISTANCE", expr.left :: expr.right :: Nil)
+                    SqlExpr.StandardFunc(
+                        "COSINE_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
                 )
             case SqlVectorDistanceMode.Dot =>
                 printExpr(
                     SqlExpr.Binary(
-                        SqlExpr.StandardValueFunc("INNER_PRODUCT", expr.left :: expr.right :: Nil),
+                        SqlExpr.StandardFunc(
+                            "INNER_PRODUCT", 
+                            expr.left :: expr.right :: Nil,
+                            None,
+                            Nil,
+                            Nil,
+                            None
+                        ),
                         SqlBinaryOperator.Times,
                         SqlExpr.NumberLiteral(-1)
                     )
                 )
             case SqlVectorDistanceMode.Manhattan =>
                 printExpr(
-                    SqlExpr.StandardValueFunc("L1_DISTANCE", expr.left :: expr.right :: Nil)
+                    SqlExpr.StandardFunc(
+                        "L1_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
                 )
 
     override def printType(`type`: SqlType): Unit =

@@ -232,30 +232,27 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case q: SqlExpr.SubQuery => printSubQueryExpr(q)
         case q: SqlExpr.SubLink => printSubLinkExpr(q)
         case g: SqlExpr.Grouping => printGroupingExpr(g)
-        case s: SqlExpr.StandardValueFunc => printStandardValueFuncExpr(s)
-        case i: SqlExpr.IdentValueFunc => printIdentValueFuncExpr(i)
-        case s: SqlExpr.SubstringValueFunc => printSubstringValueFuncExpr(s)
-        case t: SqlExpr.TrimValueFunc => printTrimValueFuncExpr(t)
-        case o: SqlExpr.OverlayValueFunc => printOverlayValueFuncExpr(o)
-        case p: SqlExpr.PositionValueFunc => printPositionValueFuncExpr(p)
-        case e: SqlExpr.ExtractValueFunc => printExtractValueFuncExpr(e)
+        case i: SqlExpr.IdentFunc => printIdentFuncExpr(i)
+        case s: SqlExpr.SubstringFunc => printSubstringFuncExpr(s)
+        case t: SqlExpr.TrimFunc => printTrimFuncExpr(t)
+        case o: SqlExpr.OverlayFunc => printOverlayFuncExpr(o)
+        case p: SqlExpr.PositionFunc => printPositionFuncExpr(p)
+        case e: SqlExpr.ExtractFunc => printExtractFuncExpr(e)
         case v: SqlExpr.VectorDistanceFunc => printVectorDistanceFuncExpr(v)
-        case j: SqlExpr.JsonSerializeValueFunc => printJsonSerializeValueFuncExpr(j)
-        case j: SqlExpr.JsonParseValueFunc => printJsonParseValueFuncExpr(j)
-        case j: SqlExpr.JsonQueryValueFunc => printJsonQueryValueFuncExpr(j)
-        case j: SqlExpr.JsonValueValueFunc => printJsonValueValueFuncExpr(j)
-        case j: SqlExpr.JsonObjectValueFunc => printJsonObjectValueFuncExpr(j)
-        case j: SqlExpr.JsonArrayValueFunc => printJsonArrayValueFuncExpr(j)
-        case j: SqlExpr.JsonExistsValueFunc => printJsonExistsValueFuncExpr(j)
-        case s: SqlExpr.StandardAggFunc => printStandardAggFuncExpr(s)
-        case c: SqlExpr.CountAsteriskAggFunc => printCountAsteriskAggFuncExpr(c)
-        case l: SqlExpr.ListAggAggFunc => printListAggAggFuncExpr(l)
-        case j: SqlExpr.JsonObjectAggAggFunc => printJsonObjectAggAggFuncExpr(j)
-        case j: SqlExpr.JsonArrayAggAggFunc => printJsonArrayAggAggFuncExpr(j)
-        case s: SqlExpr.StandardWindowFunc => printStandardWindowFuncExpr(s)
-        case n: SqlExpr.NullsTreatmentWindowFunc => printNullsTreatmentWindowFuncExpr(n)
-        case n: SqlExpr.NthValueWindowFunc => printNthValueWindowFuncExpr(n)
-        case s: SqlExpr.StandardMatchFunc => printStandardMatchFuncExpr(s)
+        case j: SqlExpr.JsonSerializeFunc => printJsonSerializeFuncExpr(j)
+        case j: SqlExpr.JsonParseFunc => printJsonParseFuncExpr(j)
+        case j: SqlExpr.JsonQueryFunc => printJsonQueryFuncExpr(j)
+        case j: SqlExpr.JsonValueFunc => printJsonValueFuncExpr(j)
+        case j: SqlExpr.JsonObjectFunc => printJsonObjectFuncExpr(j)
+        case j: SqlExpr.JsonArrayFunc => printJsonArrayFuncExpr(j)
+        case j: SqlExpr.JsonExistsFunc => printJsonExistsFuncExpr(j)
+        case c: SqlExpr.CountAsteriskFunc => printCountAsteriskFuncExpr(c)
+        case l: SqlExpr.ListAggFunc => printListAggFuncExpr(l)
+        case j: SqlExpr.JsonObjectAggFunc => printJsonObjectAggFuncExpr(j)
+        case j: SqlExpr.JsonArrayAggFunc => printJsonArrayAggFuncExpr(j)
+        case n: SqlExpr.NullsTreatmentFunc => printNullsTreatmentFuncExpr(n)
+        case n: SqlExpr.NthValueFunc => printNthValueFuncExpr(n)
+        case s: SqlExpr.StandardFunc => printStandardFuncExpr(s)
         case m: SqlExpr.MatchPhase => printMatchPhaseExpr(m)
         case c: SqlExpr.Custom => printCustomExpr(c)
 
@@ -440,10 +437,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printCoalesceExpr(expr: SqlExpr.Coalesce): Unit =
         sqlBuilder.append("COALESCE(")
-        printExpr(expr.expr)
-        if expr.thenItems.nonEmpty then
-            sqlBuilder.append(", ")
-            printList(expr.thenItems)(printExpr)
+        printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
     def printNullIfExpr(expr: SqlExpr.NullIf): Unit =
@@ -517,22 +511,13 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printGroupingExpr(expr: SqlExpr.Grouping): Unit =
         sqlBuilder.append("GROUPING(")
-        printExpr(expr.expr)
-        if expr.items.nonEmpty then
-            sqlBuilder.append(", ")
-            printList(expr.items)(printExpr)
+        printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
-    def printStandardValueFuncExpr(expr: SqlExpr.StandardValueFunc): Unit =
-        sqlBuilder.append(expr.name)
-        sqlBuilder.append("(")
-        printList(expr.args)(printExpr)
-        sqlBuilder.append(")")
-
-    def printIdentValueFuncExpr(expr: SqlExpr.IdentValueFunc): Unit =
+    def printIdentFuncExpr(expr: SqlExpr.IdentFunc): Unit =
         sqlBuilder.append(expr.name)
 
-    def printSubstringValueFuncExpr(expr: SqlExpr.SubstringValueFunc): Unit =
+    def printSubstringFuncExpr(expr: SqlExpr.SubstringFunc): Unit =
         sqlBuilder.append("SUBSTRING(")
         printExpr(expr.expr)
         sqlBuilder.append(" FROM ")
@@ -542,7 +527,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
         sqlBuilder.append(")")
 
-    def printTrimValueFuncExpr(expr: SqlExpr.TrimValueFunc): Unit =
+    def printTrimFuncExpr(expr: SqlExpr.TrimFunc): Unit =
         sqlBuilder.append("TRIM(")
         for t <- expr.trim do
             for m <- t._1 do
@@ -555,7 +540,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printExpr(expr.expr)
         sqlBuilder.append(")")
 
-    def printOverlayValueFuncExpr(expr: SqlExpr.OverlayValueFunc): Unit =
+    def printOverlayFuncExpr(expr: SqlExpr.OverlayFunc): Unit =
         sqlBuilder.append("OVERLAY(")
         printExpr(expr.expr)
         sqlBuilder.append(" PLACING ")
@@ -567,14 +552,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
         sqlBuilder.append(")")
 
-    def printPositionValueFuncExpr(expr: SqlExpr.PositionValueFunc): Unit =
+    def printPositionFuncExpr(expr: SqlExpr.PositionFunc): Unit =
         sqlBuilder.append("POSITION(")
         printExpr(expr.expr)
         sqlBuilder.append(" IN ")
         printExpr(expr.in)
         sqlBuilder.append(")")
 
-    def printExtractValueFuncExpr(expr: SqlExpr.ExtractValueFunc): Unit =
+    def printExtractFuncExpr(expr: SqlExpr.ExtractFunc): Unit =
         sqlBuilder.append("EXTRACT(")
         sqlBuilder.append(expr.unit.unit)
         sqlBuilder.append(" FROM ")
@@ -583,7 +568,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit
 
-    def printJsonSerializeValueFuncExpr(expr: SqlExpr.JsonSerializeValueFunc): Unit =
+    def printJsonSerializeFuncExpr(expr: SqlExpr.JsonSerializeFunc): Unit =
         sqlBuilder.append("JSON_SERIALIZE(")
         printExpr(expr)
         for o <- expr.output do
@@ -591,7 +576,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
-    def printJsonParseValueFuncExpr(expr: SqlExpr.JsonParseValueFunc): Unit =
+    def printJsonParseFuncExpr(expr: SqlExpr.JsonParseFunc): Unit =
         sqlBuilder.append("JSON(")
         printExpr(expr)
         for i <- expr.input do
@@ -602,7 +587,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonUniqueness(u)
         sqlBuilder.append(")")
 
-    def printJsonQueryValueFuncExpr(expr: SqlExpr.JsonQueryValueFunc): Unit =
+    def printJsonQueryFuncExpr(expr: SqlExpr.JsonQueryFunc): Unit =
         sqlBuilder.append("JSON_QUERY(")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
@@ -627,7 +612,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonQueryErrorBehavior(e)
         sqlBuilder.append(")")
 
-    def printJsonValueValueFuncExpr(expr: SqlExpr.JsonValueValueFunc): Unit =
+    def printJsonValueFuncExpr(expr: SqlExpr.JsonValueFunc): Unit =
         sqlBuilder.append("JSON_VALUE(")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
@@ -646,7 +631,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonValueErrorBehavior(e)
         sqlBuilder.append(")")
 
-    def printJsonObjectValueFuncExpr(expr: SqlExpr.JsonObjectValueFunc): Unit =
+    def printJsonObjectFuncExpr(expr: SqlExpr.JsonObjectFunc): Unit =
         def printItem(item: (SqlExpr, SqlExpr)): Unit =
             printExpr(item._1)
             sqlBuilder.append(" VALUE ")
@@ -664,7 +649,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
-    def printJsonArrayValueFuncExpr(expr: SqlExpr.JsonArrayValueFunc): Unit =
+    def printJsonArrayFuncExpr(expr: SqlExpr.JsonArrayFunc): Unit =
         def printItem(item: (SqlExpr, Option[SqlJsonInput])): Unit =
             printExpr(item._1)
             for i <- item._2 do
@@ -680,7 +665,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
-    def printJsonExistsValueFuncExpr(expr: SqlExpr.JsonExistsValueFunc): Unit =
+    def printJsonExistsFuncExpr(expr: SqlExpr.JsonExistsFunc): Unit =
         sqlBuilder.append("JSON_EXISTS(")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
@@ -800,27 +785,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(behavior.mode)
         sqlBuilder.append(" ON ERROR")
 
-    def printStandardAggFuncExpr(expr: SqlExpr.StandardAggFunc): Unit =
-        sqlBuilder.append(expr.name)
-        sqlBuilder.append("(")
-        expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
-            sqlBuilder.append(" ")
-        printList(expr.args)(printExpr)
-        if expr.orderBy.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(expr.orderBy)(printOrderingItem)
-        sqlBuilder.append(")")
-        if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
-            sqlBuilder.append(")")
-        for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
-
-    def printCountAsteriskAggFuncExpr(expr: SqlExpr.CountAsteriskAggFunc): Unit =
+    def printCountAsteriskFuncExpr(expr: SqlExpr.CountAsteriskFunc): Unit =
         sqlBuilder.append("COUNT(")
         for n <- expr.tableName do
             sqlBuilder.append(s"$leftQuote$n$rightQuote.")
@@ -830,7 +795,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
             sqlBuilder.append(")")
 
-    def printListAggAggFuncExpr(expr: SqlExpr.ListAggAggFunc): Unit =
+    def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("LISTAGG(")
         expr.quantifier.foreach: q => 
             sqlBuilder.append(q.quantifier)
@@ -858,7 +823,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
             sqlBuilder.append(")")
 
-    def printJsonObjectAggAggFuncExpr(expr: SqlExpr.JsonObjectAggAggFunc): Unit =
+    def printJsonObjectAggFuncExpr(expr: SqlExpr.JsonObjectAggFunc): Unit =
         sqlBuilder.append("JSON_OBJECTAGG(")
         printExpr(expr.item._1)
         sqlBuilder.append(" VALUE ")
@@ -878,7 +843,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
             sqlBuilder.append(")")
 
-    def printJsonArrayAggAggFuncExpr(expr: SqlExpr.JsonArrayAggAggFunc): Unit =
+    def printJsonArrayAggFuncExpr(expr: SqlExpr.JsonArrayAggFunc): Unit =
         sqlBuilder.append("JSON_ARRAYAGG(")
         printExpr(expr.item._1)
         for i <- expr.item._2 do
@@ -899,13 +864,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printExpr(f)
             sqlBuilder.append(")")
 
-    def printStandardWindowFuncExpr(expr: SqlExpr.StandardWindowFunc): Unit =
-        sqlBuilder.append(expr.name)
-        sqlBuilder.append("(")
-        printList(expr.args)(printExpr)
-        sqlBuilder.append(")")
-
-    def printNullsTreatmentWindowFuncExpr(expr: SqlExpr.NullsTreatmentWindowFunc): Unit =
+    def printNullsTreatmentFuncExpr(expr: SqlExpr.NullsTreatmentFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
         printList(expr.args)(printExpr)
@@ -914,7 +873,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(" ")
             sqlBuilder.append(m.mode)
 
-    def printNthValueWindowFuncExpr(expr: SqlExpr.NthValueWindowFunc): Unit =
+    def printNthValueFuncExpr(expr: SqlExpr.NthValueFunc): Unit =
         sqlBuilder.append("NTH_VALUE(")
         printExpr(expr.arg)
         sqlBuilder.append(")")
@@ -925,11 +884,25 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(" ")
             sqlBuilder.append(m.mode)
 
-    def printStandardMatchFuncExpr(expr: SqlExpr.StandardMatchFunc): Unit =
+    def printStandardFuncExpr(expr: SqlExpr.StandardFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
         printList(expr.args)(printExpr)
+        if expr.orderBy.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.orderBy)(printOrderingItem)
         sqlBuilder.append(")")
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+            sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
 
     def printMatchPhaseExpr(expr: SqlExpr.MatchPhase): Unit =
         sqlBuilder.append(expr.phase.phase)

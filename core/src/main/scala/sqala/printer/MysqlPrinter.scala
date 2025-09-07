@@ -84,7 +84,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case _ =>
                 super.printType(`type`)
 
-    override def printListAggAggFuncExpr(expr: SqlExpr.ListAggAggFunc): Unit =
+    override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("GROUP_CONCAT(")
         expr.quantifier.foreach: q => 
             sqlBuilder.append(q.quantifier)
@@ -105,23 +105,35 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         expr.mode match
             case SqlVectorDistanceMode.Euclidean =>
                 printExpr(
-                    SqlExpr.StandardValueFunc(
+                    SqlExpr.StandardFunc(
                         "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
                     )
                 )
             case SqlVectorDistanceMode.Cosine =>
                 printExpr(
-                    SqlExpr.StandardValueFunc(
+                    SqlExpr.StandardFunc(
                         "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
                     )
                 )
             case SqlVectorDistanceMode.Dot =>
                 printExpr(
-                    SqlExpr.StandardValueFunc(
+                    SqlExpr.StandardFunc(
                         "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
                     )
                 )
             case SqlVectorDistanceMode.Manhattan =>
