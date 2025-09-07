@@ -1,6 +1,6 @@
 package sqala.metadata
 
-import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
+import java.time.*
 
 trait Number[T]
 
@@ -28,7 +28,11 @@ object DateTime:
 
     given localDateTime: DateTime[LocalDateTime]()
 
+    given localTime: DateTime[LocalTime]()
+
     given offsetDateTime: DateTime[OffsetDateTime]()
+
+    given offsetTime: DateTime[LocalTime]()
 
     given option[T: DateTime]: DateTime[Option[T]]()
 

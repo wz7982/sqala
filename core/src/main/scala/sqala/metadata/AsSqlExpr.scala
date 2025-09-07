@@ -2,7 +2,7 @@ package sqala.metadata
 
 import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit, SqlTimeZoneMode, SqlType}
 
-import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
+import java.time.*
 import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
@@ -53,9 +53,17 @@ object AsSqlExpr:
         def asSqlExpr(x: LocalDateTime): SqlExpr =
             SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, x.toString)
 
+    given localTimeAsSqlExpr: AsSqlExpr[LocalDateTime] with
+        def asSqlExpr(x: LocalDateTime): SqlExpr =
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time, x.toString)
+
     given offsetDateTimeAsSqlExpr: AsSqlExpr[OffsetDateTime] with
         def asSqlExpr(x: OffsetDateTime): SqlExpr =
             SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Timestamp(Some(SqlTimeZoneMode.With)))
+
+    given offsetTimeAsSqlExpr: AsSqlExpr[OffsetTime] with
+        def asSqlExpr(x: OffsetTime): SqlExpr =
+            SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Time(Some(SqlTimeZoneMode.With)))
 
     given jsonAsSqlExpr: AsSqlExpr[Json] with
         def asSqlExpr(x: Json): SqlExpr = 
