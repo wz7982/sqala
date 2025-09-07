@@ -126,6 +126,12 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("HAVING\n")
             h |> printWithSpace(printExpr)
 
+        if select.window.nonEmpty then
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("WINDOW\n")
+            printList(select.window, ",\n")(printWindowItem |> printWithSpace)
+
         if select.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
@@ -459,16 +465,20 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)
-        sqlBuilder.append(" OVER (")
-        if expr.partitionBy.nonEmpty then
+        sqlBuilder.append(" OVER ")
+        printWindow(expr.window)
+
+    def printWindow(window: SqlWindow): Unit =
+        sqlBuilder.append("(")
+        if window.partitionBy.nonEmpty then
             sqlBuilder.append("PARTITION BY ")
-            printList(expr.partitionBy)(printExpr)
-        if expr.orderBy.nonEmpty then
-            if expr.partitionBy.nonEmpty then
+            printList(window.partitionBy)(printExpr)
+        if window.orderBy.nonEmpty then
+            if window.partitionBy.nonEmpty then
                 sqlBuilder.append(" ")
             sqlBuilder.append("ORDER BY ")
-            printList(expr.orderBy)(printOrderingItem)
-        for f <- expr.frame do
+            printList(window.orderBy)(printOrderingItem)
+        for f <- window.frame do
             f match
                 case SqlWindowFrame.Start(unit, start, exclude) =>
                     sqlBuilder.append(" ")
@@ -1060,6 +1070,10 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("GROUPING SETS(")
             printList(items)(printExpr)
             sqlBuilder.append(")")
+
+    def printWindowItem(item: SqlWindowItem): Unit =
+        sqlBuilder.append(s"$leftQuote${item.name}$rightQuote AS ")
+        printWindow(item.window)
 
     def printOrderingItem(item: SqlOrderingItem): Unit =
         printExpr(item.expr)

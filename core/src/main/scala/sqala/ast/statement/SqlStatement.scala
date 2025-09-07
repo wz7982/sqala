@@ -31,6 +31,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
         where: Option[SqlExpr],
         groupBy: Option[SqlGroupBy],
         having: Option[SqlExpr],
+        window: List[SqlWindowItem],
         orderBy: List[SqlOrderingItem],
         limit: Option[SqlLimit],
         override val lock: Option[SqlLock]

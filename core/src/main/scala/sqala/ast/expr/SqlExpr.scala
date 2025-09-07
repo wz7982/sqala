@@ -25,12 +25,7 @@ enum SqlExpr:
     case Coalesce(items: List[SqlExpr])
     case NullIf(expr: SqlExpr, `then`: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlType)
-    case Window(
-        expr: SqlExpr, 
-        partitionBy: List[SqlExpr], 
-        orderBy: List[SqlOrderingItem], 
-        frame: Option[SqlWindowFrame]
-    )
+    case Window(expr: SqlExpr, window: SqlWindow)
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
     case Grouping(items: List[SqlExpr])
