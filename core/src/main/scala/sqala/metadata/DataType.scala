@@ -2,31 +2,70 @@ package sqala.metadata
 
 import java.time.*
 
-trait Number[T]
+trait SqlNumber[T]
 
-object Number:
-    given int: Number[Int]()
+object SqlNumber:
+    given int: SqlNumber[Int]()
 
-    given long: Number[Long]()
+    given long: SqlNumber[Long]()
 
-    given float: Number[Float]()
+    given float: SqlNumber[Float]()
 
-    given double: Number[Double]()
+    given double: SqlNumber[Double]()
 
-    given decimal: Number[BigDecimal]()
+    given decimal: SqlNumber[BigDecimal]()
 
-    given option[T: Number]: Number[Option[T]]()
+    given option[T: SqlNumber]: SqlNumber[Option[T]]()
 
-trait DateTime[T]
+trait SqlDateTime[T]
 
-object DateTime:
-    given localDate: DateTime[LocalDate]()
+object SqlDateTime:
+    given localDate: SqlDateTime[LocalDate]()
 
-    given localDateTime: DateTime[LocalDateTime]()
+    given localDateTime: SqlDateTime[LocalDateTime]()
 
-    given offsetDateTime: DateTime[OffsetDateTime]()
+    given offsetDateTime: SqlDateTime[OffsetDateTime]()
 
-    given option[T: DateTime]: DateTime[Option[T]]()
+    given option[T: SqlDateTime]: SqlDateTime[Option[T]]()
+
+trait SqlTime[T]
+
+object SqlTime:
+    given localTime: SqlTime[LocalTime]()
+
+    given offsetTime: SqlTime[OffsetTime]()
+
+    given option[T: SqlTime]: SqlTime[Option[T]]()
+
+trait SqlString[T]
+
+object SqlString:
+    given string: SqlString[String]()
+
+    given option[T: SqlString]: SqlString[Option[T]]()
+
+trait SqlBoolean[T]
+
+object SqlBoolean:
+    given boolean: SqlBoolean[Boolean]()
+
+    given option[T: SqlBoolean]: SqlBoolean[Option[T]]()
+
+trait SqlJson[T]
+
+object SqlJson:
+    given json: SqlJson[Json]()
+
+    given option[T: SqlJson]: SqlJson[Option[T]]()
+
+trait SqlVector[T]
+
+object SqlVector:
+    given vector: SqlVector[Vector]()
+
+    given option[T: SqlVector]: SqlVector[Option[T]]()
+
+trait SqlSpatial[T]
 
 opaque type Json = String
 
