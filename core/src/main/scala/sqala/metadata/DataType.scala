@@ -17,10 +17,6 @@ object Number:
 
     given option[T: Number]: Number[Option[T]]()
 
-    given some[T: Number]: Number[Some[T]]()
-
-    given none: Number[None.type]()
-
 trait DateTime[T]
 
 object DateTime:
@@ -35,10 +31,6 @@ object DateTime:
     given offsetTime: DateTime[LocalTime]()
 
     given option[T: DateTime]: DateTime[Option[T]]()
-
-    given some[T: DateTime]: DateTime[Some[T]]()
-
-    given none: DateTime[None.type]()
 
 opaque type Json = String
 

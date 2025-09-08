@@ -38,27 +38,6 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(u)
             sqlBuilder.append(")")
 
-    // TODO 向量
-    // override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
-    //     expr.operator match
-    //         case SqlBinaryOperator.EuclideanDistance =>
-    //             val func = 
-    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil)
-    //             printExpr(func)
-    //         case SqlBinaryOperator.CosineDistance =>
-    //             val func =
-    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil)
-    //             printExpr(func)
-    //         case SqlBinaryOperator.DotDistance =>
-    //             val func =
-    //                 SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil)
-    //             printExpr(func)
-    //         case SqlBinaryOperator.Concat =>
-    //             val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
-    //             printExpr(func)
-    //         case _ =>
-    //             super.printBinaryExpr(expr) 
-
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("STRING_TO_VECTOR(")
         printExpr(expr.expr)

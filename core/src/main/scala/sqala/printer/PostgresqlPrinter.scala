@@ -54,8 +54,7 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
                 super.printType(`type`)
 
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        printExpr(expr.expr)
-        sqlBuilder.append(" :: VECTOR")
+        printExpr(SqlExpr.Cast(expr.expr, SqlType.Vector))
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")

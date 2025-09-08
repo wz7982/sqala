@@ -461,7 +461,36 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(")")
 
     def printType(`type`: SqlType): Unit =
-        sqlBuilder.append(`type`.`type`)
+        `type` match
+            case SqlType.Varchar(maxLength) =>
+                sqlBuilder.append(s"VARCHAR${maxLength.map(l => s"($l)").getOrElse("")}")
+            case SqlType.Int =>
+                sqlBuilder.append("INTEGER")
+            case SqlType.Long =>
+                sqlBuilder.append("BIGINT")
+            case SqlType.Float =>
+                sqlBuilder.append("REAL")
+            case SqlType.Double =>
+                sqlBuilder.append("DOUBLE PRECISION")
+            case SqlType.Decimal(precision) =>
+                sqlBuilder.append(s"DECIMAL${precision.map((p, s) => s"($p, $s)").getOrElse("")}")
+            case SqlType.Date =>
+                sqlBuilder.append("DATE")
+            case SqlType.Timestamp(mode) =>
+                sqlBuilder.append(s"TIMESTAMP${mode.map(m => s" ${m.mode}").getOrElse("")}")
+            case SqlType.Time(mode) =>
+                sqlBuilder.append(s"TIME${mode.map(m => s" ${m.mode}").getOrElse("")}")
+            case SqlType.Json =>
+                sqlBuilder.append("JSON")
+            case SqlType.Boolean =>
+                sqlBuilder.append("BOOLEAN")
+            case SqlType.Vector =>
+                sqlBuilder.append("VECTOR")
+            case SqlType.Array(t) =>
+                printType(t)
+                sqlBuilder.append("[]")
+            case SqlType.Custom(t) =>
+                sqlBuilder.append(t)
 
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)
