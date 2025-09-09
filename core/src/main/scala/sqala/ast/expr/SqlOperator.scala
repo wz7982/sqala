@@ -1,8 +1,6 @@
 package sqala.ast.expr
 
 enum SqlBinaryOperator(val operator: String, val precedence: Int):
-    case Json extends SqlBinaryOperator("->", 80)
-    case JsonText extends SqlBinaryOperator("->>", 80)
     case Times extends SqlBinaryOperator("*", 70)
     case Div extends SqlBinaryOperator("/", 70)
     case Plus extends SqlBinaryOperator("+", 60)
