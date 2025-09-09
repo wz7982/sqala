@@ -388,6 +388,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         for t <- expr.nodeType do
             sqlBuilder.append(" ")
             sqlBuilder.append(t.`type`)
+        for u <- expr.uniqueness do
+            sqlBuilder.append(" ")
+            printJsonUniqueness(u)
 
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         def hasBrackets(expr: SqlExpr): Boolean = 

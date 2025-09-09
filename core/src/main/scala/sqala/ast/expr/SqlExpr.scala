@@ -18,7 +18,12 @@ enum SqlExpr:
     case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
-    case JsonTest(expr: SqlExpr, not: Boolean, nodeType: Option[SqlJsonNodeType])
+    case JsonTest(
+        expr: SqlExpr, 
+        not: Boolean, 
+        nodeType: Option[SqlJsonNodeType],
+        uniqueness: Option[SqlJsonUniqueness]
+    )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
     case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
