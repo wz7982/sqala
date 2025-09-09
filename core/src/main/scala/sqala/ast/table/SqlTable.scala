@@ -1,6 +1,6 @@
 package sqala.ast.table
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlExpr, SqlJsonPassing, SqlJsonTableColumn, SqlJsonTableErrorBehavior}
 import sqala.ast.statement.SqlQuery
 
 enum SqlTable:
@@ -21,6 +21,17 @@ enum SqlTable:
     case SubQuery(
         query: SqlQuery, 
         lateral: Boolean, 
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
+    case Json(
+        expr: SqlExpr,
+        path: SqlExpr,
+        pathAlias: Option[String],
+        passingItems: List[SqlJsonPassing],
+        columns: List[SqlJsonTableColumn],
+        onError: Option[SqlJsonTableErrorBehavior],
+        lateral: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )

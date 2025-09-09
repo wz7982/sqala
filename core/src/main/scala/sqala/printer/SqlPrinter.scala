@@ -827,6 +827,16 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(behavior.mode)
         sqlBuilder.append(" ON ERROR")
 
+    def printJsonTableErrorBehavior(behavior: SqlJsonTableErrorBehavior): Unit =
+        behavior match
+            case SqlJsonTableErrorBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonTableErrorBehavior.Empty =>
+                sqlBuilder.append("EMPTY")
+            case SqlJsonTableErrorBehavior.EmptyArray =>
+                sqlBuilder.append("EMPTY ARRAY")
+        sqlBuilder.append(" ON ERROR")
+
     def printCountAsteriskFuncExpr(expr: SqlExpr.CountAsteriskFunc): Unit =
         sqlBuilder.append("COUNT(")
         for n <- expr.tableName do
@@ -961,87 +971,186 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
             sqlBuilder.append(")")
 
-    def printTable(table: SqlTable): Unit = 
-        table match
-            case SqlTable.Standard(tableName, alias, mr, sample) =>
-                sqlBuilder.append(s"$leftQuote$tableName$rightQuote")
-                for a <- alias do
-                    printTableAlias(a)
-                for m <- mr do
-                    sqlBuilder.append(" ")
-                    printMatchRecognize(m)
-                for s <- sample do
-                    sqlBuilder.append(" TABLESAMPLE ")
-                    sqlBuilder.append(s.mode.mode)
-                    sqlBuilder.append(" (")
-                    printExpr(s.percentage)
-                    sqlBuilder.append(")")
-                    for r <- s.repeatable do
-                        sqlBuilder.append(" REPEATABLE (")
-                        printExpr(r)
-                        sqlBuilder.append(")")
-            case SqlTable.Func(functionName, args, lateral, withOrd, alias, mr) =>
-                if lateral then sqlBuilder.append("LATERAL ")
-                sqlBuilder.append(functionName)
-                sqlBuilder.append("(")
-                printList(args)(printExpr)
+    def printStandardTable(table: SqlTable.Standard): Unit =
+        sqlBuilder.append(s"$leftQuote${table.name}$rightQuote")
+        for a <- table.alias do
+            printTableAlias(a)
+        for m <- table.matchRecognize do
+            sqlBuilder.append(" ")
+            printMatchRecognize(m)
+        for s <- table.sample do
+            sqlBuilder.append(" TABLESAMPLE ")
+            sqlBuilder.append(s.mode.mode)
+            sqlBuilder.append(" (")
+            printExpr(s.percentage)
+            sqlBuilder.append(")")
+            for r <- s.repeatable do
+                sqlBuilder.append(" REPEATABLE (")
+                printExpr(r)
                 sqlBuilder.append(")")
-                if withOrd then
-                    sqlBuilder.append(" WITH ORDINALITY")
-                for a <- alias do
-                    printTableAlias(a)
-                for m <- mr do
+
+    def printFuncTable(table: SqlTable.Func): Unit =
+        if table.lateral then sqlBuilder.append("LATERAL ")
+        sqlBuilder.append(table.name)
+        sqlBuilder.append("(")
+        printList(table.args)(printExpr)
+        sqlBuilder.append(")")
+        if table.withOrd then
+            sqlBuilder.append(" WITH ORDINALITY")
+        for a <- table.alias do
+            printTableAlias(a)
+        for m <- table.matchRecognize do
+            sqlBuilder.append(" ")
+            printMatchRecognize(m)
+
+    def printSubQueryTable(table: SqlTable.SubQuery): Unit =
+        if table.lateral then sqlBuilder.append("LATERAL ")
+        sqlBuilder.append("(\n")
+        push()
+        printQuery(table.query)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append(")")
+        for a <- table.alias do
+            printTableAlias(a)
+        for m <- table.matchRecognize do
+            sqlBuilder.append(" ")
+            printMatchRecognize(m)
+
+    def printJsonTable(table: SqlTable.Json): Unit =
+        def printJsonTableColumn(column: SqlJsonTableColumn): Unit =
+            column match
+                case SqlJsonTableColumn.Ordinality(name) =>
+                    sqlBuilder.append(s"$leftQuote$name$rightQuote FOR ORDINALITY")
+                case c: SqlJsonTableColumn.Column =>
+                    sqlBuilder.append(s"$leftQuote${c.name}$rightQuote")
                     sqlBuilder.append(" ")
-                    printMatchRecognize(m)
-            case SqlTable.SubQuery(query, lateral, alias, mr) =>
-                if lateral then sqlBuilder.append("LATERAL ")
-                sqlBuilder.append("(\n")
+                    printType(c.`type`)
+                    for f <- c.format do
+                        sqlBuilder.append(" FORMAT JSON")
+                        for e <- f do
+                            sqlBuilder.append(" ENCODING ")
+                            sqlBuilder.append(e.encoding)
+                    for p <- c.path do
+                        sqlBuilder.append(" PATH ")
+                        printExpr(p)
+                    for w <- c.wrapper do
+                        sqlBuilder.append(" ")
+                        printJsonQueryWrapperBehavior(w)
+                    for q <- c.quotes do
+                        sqlBuilder.append(" ")
+                        printJsonQueryQuotesBehavior(q)
+                    for b <- c.onEmpty do
+                        sqlBuilder.append(" ")
+                        printJsonQueryEmptyBehavior(b)
+                    for b <- c.onError do
+                        sqlBuilder.append(" ")
+                        printJsonQueryErrorBehavior(b)
+                case e: SqlJsonTableColumn.Exists =>
+                    sqlBuilder.append(s"$leftQuote${e.name}$rightQuote")
+                    sqlBuilder.append(" ")
+                    printType(e.`type`)
+                    for p <- e.path do
+                        sqlBuilder.append(" PATH ")
+                        printExpr(p)
+                    for b <- e.onError do
+                        sqlBuilder.append(" ")
+                        printJsonExistsErrorBehavior(b)
+                case n: SqlJsonTableColumn.Nested =>
+                    sqlBuilder.append("NESTED PATH ")
+                    printExpr(n.path)
+                    for a <- n.pathAlias do
+                        sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
+                    sqlBuilder.append(" COLUMNS(\n")
+                    push()
+                    printList(n.columns, ",\n"): i =>
+                        printSpace()
+                        printJsonTableColumn(i)
+                    pull()
+                    sqlBuilder.append("\n")
+                    printSpace()
+                    sqlBuilder.append(")")
+
+        if table.lateral then sqlBuilder.append("LATERAL ")
+        sqlBuilder.append("JSON_TABLE(\n")
+        push()
+        printSpace()
+        printExpr(table.expr)
+        sqlBuilder.append(", ")
+        printExpr(table.path)
+        for a <- table.pathAlias do
+            sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
+        if table.passingItems.nonEmpty then
+            sqlBuilder.append(" PASSING ")
+            printList(table.passingItems)(printJsonPassing)
+        sqlBuilder.append(" COLUMNS(\n")
+        push()
+        printList(table.columns, ",\n"): i =>
+            printSpace()
+            printJsonTableColumn(i)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append(")")
+        for b <- table.onError do
+            sqlBuilder.append("\n")
+            printSpace()
+            printJsonTableErrorBehavior(b)
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append(")")
+        for a <- table.alias do
+            printTableAlias(a)
+        for m <- table.matchRecognize do
+            sqlBuilder.append(" ")
+            printMatchRecognize(m)
+
+    def printJoinTable(table: SqlTable.Join): Unit =
+        printTable(table.left)
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append(s"${table.joinType.`type`} ")
+        table.right match
+            case _: SqlTable.Join =>
+                sqlBuilder.append("(")
+                sqlBuilder.append("\n")
                 push()
-                printQuery(query)
+                printSpace()
+                printTable(table.right)
+                printSpace()
                 pull()
                 sqlBuilder.append("\n")
                 printSpace()
                 sqlBuilder.append(")")
-                for a <- alias do
-                    printTableAlias(a)
-                for m <- mr do
-                    sqlBuilder.append(" ")
-                    printMatchRecognize(m)
-            case SqlTable.Join(left, joinType, right, condition) =>
-                printTable(left)
-                sqlBuilder.append("\n")
-                printSpace()
-                sqlBuilder.append(s"${joinType.`type`} ")
-                right match
-                    case _: SqlTable.Join =>
-                        sqlBuilder.append("(")
-                        sqlBuilder.append("\n")
-                        push()
-                        printSpace()
-                        printTable(right)
-                        printSpace()
-                        pull()
-                        sqlBuilder.append("\n")
-                        printSpace()
-                        sqlBuilder.append(")")
-                    case _ =>
-                        printTable(right)
-                for c <- condition do
-                    c match
-                        case SqlJoinCondition.On(onCondition) =>
-                            sqlBuilder.append(" ON ")
-                            printExpr(onCondition)
-                        case SqlJoinCondition.Using(usingCondition) =>
-                            sqlBuilder.append(" USING (")
-                            printList(usingCondition): n =>
-                                sqlBuilder.append(s"$leftQuote$n$rightQuote")
-                            sqlBuilder.append(")")
+            case _ =>
+                printTable(table.right)
+        for c <- table.condition do
+            c match
+                case SqlJoinCondition.On(onCondition) =>
+                    sqlBuilder.append(" ON ")
+                    printExpr(onCondition)
+                case SqlJoinCondition.Using(usingCondition) =>
+                    sqlBuilder.append(" USING (")
+                    printList(usingCondition): n =>
+                        sqlBuilder.append(s"$leftQuote$n$rightQuote")
+                    sqlBuilder.append(")")
+
+    def printTable(table: SqlTable): Unit = 
+        table match
+            case s: SqlTable.Standard => printStandardTable(s)
+            case f: SqlTable.Func => printFuncTable(f)
+            case s: SqlTable.SubQuery => printSubQueryTable(s)
+            case j: SqlTable.Json => printJsonTable(j)
+            case j: SqlTable.Join => printJoinTable(j)
 
     def printMatchRecognize(matchRecognize: SqlMatchRecognize): Unit =
         def printMeasure(measure: SqlMeasureItem): Unit =
             printExpr(measure.expr)
             sqlBuilder.append(s" AS $leftQuote${measure.alias}$rightQuote")
 
+        sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append("MATCH_RECOGNIZE(")
         push()

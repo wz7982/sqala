@@ -80,6 +80,35 @@ case class SqlJsonInput(format: Option[SqlJsonEncoding])
     
 case class SqlJsonOutput(`type`: SqlType, format: Option[Option[SqlJsonEncoding]])
 
+enum SqlJsonTableErrorBehavior:
+    case Error
+    case Empty
+    case EmptyArray
+
+enum SqlJsonTableColumn:
+    case Ordinality(name: String)
+    case Column(
+        name: String, 
+        `type`: SqlType,
+        format: Option[Option[SqlJsonEncoding]],
+        path: Option[SqlExpr],
+        wrapper: Option[SqlJsonQueryWrapperBehavior],
+        quotes: Option[SqlJsonQueryQuotesBehavior],
+        onEmpty: Option[SqlJsonQueryEmptyBehavior],
+        onError: Option[SqlJsonQueryErrorBehavior]
+    )
+    case Exists(
+        name: String,
+        `type`: SqlType,
+        path: Option[SqlExpr],
+        onError: Option[SqlJsonExistsErrorBehavior]
+    )
+    case Nested(
+        path: SqlExpr,
+        pathAlias: Option[String],
+        columns: List[SqlJsonTableColumn]
+    )
+
 case class SqlListAggOnOverflow(
     mode: SqlListAggOnOverflowMode,
     countMode: SqlListAggCountMode
