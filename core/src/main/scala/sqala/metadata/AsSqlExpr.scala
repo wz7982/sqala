@@ -73,10 +73,10 @@ object AsSqlExpr:
         def asSqlExpr(x: LocalDateTime): SqlExpr =
             SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, x.toString)
 
-    given localTimeAsSqlExpr: AsSqlExpr[LocalDateTime] with
+    given localTimeAsSqlExpr: AsSqlExpr[LocalTime] with
         def sqlType: SqlType = SqlType.Time(None)
 
-        def asSqlExpr(x: LocalDateTime): SqlExpr =
+        def asSqlExpr(x: LocalTime): SqlExpr =
             SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time, x.toString)
 
     given offsetDateTimeAsSqlExpr: AsSqlExpr[OffsetDateTime] with
