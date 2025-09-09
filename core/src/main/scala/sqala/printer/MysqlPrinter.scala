@@ -38,6 +38,22 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             printExpr(u)
             sqlBuilder.append(")")
 
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+        expr.operator match
+            case SqlBinaryOperator.Concat =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "CONCAT", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case _ =>
+                super.printExpr(expr)
+
     override def printVectorExpr(expr: SqlExpr.Vector): Unit =
         sqlBuilder.append("STRING_TO_VECTOR(")
         printExpr(expr.expr)
