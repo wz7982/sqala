@@ -106,7 +106,8 @@ enum SqlExpr:
         nullsMode: Option[SqlWindowNullsMode]
     )
     case NthValueFunc(
-        arg: SqlExpr,
+        expr: SqlExpr,
+        row: SqlExpr,
         fromMode: Option[SqlNthValueFromMode],
         nullsMode: Option[SqlWindowNullsMode]
     )

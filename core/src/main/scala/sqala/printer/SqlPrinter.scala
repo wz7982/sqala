@@ -914,7 +914,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printNthValueFuncExpr(expr: SqlExpr.NthValueFunc): Unit =
         sqlBuilder.append("NTH_VALUE(")
-        printExpr(expr.arg)
+        printList(List(expr.expr, expr.row))(printExpr)
         sqlBuilder.append(")")
         for m <- expr.fromMode do
             sqlBuilder.append(" ")
