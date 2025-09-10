@@ -1,4 +1,4 @@
-package sqala.metadata
+package sqala.static.metadata
 
 export sqala.printer.{
     H2Dialect,

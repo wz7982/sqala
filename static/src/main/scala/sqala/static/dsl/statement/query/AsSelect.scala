@@ -2,12 +2,13 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
-import sqala.metadata.AsSqlExpr
+import sqala.static.metadata.AsSqlExpr
 import sqala.static.dsl.{AsExpr, Expr, Table, ToTuple}
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
+import sqala.static.dsl.FuncTable
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
@@ -42,19 +43,39 @@ object AsSelect:
                 tmpCursor += 1
             items.toList
 
-    given subQuery[N <: Tuple, V <: Tuple](using 
-        s: AsMap[V],
-        t: ToTuple[s.R]
-    ): Aux[SubQuery[N, V], SubQuery[N, t.R]] = new AsSelect[SubQuery[N, V]]:
-        type R = SubQuery[N, t.R]
+    given funcTable[T]: Aux[FuncTable[T], FuncTable[T]] = new AsSelect[FuncTable[T]]:
+        type R = FuncTable[T]
 
-        def transform(x: SubQuery[N, V]): R =
-            new SubQuery(x.__alias__, t.toTuple(s.transform(x.__items__)))(using x.__context__)
+        def transform(x: FuncTable[T]): R = x
 
-        def offset(x: SubQuery[N, V]): Int = s.offset(x.__items__)
+        def offset(x: FuncTable[T]): Int = x.__fieldNames__.size
 
-        def selectItems(x: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Expr] =
-            s.selectItems(x.__items__, cursor)
+        def selectItems(x: FuncTable[T], cursor: Int): List[SqlSelectItem.Expr] =
+            var tmpCursor = cursor
+            val items = ListBuffer[SqlSelectItem.Expr]()
+            for field <- x.__columnNames__ do
+                items.addOne(
+                    SqlSelectItem.Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), field), Some(s"c${tmpCursor}")
+                    )
+                )
+                tmpCursor += 1
+            items.toList
+
+    // TODO
+    // given subQuery[N <: Tuple, V <: Tuple](using 
+    //     s: AsMap[V],
+    //     t: ToTuple[s.R]
+    // ): Aux[SubQuery[N, V], SubQuery[N, t.R]] = new AsSelect[SubQuery[N, V]]:
+    //     type R = SubQuery[N, t.R]
+
+    //     def transform(x: SubQuery[N, V]): R =
+    //         new SubQuery(x.__alias__, t.toTuple(s.transform(x.__items__)))(using x.__context__)
+
+    //     def offset(x: SubQuery[N, V]): Int = s.offset(x.__items__)
+
+    //     def selectItems(x: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+    //         s.selectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using 
         sh: AsSelect[H],

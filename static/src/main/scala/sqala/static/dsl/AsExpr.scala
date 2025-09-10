@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.metadata.{AsSqlExpr, Interval}
+import sqala.static.metadata.{AsSqlExpr, Interval}
 import sqala.static.dsl.statement.query.Query
 
 import scala.annotation.implicitNotFound

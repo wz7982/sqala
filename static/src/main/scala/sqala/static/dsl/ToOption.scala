@@ -1,6 +1,7 @@
 package sqala.static.dsl
 
-import sqala.static.dsl.statement.query.SubQuery
+// TODO
+// import sqala.static.dsl.statement.query.SubQuery
 
 trait ToOption[T]:
     type R
@@ -23,17 +24,17 @@ object ToOption:
             type R = Table[Wrap[T, Option]]
 
             def toOption(x: Table[T]): R =
-                new Table(x.__tableName__, x.__aliasName__, x.__metaData__)
+                new Table(x.__aliasName__, x.__metaData__, x.__sqlTable__)
 
-    given subQueryToOption[N <: Tuple, V <: Tuple](using
-        t: ToOption[V],
-        tt: ToTuple[t.R]
-    ): Aux[SubQuery[N, V], SubQuery[N, tt.R]] =
-        new ToOption[SubQuery[N, V]]:
-            type R = SubQuery[N, tt.R]
+    // given subQueryToOption[N <: Tuple, V <: Tuple](using
+    //     t: ToOption[V],
+    //     tt: ToTuple[t.R]
+    // ): Aux[SubQuery[N, V], SubQuery[N, tt.R]] =
+    //     new ToOption[SubQuery[N, V]]:
+    //         type R = SubQuery[N, tt.R]
 
-            def toOption(x: SubQuery[N, V]): R =
-                new SubQuery( x.__alias__, tt.toTuple(t.toOption(x.__items__)))(using x.__context__)
+    //         def toOption(x: SubQuery[N, V]): R =
+    //             new SubQuery( x.__alias__, tt.toTuple(t.toOption(x.__items__)))(using x.__context__)
 
     given tupleToOption[H, T <: Tuple](using
         h: ToOption[H],

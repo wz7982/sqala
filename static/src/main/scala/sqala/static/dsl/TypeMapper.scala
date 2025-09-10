@@ -1,5 +1,6 @@
 package sqala.static.dsl
 
+import java.time.*
 import scala.compiletime.ops.int.S
 
 type Wrap[T, F[_]] = T match
@@ -8,6 +9,11 @@ type Wrap[T, F[_]] = T match
 
 type Unwrap[T, F[_]] = T match
     case F[t] => t
+    case _ => T
+
+type UnnestFlatten[T] = T match
+    case Option[t] => UnnestFlatten[t]
+    case Array[t] => UnnestFlatten[t]
     case _ => T
 
 type MapField[X, T] = T match
@@ -43,3 +49,27 @@ type NumericResult[L, R, N <: Boolean] = (L, R, N) match
     case (Int, _, false) => Int
     case (_, Int, true) => Option[Int]
     case (_, Int, false) => Int
+
+type DateTimeResult[L, R, N <: Boolean] = (L, R, N) match
+    case (OffsetDateTime, _, true) => Option[OffsetDateTime]
+    case (OffsetDateTime, _, false) => OffsetDateTime
+    case (_, OffsetDateTime, true) => Option[OffsetDateTime]
+    case (_, OffsetDateTime, false) => OffsetDateTime
+    case (LocalDateTime, _, true) => Option[LocalDateTime]
+    case (LocalDateTime, _, false) => LocalDateTime
+    case (_, LocalDateTime, true) => Option[LocalDateTime]
+    case (_, LocalDateTime, false) => LocalDateTime
+    case (LocalDate, _, true) => Option[LocalDate]
+    case (LocalDate, _, false) => LocalDate
+    case (_, LocalDate, true) => Option[LocalDate]
+    case (_, LocalDate, false) => LocalDate
+
+type TimeResult[L, R, N <: Boolean] = (L, R, N) match
+    case (OffsetTime, _, true) => Option[OffsetTime]
+    case (OffsetTime, _, false) => OffsetTime
+    case (_, OffsetTime, true) => Option[OffsetTime]
+    case (_, OffsetTime, false) => OffsetTime
+    case (LocalTime, _, true) => Option[LocalTime]
+    case (LocalTime, _, false) => LocalTime
+    case (_, LocalTime, true) => Option[LocalTime]
+    case (_, LocalTime, false) => LocalTime

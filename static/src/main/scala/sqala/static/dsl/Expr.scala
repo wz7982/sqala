@@ -1,11 +1,13 @@
 package sqala.static.dsl
 
+// TODO
+
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
-import sqala.static.dsl.statement.dml.UpdatePair
+// import sqala.static.dsl.statement.dml.UpdatePair
 
 import scala.annotation.targetName
 
-case class Expr[T](private[sqala] val expr: SqlExpr):
+case class Expr[T](private val expr: SqlExpr):
     @targetName("eq")
     def ==[R](that: R)(using
         a: AsRightOperand[R],
@@ -22,34 +24,34 @@ case class Expr[T](private[sqala] val expr: SqlExpr):
     ): Expr[Option[Boolean]] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
-    infix def over(over: Over | Unit)(using QueryContext): Expr[T] =
-        over match
-            case o: Over =>
-                Expr(
-                    SqlExpr.Window(
-                        asSqlExpr, 
-                        o.partitionBy.map(_.asSqlExpr),
-                        o.sortBy.map(_.asSqlOrderBy),
-                        o.frame
-                    )
-                )
-            case u: Unit =>
-                Expr(
-                    SqlExpr.Window(
-                        asSqlExpr, 
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
+    // infix def over(over: Over | Unit)(using QueryContext): Expr[T] =
+    //     over match
+    //         case o: Over =>
+    //             Expr(
+    //                 SqlExpr.Window(
+    //                     asSqlExpr, 
+    //                     o.partitionBy.map(_.asSqlExpr),
+    //                     o.sortBy.map(_.asSqlOrderBy),
+    //                     o.frame
+    //                 )
+    //             )
+    //         case u: Unit =>
+    //             Expr(
+    //                 SqlExpr.Window(
+    //                     asSqlExpr, 
+    //                     Nil,
+    //                     Nil,
+    //                     None
+    //                 )
+    //             )
 
-    @targetName("to")
-    def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R]
-    ): UpdatePair = this match
-        case Expr(SqlExpr.Column(_, columnName)) =>
-            UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
-        case _ => throw MatchError(this)
+    // @targetName("to")
+    // def :=[R: AsExpr as a](updateExpr: R)(using
+    //     Compare[T, a.R]
+    // ): UpdatePair = this match
+    //     case Expr(SqlExpr.Column(_, columnName)) =>
+    //         UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
+    //     case _ => throw MatchError(this)
 
     def asSqlExpr: SqlExpr =
         import SqlExpr.*

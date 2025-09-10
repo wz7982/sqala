@@ -1,9 +1,8 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.metadata.{AsSqlExpr, DateTime, Interval, Number}
+import sqala.static.metadata.*
 
-import java.time.OffsetDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.*
@@ -15,25 +14,21 @@ trait Compare[A, B]
 object Compare:
     given idCompare[A: AsSqlExpr]: Compare[A, A]()
 
-    given valueAndNothingCompare[A](using
-        NotGiven[A =:= Nothing]
-    ): Compare[A, Nothing]()
-
-    given nothingAndValueCompare[A](using
-        NotGiven[A =:= Nothing]
-    ): Compare[Nothing, A]()
-
-    given numericCompare[A: Number, B: Number](using
+    given numericCompare[A: SqlNumber, B: SqlNumber](using
         NotGiven[A =:= B]
     ): Compare[A, B]()
 
-    given timeCompare[A: DateTime, B: DateTime](using
+    given timeCompare[A: SqlDateTime, B: SqlDateTime](using
         NotGiven[A =:= B]
     ): Compare[A, B]()
 
-    given timeAndStringCompare[A: DateTime, B <: String]: Compare[A, B]()
+    given dateTimeAndStringCompare[A: SqlDateTime, B: SqlString]: Compare[A, B]()
 
-    given stringAndTimeCompare[A <: String, B: DateTime]: Compare[A, B]()
+    given stringAndDateTimeCompare[A <: String, B: SqlDateTime]: Compare[A, B]()
+
+    given timeAndStringCompare[A: SqlTime, B: SqlString]: Compare[A, B]()
+
+    given stringAndTimeCompare[A <: String, B: SqlTime]: Compare[A, B]()
 
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using
         Compare[Unwrap[LH, Option], Unwrap[RH, Option]],
@@ -52,19 +47,15 @@ object Minus:
     type Aux[A, B, N <: Boolean, O] = Minus[A, B, N]:
         type R = O
 
-    given leftNothingResult[A: Numeric, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[Nothing, A, N, Option[A]] =
-        new Minus[Nothing, A, N]:
-            type R = Option[A]
-
-    given rightNothingResult[A: Numeric, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[A, Nothing, N, Option[A]] =
-        new Minus[A, Nothing, N]:
-            type R = Option[A]
-
-    given numberMinusNumber[A: Number, B: Number, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
+    given numberMinus[A: SqlNumber, B: SqlNumber, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
         new Minus[A, B, N]:
             type R = NumericResult[A, B, N]
 
-    given timeMinusTime[A: DateTime, B: DateTime, N <: Boolean]: Aux[A, B, N, Interval] =
+    given dateTimeMinus[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, Interval] =
+        new Minus[A, B, N]:
+            type R = Interval
+
+    given timeMinus[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, Interval] =
         new Minus[A, B, N]:
             type R = Interval
 
@@ -84,47 +75,67 @@ object Return:
         new Return[A, A, true]:
             type R = Option[A]
 
-    given leftNothingResult[A, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[Nothing, A, N, Option[A]] =
-        new Return[Nothing, A, N]:
-            type R = Option[A]
-
-    given rightNothingResult[A, N <: Boolean](using NotGiven[A =:= Nothing]): Aux[A, Nothing, N, Option[A]] =
-        new Return[A, Nothing, N]:
-            type R = Option[A]
-
-    given numericResult[A: Number, B: Number, N <: Boolean](using
+    given numericResult[A: SqlNumber, B: SqlNumber, N <: Boolean](using
         NotGiven[A =:= B]
     ): Aux[A, B, N, NumericResult[A, B, N]] =
         new Return[A, B, N]:
             type R = NumericResult[A, B, N]
 
-    given timeResult[A: DateTime, B: DateTime](using
+    given dateTimeResult[A: SqlDateTime, B: SqlDateTime](using
         NotGiven[A =:= B]
-    ): Aux[A, B, false, OffsetDateTime] =
+    ): Aux[A, B, false, DateTimeResult[A, B, false]] =
         new Return[A, B, false]:
-            type R = OffsetDateTime
+            type R = DateTimeResult[A, B, false]
 
-    given timeOptionResult[A: DateTime, B: DateTime](using
+    given dateTimeOptionResult[A: SqlDateTime, B: SqlDateTime](using
         NotGiven[A =:= B]
-    ): Aux[A, B, true, Option[OffsetDateTime]] =
+    ): Aux[A, B, true, DateTimeResult[A, B, true]] =
         new Return[A, B, true]:
-            type R = Option[OffsetDateTime]
+            type R = DateTimeResult[A, B, true]
 
-    given timeAndStringResult[A: DateTime]: Aux[A, String, false, OffsetDateTime] =
-        new Return[A, String, false]:
-            type R = OffsetDateTime
+    given timeResult[A: SqlTime, B: SqlTime](using
+        NotGiven[A =:= B]
+    ): Aux[A, B, false, TimeResult[A, B, false]] =
+        new Return[A, B, false]:
+            type R = TimeResult[A, B, false]
 
-    given timeAndStringOptionResult[A: DateTime]: Aux[A, String, true, Option[OffsetDateTime]] =
-        new Return[A, String, true]:
-            type R = Option[OffsetDateTime]
+    given timeOptionResult[A: SqlTime, B: SqlTime](using
+        NotGiven[A =:= B]
+    ): Aux[A, B, true, TimeResult[A, B, true]] =
+        new Return[A, B, true]:
+            type R = TimeResult[A, B, true]
 
-    given stringAndTimeResult[A: DateTime]: Aux[String, A, false, OffsetDateTime] =
-        new Return[String, A, false]:
-            type R = OffsetDateTime
+    given dateTimeAndStringResult[A: SqlDateTime, B: SqlString]: Aux[A, B, false, DateTimeResult[A, B, false]] =
+        new Return[A, B, false]:
+            type R = DateTimeResult[A, B, false]
 
-    given stringAndTimeOptionResult[A: DateTime]: Aux[String, A, true, Option[OffsetDateTime]] =
-        new Return[String, A, true]:
-            type R = Option[OffsetDateTime]
+    given dateTimeAndStringOptionResult[A: SqlDateTime, B: SqlString]: Aux[A, B, true, DateTimeResult[A, B, true]] =
+        new Return[A, B, true]:
+            type R = DateTimeResult[A, B, true]
+
+    given stringAndDateTimeResult[A: SqlString, B: SqlDateTime]: Aux[A, B, false, DateTimeResult[A, B, false]] =
+        new Return[A, B, false]:
+            type R = DateTimeResult[A, B, false]
+
+    given stringAndDateTimeOptionResult[A: SqlString, B: SqlDateTime]: Aux[A, B, true, DateTimeResult[A, B, true]] =
+        new Return[A, B, true]:
+            type R = DateTimeResult[A, B, true]
+
+    given timeAndStringResult[A: SqlTime, B: SqlString]: Aux[A, B, false, TimeResult[A, B, false]] =
+        new Return[A, B, false]:
+            type R = TimeResult[A, B, false]
+
+    given timeAndStringOptionResult[A: SqlTime, B: SqlString]: Aux[A, B, true, TimeResult[A, B, true]] =
+        new Return[A, B, true]:
+            type R = TimeResult[A, B, true]
+
+    given stringAndTimeResult[A: SqlString, B: SqlTime]: Aux[A, B, false, TimeResult[A, B, false]] =
+        new Return[A, B, false]:
+            type R = TimeResult[A, B, false]
+
+    given stringAndTimeOptionResult[A: SqlString, B: SqlTime]: Aux[A, B, true, TimeResult[A, B, true]] =
+        new Return[A, B, true]:
+            type R = TimeResult[A, B, true]
 
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait Union[A, B]:
@@ -137,7 +148,7 @@ trait Union[A, B]:
 object Union:
     type Aux[A, B, O] = Union[A, B]:
         type R = O
-
+ 
     given union[A, B](using
         r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
     ): Aux[Expr[A], Expr[B], Expr[r.R]] =

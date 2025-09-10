@@ -1,4 +1,4 @@
-package sqala.metadata
+package sqala.static.metadata
 
 import sqala.util.camelToSnake
 
