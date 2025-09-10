@@ -18,7 +18,6 @@ trait AsTable[T]:
 
     def table(x: T)(using QueryContext): (R, SqlTable)
 
-// TODO 子查询 value表
 object AsTable:
     type Aux[T, O] = AsTable[T]:
         type R = O
@@ -78,7 +77,7 @@ object AsTable:
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
                 c.tableIndex += 1
                 val aliasName = s"t${c.tableIndex}"
-                val subQuery = SubQuery[N, V](x, aliasName)
+                val subQuery = SubQuery[N, V](x, false, aliasName)
                 (subQuery, subQuery.__sqlTable__)
 
     inline given values[T <: Product, S <: Seq[T]](using 
@@ -142,3 +141,42 @@ object AsTable:
 
             def table(x: H *: EmptyTuple)(using QueryContext): (R, SqlTable) =
                 ah.table(x.head)
+
+trait AsLateralTable[T]:
+    type R
+
+    def table(x: T)(using QueryContext): (R, SqlTable)
+
+object AsLateralTable:
+    type Aux[T, O] = AsLateralTable[T]:
+        type R = O
+
+    given funcTable[T]: Aux[FuncTable[T], FuncTable[T]] =
+        new AsLateralTable[FuncTable[T]]:
+            type R = FuncTable[T]
+
+            def table(x: FuncTable[T])(using QueryContext): (R, SqlTable) =
+                val sqlTable: SqlTable.Func = x.__sqlTable__.copy(lateral = true)
+                val table = x.copy[T](__sqlTable__ = sqlTable)
+                (table, sqlTable)
+
+    given jsonTable[N <: Tuple, V <: Tuple]: Aux[JsonTable[N, V], JsonTable[N, V]] =
+        new AsLateralTable[JsonTable[N, V]]:
+            type R = JsonTable[N, V]
+
+            def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
+                val sqlTable: SqlTable.Json = x.__sqlTable__.copy(lateral = true)
+                val table = x.copy[N, V](__sqlTable__ = sqlTable)
+                (table, sqlTable)
+
+    given subQueryTable[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
+        AsTableParam[V]
+    ): Aux[Q, SubQueryTable[N, V]] =
+        new AsLateralTable[Q]:
+            type R = SubQueryTable[N, V]
+
+            def table(x: Q)(using c: QueryContext): (R, SqlTable) =
+                c.tableIndex += 1
+                val aliasName = s"t${c.tableIndex}"
+                val subQuery = SubQuery[N, V](x, true, aliasName)
+                (subQuery, subQuery.__sqlTable__)

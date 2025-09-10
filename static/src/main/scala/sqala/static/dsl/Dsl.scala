@@ -27,12 +27,20 @@ inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     q
 
-// TODO lateral
 // TODO matchRecognize
 extension [A](a: => A)(using c: QueryContext)
     infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
+        val params = j.join(leftTable, rightTable)
+        JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
+
+    infix def joinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+        tb: AsLateralTable[B], 
+        j: TableJoin[ta.R, tb.R]
+    ): JoinPart[j.R] =
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
@@ -42,9 +50,27 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
+    infix def crossJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+        tb: AsLateralTable[B], 
+        j: TableJoin[ta.R, tb.R]
+    ): JoinTable[j.R] =
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
+        val params = j.join(leftTable, rightTable)
+        JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
+
     infix def leftJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableLeftJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
+        val params = j.join(leftTable, rightTable)
+        JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
+
+    infix def leftJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+        tb: AsLateralTable[B], 
+        j: TableLeftJoin[ta.R, tb.R]
+    ): JoinPart[j.R] =
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
@@ -64,8 +90,9 @@ extension [A](a: => A)(using c: QueryContext)
 case class Unnest[T](x: Option[T])
 
 def unnest[T: AsExpr as a](x: T)(using
+    f: UnnestFlatten[a.R],
     c: QueryContext
-): FuncTable[Unnest[UnnestFlatten[T]]] =
+): FuncTable[Unnest[f.R]] =
     c.tableIndex += 1
     val aliasName = s"t${c.tableIndex}"
     val sqlTable: SqlTable.Func = SqlTable.Func(
@@ -81,8 +108,9 @@ def unnest[T: AsExpr as a](x: T)(using
 case class UnnestWithOrdinal[T](x: Option[T], ordinal: Int)
 
 def unnestWithOrdinal[T: AsExpr as a](x: T)(using
+    f: UnnestFlatten[a.R],
     c: QueryContext
-): FuncTable[UnnestWithOrdinal[UnnestFlatten[T]]] =
+): FuncTable[UnnestWithOrdinal[f.R]] =
     c.tableIndex += 1
     val aliasName = s"t${c.tableIndex}"
     val sqlTable: SqlTable.Func = SqlTable.Func(

@@ -11,10 +11,21 @@ type Unwrap[T, F[_]] = T match
     case F[t] => t
     case _ => T
 
-type UnnestFlatten[T] = T match
-    case Option[t] => UnnestFlatten[t]
-    case Array[t] => UnnestFlatten[t]
+type UnnestFlattenImpl[T] = T match
+    case Option[t] => UnnestFlattenImpl[t]
+    case Array[t] => UnnestFlattenImpl[t]
     case _ => T
+
+trait UnnestFlatten[T]:
+    type R
+
+object UnnestFlatten:
+    type Aux[T, O] = UnnestFlatten[T]:
+        type R = O
+
+    given flatten[T]: Aux[T, UnnestFlattenImpl[T]] =
+        new UnnestFlatten[T]:
+            type R = UnnestFlattenImpl[T]
 
 type MapField[X, T] = T match
     case Option[_] => Expr[Wrap[X, Option]]

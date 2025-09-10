@@ -140,7 +140,7 @@ class SubQueryTable[N <: Tuple, V <: Tuple](
         __items__.toList(index)
 
 object SubQuery:
-    def apply[N <: Tuple, V <: Tuple](query: Query[?], alias: String)(using 
+    def apply[N <: Tuple, V <: Tuple](query: Query[?], lateral: Boolean, alias: String)(using 
         p: AsTableParam[V]
     ): SubQueryTable[N, V] =
         new SubQueryTable(
@@ -148,7 +148,7 @@ object SubQuery:
             p.asTableParam(alias, 1),
             SqlTable.SubQuery(
                 query.tree,
-                false,
+                lateral,
                 Some(SqlTableAlias(alias, Nil)),
                 None
             )
