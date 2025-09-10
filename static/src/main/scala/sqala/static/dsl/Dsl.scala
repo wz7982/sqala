@@ -9,6 +9,10 @@ import sqala.ast.table.SqlTableAlias
 import sqala.ast.expr.SqlExpr
 import sqala.ast.expr.SqlTimeUnit
 import sqala.ast.expr.SqlType
+import sqala.static.metadata.SqlString
+import sqala.static.metadata.AsSqlExpr
+import scala.NamedTuple.NamedTuple
+import sqala.ast.expr.SqlJsonTableColumn
 
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
@@ -79,6 +83,58 @@ def unnestWithOrdinal[T: AsExpr as a](x: T)(using
         None
     )
     FuncTable(aliasName, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+
+def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
+    expr: E,
+    path: P,
+    columns: JsonTableColumns[N, V]
+)(using
+    s: SqlString[ap.R],
+    p: AsTableParam[JsonTableColumnFlatten[V]],
+    c: QueryContext
+): JsonTable[JsonTableColumnNameFlatten[N, V], JsonTableColumnFlatten[V]] =
+    c.tableIndex += 1
+    val aliasName = s"t${c.tableIndex}"
+    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, aliasName, columns)
+
+class JsonTableColumnContext
+
+def ordinalColumn(using QueryContext, JsonTableColumnContext): JsonTableOrdinalColumn =
+    new JsonTableOrdinalColumn
+
+class JsonTablePathColumnPart[T]:
+    def apply[P: AsExpr as ap](path: P)(using sp: AsSqlExpr[T]): JsonTablePathColumn[T] =
+        JsonTablePathColumn(ap.asExpr(path).asSqlExpr, sp.sqlType)
+
+def pathColumn[T: AsSqlExpr](using QueryContext, JsonTableColumnContext): JsonTablePathColumnPart[T] =
+    new JsonTablePathColumnPart
+
+def existsColumn[P: AsExpr as ap](path: P): JsonTableExistsColumn =
+    JsonTableExistsColumn(ap.asExpr(path).asSqlExpr)
+
+def columns[N <: Tuple, V <: Tuple](c: JsonTableColumnContext ?=> NamedTuple[N, V]): JsonTableColumns[N, V] =
+    given JsonTableColumnContext = new JsonTableColumnContext
+    val columnList: List[Any] = c.toList
+    val jsonColumns = columnList.map:
+        case p: JsonTablePathColumn[?] => p
+        case o: JsonTableOrdinalColumn => o
+        case e: JsonTableExistsColumn => e
+        case n: JsonTableNestedColumns[?, ?] => n
+    JsonTableColumns(jsonColumns)
+
+def nestedColumns[P: AsExpr as ap, N <: Tuple, V <: Tuple](
+    path: P
+)(
+    c: JsonTableColumnContext ?=> NamedTuple[N, V]
+): JsonTableNestedColumns[N, V] =
+    given JsonTableColumnContext = new JsonTableColumnContext
+    val columnList: List[Any] = c.toList
+    val jsonColumns = columnList.map:
+        case p: JsonTablePathColumn[?] => p
+        case o: JsonTableOrdinalColumn => o
+        case e: JsonTableExistsColumn => e
+        case n: JsonTableNestedColumns[?, ?] => n
+    JsonTableNestedColumns(ap.asExpr(path).asSqlExpr, jsonColumns)
 
 def from[T](tables: T)(using
     f: AsFrom[T],

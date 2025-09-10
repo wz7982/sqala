@@ -1051,6 +1051,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     sqlBuilder.append(s"$leftQuote${e.name}$rightQuote")
                     sqlBuilder.append(" ")
                     printType(e.`type`)
+                    sqlBuilder.append(" EXISTS")
                     for p <- e.path do
                         sqlBuilder.append(" PATH ")
                         printExpr(p)

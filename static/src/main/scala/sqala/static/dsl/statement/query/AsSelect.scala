@@ -9,6 +9,7 @@ import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
 import sqala.static.dsl.FuncTable
+import sqala.static.dsl.JsonTable
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
@@ -61,6 +62,20 @@ object AsSelect:
                 )
                 tmpCursor += 1
             items.toList
+
+    given jsonTable[N <: Tuple, V <: Tuple](using 
+        s: AsMap[V],
+        t: ToTuple[s.R]
+    ): Aux[JsonTable[N, V], JsonTable[N, t.R]] = new AsSelect[JsonTable[N, V]]:
+        type R = JsonTable[N, t.R]
+
+        def transform(x: JsonTable[N, V]): R =
+            new JsonTable(x.__alias__, t.toTuple(s.transform(x.__items__)), x.__sqlTable__)
+
+        def offset(x: JsonTable[N, V]): Int = s.offset(x.__items__)
+
+        def selectItems(x: JsonTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            s.selectItems(x.__items__, cursor)
 
     // TODO
     // given subQuery[N <: Tuple, V <: Tuple](using 

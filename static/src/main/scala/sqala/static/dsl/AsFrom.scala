@@ -52,6 +52,13 @@ object AsFrom:
             def table(x: FuncTable[T])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
+    given jsonTable[N <: Tuple, V <: Tuple]: Aux[JsonTable[N, V], JsonTable[N, V]] =
+        new AsFrom[JsonTable[N, V]]:
+            type R = JsonTable[N, V]
+
+            def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
+                (x, x.__sqlTable__)
+
     given join[T]: Aux[JoinTable[T], T] =
         new AsFrom[JoinTable[T]]:
             type R = T

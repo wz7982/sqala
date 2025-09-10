@@ -73,3 +73,27 @@ type TimeResult[L, R, N <: Boolean] = (L, R, N) match
     case (LocalTime, _, false) => LocalTime
     case (_, LocalTime, true) => Option[LocalTime]
     case (_, LocalTime, false) => LocalTime
+
+type JsonTableColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = (N, V) match
+    case (hn *: tn, hv *: tv) =>
+        hv match
+            case JsonTableNestedColumns[n, v] =>
+                Tuple.Concat[JsonTableColumnNameFlatten[n, v], JsonTableColumnNameFlatten[tn, tv]]
+            case _ => 
+                hn *: JsonTableColumnNameFlatten[tn, tv]
+    case (EmptyTuple, EmptyTuple) => 
+        EmptyTuple
+
+type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
+    case h *: t =>
+        h match
+            case JsonTableNestedColumns[_, v] =>
+                Tuple.Concat[JsonTableColumnFlatten[v], JsonTableColumnFlatten[t]]
+            case JsonTableOrdinalColumn => 
+                Expr[Int] *: JsonTableColumnFlatten[t]
+            case JsonTablePathColumn[pt] =>
+                Expr[Wrap[pt, Option]] *: JsonTableColumnFlatten[t]
+            case JsonTableExistsColumn =>
+                Expr[Option[Boolean]] *: JsonTableColumnFlatten[t]
+    case EmptyTuple => 
+        EmptyTuple
