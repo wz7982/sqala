@@ -10,7 +10,7 @@ trait AsTable[T]:
 
     def table(x: T)(using QueryContext): (R, SqlTable)
 
-// TODO 子查询和json表
+// TODO 子查询和json表 value表
 object AsTable:
     type Aux[T, O] = AsTable[T]:
         type R = O
