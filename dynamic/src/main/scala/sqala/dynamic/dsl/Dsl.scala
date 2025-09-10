@@ -1,0 +1,59 @@
+package sqala.dynamic.dsl
+
+import sqala.ast.expr.{SqlExpr, SqlSubLinkQuantifier, SqlWhen}
+import sqala.dynamic.parser.SqlParser
+
+def column(name: String): Expr = Expr(new SqlParser().parseColumn(name))
+
+def unsafeExpr(snippet: String): Expr = Expr(new SqlParser().parseExpr(snippet))
+
+def value[N: Numeric](n: N): Expr = Expr(SqlExpr.NumberLiteral(n))
+
+def value(s: String): Expr = Expr(SqlExpr.StringLiteral(s))
+
+def table(name: String): Table =
+    new SqlParser().parseIdent(name)
+    Table(name, None)
+
+def lateral(query: DynamicQuery): LateralQuery = LateralQuery(query)
+
+def select(items: List[SelectItem]): Select = Select().select(items)
+
+def select(items: SelectItem*): Select = Select().select(items.toList)
+
+def `with`(items: List[SubQueryTable]): With = With(items)
+
+def `case`(branches: List[(Expr, Expr)], default: Expr): Expr =
+    Expr(SqlExpr.Case(branches.toList.map(b => SqlWhen(b._1.sqlExpr, b._2.sqlExpr)), Some(default.sqlExpr)))
+
+def count(): Expr = Expr(SqlExpr.CountAsteriskFunc(None, None))
+
+def count(expr: Expr): Expr = 
+    Expr(SqlExpr.StandardFunc("COUNT", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+
+def sum(expr: Expr): Expr = 
+    Expr(SqlExpr.StandardFunc("SUM", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+
+def avg(expr: Expr): Expr = 
+    Expr(SqlExpr.StandardFunc("AVG", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+
+def max(expr: Expr): Expr = 
+    Expr(SqlExpr.StandardFunc("MAX", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+
+def min(expr: Expr): Expr = 
+    Expr(SqlExpr.StandardFunc("MIN", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+
+def rank(): Expr = 
+    Expr(SqlExpr.StandardFunc("RANK", Nil, None, Nil, Nil, None))
+
+def denseRank(): Expr = 
+    Expr(SqlExpr.StandardFunc("DENSE_RANK", Nil, None, Nil, Nil, None))
+
+def rowNumber(): Expr = 
+    Expr(SqlExpr.StandardFunc("ROW_NUMBER", Nil, None, Nil, Nil, None))
+
+def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Any))
+
+def all(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.All))
+
+def exists(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
