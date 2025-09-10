@@ -112,7 +112,9 @@ def pathColumn[T: AsSqlExpr](using QueryContext, JsonTableColumnContext): JsonTa
 def existsColumn[P: AsExpr as ap](path: P): JsonTableExistsColumn =
     JsonTableExistsColumn(ap.asExpr(path).asSqlExpr)
 
-def columns[N <: Tuple, V <: Tuple](c: JsonTableColumnContext ?=> NamedTuple[N, V]): JsonTableColumns[N, V] =
+def columns[N <: Tuple, V <: Tuple](c: JsonTableColumnContext ?=> NamedTuple[N, V])(using
+    QueryContext
+): JsonTableColumns[N, V] =
     given JsonTableColumnContext = new JsonTableColumnContext
     val columnList: List[Any] = c.toList
     val jsonColumns = columnList.map:
@@ -126,7 +128,7 @@ def nestedColumns[P: AsExpr as ap, N <: Tuple, V <: Tuple](
     path: P
 )(
     c: JsonTableColumnContext ?=> NamedTuple[N, V]
-): JsonTableNestedColumns[N, V] =
+)(using QueryContext, JsonTableColumnContext): JsonTableNestedColumns[N, V] =
     given JsonTableColumnContext = new JsonTableColumnContext
     val columnList: List[Any] = c.toList
     val jsonColumns = columnList.map:
