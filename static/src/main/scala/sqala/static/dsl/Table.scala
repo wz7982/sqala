@@ -13,6 +13,10 @@ import sqala.ast.expr.SqlJsonTableColumn
 import sqala.ast.expr.SqlType
 import sqala.static.dsl.statement.query.Query
 
+// TODO 允许别名为None
+// TODO insert表别名为None update也要加表别名
+// TODO matchRecognize的partition by里和order by里表别名为None
+// TODO 允许别名为None之后，就可以做表查询的union了
 case class Table[T](
     private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData,
