@@ -1568,11 +1568,14 @@ def matchNumber()(using QueryContext): Expr[Int] =
     )
 
 @matchFunction
-def first[A: AsExpr as aa](x: A)(using QueryContext): Expr[aa.R] =
+def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    SqlNumber[an.R],
+    QueryContext
+): Expr[aa.R] =
     Expr(
         SqlExpr.StandardFunc(
             "FIRST",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
             None,
             Nil,
             Nil,
@@ -1581,11 +1584,14 @@ def first[A: AsExpr as aa](x: A)(using QueryContext): Expr[aa.R] =
     )
 
 @matchFunction
-def last[A: AsExpr as aa](x: A)(using QueryContext): Expr[aa.R] =
+def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    SqlNumber[an.R],
+    QueryContext
+): Expr[aa.R] =
     Expr(
         SqlExpr.StandardFunc(
             "LAST",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
             None,
             Nil,
             Nil,
