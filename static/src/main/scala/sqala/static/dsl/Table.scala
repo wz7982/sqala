@@ -15,7 +15,7 @@ import sqala.ast.expr.SqlType
 case class Table[T](
     private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData,
-    private[sqala] val __sqlTable__ : SqlTable
+    private[sqala] val __sqlTable__ : SqlTable.Standard
 ) extends Selectable:
     type Fields =
         NamedTuple[
@@ -113,13 +113,16 @@ object JsonTable:
             )
         )
 
-case class JsonTableColumns[N <: Tuple, V <: Tuple](columns: List[JsonTableColumn])
+case class JsonTableColumns[N <: Tuple, V <: Tuple](private[sqala] columns: List[JsonTableColumn])
 
 sealed trait JsonTableColumn
 case class JsonTableNestedColumns[N <: Tuple, V <: Tuple](
-    path: SqlExpr, 
-    columns: List[JsonTableColumn]
+    private[sqala] path: SqlExpr, 
+    private[sqala] columns: List[JsonTableColumn]
 ) extends JsonTableColumn
 class JsonTableOrdinalColumn extends JsonTableColumn
-case class JsonTablePathColumn[T](path: SqlExpr, `type`: SqlType) extends JsonTableColumn
-case class JsonTableExistsColumn(path: SqlExpr) extends JsonTableColumn
+case class JsonTablePathColumn[T](
+    private[sqala] path: SqlExpr, 
+    private[sqala] `type`: SqlType
+) extends JsonTableColumn
+case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn

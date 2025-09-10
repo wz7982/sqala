@@ -20,33 +20,33 @@ inline def query[T](inline q: QueryContext ?=> T): T =
 
 // TODO lateral
 extension [A](a: => A)(using c: QueryContext)
-    infix def join[B](b: => B)(using fa: AsFrom[A], fb: AsFrom[B], j: TableJoin[fa.R, fb.R]): JoinPart[j.R] = 
-        val (leftTable, leftSqlTable) = fa.table(a)
-        val (rightTable, rightSqlTable) = fb.table(b)
+    infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
-    infix def crossJoin[B](b: => B)(using fa: AsFrom[A], fb: AsFrom[B], j: TableJoin[fa.R, fb.R]): JoinTable[j.R] = 
-        val (leftTable, leftSqlTable) = fa.table(a)
-        val (rightTable, rightSqlTable) = fb.table(b)
+    infix def crossJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinTable[j.R] = 
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
-    infix def leftJoin[B](b: => B)(using fa: AsFrom[A], fb: AsFrom[B], j: TableLeftJoin[fa.R, fb.R]): JoinPart[j.R] = 
-        val (leftTable, leftSqlTable) = fa.table(a)
-        val (rightTable, rightSqlTable) = fb.table(b)
+    infix def leftJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableLeftJoin[ta.R, tb.R]): JoinPart[j.R] = 
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
-    infix def rightJoin[B](b: => B)(using fa: AsFrom[A], fb: AsFrom[B], j: TableRightJoin[fa.R, fb.R]): JoinPart[j.R] = 
-        val (leftTable, leftSqlTable) = fa.table(a)
-        val (rightTable, rightSqlTable) = fb.table(b)
+    infix def rightJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableRightJoin[ta.R, tb.R]): JoinPart[j.R] = 
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Right, rightSqlTable, None))
 
-    infix def fullJoin[B](b: => B)(using fa: AsFrom[A], fb: AsFrom[B], j: TableFullJoin[fa.R, fb.R]): JoinPart[j.R] = 
-        val (leftTable, leftSqlTable) = fa.table(a)
-        val (rightTable, rightSqlTable) = fb.table(b)
+    infix def fullJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableFullJoin[ta.R, tb.R]): JoinPart[j.R] = 
+        val (leftTable, leftSqlTable) = ta.table(a)
+        val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
 
@@ -139,7 +139,7 @@ def nestedColumns[P: AsExpr as ap, N <: Tuple, V <: Tuple](
     JsonTableNestedColumns(ap.asExpr(path).asSqlExpr, jsonColumns)
 
 def from[T](tables: T)(using
-    f: AsFrom[T],
+    f: AsTable[T],
     s: AsSelect[f.R],
     c: QueryContext
 ): SelectQuery[f.R] =

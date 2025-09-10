@@ -5,21 +5,21 @@ import sqala.static.metadata.FetchCompanion
 import sqala.ast.table.SqlJoinType
 import scala.util.NotGiven
 
-trait AsFrom[T]:
+trait AsTable[T]:
     type R
 
     def table(x: T)(using QueryContext): (R, SqlTable)
 
 // TODO 子查询和json表
-object AsFrom:
-    type Aux[T, O] = AsFrom[T]:
+object AsTable:
+    type Aux[T, O] = AsTable[T]:
         type R = O
 
     given entity[O](using 
         fc: FetchCompanion[O],
         nt: NotGiven[O <:< Tuple]
     ): Aux[O, Table[fc.R]] =
-        new AsFrom[O]:
+        new AsTable[O]:
             type R = Table[fc.R]
 
             def table(x: O)(using c: QueryContext): (R, SqlTable) =
@@ -39,38 +39,38 @@ object AsFrom:
                 (table, table.__sqlTable__)
 
     given table[T]: Aux[Table[T], Table[T]] =
-        new AsFrom[Table[T]]:
+        new AsTable[Table[T]]:
             type R = Table[T]
 
             def table(x: Table[T])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
     given funcTable[T]: Aux[FuncTable[T], FuncTable[T]] =
-        new AsFrom[FuncTable[T]]:
+        new AsTable[FuncTable[T]]:
             type R = FuncTable[T]
 
             def table(x: FuncTable[T])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
     given jsonTable[N <: Tuple, V <: Tuple]: Aux[JsonTable[N, V], JsonTable[N, V]] =
-        new AsFrom[JsonTable[N, V]]:
+        new AsTable[JsonTable[N, V]]:
             type R = JsonTable[N, V]
 
             def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
     given join[T]: Aux[JoinTable[T], T] =
-        new AsFrom[JoinTable[T]]:
+        new AsTable[JoinTable[T]]:
             type R = T
 
             def table(x: JoinTable[T])(using QueryContext): (R, SqlTable) =
                 (x.params, x.sqlTable)
 
-    given tuple[H: AsFrom as ah, T <: Tuple : AsFrom as at](using
+    given tuple[H: AsTable as ah, T <: Tuple : AsTable as at](using
         n: NotGiven[T =:= EmptyTuple],
         t: ToTuple[at.R]
     ): Aux[H *: T, ah.R *: t.R] =
-        new AsFrom[H *: T]:
+        new AsTable[H *: T]:
             type R = ah.R *: t.R
 
             def table(x: H *: T)(using QueryContext): (R, SqlTable) =
@@ -80,8 +80,8 @@ object AsFrom:
                 val table = SqlTable.Join(headTable, SqlJoinType.Cross, tailTable, None)
                 (param, table)
 
-    given tuple1[H: AsFrom as ah]: Aux[H *: EmptyTuple, ah.R] =
-        new AsFrom[H *: EmptyTuple]:
+    given tuple1[H: AsTable as ah]: Aux[H *: EmptyTuple, ah.R] =
+        new AsTable[H *: EmptyTuple]:
             type R = ah.R
 
             def table(x: H *: EmptyTuple)(using QueryContext): (R, SqlTable) =
