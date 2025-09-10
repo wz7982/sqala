@@ -60,7 +60,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
     case Dollar(
         override val quantifier: Option[SqlRowPatternQuantifier]
     ) extends SqlRowPatternTerm(quantifier)
-    case NonGreedy(
+    case Exclusion(
         term: SqlRowPatternTerm, 
         override val quantifier: Option[SqlRowPatternQuantifier]
     ) extends SqlRowPatternTerm(quantifier)

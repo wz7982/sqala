@@ -1292,7 +1292,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     sqlBuilder.append("^")
                 case SqlRowPatternTerm.Dollar(_) =>
                     sqlBuilder.append("$")
-                case SqlRowPatternTerm.NonGreedy(term, _) =>
+                case SqlRowPatternTerm.Exclusion(term, _) =>
                     sqlBuilder.append("{-")
                     printPatternTerm(term)
                     sqlBuilder.append("-}")
