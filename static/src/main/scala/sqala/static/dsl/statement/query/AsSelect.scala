@@ -10,6 +10,7 @@ import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
 import sqala.static.dsl.FuncTable
 import sqala.static.dsl.JsonTable
+import sqala.static.dsl.SubQueryTable
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
@@ -77,20 +78,23 @@ object AsSelect:
         def selectItems(x: JsonTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.__items__, cursor)
 
-    // TODO
-    // given subQuery[N <: Tuple, V <: Tuple](using 
-    //     s: AsMap[V],
-    //     t: ToTuple[s.R]
-    // ): Aux[SubQuery[N, V], SubQuery[N, t.R]] = new AsSelect[SubQuery[N, V]]:
-    //     type R = SubQuery[N, t.R]
+    given subQueryTable[N <: Tuple, V <: Tuple](using 
+        s: AsMap[V],
+        t: ToTuple[s.R]
+    ): Aux[SubQueryTable[N, V], SubQueryTable[N, t.R]] = new AsSelect[SubQueryTable[N, V]]:
+        type R = SubQueryTable[N, t.R]
 
-    //     def transform(x: SubQuery[N, V]): R =
-    //         new SubQuery(x.__alias__, t.toTuple(s.transform(x.__items__)))(using x.__context__)
+        def transform(x: SubQueryTable[N, V]): R =
+            new SubQueryTable(
+                x.__alias__, 
+                t.toTuple(s.transform(x.__items__)),
+                x.__sqlTable__
+            )
 
-    //     def offset(x: SubQuery[N, V]): Int = s.offset(x.__items__)
+        def offset(x: SubQueryTable[N, V]): Int = s.offset(x.__items__)
 
-    //     def selectItems(x: SubQuery[N, V], cursor: Int): List[SqlSelectItem.Expr] =
-    //         s.selectItems(x.__items__, cursor)
+        def selectItems(x: SubQueryTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            s.selectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using 
         sh: AsSelect[H],

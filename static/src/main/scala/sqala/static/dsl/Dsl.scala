@@ -28,6 +28,7 @@ inline def query[T](inline q: QueryContext ?=> T): T =
     q
 
 // TODO lateral
+// TODO matchRecognize
 extension [A](a: => A)(using c: QueryContext)
     infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)

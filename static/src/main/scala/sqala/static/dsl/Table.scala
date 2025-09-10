@@ -11,6 +11,7 @@ import sqala.ast.table.SqlJoinCondition
 import scala.compiletime.constValue
 import sqala.ast.expr.SqlJsonTableColumn
 import sqala.ast.expr.SqlType
+import sqala.static.dsl.statement.query.Query
 
 case class Table[T](
     private[sqala] val __aliasName__ : String,
@@ -126,3 +127,29 @@ case class JsonTablePathColumn[T](
     private[sqala] `type`: SqlType
 ) extends JsonTableColumn
 case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn
+
+class SubQueryTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __alias__ : String,
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable.SubQuery
+) extends Selectable:
+    type Fields = NamedTuple[N, V]
+
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[N, name.type, 0]]
+        __items__.toList(index)
+
+object SubQuery:
+    def apply[N <: Tuple, V <: Tuple](query: Query[?], alias: String)(using 
+        p: AsTableParam[V]
+    ): SubQueryTable[N, V] =
+        new SubQueryTable(
+            alias, 
+            p.asTableParam(alias, 1),
+            SqlTable.SubQuery(
+                query.tree,
+                false,
+                Some(SqlTableAlias(alias, Nil)),
+                None
+            )
+        )

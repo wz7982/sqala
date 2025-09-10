@@ -4,20 +4,30 @@ import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.metadata.FetchCompanion
 import sqala.ast.table.SqlJoinType
 import scala.util.NotGiven
+import scala.NamedTuple.NamedTuple
+import sqala.static.dsl.statement.query.Query
+import scala.deriving.Mirror
+import sqala.static.metadata.AsSqlExpr
+import sqala.static.metadata.TableMacro
+import sqala.ast.statement.SqlQuery
+import sqala.static.dsl.statement.query.AsSelect
+import sqala.static.metadata.TableMetaData
 
 trait AsTable[T]:
     type R
 
     def table(x: T)(using QueryContext): (R, SqlTable)
 
-// TODO 子查询和json表 value表
+// TODO 子查询 value表
 object AsTable:
     type Aux[T, O] = AsTable[T]:
         type R = O
 
     given entity[O](using 
         fc: FetchCompanion[O],
-        nt: NotGiven[O <:< Tuple]
+        nt: NotGiven[O <:< Tuple],
+        nq: NotGiven[O <:< Query[?]],
+        ns: NotGiven[O <:< Seq[?]]
     ): Aux[O, Table[fc.R]] =
         new AsTable[O]:
             type R = Table[fc.R]
@@ -58,6 +68,52 @@ object AsTable:
 
             def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
+
+    given subQueryTable[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
+        AsTableParam[V]
+    ): Aux[Q, SubQueryTable[N, V]] =
+        new AsTable[Q]:
+            type R = SubQueryTable[N, V]
+
+            def table(x: Q)(using c: QueryContext): (R, SqlTable) =
+                c.tableIndex += 1
+                val aliasName = s"t${c.tableIndex}"
+                val subQuery = SubQuery[N, V](x, aliasName)
+                (subQuery, subQuery.__sqlTable__)
+
+    inline given values[T <: Product, S <: Seq[T]](using 
+        p: Mirror.ProductOf[T]
+    ): Aux[S, Table[T]] =
+        val metaData = TableMacro.tableMetaData[T]
+        val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
+        createValues[T, S](metaData, instances)
+
+    private[sqala] def createValues[T <: Product, S <: Seq[T]](
+        metaData: TableMetaData,
+        instances: List[AsSqlExpr[?]]
+    ): Aux[S, Table[T]] =
+        new AsTable[S]:
+            type R = Table[T]
+
+            def table(x: S)(using c: QueryContext): (R, SqlTable) =
+                c.tableIndex += 1
+                val aliasName = s"t${c.tableIndex}"
+                val tableAlias = SqlTableAlias(aliasName, metaData.columnNames)
+                val table = Table[T](
+                    aliasName,
+                    metaData,
+                    SqlTable.Standard(
+                        metaData.tableName, 
+                        Some(tableAlias),
+                        None,
+                        None
+                    )
+                )
+                val exprList = x.toList.map: datum =>
+                    instances.zip(datum.productIterator).map: (i, v) =>
+                        i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
+                val sqlValues = SqlQuery.Values(exprList, None)
+                (table, SqlTable.SubQuery(sqlValues, false, Some(tableAlias), None))
 
     given join[T]: Aux[JoinTable[T], T] =
         new AsTable[JoinTable[T]]:
