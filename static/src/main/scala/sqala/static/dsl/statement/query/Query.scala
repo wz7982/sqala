@@ -386,10 +386,9 @@ object SelectQuery:
             )(using query.context)
 
     extension [T](query: SelectQuery[Table[T]])
-        def connectBy[F: AsExpr as a](f: ConnectingContext ?=> (Table[T], Table[T]) => F)(using 
+        def connectBy[F: AsExpr as a](f: (Table[T], Table[T]) => F)(using 
             SqlBoolean[a.R]
         ): ConnectBy[T] =
-            given ConnectingContext = new ConnectingContext
             given QueryContext = query.context
             val cond = a.asExpr(
                 f(query.params, query.params.copy(__aliasName__ = Some(tableCte)))
@@ -497,8 +496,6 @@ object UnionQuery:
 
         def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
             if test then sortBy(f) else query
-
-class ConnectingContext
 
 class ConnectByContext
 
