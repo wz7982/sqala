@@ -10,7 +10,7 @@ import scala.deriving.Mirror
 
 // TODO
 
-case class UpdatePair(expr: SqlExpr, updateExpr: SqlExpr)
+case class UpdatePair(columnName: String, updateExpr: SqlExpr)
 
 enum UpdateState:
     case Table
@@ -22,7 +22,6 @@ type UpdateEntity = UpdateState.Entity.type
 
 class UpdateSetContext
 // TODO set方法要加这个上下文
-// TODO set里把别名置空
 
 // class Update[T, S <: UpdateState](
 //     private[sqala] val table: Table[T],
