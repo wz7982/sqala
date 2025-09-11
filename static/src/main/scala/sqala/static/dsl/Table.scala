@@ -66,7 +66,7 @@ case class FuncTable[T](
         Expr(SqlExpr.Column(__aliasName__, __columnNames__(index)))
 
 case class JsonTable[N <: Tuple, V <: Tuple](
-    private[sqala] val __alias__ : Option[String],
+    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
 ) extends Selectable:
@@ -132,8 +132,8 @@ case class JsonTablePathColumn[T](
 ) extends JsonTableColumn
 case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn
 
-class SubQueryTable[N <: Tuple, V <: Tuple](
-    private[sqala] val __alias__ : Option[String],
+case class SubQueryTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.SubQuery
 ) extends Selectable:

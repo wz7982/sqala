@@ -71,7 +71,11 @@ object AsSelect:
         type R = JsonTable[N, t.R]
 
         def transform(x: JsonTable[N, V]): R =
-            new JsonTable(x.__alias__, t.toTuple(s.transform(x.__items__)), x.__sqlTable__)
+            new JsonTable(
+                x.__aliasName__, 
+                t.toTuple(s.transform(x.__items__)), 
+                x.__sqlTable__
+            )
 
         def offset(x: JsonTable[N, V]): Int = s.offset(x.__items__)
 
@@ -86,7 +90,7 @@ object AsSelect:
 
         def transform(x: SubQueryTable[N, V]): R =
             new SubQueryTable(
-                x.__alias__, 
+                x.__aliasName__, 
                 t.toTuple(s.transform(x.__items__)),
                 x.__sqlTable__
             )

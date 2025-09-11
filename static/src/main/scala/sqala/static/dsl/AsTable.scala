@@ -12,6 +12,13 @@ import sqala.static.metadata.TableMacro
 import sqala.ast.statement.SqlQuery
 import sqala.static.dsl.statement.query.AsSelect
 import sqala.static.metadata.TableMetaData
+import sqala.ast.expr.SqlExpr
+import sqala.ast.order.SqlOrderingItem
+import sqala.ast.table.SqlPatternRowsPerMatchMode
+import sqala.ast.table.SqlPatternEmptyMatchMode
+import sqala.ast.table.SqlMatchRecognize
+import sqala.ast.table.SqlRowPattern
+import sqala.ast.table.SqlRowPatternTerm
 
 trait AsTable[T]:
     type R
@@ -180,3 +187,112 @@ object AsLateralTable:
                 val aliasName = s"t${c.tableIndex}"
                 val subQuery = SubQuery[N, V](x, true, Some(aliasName))
                 (subQuery, subQuery.__sqlTable__)
+
+trait AsRecognizeTable[T]:
+    def asRecognizeTable(x: T): T
+
+    def setPartitionBy(x: T, items: List[SqlExpr]): T
+
+    def setOrderBy(x: T, items: List[SqlOrderingItem]): T
+
+    def setPerMatch(x: T, perMatch: SqlPatternRowsPerMatchMode): T
+
+    def fetchRecognize(x: T): SqlMatchRecognize
+
+object AsRecognizeTable:
+    private[sqala] def createEmptyRecognize: SqlMatchRecognize =
+        SqlMatchRecognize(
+            Nil,
+            Nil,
+            Nil,
+            None,
+            SqlRowPattern(
+                None,
+                None,
+                SqlRowPatternTerm.Dollar(None),
+                Nil,
+                Nil
+            ),
+            None
+        )
+
+    given table[T]: AsRecognizeTable[Table[T]] with
+        def asRecognizeTable(x: Table[T]): Table[T] =
+            x.copy(
+                __aliasName__ = None, 
+                __sqlTable__ = x.__sqlTable__.copy(matchRecognize = Some(createEmptyRecognize))
+            )
+
+        def setPartitionBy(x: Table[T], items: List[SqlExpr]): Table[T] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(partitionBy = items)
+                    )
+            )
+
+        def setOrderBy(x: Table[T], items: List[SqlOrderingItem]): Table[T] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(orderBy = items)
+                    )
+            )
+
+        def setPerMatch(x: Table[T], perMatch: SqlPatternRowsPerMatchMode): Table[T] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(rowsPerMatch = Some(perMatch))
+                    )
+            )
+
+        def fetchRecognize(x: Table[T]): SqlMatchRecognize =
+            x.__sqlTable__.matchRecognize.get
+
+    given subQuery[N <: Tuple, V <: Tuple]: AsRecognizeTable[SubQueryTable[N, V]] with
+        def asRecognizeTable(x: SubQueryTable[N, V]): SubQueryTable[N, V] =
+            x.copy(
+                __aliasName__ = None, 
+                __sqlTable__ = x.__sqlTable__.copy(matchRecognize = Some(createEmptyRecognize))
+            )
+
+
+        def setPartitionBy(x: SubQueryTable[N, V], items: List[SqlExpr]): SubQueryTable[N, V] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(partitionBy = items)
+                    )
+            )
+
+        def setOrderBy(x: SubQueryTable[N, V], items: List[SqlOrderingItem]): SubQueryTable[N, V] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(orderBy = items)
+                    )
+            )
+
+        def setPerMatch(x: SubQueryTable[N, V], perMatch: SqlPatternRowsPerMatchMode): SubQueryTable[N, V] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = 
+                            x.__sqlTable__.matchRecognize.map: m =>
+                                m.copy(rowsPerMatch = Some(perMatch))
+                    )
+            )
+
+        def fetchRecognize(x: SubQueryTable[N, V]): SqlMatchRecognize =
+            x.__sqlTable__.matchRecognize.get
