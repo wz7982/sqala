@@ -237,7 +237,7 @@ case class Recognize[N <: Tuple, T](
             .copy(rowPattern = recognize.rowPattern.copy(pattern = p.pattern))
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def skipToNextRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
+    def afterMatchSkipToNextRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
         val recognize = 
             r.fetchRecognize(__table__)
         val newRecognize = recognize
@@ -248,7 +248,7 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def skipPastLastRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
+    def afterMatchSkipPastLastRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
         val recognize = 
             r.fetchRecognize(__table__)
         val newRecognize = recognize
@@ -259,7 +259,7 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def skipToFirst(f: RecognizePatternName[N, T] => String)(using 
+    def afterMatchSkipToFirst(f: RecognizePatternName[N, T] => String)(using 
         QueryContext, 
         MatchRecognizeContext
     ): Recognize[N, T] =
@@ -275,7 +275,7 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def skipToLast(f: RecognizePatternName[N, T] => String)(using 
+    def afterMatchSkipToLast(f: RecognizePatternName[N, T] => String)(using 
         QueryContext, 
         MatchRecognizeContext
     ): Recognize[N, T] =
@@ -291,7 +291,7 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def skipTo(f: RecognizePatternName[N, T] => String)(using 
+    def afterMatchSkipTo(f: RecognizePatternName[N, T] => String)(using 
         QueryContext, 
         MatchRecognizeContext
     ): Recognize[N, T] =
