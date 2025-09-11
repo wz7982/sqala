@@ -11,6 +11,7 @@ import scala.collection.mutable.ListBuffer
 import sqala.static.dsl.FuncTable
 import sqala.static.dsl.JsonTable
 import sqala.static.dsl.SubQueryTable
+import sqala.static.dsl.RecognizeTable
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
@@ -80,6 +81,24 @@ object AsSelect:
         def offset(x: JsonTable[N, V]): Int = s.offset(x.__items__)
 
         def selectItems(x: JsonTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            s.selectItems(x.__items__, cursor)
+
+    given recognizeTable[N <: Tuple, V <: Tuple](using 
+        s: AsMap[V],
+        t: ToTuple[s.R]
+    ): Aux[RecognizeTable[N, V], RecognizeTable[N, t.R]] = new AsSelect[RecognizeTable[N, V]]:
+        type R = RecognizeTable[N, t.R]
+
+        def transform(x: RecognizeTable[N, V]): R =
+            new RecognizeTable(
+                x.__aliasName__, 
+                t.toTuple(s.transform(x.__items__)), 
+                x.__sqlTable__
+            )
+
+        def offset(x: RecognizeTable[N, V]): Int = s.offset(x.__items__)
+
+        def selectItems(x: RecognizeTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.__items__, cursor)
 
     given subQueryTable[N <: Tuple, V <: Tuple](using 

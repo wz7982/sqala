@@ -22,6 +22,8 @@ import sqala.static.metadata.columnPseudoLevel
 import sqala.ast.expr.SqlWhen
 import sqala.static.metadata.SqlBoolean
 import sqala.ast.expr.SqlWindowFrameBound
+import sqala.ast.table.SqlRowPatternTerm
+import sqala.ast.table.SqlPatternRowsPerMatchMode
 
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
@@ -322,3 +324,57 @@ def sortBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over 
 
 def orderBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
     Over(sortBy = a.asSort(sortValue))
+
+def ^(using QueryContext, MatchRecognizeContext): Pattern =
+    new Pattern(SqlRowPatternTerm.Circumflex(None))
+
+def $(using QueryContext, MatchRecognizeContext): Pattern =
+    new Pattern(SqlRowPatternTerm.Circumflex(None))
+
+def permute(terms: Pattern*)(using QueryContext, MatchRecognizeContext): Pattern =
+    new Pattern(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
+
+def exclusion(term: Pattern)(using QueryContext, MatchRecognizeContext): Pattern =
+    new Pattern(SqlRowPatternTerm.Exclusion(term.pattern, None))
+
+extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
+    def matchRecognize[N <: Tuple, V <: Tuple](
+        f: MatchRecognizeContext ?=> t.R => RecognizeTable[N, V]
+    )(using 
+        QueryContext
+    ): RecognizeTable[N, V] =
+        given MatchRecognizeContext = new MatchRecognizeContext
+        val initialTable = r.asRecognizeTable(t.table(table)._1)
+        f(initialTable)
+
+extension [T](table: T)(using r: AsRecognizeTable[T])
+    def partitionBy[P: AsGroup as a](partitionValue: P)(using 
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPartitionBy(table, a.exprs(partitionValue).map(_.asSqlExpr)))
+
+    def sortBy[S: AsSort as a](sortValue: S)(using 
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        val sort = a.asSort(sortValue).map(_.asSqlOrderBy)
+        RecognizePredefine(r.setOrderBy(table, sort))
+
+    def orderBy[S: AsSort as a](sortValue: S)(using 
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        sortBy(sortValue)
+
+    def oneRowPerMatch(using 
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPerMatch(table, SqlPatternRowsPerMatchMode.OneRow))
+
+    def allRowsPerMatch(using 
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPerMatch(table, SqlPatternRowsPerMatchMode.AllRows(None)))

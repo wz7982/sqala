@@ -88,6 +88,13 @@ object AsTable:
                 val subQuery = SubQuery[N, V](x, false, Some(aliasName))
                 (subQuery, subQuery.__sqlTable__)
 
+    given recognizeTable[N <: Tuple, V <: Tuple]: Aux[RecognizeTable[N, V], RecognizeTable[N, V]] =
+        new AsTable[RecognizeTable[N, V]]:
+            type R = RecognizeTable[N, V]
+
+            def table(x: RecognizeTable[N, V])(using QueryContext): (R, SqlTable) =
+                (x, x.__sqlTable__)
+
     inline given values[T <: Product, S <: Seq[T]](using 
         p: Mirror.ProductOf[T]
     ): Aux[S, Table[T]] =
@@ -192,13 +199,19 @@ object AsLateralTable:
 trait AsRecognizeTable[T]:
     def asRecognizeTable(x: T): T
 
+    def alias(x: T, name: String): T
+
     def setPartitionBy(x: T, items: List[SqlExpr]): T
 
     def setOrderBy(x: T, items: List[SqlOrderingItem]): T
 
     def setPerMatch(x: T, perMatch: SqlPatternRowsPerMatchMode): T
 
+    def setRecognize(x: T, recognize: SqlMatchRecognize): T
+
     def fetchRecognize(x: T): SqlMatchRecognize
+
+    def fetchSqlTable(x: T): SqlTable
 
 object AsRecognizeTable:
     private[sqala] def createEmptyRecognize: SqlMatchRecognize =
@@ -222,6 +235,11 @@ object AsRecognizeTable:
             x.copy(
                 __aliasName__ = None, 
                 __sqlTable__ = x.__sqlTable__.copy(matchRecognize = Some(createEmptyRecognize))
+            )
+
+        def alias(x: Table[T], name: String): Table[T] =
+            x.copy(
+                __aliasName__ = Some(name)
             )
 
         def setPartitionBy(x: Table[T], items: List[SqlExpr]): Table[T] =
@@ -254,8 +272,19 @@ object AsRecognizeTable:
                     )
             )
 
+        def setRecognize(x: Table[T], recognize: SqlMatchRecognize): Table[T] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = Some(recognize)
+                    )
+            )
+
         def fetchRecognize(x: Table[T]): SqlMatchRecognize =
             x.__sqlTable__.matchRecognize.get
+
+        def fetchSqlTable(x: Table[T]): SqlTable =
+            x.__sqlTable__
 
     given subQuery[N <: Tuple, V <: Tuple]: AsRecognizeTable[SubQueryTable[N, V]] with
         def asRecognizeTable(x: SubQueryTable[N, V]): SubQueryTable[N, V] =
@@ -264,6 +293,10 @@ object AsRecognizeTable:
                 __sqlTable__ = x.__sqlTable__.copy(matchRecognize = Some(createEmptyRecognize))
             )
 
+        def alias(x: SubQueryTable[N, V], name: String): SubQueryTable[N, V] =
+            x.copy(
+                __aliasName__ = Some(name)
+            )
 
         def setPartitionBy(x: SubQueryTable[N, V], items: List[SqlExpr]): SubQueryTable[N, V] =
             x.copy(
@@ -295,5 +328,16 @@ object AsRecognizeTable:
                     )
             )
 
+        def setRecognize(x: SubQueryTable[N, V], recognize: SqlMatchRecognize): SubQueryTable[N, V] =
+            x.copy(
+                __sqlTable__ =
+                    x.__sqlTable__.copy(
+                        matchRecognize = Some(recognize)
+                    )
+            )
+
         def fetchRecognize(x: SubQueryTable[N, V]): SqlMatchRecognize =
             x.__sqlTable__.matchRecognize.get
+
+        def fetchSqlTable(x: SubQueryTable[N, V]): SqlTable =
+            x.__sqlTable__
