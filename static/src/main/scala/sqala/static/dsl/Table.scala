@@ -12,6 +12,8 @@ import scala.compiletime.constValue
 import sqala.ast.expr.SqlJsonTableColumn
 import sqala.ast.expr.SqlType
 import sqala.static.dsl.statement.query.Query
+import sqala.ast.table.SqlRowPattern
+import sqala.ast.table.SqlRowPatternTerm
 
 // TODO :=把别名
 // TODO insert表别名为None update也要加表别名
@@ -158,9 +160,33 @@ object SubQuery:
             )
         )
 
+class MatchRecognizeContext
+
 case class Recognize[N <: Tuple, T](
     private[sqala] val __table__ : T
 )
+
+// TODO dsl里要加 ^ $ permute exclusion
+class Pattern(val pattern: SqlRowPatternTerm):
+    def +(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def *(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def ?(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def between()(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def min()(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def max()(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def apply()(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def ~(that: Pattern)(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+    def |(that: Pattern)(using QueryContext, MatchRecognizeContext): Pattern = ???
+
+
 // TODO define pattern afterMatch系列方法 measures返回RecognizeTable
 
 case class RecognizeTable[N <: Tuple, V <: Tuple](
