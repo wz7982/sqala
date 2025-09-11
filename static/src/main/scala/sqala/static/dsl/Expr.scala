@@ -5,6 +5,9 @@ import sqala.static.dsl.statement.dml.UpdatePair
 
 import scala.annotation.targetName
 import sqala.ast.expr.SqlWindow
+import sqala.static.dsl.statement.dml.UpdateSetContext
+
+class OverContext
 
 case class Expr[T](private val expr: SqlExpr):
     @targetName("eq")
@@ -23,7 +26,8 @@ case class Expr[T](private val expr: SqlExpr):
     ): Expr[Option[Boolean]] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
-    infix def over(over: Over | Unit)(using QueryContext): Expr[T] =
+    infix def over(over: OverContext ?=> (Over | Unit))(using QueryContext): Expr[T] =
+        given OverContext = new OverContext
         over match
             case o: Over =>
                 Expr(
@@ -50,7 +54,8 @@ case class Expr[T](private val expr: SqlExpr):
 
     @targetName("to")
     def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R]
+        Compare[T, a.R],
+        UpdateSetContext
     ): UpdatePair = this match
         case Expr(SqlExpr.Column(_, columnName)) =>
             UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)

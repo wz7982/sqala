@@ -20,6 +20,9 @@ type UpdateTable = UpdateState.Table.type
 
 type UpdateEntity = UpdateState.Entity.type
 
+class UpdateSetContext
+// TODO set方法要加这个上下文
+
 // class Update[T, S <: UpdateState](
 //     private[sqala] val table: Table[T],
 //     val tree: SqlStatement.Update

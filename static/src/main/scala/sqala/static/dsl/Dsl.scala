@@ -320,11 +320,11 @@ extension (n: Int)
     def following(using QueryContext): SqlWindowFrameBound = 
         SqlWindowFrameBound.Following(n)
 
-def partitionBy[T: AsGroup as a](partitionValue: T)(using QueryContext): Over =
+def partitionBy[T: AsGroup as a](partitionValue: T)(using QueryContext, OverContext): Over =
     Over(partitionBy = a.exprs(partitionValue))
 
-def sortBy[T: AsSort as a](sortValue: T)(using QueryContext): Over =
+def sortBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
     Over(sortBy = a.asSort(sortValue))
 
-def orderBy[T: AsSort as a](sortValue: T)(using QueryContext): Over =
+def orderBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
     Over(sortBy = a.asSort(sortValue))
