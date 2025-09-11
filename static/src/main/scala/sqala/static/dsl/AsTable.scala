@@ -25,6 +25,7 @@ trait AsTable[T]:
 
     def table(x: T)(using QueryContext): (R, SqlTable)
 
+// TODO 支持RecognizeTable  Result ToOption AsSelect也要支持
 object AsTable:
     type Aux[T, O] = AsTable[T]:
         type R = O

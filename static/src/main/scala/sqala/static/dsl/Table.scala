@@ -157,3 +157,14 @@ object SubQuery:
                 None
             )
         )
+
+case class Recognize[N <: Tuple, T](
+    private[sqala] val __table__ : T
+)
+// TODO define pattern afterMatch系列方法 measures返回RecognizeTable
+
+case class RecognizeTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable
+)
