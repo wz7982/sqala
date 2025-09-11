@@ -339,7 +339,9 @@ object SelectQuery:
             Grouping(
                 query.params, 
                 query.tree.copy(
-                    groupBy = Some(SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None))
+                    groupBy = Some(
+                        SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)
+                    )
                 )
             )(using query.context)
 
@@ -351,7 +353,9 @@ object SelectQuery:
             Grouping(
                 o.toOption(query.params), 
                 query.tree.copy(
-                    groupBy = Some(SqlGroupBy(SqlGroupingItem.Cube(group.map(_.asSqlExpr)) :: Nil, None))
+                    groupBy = Some(
+                        SqlGroupBy(SqlGroupingItem.Cube(group.map(_.asSqlExpr)) :: Nil, None)
+                    )
                 )
             )(using query.context)
 
@@ -363,7 +367,9 @@ object SelectQuery:
             Grouping(
                 o.toOption(query.params), 
                 query.tree.copy(
-                    groupBy = Some(SqlGroupBy(SqlGroupingItem.Rollup(group.map(_.asSqlExpr)) :: Nil, None))
+                    groupBy = Some(
+                        SqlGroupBy(SqlGroupingItem.Rollup(group.map(_.asSqlExpr)) :: Nil, None)
+                    )
                 )
             )(using query.context)
 
@@ -380,7 +386,10 @@ object SelectQuery:
             )(using query.context)
 
     extension [T](query: SelectQuery[Table[T]])
-        def connectBy[F: AsExpr as a](f: Table[T] => F)(using SqlBoolean[a.R]): ConnectBy[T] =
+        def connectBy[F: AsExpr as a](f: ConnectingContext ?=> Table[T] => F)(using 
+            SqlBoolean[a.R]
+        ): ConnectBy[T] =
+            given ConnectingContext = new ConnectingContext
             given QueryContext = query.context
             val cond = a.asExpr(f(query.params)).asSqlExpr
             val joinTree = query.tree
@@ -409,6 +418,8 @@ object SelectQuery:
                 )
             ConnectBy(query.params, joinTree, startTree)
 
+class GroupingContext
+
 final class Grouping[T](
     private[sqala] val params: T,
     private[sqala] val tree: SqlQuery.Select
@@ -417,28 +428,30 @@ final class Grouping[T](
 )
 
 object Grouping:
+    given GroupingContext = new GroupingContext
+
     extension [T](query: Grouping[T])
-        infix def having[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): Grouping[T] =
+        infix def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): Grouping[T] =
             val cond = a.asExpr(f(query.params))
             Grouping(query.params, query.tree.addHaving(cond.asSqlExpr))(using query.context)
 
-        infix def sortBy[S: AsSort as s](f: T => S): Grouping[T] =
+        infix def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): Grouping[T] =
             val sort = s.asSort(f(query.params))
             Grouping(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        infix def orderBy[S: AsSort](f: T => S): Grouping[T] =
+        infix def orderBy[S: AsSort](f: GroupingContext ?=> T => S): Grouping[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: T => S): Grouping[T] =
+        def sortByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): Grouping[T] =
             if test then sortBy(f) else query
 
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): Grouping[T] =
+        def orderByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): Grouping[T] =
             sortByIf(test)(f)
 
-        infix def map[M: AsMap as m](f: T => M): Query[m.R] =
+        infix def map[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -446,10 +459,10 @@ object Grouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def select[M: AsMap as m](f: T => M): Query[m.R] =
+        infix def select[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        infix def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -457,7 +470,7 @@ object Grouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        infix def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             mapDistinct(f)
 
 class UnionQuery[T](
@@ -483,6 +496,10 @@ object UnionQuery:
         def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
             if test then sortBy(f) else query
 
+class ConnectingContext
+
+class ConnectByContext
+
 final case class ConnectBy[T](
     private[sqala] val table: Table[T],
     private[sqala] val connectByTree: SqlQuery.Select,
@@ -503,6 +520,8 @@ final case class ConnectBy[T](
 )(using private[sqala] val context: QueryContext)
 
 object ConnectBy:
+    given ConnectByContext = new ConnectByContext
+    
     extension [T](query: ConnectBy[T])
         infix def startWith[F: AsExpr as a](f: Table[T] => F)(using SqlBoolean[a.R]): ConnectBy[T] =
             val cond = a.asExpr(f(query.table))
@@ -510,20 +529,20 @@ object ConnectBy:
                 startWithTree = query.startWithTree.addWhere(cond.asSqlExpr)
             )(using query.context)
 
-        infix def sortBy[S: AsSort as s](f: Table[T] => S): ConnectBy[T] =
+        infix def sortBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             val sort = f(query.table.copy(__aliasName__ = tableCte))
             val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
             query.copy(
                 mapTree = query.mapTree.copy(orderBy = query.mapTree.orderBy ++ sqlOrderBy)
             )(using query.context)
 
-        infix def orderBy[S: AsSort as s](f: Table[T] => S): ConnectBy[T] =
+        infix def orderBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: Table[T] => S): ConnectBy[T] =
+        def sortByIf[S: AsSort as s](test: => Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             if test then sortBy(f) else query
 
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: Table[T] => S): ConnectBy[T] =
+        def orderByIf[S: AsSort as s](test: => Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortByIf(test)(f)
 
         infix def maxDepth(n: Int): ConnectBy[T] =
@@ -536,23 +555,23 @@ object ConnectBy:
                 connectByTree = query.connectByTree.addWhere(cond)
             )(using query.context)
 
-        infix def sortSiblingsBy[S: AsSort as s](f: Table[T] => S): ConnectBy[T] =
+        infix def sortSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             val sort = f(query.table)
             val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
             query.copy(
                 connectByTree = query.connectByTree.copy(orderBy = query.connectByTree.orderBy ++ sqlOrderBy)
             )(using query.context)
 
-        infix def orderSiblingsBy[S: AsSort as s](f: Table[T] => S): ConnectBy[T] =
+        infix def orderSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortSiblingsBy(f)
 
-        def sortSiblingsByIf[S: AsSort as s](test: Boolean)(f: Table[T] => S): ConnectBy[T] =
+        def sortSiblingsByIf[S: AsSort as s](test: Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             if test then sortSiblingsBy(f) else query
 
-        def orderSiblingsByIf[S: AsSort as s](test: Boolean)(f: Table[T] => S): ConnectBy[T] =
+        def orderSiblingsByIf[S: AsSort as s](test: Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortSiblingsByIf(test)(f)
 
-        infix def map[M: AsMap as m](f: Table[T] => M): Query[m.R] =
+        infix def map[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
                     tableCte, 
@@ -581,10 +600,10 @@ object ConnectBy:
             )
             Query(m.transform(mapped), cteTree)(using query.context)
 
-        infix def select[M: AsMap as m](f: Table[T] => M): Query[m.R] =
+        infix def select[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: Table[T] => M): Query[m.R] =
+        infix def mapDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
                     tableCte, 
@@ -604,7 +623,9 @@ object ConnectBy:
                 None,
                 None
             )
-            val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
+            val withItem = SqlWithItem(
+                tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
+            )
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(
                 withItem :: Nil, 
                 true, 
@@ -613,5 +634,5 @@ object ConnectBy:
             )
             Query(m.transform(mapped), cteTree)(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: Table[T] => M): Query[m.R] =
+        infix def selectDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             mapDistinct(f)

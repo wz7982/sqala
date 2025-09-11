@@ -148,7 +148,10 @@ class JsonTablePathColumnPart[T]:
 def pathColumn[T: AsSqlExpr](using QueryContext, JsonTableColumnContext): JsonTablePathColumnPart[T] =
     new JsonTablePathColumnPart
 
-def existsColumn[P: AsExpr as ap](path: P): JsonTableExistsColumn =
+def existsColumn[P: AsExpr as ap](path: P)(using 
+    QueryContext, 
+    JsonTableColumnContext
+): JsonTableExistsColumn =
     JsonTableExistsColumn(ap.asExpr(path).asSqlExpr)
 
 def columns[N <: Tuple, V <: Tuple](c: JsonTableColumnContext ?=> NamedTuple[N, V])(using
@@ -198,7 +201,7 @@ def from[T](tables: T)(using
     )
     SelectQuery(params, tree)
 
-def grouping[T: AsExpr as a](x: T): Expr[Int] =
+def grouping[T: AsExpr as a](x: T)(using QueryContext, GroupingContext): Expr[Int] =
     Expr(
         SqlExpr.Grouping(
             a.exprs(x).map(_.asSqlExpr)
@@ -211,13 +214,13 @@ def timestamp(s: String)(using QueryContext): Expr[LocalDateTime] =
 def date(s: String)(using QueryContext): Expr[LocalDate] =
     Expr(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
-def prior[T](expr: Expr[T])(using QueryContext): Expr[T] =
+def prior[T](expr: Expr[T])(using QueryContext, ConnectingContext): Expr[T] =
     expr match
         case Expr(SqlExpr.Column(_, n)) => 
             Expr(SqlExpr.Column(Some(tableCte), n))
         case _ => throw MatchError(expr)
 
-def level()(using QueryContext): Expr[Int] =
+def level()(using QueryContext, ConnectByContext): Expr[Int] =
     Expr(SqlExpr.Column(Some(tableCte), columnPseudoLevel))
 
 sealed class TimeUnit(val unit: SqlTimeUnit)
