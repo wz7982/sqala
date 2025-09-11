@@ -137,6 +137,7 @@ object Return:
         new Return[A, B, true]:
             type R = TimeResult[A, B, true]
 
+// TODO 支持Table[T]和子查询
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait Union[A, B]:
     type R

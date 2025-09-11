@@ -214,12 +214,6 @@ def timestamp(s: String)(using QueryContext): Expr[LocalDateTime] =
 def date(s: String)(using QueryContext): Expr[LocalDate] =
     Expr(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
 
-def prior[T](expr: Expr[T])(using QueryContext, ConnectingContext): Expr[T] =
-    expr match
-        case Expr(SqlExpr.Column(_, n)) => 
-            Expr(SqlExpr.Column(Some(tableCte), n))
-        case _ => throw MatchError(expr)
-
 def level()(using QueryContext, ConnectByContext): Expr[Int] =
     Expr(SqlExpr.Column(Some(tableCte), columnPseudoLevel))
 

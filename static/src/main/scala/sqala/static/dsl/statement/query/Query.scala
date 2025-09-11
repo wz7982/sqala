@@ -386,12 +386,14 @@ object SelectQuery:
             )(using query.context)
 
     extension [T](query: SelectQuery[Table[T]])
-        def connectBy[F: AsExpr as a](f: ConnectingContext ?=> Table[T] => F)(using 
+        def connectBy[F: AsExpr as a](f: ConnectingContext ?=> (Table[T], Table[T]) => F)(using 
             SqlBoolean[a.R]
         ): ConnectBy[T] =
             given ConnectingContext = new ConnectingContext
             given QueryContext = query.context
-            val cond = a.asExpr(f(query.params)).asSqlExpr
+            val cond = a.asExpr(
+                f(query.params, query.params.copy(__aliasName__ = Some(tableCte)))
+            ).asSqlExpr
             val joinTree = query.tree
                 .copy(
                     select = query.tree.select :+ SqlSelectItem.Expr(
