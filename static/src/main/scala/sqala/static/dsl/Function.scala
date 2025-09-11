@@ -1569,64 +1569,76 @@ def matchNumber()(using QueryContext): Expr[Int] =
 
 @matchFunction
 def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    SqlNumber[an.R],
-    QueryContext
-): Expr[aa.R] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "FIRST",
-            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-            None,
-            Nil,
-            Nil,
-            None
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "FIRST",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
         )
     )
 
 @matchFunction
 def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    SqlNumber[an.R],
-    QueryContext
-): Expr[aa.R] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "LAST",
-            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-            None,
-            Nil,
-            Nil,
-            None
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "LAST",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
         )
     )
 
 @matchFunction
 def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    SqlNumber[an.R],
-    QueryContext
-): Expr[aa.R] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "PREV",
-            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-            None,
-            Nil,
-            Nil,
-            None
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "PREV",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
         )
     )
 
 @matchFunction
 def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    SqlNumber[an.R],
-    QueryContext
-): Expr[aa.R] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "NEXT",
-            aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-            None,
-            Nil,
-            Nil,
-            None
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "NEXT",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
         )
     )
