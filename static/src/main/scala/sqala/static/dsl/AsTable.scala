@@ -36,7 +36,7 @@ object AsTable:
                 c.tableIndex += 1
                 val aliasName = s"t${c.tableIndex}"
                 val table = Table[fc.R](
-                    aliasName,
+                    Some(aliasName),
                     metaData,
                     SqlTable.Standard(
                         metaData.tableName, 
@@ -77,7 +77,7 @@ object AsTable:
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
                 c.tableIndex += 1
                 val aliasName = s"t${c.tableIndex}"
-                val subQuery = SubQuery[N, V](x, false, aliasName)
+                val subQuery = SubQuery[N, V](x, false, Some(aliasName))
                 (subQuery, subQuery.__sqlTable__)
 
     inline given values[T <: Product, S <: Seq[T]](using 
@@ -99,7 +99,7 @@ object AsTable:
                 val aliasName = s"t${c.tableIndex}"
                 val tableAlias = SqlTableAlias(aliasName, metaData.columnNames)
                 val table = Table[T](
-                    aliasName,
+                    Some(aliasName),
                     metaData,
                     SqlTable.Standard(
                         metaData.tableName, 
@@ -178,5 +178,5 @@ object AsLateralTable:
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
                 c.tableIndex += 1
                 val aliasName = s"t${c.tableIndex}"
-                val subQuery = SubQuery[N, V](x, true, aliasName)
+                val subQuery = SubQuery[N, V](x, true, Some(aliasName))
                 (subQuery, subQuery.__sqlTable__)

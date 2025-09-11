@@ -39,7 +39,7 @@ object AsSelect:
             for field <- x.__metaData__.columnNames do
                 items.addOne(
                     SqlSelectItem.Expr(
-                        SqlExpr.Column(Some(x.__aliasName__), field), Some(s"c${tmpCursor}")
+                        SqlExpr.Column(x.__aliasName__, field), Some(s"c${tmpCursor}")
                     )
                 )
                 tmpCursor += 1
@@ -58,7 +58,7 @@ object AsSelect:
             for field <- x.__columnNames__ do
                 items.addOne(
                     SqlSelectItem.Expr(
-                        SqlExpr.Column(Some(x.__aliasName__), field), Some(s"c${tmpCursor}")
+                        SqlExpr.Column(x.__aliasName__, field), Some(s"c${tmpCursor}")
                     )
                 )
                 tmpCursor += 1

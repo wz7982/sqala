@@ -103,7 +103,7 @@ def unnest[T: AsExpr as a](x: T)(using
         Some(SqlTableAlias(aliasName, "x" :: Nil)),
         None
     )
-    FuncTable(aliasName, "x" :: Nil, "x" :: Nil, sqlTable)
+    FuncTable(Some(aliasName), "x" :: Nil, "x" :: Nil, sqlTable)
 
 case class UnnestWithOrdinal[T](x: Option[T], ordinal: Int)
 
@@ -121,7 +121,7 @@ def unnestWithOrdinal[T: AsExpr as a](x: T)(using
         Some(SqlTableAlias(aliasName, "x" :: "ordinal" :: Nil)),
         None
     )
-    FuncTable(aliasName, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    FuncTable(Some(aliasName), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
 
 def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
     expr: E,
@@ -134,7 +134,7 @@ def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
 ): JsonTable[JsonTableColumnNameFlatten[N, V], JsonTableColumnFlatten[V]] =
     c.tableIndex += 1
     val aliasName = s"t${c.tableIndex}"
-    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, aliasName, columns)
+    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, Some(aliasName), columns)
 
 class JsonTableColumnContext
 

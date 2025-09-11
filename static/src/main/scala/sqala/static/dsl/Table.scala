@@ -18,7 +18,7 @@ import sqala.static.dsl.statement.query.Query
 // TODO matchRecognize的partition by里和order by里表别名为None
 // TODO 允许别名为None之后，就可以做表查询的union了
 case class Table[T](
-    private[sqala] val __aliasName__ : String,
+    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __sqlTable__ : SqlTable.Standard
 ) extends Selectable:
@@ -30,7 +30,7 @@ case class Table[T](
 
     def selectDynamic(name: String): Expr[?] =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
+        Expr(SqlExpr.Column(__aliasName__, __metaData__.columnNames(index)))
 
 case class JoinTable[T](
     private[sqala] val params: T,
@@ -50,7 +50,7 @@ case class JoinPart[T](
 
 // TODO result asSelect asFrom toOption等类型类都需要支持，可能可以去掉，共用Table
 case class FuncTable[T](
-    private[sqala] val __aliasName__ : String,
+    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __fieldNames__ : List[String],
     private[sqala] val __columnNames__ : List[String],
     private[sqala] val __sqlTable__ : SqlTable.Func
@@ -63,10 +63,10 @@ case class FuncTable[T](
 
     def selectDynamic(name: String): Expr[?] =
         val index = __fieldNames__.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(Some(__aliasName__), __columnNames__(index)))
+        Expr(SqlExpr.Column(__aliasName__, __columnNames__(index)))
 
 case class JsonTable[N <: Tuple, V <: Tuple](
-    private[sqala] val __alias__ : String,
+    private[sqala] val __alias__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
 ) extends Selectable:
@@ -80,7 +80,7 @@ object JsonTable:
     def apply[N <: Tuple, V <: Tuple](
         expr: SqlExpr,
         path: SqlExpr,
-        alias: String, 
+        alias: Option[String], 
         columns: JsonTableColumns[N, V]
     )(using
         p: AsTableParam[JsonTableColumnFlatten[V]]
@@ -113,7 +113,7 @@ object JsonTable:
                 sqlColumns,
                 None,
                 false,
-                Some(SqlTableAlias(alias, Nil)),
+                alias.map(SqlTableAlias(_, Nil)),
                 None
             )
         )
@@ -133,7 +133,7 @@ case class JsonTablePathColumn[T](
 case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn
 
 class SubQueryTable[N <: Tuple, V <: Tuple](
-    private[sqala] val __alias__ : String,
+    private[sqala] val __alias__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.SubQuery
 ) extends Selectable:
@@ -144,7 +144,7 @@ class SubQueryTable[N <: Tuple, V <: Tuple](
         __items__.toList(index)
 
 object SubQuery:
-    def apply[N <: Tuple, V <: Tuple](query: Query[?], lateral: Boolean, alias: String)(using 
+    def apply[N <: Tuple, V <: Tuple](query: Query[?], lateral: Boolean, alias: Option[String])(using 
         p: AsTableParam[V]
     ): SubQueryTable[N, V] =
         new SubQueryTable(
@@ -153,7 +153,7 @@ object SubQuery:
             SqlTable.SubQuery(
                 query.tree,
                 lateral,
-                Some(SqlTableAlias(alias, Nil)),
+                alias.map(SqlTableAlias(_, Nil)),
                 None
             )
         )

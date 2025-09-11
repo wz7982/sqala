@@ -530,7 +530,7 @@ object ConnectBy:
             )(using query.context)
 
         infix def sortBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
-            val sort = f(query.table.copy(__aliasName__ = tableCte))
+            val sort = f(query.table.copy(__aliasName__ = Some(tableCte)))
             val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
             query.copy(
                 mapTree = query.mapTree.copy(orderBy = query.mapTree.orderBy ++ sqlOrderBy)
@@ -574,7 +574,7 @@ object ConnectBy:
         infix def map[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
-                    tableCte, 
+                    Some(tableCte), 
                     query.table.__metaData__, 
                     query.table.__sqlTable__.copy(
                         alias = query.table.__sqlTable__.alias.map(_.copy(tableAlias = tableCte))
@@ -591,7 +591,9 @@ object ConnectBy:
                 None,
                 None
             )
-            val withItem = SqlWithItem(tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel)
+            val withItem = SqlWithItem(
+                tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
+            )
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(
                 withItem :: Nil, 
                 true, 
@@ -606,7 +608,7 @@ object ConnectBy:
         infix def mapDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
-                    tableCte, 
+                    Some(tableCte), 
                     query.table.__metaData__, 
                     query.table.__sqlTable__.copy(
                         alias = query.table.__sqlTable__.alias.map(_.copy(tableAlias = tableCte))
