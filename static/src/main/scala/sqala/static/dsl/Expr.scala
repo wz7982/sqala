@@ -59,7 +59,7 @@ case class Expr[T](private val expr: SqlExpr):
     ): UpdatePair = this match
         case Expr(SqlExpr.Column(_, columnName)) =>
             UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
-        case _ => throw MatchError("The left-hand side of a set operation must be a simple field name.")
+        case _ => throw MatchError("The left-hand side of a set operation must be a simple field.")
 
     def asSqlExpr: SqlExpr =
         import SqlExpr.*
