@@ -24,10 +24,24 @@ import sqala.static.metadata.SqlBoolean
 import sqala.ast.expr.SqlWindowFrameBound
 import sqala.ast.table.SqlRowPatternTerm
 import sqala.ast.table.SqlPatternRowsPerMatchMode
+import sqala.static.dsl.statement.dml.Insert
+import sqala.static.dsl.statement.dml.InsertTable
+import sqala.static.dsl.statement.dml.Update
+import sqala.static.dsl.statement.dml.UpdateTable
+import sqala.static.dsl.statement.dml.Delete
 
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     q
+
+inline def insert[T <: Product]: Insert[T, InsertTable] =
+    Insert.apply[T]
+
+inline def update[T <: Product](using c: QueryContext = QueryContext(0)): Update[T, UpdateTable] =
+    Update.apply[T]
+
+inline def delete[T <: Product](using c: QueryContext): Delete[T] =
+    Delete.apply[T]
 
 extension [A](a: => A)(using c: QueryContext)
     infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
