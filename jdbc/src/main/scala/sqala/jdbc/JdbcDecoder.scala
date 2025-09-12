@@ -8,7 +8,7 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type}
-import scala.collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
 
 trait JdbcDecoder[T]:
     def offset: Int
@@ -88,15 +88,15 @@ object JdbcDecoder:
                 data.getObject(i)
             if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
 
-    given arrayDecoder[T](using d: JdbcArrayItemDecoder[T]): JdbcDecoder[Array[T]] with
+    given arrayDecoder[T](using d: JdbcArrayItemDecoder[T], c: ClassTag[T]): JdbcDecoder[Array[T]] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Array[T] =
-            val array = data.getArray(cursor).getArray.asInstanceOf[Array[?]]
-            val arrayBuffer = new ArrayBuffer[Any]
-            for i <- array do
-                arrayBuffer.append(d.decode(i))
-            arrayBuffer.toArray.asInstanceOf[Array[T]]
+            data
+                .getArray(cursor)
+                .getArray
+                .asInstanceOf[Array[?]]
+                .map(i => d.decode(i))
 
     given customFieldDecoder[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
         inline def offset: Int = d.offset
@@ -193,9 +193,6 @@ object JdbcArrayItemDecoder:
                 case null => None
                 case v => Some(d.decode(v))
 
-    given arrayDecoder[T: JdbcArrayItemDecoder as d]: JdbcArrayItemDecoder[Array[T]] with
+    given arrayDecoder[T: JdbcArrayItemDecoder as d](using ClassTag[T]): JdbcArrayItemDecoder[Array[T]] with
         inline def decode(x: Any): Array[T] =
-            val arrayBuffer = new ArrayBuffer[Any]
-            for i <- x.asInstanceOf[Array[?]] do
-                arrayBuffer.append(d.decode(i))
-            arrayBuffer.toArray.asInstanceOf[Array[T]]
+            x.asInstanceOf[Array[?]].map(i => d.decode(i))
