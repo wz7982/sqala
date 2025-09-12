@@ -154,7 +154,6 @@ object Return:
         new Return[Array[A], Array[B], true]:
             type R = Option[Array[r.R]]
 
-// TODO 支持Table[T]和子查询
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait Union[A, B]:
     type R
