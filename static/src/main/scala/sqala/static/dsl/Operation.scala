@@ -30,6 +30,11 @@ object Compare:
 
     given stringAndTimeCompare[A <: String, B: SqlTime]: Compare[A, B]()
 
+    given arrayCompare[A, B](using 
+        Compare[Unwrap[A, Option], 
+        Unwrap[B, Option]]
+    ): Compare[Array[A], Array[B]]()
+
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using
         Compare[Unwrap[LH, Option], Unwrap[RH, Option]],
         Compare[LT, RT]
@@ -136,6 +141,18 @@ object Return:
     given stringAndTimeOptionResult[A: SqlString, B: SqlTime]: Aux[A, B, true, TimeResult[A, B, true]] =
         new Return[A, B, true]:
             type R = TimeResult[A, B, true]
+
+    given arrayResult[A, B](using 
+        r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
+    ): Aux[Array[A], Array[B], false, Array[r.R]] =
+        new Return[Array[A], Array[B], false]:
+            type R = Array[r.R]
+
+    given arrayOptionResult[A, B](using 
+        r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
+    ): Aux[Array[A], Array[B], true, Option[Array[r.R]]] =
+        new Return[Array[A], Array[B], true]:
+            type R = Option[Array[r.R]]
 
 // TODO 支持Table[T]和子查询
 @implicitNotFound("Types ${A} and ${B} cannot be UNION.")
