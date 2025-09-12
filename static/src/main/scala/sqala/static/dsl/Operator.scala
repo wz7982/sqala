@@ -37,6 +37,46 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
+    def isDistinctFrom[R](that: R)(using
+        ar: AsRightOperand[R],
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
+        qc: QueryContext
+    ): Expr[Boolean] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.IsDistinctFrom, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    def isNotDistinctFrom[R](that: R)(using
+        ar: AsRightOperand[R],
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
+        qc: QueryContext
+    ): Expr[Boolean] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.IsNotDistinctFrom, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    @targetName("eqIgnoreNulls")
+    def <=>[R](that: R)(using
+        ar: AsRightOperand[R],
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
+        qc: QueryContext
+    ): Expr[Boolean] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.IsNotDistinctFrom, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
     @targetName("gt")
     def >[R](that: R)(using
         ar: AsRightOperand[R],

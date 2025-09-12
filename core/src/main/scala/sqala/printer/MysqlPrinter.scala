@@ -51,6 +51,25 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
                         None
                     )
                 )
+            case SqlBinaryOperator.IsNotDistinctFrom =>
+                printExpr(
+                    SqlExpr.Binary(
+                        expr.left,
+                        SqlBinaryOperator.Custom("<=>"),
+                        expr.right
+                    )
+                )
+            case SqlBinaryOperator.IsDistinctFrom =>
+                printExpr(
+                    SqlExpr.Unary(
+                        SqlExpr.Binary(
+                            expr.left,
+                            SqlBinaryOperator.Custom("<=>"),
+                            expr.right
+                        ),
+                        SqlUnaryOperator.Not
+                    )
+                )
             case _ =>
                 super.printExpr(expr)
 

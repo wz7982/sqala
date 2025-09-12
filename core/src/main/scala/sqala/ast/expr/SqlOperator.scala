@@ -8,6 +8,8 @@ enum SqlBinaryOperator(val operator: String, val precedence: Int):
     case Concat extends SqlBinaryOperator("||", 40)
     case Equal extends SqlBinaryOperator("=", 30)
     case NotEqual extends SqlBinaryOperator("<>", 30)
+    case IsDistinctFrom extends SqlBinaryOperator("IS DISTINCT FROM", 30)
+    case IsNotDistinctFrom extends SqlBinaryOperator("IS NOT DISTINCT FROM", 30)
     case In extends SqlBinaryOperator("IN", 30)
     case NotIn extends SqlBinaryOperator("NOT IN", 30)
     case GreaterThan extends SqlBinaryOperator(">", 30)
