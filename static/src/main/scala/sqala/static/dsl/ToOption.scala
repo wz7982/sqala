@@ -12,31 +12,58 @@ object ToOption:
     type Aux[T, O] = ToOption[T]:
         type R = O
 
-    given exprToOption[T]: Aux[Expr[T], Expr[Wrap[T, Option]]] =
+    given expr[T]: Aux[Expr[T], Expr[Wrap[T, Option]]] =
         new ToOption[Expr[T]]:
             type R = Expr[Wrap[T, Option]]
 
             def toOption(x: Expr[T]): R =
                 Expr(x.asSqlExpr)
 
-    given tableToOption[T]: Aux[Table[T], Table[Wrap[T, Option]]] =
+    given table[T]: Aux[Table[T], Table[Wrap[T, Option]]] =
         new ToOption[Table[T]]:
             type R = Table[Wrap[T, Option]]
 
             def toOption(x: Table[T]): R =
-                new Table(x.__aliasName__, x.__metaData__, x.__sqlTable__)
+                x.copy[Wrap[T, Option]]()
 
-    // given subQueryToOption[N <: Tuple, V <: Tuple](using
-    //     t: ToOption[V],
-    //     tt: ToTuple[t.R]
-    // ): Aux[SubQuery[N, V], SubQuery[N, tt.R]] =
-    //     new ToOption[SubQuery[N, V]]:
-    //         type R = SubQuery[N, tt.R]
+    given funcTable[T]: Aux[FuncTable[T], FuncTable[Wrap[T, Option]]] =
+        new ToOption[FuncTable[T]]:
+            type R = FuncTable[Wrap[T, Option]]
 
-    //         def toOption(x: SubQuery[N, V]): R =
-    //             new SubQuery( x.__alias__, tt.toTuple(t.toOption(x.__items__)))(using x.__context__)
+            def toOption(x: FuncTable[T]): R =
+                x.copy[Wrap[T, Option]]()
 
-    given tupleToOption[H, T <: Tuple](using
+    given subQueryTable[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[SubQueryTable[N, V], SubQueryTable[N, tt.R]] =
+        new ToOption[SubQueryTable[N, V]]:
+            type R = SubQueryTable[N, tt.R]
+
+            def toOption(x: SubQueryTable[N, V]): R =
+                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+
+    given jsonTable[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[JsonTable[N, V], JsonTable[N, tt.R]] =
+        new ToOption[JsonTable[N, V]]:
+            type R = JsonTable[N, tt.R]
+
+            def toOption(x: JsonTable[N, V]): R =
+                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+
+    given recognizeTable[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[RecognizeTable[N, V], RecognizeTable[N, tt.R]] =
+        new ToOption[RecognizeTable[N, V]]:
+            type R = RecognizeTable[N, tt.R]
+
+            def toOption(x: RecognizeTable[N, V]): R =
+                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+
+    given tuple[H, T <: Tuple](using
         h: ToOption[H],
         t: ToOption[T],
         tt: ToTuple[t.R]
@@ -47,7 +74,7 @@ object ToOption:
             def toOption(x: H *: T): R =
                 h.toOption(x.head) *: tt.toTuple(t.toOption(x.tail))
 
-    given tuple1ToOption[H](using h: ToOption[H]): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
+    given tuple1[H](using h: ToOption[H]): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
         new ToOption[H *: EmptyTuple]:
             type R = h.R *: EmptyTuple
 

@@ -19,16 +19,13 @@ import sqala.ast.table.SqlRowPatternQuantifier
 import sqala.static.metadata.SqlNumber
 import scala.language.dynamics
 import sqala.ast.table.SqlRowPatternDefineItem
-import scala.quoted.runtime.Patterns.patternType
 import sqala.ast.table.SqlRowPatternSkipMode
 import sqala.ast.table.SqlPatternRowsPerMatchMode
 import sqala.static.dsl.statement.query.AsMap
 import sqala.ast.table.SqlMeasureItem
 
-// TODO :=把别名
 // TODO insert表别名为None update也要加表别名
 // TODO matchRecognize的partition by里和order by里表别名为None
-// TODO 允许别名为None之后，就可以做表查询的union了
 case class Table[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
