@@ -100,13 +100,24 @@ object Transaction:
         val (sql, args) = statementToString(s.tree, t.dialect, true)
         jdbcExec(t.connection, sql, args)
 
+    inline def fetchByPrimaryKeys[T](using 
+        fp: FetchPk[T],
+        d: JdbcDecoder[T], 
+        t: JdbcTransactionContext, 
+        l: Logger
+    )(pks: Seq[fp.R]): List[T] =
+        val tree = fp.createTree(pks)
+        val (sql, args) = queryToString(tree, t.dialect, true)
+        l(sql, args)
+        jdbcQuery(t.connection, sql, args)
+
     inline def findByPrimaryKey[T](using 
         fp: FetchPk[T],
         d: JdbcDecoder[T], 
         t: JdbcTransactionContext, 
         l: Logger
     )(pk: fp.R): Option[T] =
-        val tree = fp.createTree(pk)
+        val tree = fp.createTree(pk :: Nil)
         val (sql, args) = queryToString(tree, t.dialect, true)
         l(sql, args)
         jdbcQuery(t.connection, sql, args).headOption

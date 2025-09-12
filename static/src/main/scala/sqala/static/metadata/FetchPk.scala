@@ -9,7 +9,7 @@ import scala.quoted.{Expr, Quotes, Type}
 trait FetchPk[T]:
     type R
 
-    def createTree(x: R): SqlQuery
+    def createTree(x: Seq[R]): SqlQuery
 
 object FetchPk:
     type Aux[T, O] = FetchPk[T]:
@@ -69,18 +69,22 @@ object FetchPk:
                     val pk = new FetchPk[T]:
                         type R = t
 
-                        def createTree(x: R): SqlQuery =
-                            val values = x match
-                                case t: Tuple => t.toArray.toList
-                                case _ => List[Any](x)
-                            val instances = $instancesExpr.map(_.asInstanceOf[AsSqlExpr[Any]])
-                            val sqlValues = instances.zip(values).map: (i, v) =>
-                                i.asSqlExpr(v)
-                            val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
-                                SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
-                            val sqlCondition = sqlConditions
-                                .reduce: (x, y) => 
-                                    SqlExpr.Binary(x, SqlBinaryOperator.And, y)
+                        def createTree(x: Seq[R]): SqlQuery =
+                            val sqlConditions = x.map: p =>
+                                val values = p match
+                                    case t: Tuple => t.toArray.toList
+                                    case _ => List[Any](p)
+                                val instances = $instancesExpr.map(_.asInstanceOf[AsSqlExpr[Any]])
+                                val sqlValues = instances.zip(values).map: (i, v) =>
+                                    i.asSqlExpr(v)
+                                val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
+                                    SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
+                                sqlConditions
+                                    .reduce: (x, y) => 
+                                        SqlExpr.Binary(x, SqlBinaryOperator.And, y)
+                            val sqlCondition = 
+                                if sqlConditions.isEmpty then SqlExpr.BooleanLiteral(false)
+                                else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y)) 
                             val table = SqlTable.Standard($tableNameExpr, None, None, None)
                             SqlQuery.Select(
                                 None,

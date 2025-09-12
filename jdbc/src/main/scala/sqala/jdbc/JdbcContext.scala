@@ -91,12 +91,22 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         val (sql, args) = statementToString(s.tree, dialect, true)
         executeDml(sql, args)
 
+    inline def fetchByPrimaryKeys[T](using 
+        fp: FetchPk[T], 
+        d: JdbcDecoder[T],
+        l: Logger
+    )(pks: Seq[fp.R]): List[T] =
+        val tree = fp.createTree(pks)
+        val (sql, args) = queryToString(tree, dialect, true)
+        l(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
+
     inline def findByPrimaryKey[T](using 
         fp: FetchPk[T], 
         d: JdbcDecoder[T],
         l: Logger
     )(pk: fp.R): Option[T] =
-        val tree = fp.createTree(pk)
+        val tree = fp.createTree(pk :: Nil)
         val (sql, args) = queryToString(tree, dialect, true)
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args)).headOption
