@@ -1,7 +1,6 @@
 package sqala.static.metadata
 
-import sqala.ast.expr.SqlExpr
-import sqala.ast.expr.SqlType
+import sqala.ast.expr.{SqlExpr, SqlType}
 
 trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
     def toValue(x: T): R

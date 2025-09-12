@@ -1,11 +1,9 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.statement.SqlStatement
-import sqala.ast.table.SqlTable
-import sqala.static.metadata.TableMacro
+import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.{AsExpr, QueryContext, Table}
-import sqala.static.metadata.SqlBoolean
-import sqala.ast.table.SqlTableAlias
+import sqala.static.metadata.{SqlBoolean, TableMacro}
 
 class Delete[T](
     private[sqala] val table: Table[T],

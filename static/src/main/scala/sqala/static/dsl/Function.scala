@@ -1,24 +1,11 @@
 package sqala.static.dsl
 
-import sqala.static.metadata.aggFunction
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlExpr, SqlJsonUniqueness, SqlVectorDistanceMode}
 import sqala.ast.quantifier.SqlQuantifier
-import sqala.static.metadata.SqlNumber
-import sqala.static.metadata.SqlString
-import sqala.static.metadata.function
-import sqala.static.metadata.SqlVector
-import sqala.ast.expr.SqlVectorDistanceMode
-import sqala.static.metadata.SqlDateTime
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.OffsetDateTime
-import java.time.LocalTime
-import sqala.static.metadata.windowFunction
+import sqala.static.metadata.*
+
+import java.time.{LocalDate, LocalTime, OffsetDateTime, OffsetTime}
 import scala.compiletime.ops.boolean.||
-import sqala.static.metadata.matchFunction
-import sqala.static.metadata.Json
-import sqala.ast.expr.SqlJsonUniqueness
-import sqala.static.metadata.SqlJson
 
 
 @aggFunction

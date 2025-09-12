@@ -1,14 +1,13 @@
 package sqala.dynamic.dsl
 
 import sqala.ast.expr.SqlBinaryOperator.*
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Not, Positive}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlWindow}
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.SqlSelectItem
 import sqala.dynamic.parser.SqlParser
 
 import scala.annotation.targetName
-import sqala.ast.expr.SqlWindow
 
 case class Expr(sqlExpr: SqlExpr):
     @targetName("eq")

@@ -2,16 +2,12 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
+import sqala.static.dsl.*
 import sqala.static.metadata.AsSqlExpr
-import sqala.static.dsl.{AsExpr, Expr, Table, ToTuple}
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
-import sqala.static.dsl.FuncTable
-import sqala.static.dsl.JsonTable
-import sqala.static.dsl.SubQueryTable
-import sqala.static.dsl.RecognizeTable
 
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:

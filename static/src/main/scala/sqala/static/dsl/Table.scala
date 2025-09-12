@@ -1,30 +1,14 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
-import sqala.static.metadata.{TableMacro, TableMetaData}
+import sqala.ast.expr.{SqlExpr, SqlJsonTableColumn, SqlType}
+import sqala.ast.table.*
+import sqala.static.dsl.statement.query.{AsMap, Query}
+import sqala.static.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
-import sqala.ast.table.SqlTable
-import sqala.ast.table.SqlTableAlias
-import sqala.static.metadata.SqlBoolean
-import sqala.ast.table.SqlJoinCondition
-import scala.compiletime.constValue
-import scala.compiletime.constValueTuple
-import sqala.ast.expr.SqlJsonTableColumn
-import sqala.ast.expr.SqlType
-import sqala.static.dsl.statement.query.Query
-import sqala.ast.table.SqlRowPattern
-import sqala.ast.table.SqlRowPatternTerm
-import sqala.ast.table.SqlRowPatternQuantifier
-import sqala.static.metadata.SqlNumber
+import scala.compiletime.{constValue, constValueTuple}
 import scala.language.dynamics
-import sqala.ast.table.SqlRowPatternDefineItem
-import sqala.ast.table.SqlRowPatternSkipMode
-import sqala.ast.table.SqlPatternRowsPerMatchMode
-import sqala.static.dsl.statement.query.AsMap
-import sqala.ast.table.SqlMeasureItem
 
-// TODO insert表别名为None update也要加表别名
 case class Table[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,

@@ -1,12 +1,10 @@
 package sqala.static.metadata
 
-import sqala.ast.statement.SqlQuery
-
-import scala.quoted.*
-import sqala.ast.expr.SqlExpr
-import sqala.ast.expr.SqlBinaryOperator
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.SqlTable
-import sqala.ast.statement.SqlSelectItem
+
+import scala.quoted.{Expr, Quotes, Type}
 
 trait FetchPk[T]:
     type R

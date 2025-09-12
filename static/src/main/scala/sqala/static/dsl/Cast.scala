@@ -1,9 +1,9 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
-import sqala.static.metadata.*
+import sqala.static.metadata.{AsSqlExpr, Json, SqlNumber, SqlString}
 
-import java.time.*
+import java.time.{LocalDateTime, OffsetDateTime}
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("Cannot cast type ${T} to ${R}.")

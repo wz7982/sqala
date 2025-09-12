@@ -2,17 +2,14 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubLinkQuantifier}
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.limit.*
+import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
-import sqala.static.metadata.*
 import sqala.printer.Dialect
 import sqala.static.dsl.*
+import sqala.static.metadata.{SqlBoolean, columnPseudoLevel, tableCte}
 import sqala.util.queryToString
-
-import scala.NamedTuple.NamedTuple
-import scala.Tuple.Append
 
 sealed class Query[T](
     private[sqala] val params: T,

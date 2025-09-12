@@ -1,11 +1,9 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
-import sqala.static.dsl.statement.dml.UpdatePair
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator, SqlWindow}
+import sqala.static.dsl.statement.dml.{UpdatePair, UpdateSetContext}
 
 import scala.annotation.targetName
-import sqala.ast.expr.SqlWindow
-import sqala.static.dsl.statement.dml.UpdateSetContext
 
 class OverContext
 

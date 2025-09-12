@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.*
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMode}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTableAlias
 

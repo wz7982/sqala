@@ -1,34 +1,15 @@
 package sqala.static.dsl
 
-import sqala.static.dsl.statement.query.*
+import sqala.ast.expr.*
 import sqala.ast.statement.SqlQuery
-import sqala.ast.table.SqlTable
-import sqala.ast.table.SqlJoinType
-import sqala.static.metadata.TableMetaData
-import sqala.ast.table.SqlTableAlias
-import sqala.ast.expr.SqlExpr
-import sqala.ast.expr.SqlTimeUnit
-import sqala.ast.expr.SqlType
-import sqala.static.metadata.SqlString
-import sqala.static.metadata.AsSqlExpr
+import sqala.ast.table.*
+import sqala.static.dsl.statement.dml.*
+import sqala.static.dsl.statement.query.{AsSelect, ConnectByContext, GroupingContext, SelectQuery}
+import sqala.static.metadata.*
+
+import java.time.{LocalDate, LocalDateTime}
 import scala.NamedTuple.NamedTuple
-import sqala.ast.expr.SqlJsonTableColumn
-import java.time.LocalDateTime
-import java.time.LocalDate
-import sqala.ast.expr.SqlTimeLiteralUnit
-import sqala.static.metadata.tableCte
 import scala.compiletime.ops.boolean.||
-import sqala.static.metadata.columnPseudoLevel
-import sqala.ast.expr.SqlWhen
-import sqala.static.metadata.SqlBoolean
-import sqala.ast.expr.SqlWindowFrameBound
-import sqala.ast.table.SqlRowPatternTerm
-import sqala.ast.table.SqlPatternRowsPerMatchMode
-import sqala.static.dsl.statement.dml.Insert
-import sqala.static.dsl.statement.dml.InsertTable
-import sqala.static.dsl.statement.dml.Update
-import sqala.static.dsl.statement.dml.UpdateTable
-import sqala.static.dsl.statement.dml.Delete
 
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)

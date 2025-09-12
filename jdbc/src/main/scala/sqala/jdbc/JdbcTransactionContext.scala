@@ -1,16 +1,15 @@
 package sqala.jdbc
 
 import sqala.dynamic.dsl.{DynamicQuery, NativeSql}
-import sqala.static.metadata.InsertMacro
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
+import sqala.static.metadata.{FetchPk, InsertMacro}
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
 import scala.deriving.Mirror
-import sqala.static.metadata.FetchPk
 
 class JdbcTransactionContext(
     val connection: Connection, 

@@ -1,24 +1,15 @@
 package sqala.static.dsl
 
-import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.metadata.FetchCompanion
-import sqala.ast.table.SqlJoinType
-import scala.util.NotGiven
-import scala.NamedTuple.NamedTuple
-import sqala.static.dsl.statement.query.Query
-import scala.deriving.Mirror
-import sqala.static.metadata.AsSqlExpr
-import sqala.static.metadata.TableMacro
-import sqala.ast.statement.SqlQuery
-import sqala.static.dsl.statement.query.AsSelect
-import sqala.static.metadata.TableMetaData
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
-import sqala.ast.table.SqlPatternRowsPerMatchMode
-import sqala.ast.table.SqlPatternEmptyMatchMode
-import sqala.ast.table.SqlMatchRecognize
-import sqala.ast.table.SqlRowPattern
-import sqala.ast.table.SqlRowPatternTerm
+import sqala.ast.statement.SqlQuery
+import sqala.ast.table.*
+import sqala.static.dsl.statement.query.Query
+import sqala.static.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
+
+import scala.NamedTuple.NamedTuple
+import scala.deriving.Mirror
+import scala.util.NotGiven
 
 trait AsTable[T]:
     type R

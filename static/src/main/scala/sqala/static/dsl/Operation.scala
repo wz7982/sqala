@@ -5,7 +5,7 @@ import sqala.static.metadata.*
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
-import scala.compiletime.ops.boolean.*
+import scala.compiletime.ops.boolean.||
 import scala.util.NotGiven
 
 @implicitNotFound("Types ${A} and ${B} be cannot compared.")

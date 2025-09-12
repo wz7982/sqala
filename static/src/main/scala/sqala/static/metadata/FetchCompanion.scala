@@ -1,6 +1,6 @@
 package sqala.static.metadata
 
-import scala.quoted.*
+import scala.quoted.{Expr, Quotes, Type}
 
 trait FetchCompanion[T]:
     type R
