@@ -1,8 +1,5 @@
 package sqala.static.dsl
 
-// TODO
-// import sqala.static.dsl.statement.query.SubQuery
-// TODO 函数表 json表 子查询表
 trait ToOption[T]:
     type R
 

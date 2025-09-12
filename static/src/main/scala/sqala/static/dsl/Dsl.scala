@@ -29,7 +29,6 @@ inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     q
 
-// TODO matchRecognize
 extension [A](a: => A)(using c: QueryContext)
     infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
@@ -88,7 +87,6 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
 
-// TODO 把这个逻辑封装成通用的
 case class Unnest[T](x: Option[T])
 
 def unnest[T: AsExpr as a](x: T)(using

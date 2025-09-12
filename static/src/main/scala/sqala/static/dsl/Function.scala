@@ -1223,7 +1223,6 @@ def json[A: AsExpr as aa](x: A)(using
         )
     )
 
-// TODO 需要想办法填返回类型
 @function
 def jsonValue[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using 
     SqlJson[aa.R],

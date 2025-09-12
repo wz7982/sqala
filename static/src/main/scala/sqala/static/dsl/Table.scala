@@ -25,7 +25,6 @@ import sqala.static.dsl.statement.query.AsMap
 import sqala.ast.table.SqlMeasureItem
 
 // TODO insert表别名为None update也要加表别名
-// TODO matchRecognize的partition by里和order by里表别名为None
 case class Table[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
@@ -57,7 +56,6 @@ case class JoinPart[T](
             sqlTable.copy(condition = Some(SqlJoinCondition.On(cond.asSqlExpr)))
         )
 
-// TODO result asSelect asFrom toOption等类型类都需要支持，可能可以去掉，共用Table
 case class FuncTable[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __fieldNames__ : List[String],
