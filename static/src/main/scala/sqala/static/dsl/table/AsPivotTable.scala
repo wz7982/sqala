@@ -27,10 +27,7 @@ object AsPivotTable:
 
             def table(x: Table[T])(using c: QueryContext): R =
                 val query = from(x)
-                c.tableIndex += 1
-                val alias = s"t${c.tableIndex}"
                 PivotTable(
-                    Some(alias),
                     Tuple.fromArray(
                         x.__metaData__.columnNames.map(n => Expr(SqlExpr.Column(x.__aliasName__, n))).toArray
                     ).asInstanceOf[tt.R], 
@@ -47,6 +44,4 @@ object AsPivotTable:
 
             def table(x: SubQueryTable[N, V])(using c: QueryContext): R =
                 val query = from(x)
-                c.tableIndex += 1
-                val alias = s"t${c.tableIndex}"
-                PivotTable(Some(alias), ap.asTableParam(x.__aliasName__, 1), query.tree)
+                PivotTable(ap.asTableParam(x.__aliasName__, 1), query.tree)

@@ -16,7 +16,6 @@ class PivotContext
 case class PivotWithin[N](expr: SqlExpr, conditions: List[SqlExpr])
 
 case class PivotTable[N <: Tuple, V <: Tuple](
-    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlQuery__ : SqlQuery.Select
 ) extends Selectable:
@@ -39,10 +38,9 @@ case class PivotTable[N <: Tuple, V <: Tuple](
                     SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g)), None)
                 )
             )
-        PivotGroupBy[N, V, GN, tt.R](__aliasName__, __items__, group, newQuery)
+        PivotGroupBy[N, V, GN, tt.R](__items__, group, newQuery)
 
 case class PivotGroupBy[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple](
-    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __group__ : List[SqlExpr],
     private[sqala] val __sqlQuery__ : SqlQuery.Select
@@ -60,10 +58,9 @@ case class PivotGroupBy[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple](
         pc: PivotContext
     ): PivotAgg[N, V, GN, GV, AN, tt.R] =
         val aggItems = m.selectItems(aggregations.toTuple, 1).map(_.expr)
-        PivotAgg[N, V, GN, GV, AN, tt.R](__aliasName__, __items__, __group__, aggItems, __sqlQuery__)
+        PivotAgg[N, V, GN, GV, AN, tt.R](__items__, __group__, aggItems, __sqlQuery__)
 
 case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple](
-    private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __group__ : List[SqlExpr],
     private[sqala] val __aggregations__ : List[SqlExpr],
@@ -118,7 +115,9 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
                     e, Some(s"c${i + 1}")
                 )
         val newQuery = __sqlQuery__.copy(select = selectItems)
-        SubQueryTable(newQuery, false, __aliasName__)
+        c.tableIndex += 1
+        val alias = s"t${c.tableIndex}"
+        SubQueryTable(newQuery, false, Some(alias))
 
     def `for`[WN <: Tuple](item: PivotWithin[WN])(using c: QueryContext, pc: PivotContext): SubQueryTable[
         Tuple.Concat[GN, CombinePivotNames[AN, WN *: EmptyTuple]],
