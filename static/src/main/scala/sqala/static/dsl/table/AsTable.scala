@@ -35,7 +35,8 @@ object AsTable:
                     Some(alias),
                     metaData,
                     SqlTable.Standard(
-                        metaData.tableName, 
+                        metaData.tableName,
+                        None,
                         Some(SqlTableAlias(alias, Nil)),
                         None,
                         None
@@ -110,7 +111,8 @@ object AsTable:
                     Some(alias),
                     metaData,
                     SqlTable.Standard(
-                        metaData.tableName, 
+                        metaData.tableName,
+                        None, 
                         Some(tableAlias),
                         None,
                         None

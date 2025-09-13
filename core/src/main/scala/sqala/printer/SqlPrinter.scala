@@ -973,6 +973,24 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printStandardTable(table: SqlTable.Standard): Unit =
         sqlBuilder.append(s"$leftQuote${table.name}$rightQuote")
+        for p <- table.period do
+            p match
+                case SqlTablePeriodMode.ForSystemTimeAsOf(expr) =>
+                    sqlBuilder.append(" FOR SYSTEM_TIME AS OF ")
+                    printExpr(expr)
+                case SqlTablePeriodMode.ForSystemTimeBetween(mode, start, end) =>
+                    sqlBuilder.append(" FOR SYSTEM_TIME BETWEEN ")
+                    for m <- mode do
+                        sqlBuilder.append(m.mode)
+                        sqlBuilder.append(" ")
+                    printExpr(start)
+                    sqlBuilder.append(" AND ")
+                    printExpr(end)
+                case SqlTablePeriodMode.ForSystemTimeFrom(from, to) =>
+                    sqlBuilder.append(" FOR SYSTEM_TIME FROM ")
+                    printExpr(from)
+                    sqlBuilder.append(" TO ")
+                    printExpr(to)
         for a <- table.alias do
             printTableAlias(a)
         for m <- table.matchRecognize do

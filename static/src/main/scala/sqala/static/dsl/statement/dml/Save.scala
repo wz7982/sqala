@@ -27,6 +27,6 @@ object Save:
             .map((c, _) => SqlExpr.Column(None, c))
         val tree: SqlStatement.Upsert = 
             SqlStatement.Upsert(
-                SqlTable.Standard(tableName, None, None, None), columns, values, primaryKeys, updateColumns
+                SqlTable.Standard(tableName, None, None, None, None), columns, values, primaryKeys, updateColumns
             )
         new Save(tree)

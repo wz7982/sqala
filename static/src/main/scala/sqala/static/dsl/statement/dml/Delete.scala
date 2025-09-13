@@ -23,6 +23,7 @@ object Delete:
         val alias = c.fetchAlias
         val sqlTable: SqlTable.Standard = SqlTable.Standard(
             metaData.tableName,
+            None,
             Some(SqlTableAlias(alias, Nil)),
             None,
             None

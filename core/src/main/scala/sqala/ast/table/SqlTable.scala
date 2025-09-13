@@ -6,6 +6,7 @@ import sqala.ast.statement.SqlQuery
 enum SqlTable:
     case Standard(
         name: String,
+        period: Option[SqlTablePeriodMode],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize],
         sample: Option[SqlTableSample]
@@ -49,3 +50,16 @@ case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeata
 enum SqlTableSampleMode(val mode: String):
     case Bernoulli extends SqlTableSampleMode("BERNOULLI")
     case System extends SqlTableSampleMode("SYSTEM")
+
+enum SqlTablePeriodMode:
+    case ForSystemTimeAsOf(expr: SqlExpr)
+    case ForSystemTimeBetween(
+        mode: Option[SqlTablePeriodBetweenMode], 
+        start: SqlExpr,
+        end: SqlExpr
+    )
+    case ForSystemTimeFrom(from: SqlExpr, to: SqlExpr)
+
+enum SqlTablePeriodBetweenMode(val mode: String):
+    case Asymmetric extends SqlTablePeriodBetweenMode("ASYMMETRIC")
+    case Symmetric extends SqlTablePeriodBetweenMode("SYMMETRIC")

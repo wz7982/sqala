@@ -516,7 +516,7 @@ class SqlParser extends StandardTokenParsers:
     def simpleTable: Parser[SqlTable] =
         ident ~ opt(tableAlias) ^^ {
             case table ~ alias =>
-                SqlTable.Standard(table, alias, None, None)
+                SqlTable.Standard(table, None, alias, None, None)
         } |
         opt("LATERAL") ~ ("(" ~> set <~ ")") ~ opt(tableAlias) ^^ {
             case lateral ~ s ~ alias =>

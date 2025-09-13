@@ -48,6 +48,7 @@ object Update:
         val alias = c.fetchAlias
         val sqlTable: SqlTable.Standard = SqlTable.Standard(
             metaData.tableName,
+            None,
             Some(SqlTableAlias(alias, Nil)),
             None,
             None
@@ -62,6 +63,7 @@ object Update:
         val metaData = TableMacro.tableMetaData[T]
         val sqlTable: SqlTable.Standard = SqlTable.Standard(
             metaData.tableName,
+            None,
             None,
             None,
             None
