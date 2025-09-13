@@ -3,7 +3,8 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.dsl.{AsExpr, QueryContext, Table}
+import sqala.static.dsl.table.Table
+import sqala.static.dsl.{AsExpr, QueryContext}
 import sqala.static.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
 
 import scala.deriving.Mirror

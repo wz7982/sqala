@@ -3,7 +3,8 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.dsl.{AsExpr, Expr, Table}
+import sqala.static.dsl.table.Table
+import sqala.static.dsl.{AsExpr, Expr}
 import sqala.static.metadata.{AsSqlExpr, TableMacro}
 
 import scala.deriving.Mirror

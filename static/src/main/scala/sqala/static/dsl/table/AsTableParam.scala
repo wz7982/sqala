@@ -1,6 +1,7 @@
-package sqala.static.dsl
+package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
+import sqala.static.dsl.Expr
 
 trait AsTableParam[T]:
     def offset: Int

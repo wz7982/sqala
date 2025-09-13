@@ -1,9 +1,10 @@
-package sqala.static.dsl
+package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
+import sqala.static.dsl.{QueryContext, ToTuple}
 import sqala.static.dsl.statement.query.Query
 import sqala.static.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
 

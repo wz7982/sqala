@@ -1,5 +1,7 @@
 package sqala.static.dsl
 
+import sqala.static.dsl.table.*
+
 trait ToOption[T]:
     type R
 

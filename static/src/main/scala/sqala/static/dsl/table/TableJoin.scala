@@ -1,4 +1,6 @@
-package sqala.static.dsl
+package sqala.static.dsl.table
+
+import sqala.static.dsl.{ToOption, ToTuple}
 
 trait TableJoin[A, B]:
     type R

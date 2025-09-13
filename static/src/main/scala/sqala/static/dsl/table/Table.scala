@@ -1,7 +1,8 @@
-package sqala.static.dsl
+package sqala.static.dsl.table
 
 import sqala.ast.expr.{SqlExpr, SqlJsonTableColumn, SqlType}
 import sqala.ast.table.*
+import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.{AsMap, Query}
 import sqala.static.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 

@@ -1,5 +1,7 @@
 package sqala.static.dsl
 
+import sqala.static.dsl.table.*
+
 import scala.NamedTuple.NamedTuple
 
 trait Result[T]:

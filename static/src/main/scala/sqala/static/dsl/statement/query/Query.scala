@@ -8,6 +8,7 @@ import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.printer.Dialect
 import sqala.static.dsl.*
+import sqala.static.dsl.table.Table
 import sqala.static.metadata.{SqlBoolean, columnPseudoLevel, tableCte}
 import sqala.util.queryToString
 

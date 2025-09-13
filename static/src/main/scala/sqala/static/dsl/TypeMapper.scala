@@ -1,5 +1,7 @@
 package sqala.static.dsl
 
+import sqala.static.dsl.table.{JsonTableExistsColumn, JsonTableNestedColumns, JsonTableOrdinalColumn, JsonTablePathColumn}
+
 import java.time.*
 import scala.compiletime.ops.int.S
 

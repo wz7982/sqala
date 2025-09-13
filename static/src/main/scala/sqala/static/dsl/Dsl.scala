@@ -5,6 +5,7 @@ import sqala.ast.statement.SqlQuery
 import sqala.ast.table.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.{AsSelect, ConnectByContext, GroupingContext, SelectQuery}
+import sqala.static.dsl.table.*
 import sqala.static.metadata.*
 
 import java.time.{LocalDate, LocalDateTime}
