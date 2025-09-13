@@ -63,16 +63,6 @@ case class Expr[T](private val expr: SqlExpr):
         import SqlExpr.*
         
         expr match
-            case Binary(left, SqlBinaryOperator.Equal, SqlExpr.NullLiteral) =>
-                NullTest(left, false)
-            case Binary(left, SqlBinaryOperator.NotEqual, SqlExpr.NullLiteral) =>
-                NullTest(left, true)
-            case Binary(left, SqlBinaryOperator.NotEqual, right) =>
-                Binary(
-                    Binary(left, SqlBinaryOperator.NotEqual, right),
-                    SqlBinaryOperator.Or,
-                    NullTest(left, false)
-                )
             case Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(Nil)) =>
                 BooleanLiteral(false)
             case Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(Nil)) =>

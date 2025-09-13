@@ -37,30 +37,9 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    def isDistinctFrom[R](that: R)(using
-        ar: AsRightOperand[R],
-        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
-        qc: QueryContext
-    ): Expr[Boolean] =
+    def isNull(using QueryContext): Expr[Boolean] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.IsDistinctFrom, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    def isNotDistinctFrom[R](that: R)(using
-        ar: AsRightOperand[R],
-        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
-        qc: QueryContext
-    ): Expr[Boolean] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.IsNotDistinctFrom, 
-                ar.asExpr(that).asSqlExpr
-            )
+            SqlExpr.NullTest(at.asExpr(self).asSqlExpr, false)
         )
 
     @targetName("eqIgnoreNulls")
