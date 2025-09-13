@@ -3,14 +3,14 @@ package sqala.static.dsl.table
 import sqala.ast.expr.SqlExpr
 import sqala.ast.table.SqlTable
 import sqala.static.dsl.{Expr, MapField, Unwrap}
-import sqala.static.metadata.TableMetaData
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 
-case class Table[T](
+case class FuncTable[T](
     private[sqala] val __aliasName__ : Option[String],
-    private[sqala] val __metaData__ : TableMetaData,
-    private[sqala] val __sqlTable__ : SqlTable.Standard
+    private[sqala] val __fieldNames__ : List[String],
+    private[sqala] val __columnNames__ : List[String],
+    private[sqala] val __sqlTable__ : SqlTable.Func
 ) extends Selectable:
     type Fields =
         NamedTuple[
@@ -19,5 +19,5 @@ case class Table[T](
         ]
 
     def selectDynamic(name: String): Expr[?] =
-        val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(__aliasName__, __metaData__.columnNames(index)))
+        val index = __fieldNames__.indexWhere(f => f == name)
+        Expr(SqlExpr.Column(__aliasName__, __columnNames__(index)))
