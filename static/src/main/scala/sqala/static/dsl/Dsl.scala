@@ -330,6 +330,12 @@ def permute(terms: Pattern*)(using QueryContext, MatchRecognizeContext): Pattern
 def exclusion(term: Pattern)(using QueryContext, MatchRecognizeContext): Pattern =
     new Pattern(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
+def `final`[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Expr[a.R] =
+    Expr(SqlExpr.MatchPhase(a.asExpr(x).asSqlExpr, SqlMatchPhase.Final))
+
+def running[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Expr[a.R] =
+    Expr(SqlExpr.MatchPhase(a.asExpr(x).asSqlExpr, SqlMatchPhase.Running))
+
 extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
     def matchRecognize[N <: Tuple, V <: Tuple](
         f: MatchRecognizeContext ?=> t.R => RecognizeTable[N, V]
