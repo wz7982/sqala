@@ -10,6 +10,7 @@ import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.collection.mutable.ListBuffer
 
+// TODO 简化一下
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
     type R

@@ -6,6 +6,7 @@ import sqala.static.dsl.statement.query.Query
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
+import sqala.ast.statement.SqlQuery
 
 case class SubQueryTable[N <: Tuple, V <: Tuple](
     private[sqala] val __aliasName__ : Option[String],
@@ -19,16 +20,21 @@ case class SubQueryTable[N <: Tuple, V <: Tuple](
         __items__.toList(index)
 
 object SubQueryTable:
-    def apply[N <: Tuple, V <: Tuple](query: Query[?], lateral: Boolean, alias: Option[String])(using 
+    def apply[N <: Tuple, V <: Tuple](query: SqlQuery, lateral: Boolean, alias: Option[String])(using 
         p: AsTableParam[V]
     ): SubQueryTable[N, V] =
         new SubQueryTable(
             alias, 
             p.asTableParam(alias, 1),
             SqlTable.SubQuery(
-                query.tree,
+                query,
                 lateral,
                 alias.map(SqlTableAlias(_, Nil)),
                 None
             )
         )
+
+    def apply[N <: Tuple, V <: Tuple](query: Query[?], lateral: Boolean, alias: Option[String])(using 
+        p: AsTableParam[V]
+    ): SubQueryTable[N, V] =
+        apply(query.tree, lateral, alias)

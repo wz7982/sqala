@@ -378,3 +378,19 @@ extension [T](table: T)(using r: AsRecognizeTable[T])
         MatchRecognizeContext
     ): RecognizePredefine[T] =
         RecognizePredefine(r.setPerMatch(table, SqlPatternRowsPerMatchMode.AllRows(None)))
+
+extension [T](x: T)(using at: AsTable[T], ap: AsPivotTable[at.R])
+    def pivot[N <: Tuple, V <: Tuple](f: PivotContext ?=> ap.R => SubQueryTable[N, V])(using 
+        QueryContext
+    ): SubQueryTable[N, V] =
+        given PivotContext = new PivotContext
+        f(ap.table(at.table(x)._1))
+
+extension [T: AsExpr as a](x: T)
+    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
+        av: AsExpr[V],
+        in: CanIn[a.R, V],
+        c: QueryContext,
+        pc: PivotContext
+    ): PivotWithin[N] =
+        PivotWithin[N](a.asExpr(x).asSqlExpr, av.exprs(items.toTuple).map(_.asSqlExpr))

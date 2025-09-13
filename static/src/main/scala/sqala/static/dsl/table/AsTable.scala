@@ -65,7 +65,7 @@ object AsTable:
             def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
-    given subQueryTable[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
+    given subQuery[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
         AsTableParam[V]
     ): Aux[Q, SubQueryTable[N, V]] =
         new AsTable[Q]:
@@ -76,6 +76,13 @@ object AsTable:
                 val aliasName = s"t${c.tableIndex}"
                 val subQuery = SubQueryTable[N, V](x, false, Some(aliasName))
                 (subQuery, subQuery.__sqlTable__)
+
+    given subQueryTable[N <: Tuple, V <: Tuple]: Aux[SubQueryTable[N, V], SubQueryTable[N, V]] =
+        new AsTable[SubQueryTable[N, V]]:
+            type R = SubQueryTable[N, V]
+
+            def table(x: SubQueryTable[N, V])(using QueryContext): (R, SqlTable) =
+                (x, x.__sqlTable__)
 
     given recognizeTable[N <: Tuple, V <: Tuple]: Aux[RecognizeTable[N, V], RecognizeTable[N, V]] =
         new AsTable[RecognizeTable[N, V]]:

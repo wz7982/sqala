@@ -3,7 +3,9 @@ package sqala.static.dsl
 import sqala.static.dsl.table.{JsonTableExistsColumn, JsonTableNestedColumns, JsonTableOrdinalColumn, JsonTablePathColumn}
 
 import java.time.*
+import scala.compiletime.ops.any.ToString
 import scala.compiletime.ops.int.S
+import scala.compiletime.ops.string.+
 
 type Wrap[T, F[_]] = T match
     case F[t] => T
@@ -12,6 +14,11 @@ type Wrap[T, F[_]] = T match
 type Unwrap[T, F[_]] = T match
     case F[t] => t
     case _ => T
+
+type TupleMap[T <: Tuple, F[_]] <: Tuple =
+    T match
+        case x *: xs => F[x] *: TupleMap[xs, F]
+        case EmptyTuple => EmptyTuple
 
 type UnnestFlattenImpl[T] = T match
     case Option[t] => UnnestFlattenImpl[t]
@@ -110,3 +117,34 @@ type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
                 Expr[Option[Boolean]] *: JsonTableColumnFlatten[t]
     case EmptyTuple => 
         EmptyTuple
+
+type CombinePivotNames[A <: Tuple, F <: Tuple] =
+    Tuple.FlatMap[
+        A,
+        [i] =>> Tuple.Map[
+            CombinePivotForNames[F],
+            [ii] =>> ToString[i] + "_" + ToString[ii]
+        ]
+    ]
+
+type CombinePivotTypes[T <: Tuple, F <: Tuple] =
+    Tuple.FlatMap[
+        T,
+        [i] =>> Tuple.Map[
+            CombinePivotForNames[F],
+            [ii] =>> i
+        ]
+    ]
+
+type CombinePivotForNames[F <: Tuple] <: Tuple =
+    F match
+        case EmptyTuple => EmptyTuple
+        case (x *: xs) *: EmptyTuple => x *: xs
+        case x *: xs =>
+            Tuple.FlatMap[
+                x, 
+                [i] =>> Tuple.Map[
+                    CombinePivotForNames[xs], 
+                    [ii] =>> i + "_" + ii
+                ]
+            ]
