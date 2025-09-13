@@ -153,8 +153,7 @@ case class Recognize[N <: Tuple, T](
         c: QueryContext,
         mc: MatchRecognizeContext
     ): RecognizeTable[MN, t.R] =
-        c.tableIndex += 1
-        val aliasName = s"t${c.tableIndex}"
+        val alias = c.fetchAlias
         val items = m.selectItems(f(RecognizeDefine[N, T](__table__)), 1)
         val measureItems = items.map: i =>
             SqlMeasureItem(i.expr, i.alias.get)
@@ -163,11 +162,11 @@ case class Recognize[N <: Tuple, T](
         val newRecognize = recognize
             .copy(
                 measures = measureItems,
-                alias = Some(SqlTableAlias(aliasName, Nil))
+                alias = Some(SqlTableAlias(alias, Nil))
             )
         RecognizeTable[MN, t.R](
-            Some(aliasName),
-            t.toTuple(p.asTableParam(Some(aliasName), 1)),
+            Some(alias),
+            t.toTuple(p.asTableParam(Some(alias), 1)),
             r.fetchSqlTable(r.setRecognize(__table__, newRecognize))
         )
 

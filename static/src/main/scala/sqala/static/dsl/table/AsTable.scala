@@ -30,14 +30,13 @@ object AsTable:
 
             def table(x: O)(using c: QueryContext): (R, SqlTable) =
                 val metaData = fc.metaData
-                c.tableIndex += 1
-                val aliasName = s"t${c.tableIndex}"
+                val alias = c.fetchAlias
                 val table = Table[fc.R](
-                    Some(aliasName),
+                    Some(alias),
                     metaData,
                     SqlTable.Standard(
                         metaData.tableName, 
-                        Some(SqlTableAlias(aliasName, Nil)),
+                        Some(SqlTableAlias(alias, Nil)),
                         None,
                         None
                     )
@@ -72,9 +71,8 @@ object AsTable:
             type R = SubQueryTable[N, V]
 
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
-                c.tableIndex += 1
-                val aliasName = s"t${c.tableIndex}"
-                val subQuery = SubQueryTable[N, V](x, false, Some(aliasName))
+                val alias = c.fetchAlias
+                val subQuery = SubQueryTable[N, V](x, false, Some(alias))
                 (subQuery, subQuery.__sqlTable__)
 
     given subQueryTable[N <: Tuple, V <: Tuple]: Aux[SubQueryTable[N, V], SubQueryTable[N, V]] =
@@ -106,11 +104,10 @@ object AsTable:
             type R = Table[T]
 
             def table(x: S)(using c: QueryContext): (R, SqlTable) =
-                c.tableIndex += 1
-                val aliasName = s"t${c.tableIndex}"
-                val tableAlias = SqlTableAlias(aliasName, metaData.columnNames)
+                val alias = c.fetchAlias
+                val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T](
-                    Some(aliasName),
+                    Some(alias),
                     metaData,
                     SqlTable.Standard(
                         metaData.tableName, 

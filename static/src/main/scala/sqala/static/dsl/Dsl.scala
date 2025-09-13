@@ -89,17 +89,16 @@ def unnest[T: AsExpr as a](x: T)(using
     f: UnnestFlatten[a.R],
     c: QueryContext
 ): FuncTable[Unnest[f.R]] =
-    c.tableIndex += 1
-    val aliasName = s"t${c.tableIndex}"
+    val alias = c.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
         "UNNEST",
         a.asExpr(x).asSqlExpr :: Nil,
         false,
         false,
-        Some(SqlTableAlias(aliasName, "x" :: Nil)),
+        Some(SqlTableAlias(alias, "x" :: Nil)),
         None
     )
-    FuncTable(Some(aliasName), "x" :: Nil, "x" :: Nil, sqlTable)
+    FuncTable(Some(alias), "x" :: Nil, "x" :: Nil, sqlTable)
 
 case class UnnestWithOrdinal[T](x: Option[T], ordinal: Int)
 
@@ -107,17 +106,16 @@ def unnestWithOrdinal[T: AsExpr as a](x: T)(using
     f: UnnestFlatten[a.R],
     c: QueryContext
 ): FuncTable[UnnestWithOrdinal[f.R]] =
-    c.tableIndex += 1
-    val aliasName = s"t${c.tableIndex}"
+    val alias = c.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
         "UNNEST",
         a.asExpr(x).asSqlExpr :: Nil,
         false,
         true,
-        Some(SqlTableAlias(aliasName, "x" :: "ordinal" :: Nil)),
+        Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
         None
     )
-    FuncTable(Some(aliasName), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    FuncTable(Some(alias), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
 
 def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
     expr: E,
@@ -128,9 +126,8 @@ def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
     p: AsTableParam[JsonTableColumnFlatten[V]],
     c: QueryContext
 ): JsonTable[JsonTableColumnNameFlatten[N, V], JsonTableColumnFlatten[V]] =
-    c.tableIndex += 1
-    val aliasName = s"t${c.tableIndex}"
-    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, Some(aliasName), columns)
+    val alias = c.fetchAlias
+    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, Some(alias), columns)
 
 class JsonTableColumnContext
 

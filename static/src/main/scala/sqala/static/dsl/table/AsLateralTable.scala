@@ -40,7 +40,6 @@ object AsLateralTable:
             type R = SubQueryTable[N, V]
 
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
-                c.tableIndex += 1
-                val aliasName = s"t${c.tableIndex}"
-                val subQuery = SubQueryTable[N, V](x, true, Some(aliasName))
+                val alias = c.fetchAlias
+                val subQuery = SubQueryTable[N, V](x, true, Some(alias))
                 (subQuery, subQuery.__sqlTable__)

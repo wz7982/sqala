@@ -1,12 +1,12 @@
 package sqala.static.dsl.table
 
+import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.Index
 import sqala.static.dsl.statement.query.Query
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
-import sqala.ast.statement.SqlQuery
 
 case class SubQueryTable[N <: Tuple, V <: Tuple](
     private[sqala] val __aliasName__ : Option[String],

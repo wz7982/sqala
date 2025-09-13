@@ -1,15 +1,13 @@
 package sqala.static.dsl.table
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.statement.SqlQuery
+import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
-import sqala.ast.expr.SqlBinaryOperator
-import sqala.ast.statement.SqlSelectItem
 
 class PivotContext
 
@@ -115,15 +113,32 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
                     e, Some(s"c${i + 1}")
                 )
         val newQuery = __sqlQuery__.copy(select = selectItems)
-        c.tableIndex += 1
-        val alias = s"t${c.tableIndex}"
+        val alias = c.fetchAlias
         SubQueryTable(newQuery, false, Some(alias))
 
-    def `for`[WN <: Tuple](item: PivotWithin[WN])(using c: QueryContext, pc: PivotContext): SubQueryTable[
-        Tuple.Concat[GN, CombinePivotNames[AN, WN *: EmptyTuple]],
-        Tuple.Concat[GV, CombinePivotTypes[AV, WN *: EmptyTuple]]
-    ] =
-        new SubQueryTable(???, ???, ???)
+    def `for`[WN <: Tuple](item: PivotWithin[WN])(using
+        f: PivotFor[PivotWithin[WN], GN, GV, AN, AV],
+        m: AsMap[f.V],
+        tt: ToTuple[m.R],
+        a: AsTableParam[tt.R],
+        c: QueryContext, 
+        pc: PivotContext
+    ): SubQueryTable[f.N, tt.R] =
+        val conditions = item.conditions.map(c => SqlExpr.Binary(item.expr, SqlBinaryOperator.Equal, c))
+        val selectAggregations =
+            for
+                agg <- __aggregations__
+                c <- conditions
+            yield
+                addFilter(agg, c)
+        val selectItems =
+            (__group__ ++ selectAggregations).zipWithIndex.map: (e, i) =>
+                SqlSelectItem.Expr(
+                    e, Some(s"c${i + 1}")
+                )
+        val newQuery = __sqlQuery__.copy(select = selectItems)
+        val alias = c.fetchAlias
+        SubQueryTable(newQuery, false, Some(alias))
 
 trait PivotFor[T, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple]:
     type N <: Tuple
@@ -150,3 +165,17 @@ object PivotFor:
             type N = Tuple.Concat[GN, CombinePivotNames[AN, TupleMap[WS, [x] =>> Unwrap[x, PivotWithin]]]]
 
             type V = Tuple.Concat[GV, CombinePivotTypes[AV, TupleMap[WS, [x] =>> Unwrap[x, PivotWithin]]]]
+
+    given single[WN <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple]: Aux[
+        PivotWithin[WN],
+        GN,
+        GV,
+        AN,
+        AV,
+        Tuple.Concat[GN, CombinePivotNames[AN, WN *: EmptyTuple]],
+        Tuple.Concat[GV, CombinePivotTypes[AV, WN *: EmptyTuple]]
+    ] =
+        new PivotFor[PivotWithin[WN], GN, GV, AN, AV]:
+            type N = Tuple.Concat[GN, CombinePivotNames[AN, WN *: EmptyTuple]]
+
+            type V = Tuple.Concat[GV, CombinePivotTypes[AV, WN *: EmptyTuple]]

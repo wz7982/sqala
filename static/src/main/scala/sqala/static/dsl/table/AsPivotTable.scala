@@ -1,11 +1,10 @@
 package sqala.static.dsl.table
 
+import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.statement.query.AsMap
-import sqala.static.dsl.{QueryContext, ToTuple, from}
+import sqala.static.dsl.{Expr, QueryContext, ToTuple, from}
 
 import scala.deriving.Mirror
-import sqala.ast.expr.SqlExpr
-import sqala.static.dsl.Expr
 
 trait AsPivotTable[T]:
     type R

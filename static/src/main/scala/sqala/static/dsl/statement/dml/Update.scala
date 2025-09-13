@@ -45,8 +45,7 @@ class Update[T, S <: UpdateState](
 object Update:
     inline def apply[T <: Product](using c: QueryContext): Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]
-        c.tableIndex += 1
-        val alias = s"t${c.tableIndex}"
+        val alias = c.fetchAlias
         val sqlTable: SqlTable.Standard = SqlTable.Standard(
             metaData.tableName,
             Some(SqlTableAlias(alias, Nil)),
