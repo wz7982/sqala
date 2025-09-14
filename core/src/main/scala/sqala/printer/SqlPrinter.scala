@@ -485,6 +485,20 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 sqlBuilder.append("BOOLEAN")
             case SqlType.Vector =>
                 sqlBuilder.append("VECTOR")
+            case SqlType.Point =>
+                sqlBuilder.append("POINT")
+            case SqlType.LineString =>
+                sqlBuilder.append("LINESTRING")
+            case SqlType.Polygon =>
+                sqlBuilder.append("POLYGON")
+            case SqlType.MultiPoint =>
+                sqlBuilder.append("MULTIPOINT")
+            case SqlType.MultiLineString =>
+                sqlBuilder.append("MULTILINESTRING")
+            case SqlType.MultiPolygon =>
+                sqlBuilder.append("MULTIPOLYGON")
+            case SqlType.GeometryCollection =>
+                sqlBuilder.append("GEOMETRYCOLLECTION")
             case SqlType.Array(t) =>
                 printType(t)
                 sqlBuilder.append("[]")

@@ -65,7 +65,24 @@ object SqlVector:
 
     given option[T: SqlVector]: SqlVector[Option[T]]()
 
-trait SqlSpatial[T]
+trait SqlGeometry[T]
+
+object SqlGeometry:
+    given point: SqlGeometry[Point]()
+
+    given lineString: SqlGeometry[LineString]()
+
+    given polygon: SqlGeometry[Polygon]()
+
+    given multiPoint: SqlGeometry[MultiPoint]()
+
+    given multiLineString: SqlGeometry[MultiLineString]()
+
+    given multiPolygon: SqlGeometry[MultiPolygon]()
+
+    given geometryCollection: SqlGeometry[GeometryCollection]()
+
+    given option[T: SqlGeometry]: SqlGeometry[Option[T]]()
 
 opaque type Json = String
 
@@ -78,3 +95,38 @@ opaque type Vector = String
 
 object Vector:
     def apply(value: String): Vector = value
+
+opaque type Point = String
+
+object Point:
+    def apply(value: String): Point = value
+
+opaque type LineString = String
+
+object LineString:
+    def apply(value: String): LineString = value
+
+opaque type Polygon = String
+
+object Polygon:
+    def apply(value: String): Polygon = value
+
+opaque type MultiPoint = String
+
+object MultiPoint:
+    def apply(value: String): MultiPoint = value
+
+opaque type MultiLineString = String
+
+object MultiLineString:
+    def apply(value: String): MultiLineString = value
+
+opaque type MultiPolygon = String
+
+object MultiPolygon:
+    def apply(value: String): MultiPolygon = value
+
+opaque type GeometryCollection = String
+
+object GeometryCollection:
+    def apply(value: String): GeometryCollection = value

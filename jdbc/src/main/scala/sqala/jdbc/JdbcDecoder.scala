@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.static.metadata.{CustomField, Json, Vector}
+import sqala.static.metadata.*
 
 import java.sql.ResultSet
 import java.time.{LocalDate, LocalDateTime, ZoneId}
@@ -21,66 +21,108 @@ object JdbcDecoder:
             case _: EmptyTuple => Nil
             case _: (t *: ts) => summonInline[JdbcDecoder[t]] :: summonInstances[ts]
 
-    given intDecoder: JdbcDecoder[Int] with
+    given int: JdbcDecoder[Int] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Int = data.getInt(cursor)
 
-    given longDecoder: JdbcDecoder[Long] with
+    given long: JdbcDecoder[Long] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Long = data.getLong(cursor)
 
-    given floatDecoder: JdbcDecoder[Float] with
+    given float: JdbcDecoder[Float] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Float = data.getFloat(cursor)
 
-    given doubleDecoder: JdbcDecoder[Double] with
+    given double: JdbcDecoder[Double] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Double = data.getDouble(cursor)
 
-    given decimalDecoder: JdbcDecoder[BigDecimal] with
+    given decimal: JdbcDecoder[BigDecimal] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): BigDecimal = data.getBigDecimal(cursor)
 
-    given booleanDecoder: JdbcDecoder[Boolean] with
+    given boolean: JdbcDecoder[Boolean] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Boolean = data.getBoolean(cursor)
 
-    given stringDecoder: JdbcDecoder[String] with
+    given string: JdbcDecoder[String] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): String = data.getString(cursor)
 
-    given localDateDecoder: JdbcDecoder[LocalDate] with
+    given localDate: JdbcDecoder[LocalDate] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): LocalDate =
             LocalDate.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
 
-    given localDateTimeDecoder: JdbcDecoder[LocalDateTime] with
+    given localDateTime: JdbcDecoder[LocalDateTime] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): LocalDateTime =
             LocalDateTime.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
 
-    given jsonDecoder: JdbcDecoder[Json] with
+    given json: JdbcDecoder[Json] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Json =
             Json(data.getString(cursor))
         
-    given vectorDecoder: JdbcDecoder[Vector] with
+    given vector: JdbcDecoder[Vector] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Vector =
             Vector(data.getString(cursor))
 
-    given optionDecoder[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
+    given point: JdbcDecoder[Point] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): Point =
+            Point(data.getString(cursor))
+
+    given lineString: JdbcDecoder[LineString] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): LineString =
+            LineString(data.getString(cursor))
+
+    given polygon: JdbcDecoder[Polygon] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): Polygon =
+            Polygon(data.getString(cursor))
+
+    given multiPoint: JdbcDecoder[MultiPoint] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): MultiPoint =
+            MultiPoint(data.getString(cursor))
+
+    given multiLineString: JdbcDecoder[MultiLineString] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): MultiLineString =
+            MultiLineString(data.getString(cursor))
+
+    given multiPolygon: JdbcDecoder[MultiPolygon] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): MultiPolygon =
+            MultiPolygon(data.getString(cursor))
+
+    given geometryCollection: JdbcDecoder[GeometryCollection] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): GeometryCollection =
+            GeometryCollection(data.getString(cursor))
+
+    given option[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
         inline def offset: Int = d.offset
 
         inline def decode(data: ResultSet, cursor: Int): Option[T] =
@@ -88,7 +130,7 @@ object JdbcDecoder:
                 data.getObject(i)
             if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
 
-    given arrayDecoder[T](using d: JdbcArrayItemDecoder[T], c: ClassTag[T]): JdbcDecoder[Array[T]] with
+    given array[T](using d: JdbcArrayItemDecoder[T], c: ClassTag[T]): JdbcDecoder[Array[T]] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): Array[T] =
@@ -98,24 +140,24 @@ object JdbcDecoder:
                 .asInstanceOf[Array[?]]
                 .map(i => d.decode(i))
 
-    given customFieldDecoder[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
+    given customField[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
         inline def offset: Int = d.offset
 
         inline def decode(data: ResultSet, cursor: Int): T = c.fromValue(d.decode(data, cursor))
 
-    given tupleDecoder[H, T <: Tuple](using headDecoder: JdbcDecoder[H], tailDecoder: JdbcDecoder[T]): JdbcDecoder[H *: T] with
+    given tuple[H, T <: Tuple](using headDecoder: JdbcDecoder[H], tailDecoder: JdbcDecoder[T]): JdbcDecoder[H *: T] with
         inline def offset: Int = headDecoder.offset + tailDecoder.offset
 
         inline def decode(data: ResultSet, cursor: Int): H *: T =
             headDecoder.decode(data, cursor) *: tailDecoder.decode(data, cursor + headDecoder.offset)
 
-    given tuple1Decoder[H](using headDecoder: JdbcDecoder[H]): JdbcDecoder[H *: EmptyTuple] with
+    given tuple1[H](using headDecoder: JdbcDecoder[H]): JdbcDecoder[H *: EmptyTuple] with
         inline def offset: Int = headDecoder.offset
 
         inline def decode(data: ResultSet, cursor: Int): H *: EmptyTuple =
             headDecoder.decode(data, cursor) *: EmptyTuple
 
-    given namedTupleDecoder[N <: Tuple, V <: Tuple](using d: JdbcDecoder[V]): JdbcDecoder[NamedTuple[N, V]] with
+    given namedTuple[N <: Tuple, V <: Tuple](using d: JdbcDecoder[V]): JdbcDecoder[NamedTuple[N, V]] with
         inline def offset: Int = d.offset
 
         inline def decode(data: ResultSet, cursor: Int): NamedTuple[N, V] =
@@ -159,40 +201,40 @@ trait JdbcArrayItemDecoder[T]:
     def decode(x: Any): T
 
 object JdbcArrayItemDecoder:
-    given intDecoder: JdbcArrayItemDecoder[Int] with
+    given int: JdbcArrayItemDecoder[Int] with
         inline def decode(x: Any): Int =
             x.asInstanceOf[java.lang.Integer].intValue
 
-    given longDecoder: JdbcArrayItemDecoder[Long] with
+    given long: JdbcArrayItemDecoder[Long] with
         inline def decode(x: Any): Long =
             x.asInstanceOf[java.lang.Long].longValue
 
-    given floatDecoder: JdbcArrayItemDecoder[Float] with
+    given float: JdbcArrayItemDecoder[Float] with
         inline def decode(x: Any): Float =
             x.asInstanceOf[java.lang.Float].floatValue
 
-    given doubleDecoder: JdbcArrayItemDecoder[Double] with
+    given double: JdbcArrayItemDecoder[Double] with
         inline def decode(x: Any): Double =
             x.asInstanceOf[java.lang.Double].doubleValue
 
-    given decimalDecoder: JdbcArrayItemDecoder[BigDecimal] with
+    given decimal: JdbcArrayItemDecoder[BigDecimal] with
         inline def decode(x: Any): BigDecimal =
             BigDecimal(x.asInstanceOf[java.math.BigDecimal])
 
-    given boolDecoder: JdbcArrayItemDecoder[Boolean] with
+    given bool: JdbcArrayItemDecoder[Boolean] with
         inline def decode(x: Any): Boolean =
             x.asInstanceOf[java.lang.Boolean].booleanValue
 
-    given stringDecoder: JdbcArrayItemDecoder[String] with
+    given string: JdbcArrayItemDecoder[String] with
         inline def decode(x: Any): String =
             x.asInstanceOf[java.lang.String]
 
-    given optionDecoder[T: JdbcArrayItemDecoder as d]: JdbcArrayItemDecoder[Option[T]] with
+    given option[T: JdbcArrayItemDecoder as d]: JdbcArrayItemDecoder[Option[T]] with
         inline def decode(x: Any): Option[T] =
             x match
                 case null => None
                 case v => Some(d.decode(v))
 
-    given arrayDecoder[T: JdbcArrayItemDecoder as d](using ClassTag[T]): JdbcArrayItemDecoder[Array[T]] with
+    given array[T: JdbcArrayItemDecoder as d](using ClassTag[T]): JdbcArrayItemDecoder[Array[T]] with
         inline def decode(x: Any): Array[T] =
             x.asInstanceOf[Array[?]].map(i => d.decode(i))

@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
-import sqala.static.metadata.{AsSqlExpr, Json, SqlNumber, SqlString}
+import sqala.static.metadata.*
 
 import java.time.{LocalDateTime, OffsetDateTime}
 import scala.annotation.implicitNotFound
@@ -37,3 +37,6 @@ object Cast:
 
     given castOffsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
         def castType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    given castVector[T: SqlString]: Cast[T, Vector] with
+        def castType: SqlType = SqlType.Vector
