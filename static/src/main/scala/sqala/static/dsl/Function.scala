@@ -1302,6 +1302,174 @@ def localTimestamp()(using QueryContext): Expr[OffsetDateTime] =
         SqlExpr.IdentFunc("LOCALTIMESTAMP")
     )
 
+@function
+def stGeomFromText[A: AsExpr as aa, S: AsExpr as as](x: A, srid: S)(using
+    SqlString[aa.R],
+    SqlNumber[as.R],
+    QueryContext
+): Expr[Option[Geometry]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_GeomFromText",
+            aa.asExpr(x).asSqlExpr :: as.asExpr(srid).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stAsText[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[String]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_AsText",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stAsGeoJson[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[String]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_AsGeoJson",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stContains[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Contains",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stWithin[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Within",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stIntersects[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Intersects",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stTouches[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Touches",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stOverlaps[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Overlaps",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stCrosses[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Crosses",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stDisjoint[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Disjoint",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
 @windowFunction
 def rank()(using QueryContext): Expr[Long] =
     Expr(
