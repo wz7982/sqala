@@ -31,13 +31,13 @@ case class RecognizePredefine[T](
         QueryContext, 
         MatchRecognizeContext
     ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlPatternRowsPerMatchMode.OneRow))
+        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.OneRow))
 
     def allRowsPerMatch(using
         QueryContext, 
         MatchRecognizeContext
     ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlPatternRowsPerMatchMode.AllRows(None)))
+        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
 
     def predefine[N <: Tuple](using
         QueryContext, 
@@ -156,7 +156,7 @@ case class Recognize[N <: Tuple, T](
         val alias = c.fetchAlias
         val items = m.selectItems(f(RecognizeDefine[N, T](__table__)), 1)
         val measureItems = items.map: i =>
-            SqlMeasureItem(i.expr, i.alias.get)
+            SqlRecognizeMeasureItem(i.expr, i.alias.get)
         val recognize = 
             r.fetchRecognize(__table__)
         val newRecognize = recognize

@@ -14,7 +14,7 @@ trait AsRecognizeTable[T]:
 
     def setOrderBy(x: T, items: List[SqlOrderingItem]): T
 
-    def setPerMatch(x: T, perMatch: SqlPatternRowsPerMatchMode): T
+    def setPerMatch(x: T, perMatch: SqlRecognizePatternRowsPerMatchMode): T
 
     def setRecognize(x: T, recognize: SqlMatchRecognize): T
 
@@ -71,7 +71,7 @@ object AsRecognizeTable:
                     )
             )
 
-        def setPerMatch(x: Table[T], perMatch: SqlPatternRowsPerMatchMode): Table[T] =
+        def setPerMatch(x: Table[T], perMatch: SqlRecognizePatternRowsPerMatchMode): Table[T] =
             x.copy(
                 __sqlTable__ =
                     x.__sqlTable__.copy(
@@ -127,7 +127,7 @@ object AsRecognizeTable:
                     )
             )
 
-        def setPerMatch(x: SubQueryTable[N, V], perMatch: SqlPatternRowsPerMatchMode): SubQueryTable[N, V] =
+        def setPerMatch(x: SubQueryTable[N, V], perMatch: SqlRecognizePatternRowsPerMatchMode): SubQueryTable[N, V] =
             x.copy(
                 __sqlTable__ =
                     x.__sqlTable__.copy(

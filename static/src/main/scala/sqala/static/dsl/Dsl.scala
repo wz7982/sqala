@@ -368,13 +368,13 @@ extension [T](table: T)(using r: AsRecognizeTable[T])
         QueryContext, 
         MatchRecognizeContext
     ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(table, SqlPatternRowsPerMatchMode.OneRow))
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.OneRow))
 
     def allRowsPerMatch(using 
         QueryContext, 
         MatchRecognizeContext
     ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(table, SqlPatternRowsPerMatchMode.AllRows(None)))
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
 
 extension [T](x: T)(using at: AsTable[T], ap: AsPivotTable[at.R])
     def pivot[N <: Tuple, V <: Tuple](f: PivotContext ?=> ap.R => SubQueryTable[N, V])(using 

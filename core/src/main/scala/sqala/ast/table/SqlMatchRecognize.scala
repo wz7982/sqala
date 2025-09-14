@@ -6,22 +6,22 @@ import sqala.ast.order.SqlOrderingItem
 case class SqlMatchRecognize(
     partitionBy: List[SqlExpr],
     orderBy: List[SqlOrderingItem],
-    measures: List[SqlMeasureItem],
-    rowsPerMatch: Option[SqlPatternRowsPerMatchMode],
+    measures: List[SqlRecognizeMeasureItem],
+    rowsPerMatch: Option[SqlRecognizePatternRowsPerMatchMode],
     rowPattern: SqlRowPattern,
     alias: Option[SqlTableAlias]
 )
 
-case class SqlMeasureItem(expr: SqlExpr, alias: String)
+case class SqlRecognizeMeasureItem(expr: SqlExpr, alias: String)
 
-enum SqlPatternRowsPerMatchMode:
+enum SqlRecognizePatternRowsPerMatchMode:
     case OneRow
-    case AllRows(emptyMatchMode: Option[SqlPatternEmptyMatchMode])
+    case AllRows(emptyMatchMode: Option[SqlRecognizePatternEmptyMatchMode])
 
-enum SqlPatternEmptyMatchMode(val mode: String):
-    case ShowEmptyMatches extends SqlPatternEmptyMatchMode("SHOW EMPTY MATCHES")
-    case OmitEmptyMatches extends SqlPatternEmptyMatchMode("OMIT EMPTY MATCHES")
-    case WithUnmatchedRows extends SqlPatternEmptyMatchMode("WITH UNMATCHED ROWS")
+enum SqlRecognizePatternEmptyMatchMode(val mode: String):
+    case ShowEmptyMatches extends SqlRecognizePatternEmptyMatchMode("SHOW EMPTY MATCHES")
+    case OmitEmptyMatches extends SqlRecognizePatternEmptyMatchMode("OMIT EMPTY MATCHES")
+    case WithUnmatchedRows extends SqlRecognizePatternEmptyMatchMode("WITH UNMATCHED ROWS")
 
 case class SqlRowPattern(
     afterMatch: Option[SqlRowPatternSkipMode],

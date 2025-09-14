@@ -1179,7 +1179,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             case j: SqlTable.Join => printJoinTable(j)
 
     def printMatchRecognize(matchRecognize: SqlMatchRecognize): Unit =
-        def printMeasure(measure: SqlMeasureItem): Unit =
+        def printMeasure(measure: SqlRecognizeMeasureItem): Unit =
             printExpr(measure.expr)
             sqlBuilder.append(s" AS $leftQuote${measure.alias}$rightQuote")
 
@@ -1206,9 +1206,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("\n")
             printSpace()
             m match
-                case SqlPatternRowsPerMatchMode.OneRow =>
+                case SqlRecognizePatternRowsPerMatchMode.OneRow =>
                     sqlBuilder.append("ONE ROW PER MATCH")
-                case SqlPatternRowsPerMatchMode.AllRows(mode) =>
+                case SqlRecognizePatternRowsPerMatchMode.AllRows(mode) =>
                     sqlBuilder.append("ALL ROWS PER MATCH")
                     for em <- mode do
                         sqlBuilder.append(" ")
