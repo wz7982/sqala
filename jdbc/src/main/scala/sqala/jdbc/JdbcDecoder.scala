@@ -56,6 +56,7 @@ object JdbcDecoder:
 
         inline def decode(data: ResultSet, cursor: Int): String = data.getString(cursor)
 
+    // TODO 时间反序列化重写
     given localDate: JdbcDecoder[LocalDate] with
         inline def offset: Int = 1
 
@@ -73,54 +74,6 @@ object JdbcDecoder:
 
         inline def decode(data: ResultSet, cursor: Int): Json =
             Json(data.getString(cursor))
-        
-    given vector: JdbcDecoder[Vector] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): Vector =
-            Vector(data.getString(cursor))
-
-    given point: JdbcDecoder[Point] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): Point =
-            Point(data.getString(cursor))
-
-    given lineString: JdbcDecoder[LineString] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): LineString =
-            LineString(data.getString(cursor))
-
-    given polygon: JdbcDecoder[Polygon] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): Polygon =
-            Polygon(data.getString(cursor))
-
-    given multiPoint: JdbcDecoder[MultiPoint] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): MultiPoint =
-            MultiPoint(data.getString(cursor))
-
-    given multiLineString: JdbcDecoder[MultiLineString] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): MultiLineString =
-            MultiLineString(data.getString(cursor))
-
-    given multiPolygon: JdbcDecoder[MultiPolygon] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): MultiPolygon =
-            MultiPolygon(data.getString(cursor))
-
-    given geometryCollection: JdbcDecoder[GeometryCollection] with
-        inline def offset: Int = 1
-
-        inline def decode(data: ResultSet, cursor: Int): GeometryCollection =
-            GeometryCollection(data.getString(cursor))
 
     given option[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
         inline def offset: Int = d.offset

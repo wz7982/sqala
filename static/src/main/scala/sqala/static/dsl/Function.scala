@@ -7,7 +7,6 @@ import sqala.static.metadata.*
 import java.time.{LocalDate, LocalTime, OffsetDateTime, OffsetTime}
 import scala.compiletime.ops.boolean.||
 
-
 @aggFunction
 def count()(using QueryContext): Expr[Long] =
     Expr(SqlExpr.CountAsteriskFunc(None, None))
@@ -809,6 +808,18 @@ def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
 @function
 def extract[A: AsExpr as aa](x: A, unit: TimeUnit)(using
     SqlDateTime[aa.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.ExtractFunc(
+            aa.asExpr(x).asSqlExpr,
+            unit.unit
+        )
+    )
+
+@function
+def extractInterval[A: AsExpr as aa](x: A, unit: TimeUnit)(using
+    SqlInterval[aa.R],
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(

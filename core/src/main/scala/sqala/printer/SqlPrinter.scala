@@ -483,8 +483,12 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 sqlBuilder.append("JSON")
             case SqlType.Boolean =>
                 sqlBuilder.append("BOOLEAN")
+            case SqlType.Interval =>
+                sqlBuilder.append("INTERVAL")
             case SqlType.Vector =>
                 sqlBuilder.append("VECTOR")
+            case SqlType.Geometry =>
+                sqlBuilder.append("GEOMETRY")
             case SqlType.Point =>
                 sqlBuilder.append("POINT")
             case SqlType.LineString =>

@@ -218,8 +218,8 @@ case object Hour extends TimeUnit(SqlTimeUnit.Hour)
 case object Minute extends TimeUnit(SqlTimeUnit.Minute)
 case object Second extends TimeUnit(SqlTimeUnit.Second)
 
-def interval(n: Double, unit: TimeUnit)(using QueryContext): TimeInterval =
-    TimeInterval(n.toString, unit.unit)
+def interval(n: Double, unit: TimeUnit)(using QueryContext): Interval =
+    Interval(n.toString, unit.unit)
 
 class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[E: AsExpr as a](expr: E)(using QueryContext): IfThen[a.R] =

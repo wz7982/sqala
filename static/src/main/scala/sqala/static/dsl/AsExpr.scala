@@ -2,7 +2,7 @@ package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.statement.query.Query
-import sqala.static.metadata.{AsSqlExpr, Interval}
+import sqala.static.metadata.AsSqlExpr
 
 import scala.annotation.implicitNotFound
 
@@ -35,13 +35,6 @@ object AsExpr:
             type R = T
 
             def exprs(x: Expr[T]): List[Expr[?]] =
-                x :: Nil
-
-    given interval: Aux[Expr[Interval], Interval] =
-        new AsExpr[Expr[Interval]]:
-            type R = Interval
-
-            def exprs(x: Expr[Interval]): List[Expr[?]] =
                 x :: Nil
 
     given query[T: AsSqlExpr, Q <: Query[Expr[T]]]: Aux[Q, T] =

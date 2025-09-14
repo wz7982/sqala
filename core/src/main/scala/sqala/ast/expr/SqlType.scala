@@ -12,7 +12,9 @@ enum SqlType:
     case Time(mode: Option[SqlTimeZoneMode])
     case Json
     case Boolean
+    case Interval
     case Vector
+    case Geometry
     case Point
     case LineString
     case Polygon

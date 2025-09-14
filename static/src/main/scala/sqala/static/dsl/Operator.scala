@@ -157,7 +157,7 @@ extension [T: AsExpr as at](self: T)
         )
 
     @targetName("plus")
-    def +(interval: TimeInterval)(using
+    def +(interval: Interval)(using
         d: SqlDateTime[at.R],
         r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
         qc: QueryContext
@@ -185,7 +185,7 @@ extension [T: AsExpr as at](self: T)
         )
 
     @targetName("minus")
-    def -(interval: TimeInterval)(using
+    def -(interval: Interval)(using
         d: SqlDateTime[at.R],
         r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
         qc: QueryContext

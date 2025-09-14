@@ -1,5 +1,7 @@
 package sqala.static.metadata
 
+import sqala.ast.expr.SqlTimeUnit
+
 import java.time.*
 
 trait SqlNumber[T]
@@ -68,6 +70,8 @@ object SqlVector:
 trait SqlGeometry[T]
 
 object SqlGeometry:
+    given geometry: SqlGeometry[Geometry]()
+
     given point: SqlGeometry[Point]()
 
     given lineString: SqlGeometry[LineString]()
@@ -84,49 +88,37 @@ object SqlGeometry:
 
     given option[T: SqlGeometry]: SqlGeometry[Option[T]]()
 
+trait SqlInterval[T]
+
+object SqlInterval:
+    given interval: SqlInterval[Interval]()
+
+    given option[T: SqlInterval]: SqlInterval[Option[T]]()
+
 opaque type Json = String
 
 object Json:
     def apply(value: String): Json = value
 
-opaque type Interval = Long
+case class Interval(value: String, unit: SqlTimeUnit)
 
 opaque type Vector = String
 
 object Vector:
     def apply(value: String): Vector = value
 
-opaque type Point = String
+case class Geometry(value: String, srid: Int)
 
-object Point:
-    def apply(value: String): Point = value
+case class Point(value: String, srid: Int)
 
-opaque type LineString = String
+case class LineString(value: String, srid: Int)
 
-object LineString:
-    def apply(value: String): LineString = value
+case class Polygon(value: String, srid: Int)
 
-opaque type Polygon = String
+case class MultiPoint(value: String, srid: Int)
 
-object Polygon:
-    def apply(value: String): Polygon = value
+case class MultiLineString(value: String, srid: Int)
 
-opaque type MultiPoint = String
+case class MultiPolygon(value: String, srid: Int)
 
-object MultiPoint:
-    def apply(value: String): MultiPoint = value
-
-opaque type MultiLineString = String
-
-object MultiLineString:
-    def apply(value: String): MultiLineString = value
-
-opaque type MultiPolygon = String
-
-object MultiPolygon:
-    def apply(value: String): MultiPolygon = value
-
-opaque type GeometryCollection = String
-
-object GeometryCollection:
-    def apply(value: String): GeometryCollection = value
+case class GeometryCollection(value: String, srid: Int)

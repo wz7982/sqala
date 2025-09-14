@@ -1,6 +1,6 @@
 package sqala.static.metadata
 
-import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit, SqlTimeZoneMode, SqlType}
+import sqala.ast.expr.*
 
 import java.time.*
 import scala.annotation.implicitNotFound
@@ -97,11 +97,30 @@ object AsSqlExpr:
         def asSqlExpr(x: Json): SqlExpr = 
             SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Json)
 
+    given interval: AsSqlExpr[Interval] with
+        def sqlType: SqlType = SqlType.Interval
+
+        def asSqlExpr(x: Interval): SqlExpr =
+            SqlExpr.IntervalLiteral(x.value, SqlIntervalField.Single(x.unit))
+
     given vector: AsSqlExpr[Vector] with
         def sqlType: SqlType = SqlType.Vector
 
         def asSqlExpr(x: Vector): SqlExpr = 
             SqlExpr.StringLiteral(x.toString)
+
+    given geometry: AsSqlExpr[Geometry] with
+        def sqlType: SqlType = SqlType.Geometry
+
+        def asSqlExpr(x: Geometry): SqlExpr = 
+            SqlExpr.StandardFunc(
+                "ST_GeomFromText",
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
 
     given point: AsSqlExpr[Point] with
         def sqlType: SqlType = SqlType.Point
@@ -109,7 +128,7 @@ object AsSqlExpr:
         def asSqlExpr(x: Point): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -122,7 +141,7 @@ object AsSqlExpr:
         def asSqlExpr(x: LineString): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -135,7 +154,7 @@ object AsSqlExpr:
         def asSqlExpr(x: Polygon): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -148,7 +167,7 @@ object AsSqlExpr:
         def asSqlExpr(x: MultiPoint): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -161,7 +180,7 @@ object AsSqlExpr:
         def asSqlExpr(x: MultiLineString): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -174,7 +193,7 @@ object AsSqlExpr:
         def asSqlExpr(x: MultiPolygon): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
@@ -187,7 +206,7 @@ object AsSqlExpr:
         def asSqlExpr(x: GeometryCollection): SqlExpr =
             SqlExpr.StandardFunc(
                 "ST_GeomFromText",
-                SqlExpr.StringLiteral(x.toString) :: Nil,
+                SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
                 None,
                 Nil,
                 Nil,
