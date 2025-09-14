@@ -1352,6 +1352,86 @@ def stAsGeoJson[A: AsExpr as aa](x: A)(using
     )
 
 @function
+def stGeometryType[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[String]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_GeometryType",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stX[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_X",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stY[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Y",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stArea[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Area",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stLength[A: AsExpr as aa](x: A)(using
+    SqlGeometry[aa.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Length",
+            aa.asExpr(x).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
 def stContains[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     SqlGeometry[aa.R],
     SqlGeometry[ab.R],
@@ -1462,6 +1542,91 @@ def stDisjoint[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     Expr(
         SqlExpr.StandardFunc(
             "ST_Disjoint",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stIntersection[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Geometry]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Intersection",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stUnion[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Geometry]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Union",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Geometry]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Difference",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stSymDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[Geometry]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_SymDifference",
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@function
+def stDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+    SqlGeometry[aa.R],
+    SqlGeometry[ab.R],
+    QueryContext
+): Expr[Option[BigDecimal]] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "ST_Distance",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
             None,
             Nil,
