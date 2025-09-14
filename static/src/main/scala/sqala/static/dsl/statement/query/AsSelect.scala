@@ -8,9 +8,7 @@ import sqala.static.metadata.AsSqlExpr
 
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
-import scala.collection.mutable.ListBuffer
 
-// TODO 简化一下
 @implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsSelect[T]:
     type R
@@ -33,16 +31,12 @@ object AsSelect:
         def offset(x: Table[T]): Int = x.__metaData__.fieldNames.size
 
         def selectItems(x: Table[T], cursor: Int): List[SqlSelectItem.Expr] =
-            var tmpCursor = cursor
-            val items = ListBuffer[SqlSelectItem.Expr]()
-            for field <- x.__metaData__.columnNames do
-                items.addOne(
-                    SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, field), Some(s"c${tmpCursor}")
-                    )
+            for 
+                (column, index) <- x.__metaData__.columnNames.zipWithIndex 
+            yield
+                SqlSelectItem.Expr(
+                    SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
                 )
-                tmpCursor += 1
-            items.toList
 
     given funcTable[T]: Aux[FuncTable[T], FuncTable[T]] = new AsSelect[FuncTable[T]]:
         type R = FuncTable[T]
@@ -52,16 +46,12 @@ object AsSelect:
         def offset(x: FuncTable[T]): Int = x.__fieldNames__.size
 
         def selectItems(x: FuncTable[T], cursor: Int): List[SqlSelectItem.Expr] =
-            var tmpCursor = cursor
-            val items = ListBuffer[SqlSelectItem.Expr]()
-            for field <- x.__columnNames__ do
-                items.addOne(
-                    SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, field), Some(s"c${tmpCursor}")
-                    )
+            for 
+                (column, index) <- x.__columnNames__.zipWithIndex 
+            yield
+                SqlSelectItem.Expr(
+                    SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
                 )
-                tmpCursor += 1
-            items.toList
 
     given jsonTable[N <: Tuple, V <: Tuple](using 
         s: AsMap[V],
