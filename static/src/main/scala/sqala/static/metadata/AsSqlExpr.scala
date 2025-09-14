@@ -101,7 +101,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.Vector
 
         def asSqlExpr(x: Vector): SqlExpr = 
-            SqlExpr.Vector(SqlExpr.StringLiteral(x.toString))
+            SqlExpr.StringLiteral(x.toString)
 
     given optionAsSqlExpr[T: AsSqlExpr as a]: AsSqlExpr[Option[T]] with
         def sqlType: SqlType = a.sqlType

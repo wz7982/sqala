@@ -73,11 +73,6 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             case _ =>
                 super.printExpr(expr)
 
-    override def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        sqlBuilder.append("STRING_TO_VECTOR(")
-        printExpr(expr.expr)
-        sqlBuilder.append(")")
-
     override def printValues(values: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")

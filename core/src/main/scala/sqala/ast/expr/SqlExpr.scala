@@ -14,7 +14,6 @@ enum SqlExpr:
     case IntervalLiteral(value: String, field: SqlIntervalField)
     case Tuple(items: List[SqlExpr])
     case Array(items: List[SqlExpr])
-    case Vector(expr: SqlExpr)
     case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)

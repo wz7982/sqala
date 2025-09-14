@@ -223,7 +223,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         case i: SqlExpr.IntervalLiteral => printIntervalLiteralExpr(i)
         case v: SqlExpr.Tuple => printTupleExpr(v)
         case a: SqlExpr.Array => printArrayExpr(a)
-        case v: SqlExpr.Vector => printVectorExpr(v)
         case u: SqlExpr.Unary => printUnaryExpr(u)
         case b: SqlExpr.Binary => printBinaryExpr(b)
         case n: SqlExpr.NullTest => printNullTestExpr(n)
@@ -323,9 +322,6 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("ARRAY[")
         printList(expr.items)(printExpr)
         sqlBuilder.append("]")
-
-    def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        printExpr(expr.expr)
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
         expr.operator match
