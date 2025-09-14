@@ -3,7 +3,7 @@ package sqala.jdbc
 import sqala.static.metadata.*
 
 import java.sql.ResultSet
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.time.*
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
@@ -56,18 +56,35 @@ object JdbcDecoder:
 
         inline def decode(data: ResultSet, cursor: Int): String = data.getString(cursor)
 
-    // TODO 时间反序列化重写
     given localDate: JdbcDecoder[LocalDate] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): LocalDate =
-            LocalDate.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
+            data.getObject(cursor, classOf[LocalDate])
 
     given localDateTime: JdbcDecoder[LocalDateTime] with
         inline def offset: Int = 1
 
         inline def decode(data: ResultSet, cursor: Int): LocalDateTime =
-            LocalDateTime.ofInstant(data.getTimestamp(cursor).toInstant(), ZoneId.systemDefault())
+            data.getObject(cursor, classOf[LocalDateTime])
+
+    given localTime: JdbcDecoder[LocalTime] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): LocalTime =
+            data.getObject(cursor, classOf[LocalTime])
+
+    given offsetDateTime: JdbcDecoder[OffsetDateTime] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): OffsetDateTime =
+            data.getObject(cursor, classOf[OffsetDateTime])
+
+    given offsetTime: JdbcDecoder[OffsetTime] with
+        inline def offset: Int = 1
+
+        inline def decode(data: ResultSet, cursor: Int): OffsetTime =
+            data.getObject(cursor, classOf[OffsetTime])
 
     given json: JdbcDecoder[Json] with
         inline def offset: Int = 1
