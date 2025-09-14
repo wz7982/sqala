@@ -43,7 +43,7 @@ enum SqlTable:
         keep: Option[SqlGraphPatternPrefix],
         where: Option[SqlExpr],
         rows: Option[SqlGraphRowsMode],
-        columns: List[SqlGraphColumnItem],
+        columns: List[SqlGraphColumn],
         `export`: Option[SqlGraphExportMode]
     )
     case Join(

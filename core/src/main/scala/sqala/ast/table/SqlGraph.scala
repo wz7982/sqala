@@ -15,7 +15,7 @@ enum SqlGraphRowsMode:
         inPaths: List[String]
     )
 
-enum SqlGraphColumnItem:
+enum SqlGraphColumn:
     case Asterisk(tableName: Option[String])
     case Expr(expr: SqlExpr, alias: Option[String])
 
