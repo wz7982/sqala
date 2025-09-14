@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.static.metadata.*
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
@@ -156,17 +156,17 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    @targetName("plus")
-    def +(interval: Interval)(using
+    def plusInterval[R](that: R)(using
         d: SqlDateTime[at.R],
-        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
+        ar: AsExpr[R],
+        i: SqlInterval[ar.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Plus, 
-                SqlExpr.IntervalLiteral(interval.value, SqlIntervalField.Single(interval.unit))
+                ar.asExpr(that).asSqlExpr
             )
         )
 
@@ -184,17 +184,17 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    @targetName("minus")
-    def -(interval: Interval)(using
+    def minusInterval[R](that: R)(using
         d: SqlDateTime[at.R],
-        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
+        ar: AsExpr[R],
+        i: SqlInterval[ar.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Minus, 
-                SqlExpr.IntervalLiteral(interval.value, SqlIntervalField.Single(interval.unit))
+                ar.asExpr(that).asSqlExpr
             )
         )
 
