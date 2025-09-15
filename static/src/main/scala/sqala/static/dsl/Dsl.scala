@@ -391,3 +391,43 @@ extension [T: AsExpr as a](x: T)
         pc: PivotContext
     ): PivotWithin[N] =
         PivotWithin[N](a.asExpr(x).asSqlExpr, av.exprs(items.toTuple).map(_.asSqlExpr))
+
+def createFunction[T](name: String, args: List[Expr[?]])(using QueryContext): Expr[T] =
+    Expr(
+        SqlExpr.StandardFunc(
+            name,
+            args.map(_.asSqlExpr),
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+def createBinaryExpr[T](left: Expr[?], operator: String, right: Expr[?])(using QueryContext): Expr[T] =
+    Expr(
+        SqlExpr.Binary(
+            left.asSqlExpr,
+            SqlBinaryOperator.Custom(operator),
+            right.asSqlExpr
+        )
+    )
+
+inline def createTableFunction[T](
+    name: String, 
+    args: List[Expr[?]],
+    withOrdinal: Boolean
+)(using
+    c: QueryContext
+): FuncTable[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    val alias = c.fetchAlias
+    val sqlTable: SqlTable.Func = SqlTable.Func(
+        name,
+        args.map(_.asSqlExpr),
+        false,
+        withOrdinal,
+        Some(SqlTableAlias(alias, metaData.columnNames)),
+        None
+    )
+    FuncTable(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
