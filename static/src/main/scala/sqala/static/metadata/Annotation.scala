@@ -1,4 +1,4 @@
-package sqala.metadata
+package sqala.static.metadata
 
 import scala.annotation.StaticAnnotation
 
@@ -15,10 +15,13 @@ class primaryKey extends StaticAnnotation
 class autoInc extends StaticAnnotation
 
 @scala.annotation.meta.field
-class function(functionName: String) extends StaticAnnotation
+class function extends StaticAnnotation
 
 @scala.annotation.meta.field
-class agg(functionName: String) extends StaticAnnotation
+class aggFunction extends StaticAnnotation
 
 @scala.annotation.meta.field
-class window(functionName: String) extends StaticAnnotation
+class windowFunction extends StaticAnnotation
+
+@scala.annotation.meta.field
+class matchFunction extends StaticAnnotation

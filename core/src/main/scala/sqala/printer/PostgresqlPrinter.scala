@@ -1,7 +1,7 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlCastType, SqlExpr}
-import sqala.ast.limit.*
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMode}
+import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
 class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
@@ -46,25 +46,45 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
             sqlBuilder.append("EXCLUDED.")
             printExpr(u)
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INT4"
-            case SqlCastType.Int8 => "INT8"
-            case SqlCastType.Float4 => "FLOAT4"
-            case SqlCastType.Float8 => "FLOAT8"
-            case SqlCastType.DateTime => "TIMESTAMP"
-            case SqlCastType.Json => "JSONB"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Json => 
+                sqlBuilder.append("JSONB")
+            case _ =>
+                super.printType(`type`)
 
-    override def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        super.printVectorExpr(expr)
-        sqlBuilder.append(" :: VECTOR")
+    override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
+        sqlBuilder.append("STRING_AGG(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        printExpr(expr.expr)
+        sqlBuilder.append(", ")
+        printExpr(expr.separator)
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+        sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
 
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append(" ")
-        sqlBuilder.append(expr.unit.unit)
-        sqlBuilder.append("'")
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
+        expr.mode match
+            case SqlVectorDistanceMode.Euclidean =>
+                printExpr(
+                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<->"), expr.right)
+                )
+            case SqlVectorDistanceMode.Cosine =>
+                printExpr(
+                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<=>"), expr.right)
+                )
+            case SqlVectorDistanceMode.Dot =>
+                printExpr(
+                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<#>"), expr.right)
+                )
+            case SqlVectorDistanceMode.Manhattan =>
+                printExpr(
+                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<+>"), expr.right)
+                )

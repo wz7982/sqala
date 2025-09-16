@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.static.dsl.statement.query.SubQuery
+import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
 
@@ -11,19 +11,34 @@ object Result:
     type Aux[T, O] = Result[T]:
         type R = O
 
-    given tableResult[T]: Aux[Table[T], T] = new Result[Table[T]]:
+    given expr[T]: Aux[Expr[T], T] = new Result[Expr[T]]:
         type R = T
 
-    given exprResult[T]: Aux[Expr[T], T] = new Result[Expr[T]]:
+    given table[T]: Aux[Table[T], T] = new Result[Table[T]]:
         type R = T
 
-    given subQueryResult[N <: Tuple, V <: Tuple](using
+    given funcTable[T]: Aux[FuncTable[T], T] = new Result[FuncTable[T]]:
+        type R = T
+
+    given subQueryTable[N <: Tuple, V <: Tuple](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[SubQuery[N, V], r.R] =
-        new Result[SubQuery[N, V]]:
+    ): Aux[SubQueryTable[N, V], r.R] =
+        new Result[SubQueryTable[N, V]]:
             type R = r.R
 
-    given tupleResult[H, T <: Tuple](using
+    given jsonTable[N <: Tuple, V <: Tuple](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[JsonTable[N, V], r.R] =
+        new Result[JsonTable[N, V]]:
+            type R = r.R
+
+    given recognizeTable[N <: Tuple, V <: Tuple](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[RecognizeTable[N, V], r.R] =
+        new Result[RecognizeTable[N, V]]:
+            type R = r.R
+
+    given tuple[H, T <: Tuple](using
         hr: Result[H],
         tr: Result[T],
         tt: ToTuple[tr.R]
@@ -31,11 +46,11 @@ object Result:
         new Result[H *: T]:
             type R = hr.R *: tt.R
 
-    given tuple1Result[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
+    given tuple1[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
-    given namedTupleResult[N <: Tuple, V <: Tuple](using
+    given namedTuple[N <: Tuple, V <: Tuple](using
         r: Result[V],
         tt: ToTuple[r.R]
     ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =

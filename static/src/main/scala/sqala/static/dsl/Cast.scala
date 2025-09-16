@@ -1,33 +1,42 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlCastType
-import sqala.metadata.{AsSqlExpr, Json, Number}
+import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
+import sqala.static.metadata.*
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, OffsetDateTime}
 import scala.annotation.implicitNotFound
 
 @implicitNotFound("Cannot cast type ${T} to ${R}.")
 trait Cast[T, R]:
-    def castType: SqlCastType
+    def castType: SqlType
 
 object Cast:
     given castString[T: AsSqlExpr]: Cast[T, String] with
-        def castType: SqlCastType = SqlCastType.Varchar
+        def castType: SqlType = SqlType.Varchar(None)
 
-    given castInt[T: Number]: Cast[T, Int] with
-        def castType: SqlCastType = SqlCastType.Int4
+    given castInt[T: SqlNumber]: Cast[T, Int] with
+        def castType: SqlType = SqlType.Int
 
-    given castLong[T: Number]: Cast[T, Long] with
-        def castType: SqlCastType = SqlCastType.Int8
+    given castLong[T: SqlNumber]: Cast[T, Long] with
+        def castType: SqlType = SqlType.Long
 
-    given castFloat[T: Number]: Cast[T, Float] with
-        def castType: SqlCastType = SqlCastType.Float4
+    given castFloat[T: SqlNumber]: Cast[T, Float] with
+        def castType: SqlType = SqlType.Float
 
-    given castDouble[T: Number]: Cast[T, Double] with
-        def castType: SqlCastType = SqlCastType.Float8
+    given castDouble[T: SqlNumber]: Cast[T, Double] with
+        def castType: SqlType = SqlType.Double
 
-    given castJson[T <: String | Option[String]]: Cast[T, Json] with
-        def castType: SqlCastType = SqlCastType.Json
+    given castDecimal[T: SqlNumber]: Cast[T, Double] with
+        def castType: SqlType = SqlType.Decimal(None)
 
-    given castDate[T <: String | Option[String]]: Cast[T, LocalDateTime] with
-        def castType: SqlCastType = SqlCastType.DateTime
+    given castJson[T: SqlString]: Cast[T, Json] with
+        def castType: SqlType = SqlType.Json
+
+    given castLocalDateTime[T: SqlString]: Cast[T, LocalDateTime] with
+        def castType: SqlType = SqlType.Timestamp(None)
+
+    given castOffsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
+        def castType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    given castVector[T: SqlString]: Cast[T, Vector] with
+        def castType: SqlType = SqlType.Vector

@@ -1,21 +1,20 @@
 package sqala.jdbc
 
 import sqala.dynamic.dsl.{DynamicQuery, NativeSql}
-import sqala.metadata.InsertMacro
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
-import sqala.static.dsl.analysis.AnalysisMacro
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
+import sqala.static.metadata.{FetchPk, InsertMacro}
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
 
-class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: String, Driver <: String](
+class JdbcContext[Url <: String, Username <: String, Password <: String, Driver <: String](
     val dataSource: DataSource, 
-    val dialect: D
+    val dialect: Dialect
 ):
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
         val conn = dataSource.getConnection()
@@ -47,7 +46,7 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         Mirror.ProductOf[A],
         Logger
     ): Int =
-        val i = Insert[A](entity :: Nil)
+        val i = Insert.insertByEntities[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
@@ -55,7 +54,7 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         Mirror.ProductOf[A],
         Logger
     ): Int =
-        val i = Insert[A](entities)
+        val i = Insert.insertByEntities[A](entities)
         val (sql, args) = statementToString(i.tree, dialect, true)
         executeDml(sql, args)
 
@@ -63,7 +62,7 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         Mirror.ProductOf[A],
         Logger
     ): A =
-        val i = Insert[A](entity :: Nil)
+        val i = Insert.insertByEntities[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, dialect, true)
         val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
@@ -75,7 +74,7 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         Mirror.ProductOf[A],
         Logger
     ): Int =
-        val u = Update[A](entity, skipNone)
+        val u = Update.updateByEntity[A](entity, skipNone)
         if u.tree.setList.isEmpty then
             0
         else
@@ -88,15 +87,34 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         Mirror.ProductOf[A],
         Logger
     ): Int =
-        val s = Save[A](entity)
+        val s = Save.saveByEntity[A](entity)
         val (sql, args) = statementToString(s.tree, dialect, true)
         executeDml(sql, args)
+
+    inline def fetchByPrimaryKeys[T](using 
+        fp: FetchPk[T], 
+        d: JdbcDecoder[T],
+        l: Logger
+    )(pks: Seq[fp.R]): List[T] =
+        val tree = fp.createTree(pks)
+        val (sql, args) = queryToString(tree, dialect, true)
+        l(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
+
+    inline def findByPrimaryKey[T](using 
+        fp: FetchPk[T], 
+        d: JdbcDecoder[T],
+        l: Logger
+    )(pk: fp.R): Option[T] =
+        val tree = fp.createTree(pk :: Nil)
+        val (sql, args) = queryToString(tree, dialect, true)
+        l(sql, args)
+        execute(c => jdbcQuery(c, sql, args)).headOption
 
     inline def fetchTo[T](inline query: Query[?])(using 
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        AnalysisMacro.showQuery[D](query)
         val (sql, args) = queryToString(query.tree, dialect, true)
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
@@ -162,7 +180,6 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         JdbcDecoder[T],
         Logger
     ): Page[T] =
-        AnalysisMacro.showPageQuery[D](query)
         val data = if pageSize == 0 then Nil
             else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
         val count = if returnCount then fetch(query.size).head else 0L
@@ -184,7 +201,6 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         d: JdbcDecoder[T],
         l: Logger
     ): Option[T] =
-        AnalysisMacro.showLimitQuery[D](query)
         fetchTo[T](query.take(1)).headOption
 
     inline def find[T](inline query: Query[T])(using 
@@ -195,12 +211,10 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         findTo[r.R](query)
 
     inline def fetchSize[T](inline query: Query[T])(using Logger): Long =
-        AnalysisMacro.showSizeQuery[D](query)
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
     inline def fetchExists(inline query: Query[?])(using Logger): Boolean =
-        AnalysisMacro.showExistsQuery[D](query)
         val existsQuery = query.exists
         fetch(existsQuery).head
 
@@ -215,7 +229,6 @@ class JdbcContext[D <: Dialect, Url <: String, Username <: String, Password <: S
         d: JdbcDecoder[r.R],
         l: Logger
     )(f: Cursor[r.R] => R): Unit =
-        AnalysisMacro.showQuery[D](query)
         val (sql, args) = queryToString(query.tree, dialect, true)
         l(sql, args)
         val conn = dataSource.getConnection()
@@ -266,5 +279,5 @@ object JdbcContext:
         username: String, 
         password: String, 
         driverClassName: String
-    )(using c: JdbcConnection[S]): JdbcContext[dialect.type, url.type, username.type, password.type, driverClassName.type] =
+    )(using c: JdbcConnection[S]): JdbcContext[url.type, username.type, password.type, driverClassName.type] =
         new JdbcContext(c.init(url, username, password, driverClassName), dialect)

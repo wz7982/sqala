@@ -1,29 +1,77 @@
 package sqala.ast.table
 
-import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.SqlQuery
+import sqala.ast.expr.{SqlExpr, SqlJsonPassing, SqlJsonTableColumn, SqlJsonTableErrorBehavior}
+import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 
-enum SqlTable(val alias: Option[SqlTableAlias]):
+enum SqlTable:
     case Standard(
-        name: String, 
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        name: String,
+        period: Option[SqlTablePeriodMode],
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize],
+        sample: Option[SqlTableSample]
+    )
     case Func(
         name: String, 
-        args: List[SqlExpr], 
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        args: List[SqlExpr],
+        lateral: Boolean,
+        withOrd: Boolean,
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
     case SubQuery(
         query: SqlQuery, 
         lateral: Boolean, 
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
+    case Json(
+        expr: SqlExpr,
+        path: SqlExpr,
+        pathAlias: Option[String],
+        passingItems: List[SqlJsonPassing],
+        columns: List[SqlJsonTableColumn],
+        onError: Option[SqlJsonTableErrorBehavior],
+        lateral: Boolean,
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
+    case Graph(
+        name: String,
+        `match`: Option[SqlGraphMatchMode],
+        patterns: List[SqlGraphPattern],
+        where: Option[SqlExpr],
+        rows: Option[SqlGraphRowsMode],
+        columns: List[SqlSelectItem],
+        `export`: Option[SqlGraphExportMode],
+        lateral: Boolean,
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
     case Join(
         left: SqlTable, 
         joinType: SqlJoinType, 
         right: SqlTable, 
-        condition: Option[SqlJoinCondition],
-        override val alias: Option[SqlTableAlias]
-    ) extends SqlTable(alias)
+        condition: Option[SqlJoinCondition]
+    )
 
-case class SqlTableAlias(tableAlias: String, columnAlias: List[String] = Nil)
+case class SqlTableAlias(tableAlias: String, columnAlias: List[String])
+
+case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
+
+enum SqlTableSampleMode(val mode: String):
+    case Bernoulli extends SqlTableSampleMode("BERNOULLI")
+    case System extends SqlTableSampleMode("SYSTEM")
+
+enum SqlTablePeriodMode:
+    case ForSystemTimeAsOf(expr: SqlExpr)
+    case ForSystemTimeBetween(
+        mode: Option[SqlTablePeriodBetweenMode], 
+        start: SqlExpr,
+        end: SqlExpr
+    )
+    case ForSystemTimeFrom(from: SqlExpr, to: SqlExpr)
+
+enum SqlTablePeriodBetweenMode(val mode: String):
+    case Asymmetric extends SqlTablePeriodBetweenMode("ASYMMETRIC")
+    case Symmetric extends SqlTablePeriodBetweenMode("SYMMETRIC")

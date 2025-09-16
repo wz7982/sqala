@@ -1,8 +1,8 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlCastType, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMode}
 import sqala.ast.statement.SqlStatement
-import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.ast.table.SqlTableAlias
 
 class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
     override def printCteRecursive(): Unit = {}
@@ -10,7 +10,8 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
-        sqlBuilder.append(s" ${leftQuote}t1$rightQuote")
+        sqlBuilder.append(" ")
+        printIdent("t1")
 
         sqlBuilder.append(" USING (")
         sqlBuilder.append("SELECT ")
@@ -21,14 +22,19 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s" FROM ${leftQuote}dual$rightQuote) ${leftQuote}t2$rightQuote")
+        sqlBuilder.append(" FROM ")
+        printIdent("dual")
+        sqlBuilder.append(") ")
+        printIdent("t2")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             if index < upsert.pkList.size - 1 then
                 sqlBuilder.append(" AND ")
@@ -36,10 +42,12 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
 
         sqlBuilder.append(" WHEN MATCHED THEN UPDATE SET ")
         printList(upsert.updateList): u =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(u)
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(u)
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
@@ -51,68 +59,70 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
-        expr.operator match
-            case SqlBinaryOperator.EuclideanDistance =>
-                val func = 
-                    SqlExpr.Func("L2_DISTANCE", expr.left :: expr.right :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.CosineDistance =>
-                val func =
-                    SqlExpr.Func("COSINE_DISTANCE", expr.left :: expr.right :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.DotDistance =>
-                val func =
-                    SqlExpr.Func("INNER_PRODUCT", expr.left :: expr.right :: Nil)
-                printExpr(SqlExpr.Binary(func, SqlBinaryOperator.Times, SqlExpr.NumberLiteral(-1)))
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
+        expr.mode match
+            case SqlVectorDistanceMode.Euclidean =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "L2_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlVectorDistanceMode.Cosine =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "COSINE_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlVectorDistanceMode.Dot =>
+                printExpr(
+                    SqlExpr.Binary(
+                        SqlExpr.StandardFunc(
+                            "INNER_PRODUCT", 
+                            expr.left :: expr.right :: Nil,
+                            None,
+                            Nil,
+                            Nil,
+                            None
+                        ),
+                        SqlBinaryOperator.Times,
+                        SqlExpr.NumberLiteral(-1)
+                    )
+                )
+            case SqlVectorDistanceMode.Manhattan =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "L1_DISTANCE", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(None) => 
+                sqlBuilder.append("VARCHAR(4000)")
+            case SqlType.Long =>
+                sqlBuilder.append("INT")
             case _ =>
-                super.printBinaryExpr(expr) 
-
-    override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
-            sqlBuilder.append("LISTAGG")
-            sqlBuilder.append("(")
-            printList(expr.args)(printExpr)
-            sqlBuilder.append(")")
-            if expr.orderBy.nonEmpty then
-                sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-                printList(expr.orderBy)(printOrderingItem)
-                sqlBuilder.append(")")
-        else super.printFuncExpr(expr)
-
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "VARCHAR"
-            case SqlCastType.Int4 => "INTEGER"
-            case SqlCastType.Int8 => "NUMBER"
-            case SqlCastType.Float4 => "FLOAT"
-            case SqlCastType.Float8 => "BINARY_DOUBLE"
-            case SqlCastType.DateTime => "TIMESTAMP"
-            case SqlCastType.Json => "JSON"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.unit)
+                super.printType(`type`)
 
     override def printTableAlias(alias: SqlTableAlias): Unit =
-        sqlBuilder.append(s" $leftQuote${alias.tableAlias}$rightQuote")
+        sqlBuilder.append(" ")
+        printIdent(alias.tableAlias)
         if alias.columnAlias.nonEmpty then
             sqlBuilder.append("(")
-            printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            printList(alias.columnAlias)(i => printIdent(i))
             sqlBuilder.append(")")
-
-    override def printTable(table: SqlTable): Unit =
-        table match
-            case SqlTable.Func(functionName, args, alias) =>
-                sqlBuilder.append("TABLE(")
-                sqlBuilder.append(s"$functionName")
-                sqlBuilder.append("(")
-                printList(args)(printExpr)
-                sqlBuilder.append("))")
-                for a <- alias do
-                    printTableAlias(a)
-            case _ => super.printTable(table)

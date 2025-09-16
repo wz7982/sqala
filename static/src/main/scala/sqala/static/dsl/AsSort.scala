@@ -2,8 +2,8 @@ package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrdering
-import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
+import sqala.static.metadata.AsSqlExpr
 
 import scala.annotation.implicitNotFound
 

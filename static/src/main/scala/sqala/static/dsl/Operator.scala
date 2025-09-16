@@ -1,10 +1,10 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
+import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
-import sqala.metadata.{AsSqlExpr, DateTime, Json, Number, Vector}
+import sqala.static.metadata.*
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
@@ -33,6 +33,25 @@ extension [T: AsExpr as at](self: T)
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.NotEqual, 
+                ar.asExpr(that).asSqlExpr
+            )
+        )
+
+    def isNull(using QueryContext): Expr[Boolean] =
+        Expr(
+            SqlExpr.NullTest(at.asExpr(self).asSqlExpr, false)
+        )
+
+    @targetName("eqIgnoreNulls")
+    def <=>[R](that: R)(using
+        ar: AsRightOperand[R],
+        c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
+        qc: QueryContext
+    ): Expr[Boolean] =
+        Expr(
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr, 
+                SqlBinaryOperator.IsNotDistinctFrom, 
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -123,9 +142,9 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("plus")
     def +[R](that: R)(using
-        nt: Number[at.R],
+        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: Number[ar.R],
+        nr: SqlNumber[ar.R],
         r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
@@ -137,17 +156,17 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    @targetName("plus")
-    def +(interval: TimeInterval)(using
-        d: DateTime[at.R],
-        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
+    def plusInterval[R](that: R)(using
+        d: SqlDateTime[at.R],
+        ar: AsExpr[R],
+        i: SqlInterval[ar.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Plus, 
-                SqlExpr.Interval(interval.value, interval.unit)
+                ar.asExpr(that).asSqlExpr
             )
         )
 
@@ -165,25 +184,25 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    @targetName("minus")
-    def -(interval: TimeInterval)(using
-        d: DateTime[at.R],
-        r: Return[Unwrap[at.R, Option], LocalDateTime, IsOption[at.R]],
+    def minusInterval[R](that: R)(using
+        d: SqlDateTime[at.R],
+        ar: AsExpr[R],
+        i: SqlInterval[ar.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
                 SqlBinaryOperator.Minus, 
-                SqlExpr.Interval(interval.value, interval.unit)
+                ar.asExpr(that).asSqlExpr
             )
         )
 
     @targetName("times")
     def *[R](that: R)(using
-        nt: Number[at.R],
+        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: Number[ar.R],
+        nr: SqlNumber[ar.R],
         r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
@@ -197,9 +216,9 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("div")
     def /[R](that: R)(using
-        nt: Number[at.R],
+        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: Number[ar.R],
+        nr: SqlNumber[ar.R],
         qc: QueryContext
     ): Expr[Option[BigDecimal]] =
         Expr(
@@ -212,32 +231,35 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("mod")
     def %[R](that: R)(using
-        nt: Number[at.R],
+        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: Number[ar.R],
+        nr: SqlNumber[ar.R],
         qc: QueryContext
     ): Expr[Option[BigDecimal]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Mod, 
-                ar.asExpr(that).asSqlExpr
+            SqlExpr.StandardFunc(
+                "MOD",
+                at.asExpr(self).asSqlExpr :: ar.asExpr(that).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
             )
         )
 
     @targetName("positive")
-    def unary_+(using Number[at.R], QueryContext): Expr[at.R] =
+    def unary_+(using SqlNumber[at.R], QueryContext): Expr[at.R] =
         Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Positive))
 
     @targetName("negative")
-    def unary_-(using Number[at.R], QueryContext): Expr[at.R] =
+    def unary_-(using SqlNumber[at.R], QueryContext): Expr[at.R] =
         Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Negative))
 
     @targetName("and")
     def &&[R](that: R)(using
-        rt: at.R <:< (Boolean | Option[Boolean]),
+        rt: SqlBoolean[at.R],
         ar: AsExpr[R],
-        rr: ar.R <:< (Boolean | Option[Boolean]),
+        rr: SqlBoolean[ar.R],
         qc: QueryContext
     ): Expr[Option[Boolean]] =
         Expr(
@@ -250,9 +272,9 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("or")
     def ||[R](that: R)(using
-        rt: at.R <:< (Boolean | Option[Boolean]),
+        rt: SqlBoolean[at.R],
         ar: AsExpr[R],
-        rr: ar.R <:< (Boolean | Option[Boolean]),
+        rr: SqlBoolean[ar.R],
         qc: QueryContext
     ): Expr[Option[Boolean]] =
         Expr(
@@ -264,13 +286,13 @@ extension [T: AsExpr as at](self: T)
         )
 
     @targetName("not")
-    def unary_!(using at.R <:< (Boolean | Option[Boolean]), QueryContext): Expr[Option[Boolean]] =
+    def unary_!(using SqlBoolean[at.R], QueryContext): Expr[Option[Boolean]] =
         Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Not))
 
     def like[R](that: R)(using
-        rt: at.R <:< (String | Option[String]),
+        rt: SqlString[at.R],
         ar: AsExpr[R],
-        rr: ar.R <:< (String | Option[String]),
+        rr: SqlString[ar.R],
         qc: QueryContext
     ): Expr[Option[Boolean]] =
         Expr(
@@ -282,28 +304,28 @@ extension [T: AsExpr as at](self: T)
         )
 
     def contains(value: String)(using 
-        at.R <:< (String | Option[String]),
+        SqlString[at.R],
         QueryContext
     ): Expr[Option[Boolean]] =
         like(s"%$value%")
 
     def startsWith(value: String)(using 
-        at.R <:< (String | Option[String]),
+        SqlString[at.R],
         QueryContext
     ): Expr[Option[Boolean]] =
         like(s"$value%")
 
     def endsWith(value: String)(using 
-        at.R <:< (String | Option[String]),
+        SqlString[at.R],
         QueryContext
     ): Expr[Option[Boolean]] =
         like(s"%$value")
 
     @targetName("concatString")
     def ++[R](that: R)(using
-        rt: at.R <:< (String | Option[String]),
+        rt: SqlString[at.R],
         ar: AsExpr[R],
-        rr: ar.R <:< (String | Option[String]),
+        rr: SqlString[ar.R],
         qc: QueryContext
     ): Expr[Option[String]] =
         Expr(
@@ -314,118 +336,36 @@ extension [T: AsExpr as at](self: T)
             )
         )
 
-    @targetName("json")
-    def ->(path: Int | String)(using 
-        at.R <:< (Json | Option[Json]),
+    def isJson(using
+        SqlString[at.R],
         QueryContext
-    ): Expr[Option[Json]] =
+    ): Expr[Option[Boolean]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Json, 
-                path match
-                    case p: Int => SqlExpr.NumberLiteral(p)
-                    case p: String => SqlExpr.StringLiteral(p)
-            )
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, None, None)
         )
 
-    @targetName("jsonText")
-    def ->>(path: Int | String)(using 
-        at.R <:< (Json | Option[Json]),
+    def isJsonObject(using
+        SqlString[at.R],
         QueryContext
-    ): Expr[Option[String]] =
+    ): Expr[Option[Boolean]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.JsonText, 
-                path match
-                    case p: Int => SqlExpr.NumberLiteral(p)
-                    case p: String => SqlExpr.StringLiteral(p)
-            )
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Object), None)
         )
 
-    @targetName("euclideanDistance")
-    def <->[R](that: R)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
+    def isJsonArray(using
+        SqlString[at.R],
+        QueryContext
+    ): Expr[Option[Boolean]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.EuclideanDistance, 
-                ar.asExpr(that).asSqlExpr
-            )
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Array), None)
         )
 
-    @targetName("euclideanDistance")
-    def <->(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
+    def isJsonScalar(using
+        SqlString[at.R],
+        QueryContext
+    ): Expr[Option[Boolean]] =
         Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.EuclideanDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
-            )
-        )
-
-    @targetName("cosineDistance")
-    def <=>[R](that: R)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.CosineDistance, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    @targetName("cosineDistance")
-    def <=>(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.CosineDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
-            )
-        )
-
-    @targetName("dotDistance")
-    def <#>[R](that: R)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        ar: AsExpr[R],
-        rr: ar.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.DotDistance, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    @targetName("dotDistance")
-    def <#>(that: String)(using
-        rt: at.R <:< (Vector | Option[Vector]),
-        qc: QueryContext
-    ): Expr[Option[Float]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.DotDistance, 
-                summon[AsSqlExpr[Vector]].asSqlExpr(Vector(that))
-            )
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Scalar), None)
         )
 
     def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
@@ -445,3 +385,27 @@ extension [T: AsExpr as at](self: T)
 
     def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
+
+extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))
+    def overlaps[C: AsExpr as ac, D: AsExpr as ad](that: (C, D))(using
+        SqlDateTime[aa.R],
+        SqlDateTime[ab.R],
+        SqlDateTime[ac.R],
+        SqlDateTime[ad.R],
+        QueryContext
+    ): Expr[Option[Boolean]] =
+        Expr(
+            SqlExpr.Binary(
+                SqlExpr.Tuple(
+                    aa.asExpr(self._1).asSqlExpr :: 
+                    ab.asExpr(self._2).asSqlExpr ::
+                    Nil
+                ),
+                SqlBinaryOperator.Overlaps, 
+                SqlExpr.Tuple(
+                    ac.asExpr(that._1).asSqlExpr :: 
+                    ad.asExpr(that._2).asSqlExpr ::
+                    Nil
+                )
+            )
+        )

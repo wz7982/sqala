@@ -1,12 +1,11 @@
 package sqala.dynamic.dsl
 
 import sqala.ast.expr.SqlBinaryOperator.*
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.expr.SqlUnaryOperator.{Negative, Not, Positive}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlWindow}
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.SqlSelectItem
 import sqala.dynamic.parser.SqlParser
-import sqala.metadata.AsSqlExpr
 
 import scala.annotation.targetName
 
@@ -16,18 +15,10 @@ case class Expr(sqlExpr: SqlExpr):
         case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.NullTest(sqlExpr, false))
         case _ => Expr(SqlExpr.Binary(sqlExpr, Equal, expr.sqlExpr))
 
-    @targetName("eq")
-    def ==[T: AsSqlExpr as a](value: T): Expr =
-        ==(Expr(a.asSqlExpr(value)))
-
     @targetName("ne")
     def !=(expr: Expr): Expr = expr match
         case Expr(SqlExpr.NullLiteral) => Expr(SqlExpr.NullTest(sqlExpr, true))
         case _ => Expr(SqlExpr.Binary(sqlExpr, NotEqual, expr.sqlExpr))
-
-    @targetName("ne")
-    def !=[T: AsSqlExpr as a](value: T): Expr =
-        !=(Expr(a.asSqlExpr(value)))
 
     @targetName("gt")
     def >(expr: Expr): Expr = expr match
@@ -67,9 +58,6 @@ case class Expr(sqlExpr: SqlExpr):
     @targetName("div")
     def /(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Div, expr.sqlExpr))
 
-    @targetName("mod")
-    def %(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Mod, expr.sqlExpr))
-
     @targetName("positive")
     def unary_+ : Expr = Expr(SqlExpr.Unary(sqlExpr, Positive))
 
@@ -102,15 +90,16 @@ case class Expr(sqlExpr: SqlExpr):
 
     def like(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Like, expr.sqlExpr))
 
-    def over: Expr = Expr(SqlExpr.Window(sqlExpr, Nil, Nil, None))
+    def over: Expr = Expr(SqlExpr.Window(sqlExpr, SqlWindow(Nil, Nil, None)))
 
     def partitionBy(items: Expr*): Expr = sqlExpr match
-        case SqlExpr.Window(expr, _, orderBy, frame) => Expr(SqlExpr.Window(expr, items.toList.map(_.sqlExpr), orderBy, frame))
+        case SqlExpr.Window(expr, SqlWindow(_, orderBy, frame)) => 
+            Expr(SqlExpr.Window(expr, SqlWindow(items.toList.map(_.sqlExpr), orderBy, frame)))
         case _ => this
 
     def orderBy(items: OrderBy*): Expr = sqlExpr match
-        case SqlExpr.Window(expr, partitionBy, _, frame) =>
-            Expr(SqlExpr.Window(expr, partitionBy, items.toList.map(i => i.asSqlOrderBy), frame))
+        case SqlExpr.Window(expr, SqlWindow(partitionBy, _, frame)) =>
+            Expr(SqlExpr.Window(expr, SqlWindow(partitionBy, items.toList.map(i => i.asSqlOrderBy), frame)))
         case _ => this
 
     def asc: OrderBy = OrderBy(this, SqlOrdering.Asc, None)
@@ -130,14 +119,8 @@ case class Expr(sqlExpr: SqlExpr):
         SelectItem(this, Some(name))
 
 object Expr:
-    given valueToExpr[T](using a: AsSqlExpr[T]): Conversion[T, Expr] =
-        v => Expr(a.asSqlExpr(v))
-
     given queryToExpr: Conversion[DynamicQuery, Expr] =
         q => Expr(SqlExpr.SubQuery(q.tree))
-
-    given listToExprList[T](using a: AsSqlExpr[T]): Conversion[List[T], List[Expr]] =
-        l => l.map(i => Expr(a.asSqlExpr(i)))
 
     given exprToSelectItem: Conversion[Expr, SelectItem] = SelectItem(_, None)
 

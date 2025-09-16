@@ -79,14 +79,27 @@ class Select(val tree: SqlQuery.Select) extends DynamicQuery:
     def distinct: Select = new Select(tree.copy(quantifier = Some(SqlQuantifier.Distinct)))
 
 object Select:
-    def apply(): Select = new Select(SqlQuery.Select(select = Nil, from = Nil))
+    def apply(): Select = new Select(
+        SqlQuery.Select(
+            None,
+            Nil, 
+            Nil,
+            None,
+            None,
+            None,
+            Nil,
+            Nil,
+            None,
+            None
+        )
+    )
 
 class Union(
     private[sqala] val left: DynamicQuery,
     private[sqala] val operator: SqlSetOperator,
     private[sqala] val right: DynamicQuery
 ) extends DynamicQuery:
-    override def tree: SqlQuery = SqlQuery.Set(left.tree, operator, right.tree)
+    override def tree: SqlQuery = SqlQuery.Set(left.tree, operator, right.tree, Nil, None, None)
 
 class With(val tree: SqlQuery.Cte) extends DynamicQuery:
     def recursive: With = new With(tree.copy(recursive = true))
@@ -97,4 +110,4 @@ object With:
     def apply(items: List[SubQueryTable]): With =
         val queries = items.map: i =>
             SqlWithItem(i.__alias__, i.__query__.tree, Nil)
-        new With(tree = SqlQuery.Cte(queries, false, queries.head.query))
+        new With(tree = SqlQuery.Cte(queries, false, queries.head.query, None))
