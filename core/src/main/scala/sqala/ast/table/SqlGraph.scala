@@ -15,10 +15,6 @@ enum SqlGraphRowsMode:
         inPaths: List[String]
     )
 
-enum SqlGraphColumn:
-    case Asterisk(tableName: Option[String])
-    case Expr(expr: SqlExpr, alias: Option[String])
-
 enum SqlGraphExportMode:
     case AllSingletons(exceptPatterns: List[String])
     case Singletons(patterns: List[String])
@@ -38,49 +34,47 @@ enum SqlGraphDifferentMode(val mode: String):
     case EdgeBindings extends SqlGraphDifferentMode("EDGE BINDINGS")
     case Edges extends SqlGraphDifferentMode("EDGES")
 
-enum SqlGraphPatternTerm(val quantifier: Option[SqlGraphQuantifier]):
-    case Pattern(
-        name: Option[String],
+case class SqlGraphPattern(
+    name: Option[String],
+    term: SqlGraphPatternTerm
+)
+
+enum SqlGraphPatternTerm:
+    case Quantified(
         term: SqlGraphPatternTerm,
-        where: Option[SqlExpr],
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        quantifier: SqlGraphQuantifier
+    )
     case Vertex(
         name: Option[String],
-        label: Option[SqlGraphLabelTerm],
-        where: Option[SqlExpr],
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        label: Option[SqlGraphLabel],
+        where: Option[SqlExpr]
+    )
     case Edge(
         leftSymbol: SqlGraphSymbol,
         name: Option[String],
-        label: Option[SqlGraphLabelTerm],
+        label: Option[SqlGraphLabel],
         where: Option[SqlExpr],
-        rightSymbol: SqlGraphSymbol,
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        rightSymbol: SqlGraphSymbol
+    )
     case And(
         left: SqlGraphPatternTerm, 
-        right: SqlGraphPatternTerm,
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        right: SqlGraphPatternTerm
+    )
     case Or(
         left: SqlGraphPatternTerm, 
-        right: SqlGraphPatternTerm,
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        right: SqlGraphPatternTerm
+    )
     case Alternation(
         left: SqlGraphPatternTerm, 
-        right: SqlGraphPatternTerm,
-        override val quantifier: Option[SqlGraphQuantifier]
-    ) extends SqlGraphPatternTerm(quantifier)
+        right: SqlGraphPatternTerm
+    )
 
-enum SqlGraphLabelTerm:
+enum SqlGraphLabel:
     case Label(name: String)
     case Percent
-    case Not(term: SqlGraphLabelTerm)
-    case And(left: SqlGraphLabelTerm, right: SqlGraphLabelTerm)
-    case Or(left: SqlGraphLabelTerm, right: SqlGraphLabelTerm)
+    case Not(label: SqlGraphLabel)
+    case And(left: SqlGraphLabel, right: SqlGraphLabel)
+    case Or(left: SqlGraphLabel, right: SqlGraphLabel)
 
 enum SqlGraphQuantifier:
     case Asterisk

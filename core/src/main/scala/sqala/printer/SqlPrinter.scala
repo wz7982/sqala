@@ -329,24 +329,10 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append("]")
 
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
-        expr.operator match
-            case SqlUnaryOperator.Not =>
-                sqlBuilder.append(expr.operator.operator)
-                sqlBuilder.append(" ")
-                printExpr(expr.expr)
-            case _ =>
-                val hasBrackets = expr.expr match
-                    case SqlExpr.NullLiteral => false
-                    case SqlExpr.Column(_, _) => false
-                    case SqlExpr.NumberLiteral(_) => false
-                    case _ => true
-                sqlBuilder.append(expr.operator.operator)
-                if hasBrackets then
-                    sqlBuilder.append("(")
-                    printExpr(expr.expr)
-                    sqlBuilder.append(")")
-                else
-                    printExpr(expr.expr)
+        sqlBuilder.append(expr.operator.operator)
+        sqlBuilder.append("(")
+        printExpr(expr.expr)
+        sqlBuilder.append(")")
 
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
@@ -1169,9 +1155,241 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             printMatchRecognize(m)
 
     def printGraphTable(table: SqlTable.Graph): Unit =
+        def printPattern(pattern: SqlGraphPattern): Unit =
+            for n <- pattern.name do
+                printIdent(n)
+                sqlBuilder.append(" = ")
+            printPatternTerm(pattern.term)
+
+        def printPatternTerm(term: SqlGraphPatternTerm): Unit =
+            term match
+                case SqlGraphPatternTerm.Quantified(term, quantifier) =>
+                    term match
+                        case _: SqlGraphPatternTerm.And | SqlGraphPatternTerm.Or | SqlGraphPatternTerm.Alternation =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(term)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(term)
+                    printPatternQuantifier(quantifier)
+                case SqlGraphPatternTerm.Vertex(name, label, where) =>
+                    sqlBuilder.append("(")
+                    for n <- name do
+                        printIdent(n)
+                    for l <- label do
+                        if name.isDefined then
+                            sqlBuilder.append(" ")
+                        sqlBuilder.append(" IS ")
+                        printPatternLabel(l)
+                    for w <- where do
+                        if name.isDefined || label.isDefined then
+                            sqlBuilder.append(" ")
+                        sqlBuilder.append(" WHERE ")
+                        printExpr(w)
+                    sqlBuilder.append(")")
+                case SqlGraphPatternTerm.Edge(leftSymbol, name, label, where, rightSymbol) =>
+                    sqlBuilder.append(leftSymbol.symbol)
+                    sqlBuilder.append("[")
+                    for n <- name do
+                        printIdent(n)
+                    for l <- label do
+                        if name.isDefined then
+                            sqlBuilder.append(" ")
+                        sqlBuilder.append(" IS ")
+                        printPatternLabel(l)
+                    for w <- where do
+                        if name.isDefined || label.isDefined then
+                            sqlBuilder.append(" ")
+                        sqlBuilder.append(" WHERE ")
+                        printExpr(w)
+                    sqlBuilder.append("]")
+                    sqlBuilder.append(rightSymbol.symbol)
+                case SqlGraphPatternTerm.And(left, right) =>
+                    left match
+                        case _: SqlGraphPatternTerm.Or | SqlGraphPatternTerm.Alternation =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(left)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(left)
+                    sqlBuilder.append(" ")
+                    right match
+                        case _: SqlGraphPatternTerm.Or | SqlGraphPatternTerm.Alternation =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(right)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(right)
+                case SqlGraphPatternTerm.Or(left, right) =>
+                    left match
+                        case _: SqlGraphPatternTerm.Alternation =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(left)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(left)
+                    sqlBuilder.append(" | ")
+                    right match
+                        case _: SqlGraphPatternTerm.Alternation =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(right)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(right)
+                case SqlGraphPatternTerm.Alternation(left, right) =>
+                    left match
+                        case _: SqlGraphPatternTerm.Or =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(left)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(left)
+                    sqlBuilder.append(" |+| ")
+                    right match
+                        case _: SqlGraphPatternTerm.Or =>
+                            sqlBuilder.append("(")
+                            printPatternTerm(right)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternTerm(right)
+                    
+        def printPatternQuantifier(quantifier: SqlGraphQuantifier): Unit =
+            quantifier match
+                case SqlGraphQuantifier.Asterisk =>
+                    sqlBuilder.append("*")
+                case SqlGraphQuantifier.Question =>
+                    sqlBuilder.append("?")
+                case SqlGraphQuantifier.Plus =>
+                    sqlBuilder.append("+")
+                case SqlGraphQuantifier.Between(start, end) =>
+                    sqlBuilder.append("{")
+                    for s <- start do
+                        printExpr(s)
+                    sqlBuilder.append(",")
+                    for e <- end do
+                        printExpr(e)
+                    sqlBuilder.append("}")
+                case SqlGraphQuantifier.Quantity(quantity) =>
+                    sqlBuilder.append("{")
+                    printExpr(quantity)
+                    sqlBuilder.append("}")
+
+        def printPatternLabel(label: SqlGraphLabel): Unit =
+            label match
+                case SqlGraphLabel.Label(name) =>
+                    printIdent(name)
+                case SqlGraphLabel.Percent =>
+                    sqlBuilder.append("%")
+                case SqlGraphLabel.Not(label) =>
+                    sqlBuilder.append("!(")
+                    printPatternLabel(label)
+                    sqlBuilder.append(")")
+                case SqlGraphLabel.And(left, right) =>
+                    left match
+                        case _: SqlGraphLabel.Or =>
+                            sqlBuilder.append("(")
+                            printPatternLabel(left)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternLabel(left)
+                    sqlBuilder.append(" & ")
+                    right match
+                        case _: SqlGraphLabel.Or =>
+                            sqlBuilder.append("(")
+                            printPatternLabel(right)
+                            sqlBuilder.append(")")
+                        case _ =>
+                            printPatternLabel(right)
+                case SqlGraphLabel.Or(left, right) =>
+                    printPatternLabel(left)
+                    sqlBuilder.append(" | ")
+                    printPatternLabel(right)
+
         if table.lateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("GRAPH_TABLE(\n")
-        // TODO
+        push()
+        printSpace()
+        printIdent(table.name)
+        sqlBuilder.append(",\n")
+
+        printSpace()
+        sqlBuilder.append("MATCH")
+        for m <- table.`match` do
+            sqlBuilder.append(" ")
+            m match
+                case SqlGraphMatchMode.Repeatable(mode) =>
+                    sqlBuilder.append("REPEATABLE ")
+                    sqlBuilder.append(mode.mode)
+                case SqlGraphMatchMode.Different(mode) =>
+                    sqlBuilder.append("DIFFERENT ")
+                    sqlBuilder.append(mode.mode)
+        sqlBuilder.append("\n")
+        printList(table.patterns, ",\n")(printPattern |> printWithSpace)
+
+        for w <- table.where do
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("WHERE\n")
+            w |> printWithSpace(printExpr)
+
+        for r <- table.rows do
+            sqlBuilder.append("\n")
+            printSpace()
+            r match
+                case SqlGraphRowsMode.Match =>
+                    sqlBuilder.append("ONE ROW PER MATCH")
+                case SqlGraphRowsMode.Vertex(name, inPaths) =>
+                    sqlBuilder.append("ONE ROW PER VERTEX (")
+                    printIdent(name)
+                    sqlBuilder.append(")")
+                    if inPaths.nonEmpty then
+                        sqlBuilder.append(" IN (")
+                        printList(inPaths)(printIdent)
+                        sqlBuilder.append(")")
+                case SqlGraphRowsMode.Step(v1, e, v2, inPaths) =>
+                    sqlBuilder.append("ONE ROW PER STEP (")
+                    printIdent(v1)
+                    sqlBuilder.append(", ")
+                    printIdent(e)
+                    sqlBuilder.append(", ")
+                    printIdent(v2)
+                    sqlBuilder.append(")")
+                    if inPaths.nonEmpty then
+                        sqlBuilder.append(" IN (")
+                        printList(inPaths)(printIdent)
+                        sqlBuilder.append(")")
+
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append("COLUMNS(\n")
+        printList(table.columns, ",\n")(printSelectItem |> printWithSpace)
+        printSpace()
+        sqlBuilder.append(")")
+
+        for e <- table.`export` do
+            sqlBuilder.append("\n")
+            printSpace()
+            e match
+                case SqlGraphExportMode.AllSingletons(exceptPatterns) =>
+                    sqlBuilder.append("EXPORT ALL SINGLETONS EXCEPT (")
+                    printList(exceptPatterns)(printIdent)
+                    sqlBuilder.append(")")
+                case SqlGraphExportMode.Singletons(patterns) =>
+                    sqlBuilder.append("EXPORT SINGLETONS (")
+                    printList(patterns)(printIdent)
+                    sqlBuilder.append(")")
+                case SqlGraphExportMode.NoSingletons =>
+                    sqlBuilder.append("EXPORT NO SINGLETONS")
+
+        pull()
+        sqlBuilder.append("\n")
+        printSpace()
+        sqlBuilder.append(")")
+        for a <- table.alias do
+            printTableAlias(a)
+        for m <- table.matchRecognize do
+            sqlBuilder.append(" ")
+            printMatchRecognize(m)
 
     def printJoinTable(table: SqlTable.Join): Unit =
         printTable(table.left)

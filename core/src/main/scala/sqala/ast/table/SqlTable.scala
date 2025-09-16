@@ -1,7 +1,7 @@
 package sqala.ast.table
 
 import sqala.ast.expr.{SqlExpr, SqlJsonPassing, SqlJsonTableColumn, SqlJsonTableErrorBehavior}
-import sqala.ast.statement.SqlQuery
+import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 
 enum SqlTable:
     case Standard(
@@ -37,9 +37,12 @@ enum SqlTable:
         matchRecognize: Option[SqlMatchRecognize]
     )
     case Graph(
-        reference: String,
+        name: String,
+        `match`: Option[SqlGraphMatchMode],
+        patterns: List[SqlGraphPattern],
+        where: Option[SqlExpr],
         rows: Option[SqlGraphRowsMode],
-        columns: List[SqlGraphColumn],
+        columns: List[SqlSelectItem],
         `export`: Option[SqlGraphExportMode],
         lateral: Boolean,
         alias: Option[SqlTableAlias],
