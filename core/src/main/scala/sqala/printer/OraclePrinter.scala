@@ -10,7 +10,8 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
-        sqlBuilder.append(s" ${leftQuote}t1$rightQuote")
+        sqlBuilder.append(" ")
+        printIdent("t1")
 
         sqlBuilder.append(" USING (")
         sqlBuilder.append("SELECT ")
@@ -21,14 +22,19 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s" FROM ${leftQuote}dual$rightQuote) ${leftQuote}t2$rightQuote")
+        sqlBuilder.append(" FROM ")
+        printIdent("dual")
+        sqlBuilder.append(") ")
+        printIdent("t2")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             if index < upsert.pkList.size - 1 then
                 sqlBuilder.append(" AND ")
@@ -36,10 +42,12 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
 
         sqlBuilder.append(" WHEN MATCHED THEN UPDATE SET ")
         printList(upsert.updateList): u =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(u)
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(u)
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")
@@ -112,8 +120,9 @@ class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(
                 super.printType(`type`)
 
     override def printTableAlias(alias: SqlTableAlias): Unit =
-        sqlBuilder.append(s" $leftQuote${alias.tableAlias}$rightQuote")
+        sqlBuilder.append(" ")
+        printIdent(alias.tableAlias)
         if alias.columnAlias.nonEmpty then
             sqlBuilder.append("(")
-            printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            printList(alias.columnAlias)(i => printIdent(i))
             sqlBuilder.append(")")

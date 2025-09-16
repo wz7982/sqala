@@ -11,7 +11,8 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)
-        sqlBuilder.append(s" ${leftQuote}t1$rightQuote")
+        sqlBuilder.append(" ")
+        printIdent("t1")
 
         sqlBuilder.append(" USING (")
         sqlBuilder.append("SELECT ")
@@ -22,14 +23,17 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
             if index < upsert.columns.size - 1 then
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
-        sqlBuilder.append(s") ${leftQuote}t2$rightQuote")
+        sqlBuilder.append(") ")
+        printIdent("t1")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(upsert.pkList(index))
             if index < upsert.pkList.size - 1 then
                 sqlBuilder.append(" AND ")
@@ -37,10 +41,12 @@ class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enab
 
         sqlBuilder.append(" WHEN MATCHED THEN UPDATE SET ")
         printList(upsert.updateList): u =>
-            sqlBuilder.append(s"${leftQuote}t1$rightQuote.")
+            printIdent("t1")
+            sqlBuilder.append(".")
             printExpr(u)
             sqlBuilder.append(" = ")
-            sqlBuilder.append(s"${leftQuote}t2$rightQuote.")
+            printIdent("t2")
+            sqlBuilder.append(".")
             printExpr(u)
 
         sqlBuilder.append(" WHEN NOT MATCHED THEN INSERT (")

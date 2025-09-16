@@ -194,10 +194,10 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
         def printWithItem(item: SqlWithItem): Unit =
             printSpace()
-            sqlBuilder.append(s"$leftQuote${item.name}$rightQuote")
+            printIdent(item.name)
             if item.columnNames.nonEmpty then
                 sqlBuilder.append("(")
-                printList(item.columnNames)(c => sqlBuilder.append(s"$leftQuote$c$rightQuote"))
+                printList(item.columnNames)(c => printIdent(c))
                 sqlBuilder.append(")")
             sqlBuilder.append(" AS ")
             push()
@@ -263,8 +263,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         for n <- expr.tableName do
-            sqlBuilder.append(s"$leftQuote$n$rightQuote.")
-        sqlBuilder.append(s"$leftQuote${expr.columnName}$rightQuote")
+            printIdent(n)
+            sqlBuilder.append(".")
+        printIdent(expr.columnName)
 
     def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
 
@@ -273,7 +274,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("?")
             args.addOne(expr.string)
         else
-            sqlBuilder.append(s"'${expr.string}'")
+            sqlBuilder.append("'")
+            sqlBuilder.append(expr.string)
+            sqlBuilder.append("'")
 
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         if enableJdbcPrepare then
@@ -299,7 +302,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         else
             sqlBuilder.append(expr.unit.unit)
             sqlBuilder.append(" ")
-            sqlBuilder.append(s"'${expr.time}'")
+            sqlBuilder.append("'")
+            sqlBuilder.append(expr.time)
+            sqlBuilder.append("'")
 
     def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
         sqlBuilder.append("INTERVAL '")
@@ -363,7 +368,9 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         else
             printExpr(expr.left)
 
-        sqlBuilder.append(s" ${expr.operator.operator} ")
+        sqlBuilder.append(" ")
+        sqlBuilder.append(expr.operator.operator)
+        sqlBuilder.append(" ")
 
         if hasBracketsRight(expr, expr.right) then
             sqlBuilder.append("(")
@@ -462,7 +469,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(maxLength) =>
-                sqlBuilder.append(s"VARCHAR${maxLength.map(l => s"($l)").getOrElse("")}")
+                sqlBuilder.append("VARCHAR")
+                for l <- maxLength do
+                    sqlBuilder.append("(")
+                    sqlBuilder.append(l)
+                    sqlBuilder.append(")")
             case SqlType.Int =>
                 sqlBuilder.append("INTEGER")
             case SqlType.Long =>
@@ -472,13 +483,25 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             case SqlType.Double =>
                 sqlBuilder.append("DOUBLE PRECISION")
             case SqlType.Decimal(precision) =>
-                sqlBuilder.append(s"DECIMAL${precision.map((p, s) => s"($p, $s)").getOrElse("")}")
+                sqlBuilder.append("DECIMAL")
+                for (p, s) <- precision do
+                    sqlBuilder.append("(")
+                    sqlBuilder.append(p)
+                    sqlBuilder.append(", ")
+                    sqlBuilder.append(s)
+                    sqlBuilder.append(")")
             case SqlType.Date =>
                 sqlBuilder.append("DATE")
             case SqlType.Timestamp(mode) =>
-                sqlBuilder.append(s"TIMESTAMP${mode.map(m => s" ${m.mode}").getOrElse("")}")
+                sqlBuilder.append("TIMESTAMP")
+                for m <- mode do
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(m.mode)
             case SqlType.Time(mode) =>
-                sqlBuilder.append(s"TIME${mode.map(m => s" ${m.mode}").getOrElse("")}")
+                sqlBuilder.append("TIME")
+                for m <- mode do
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(m.mode)
             case SqlType.Json =>
                 sqlBuilder.append("JSON")
             case SqlType.Boolean =>
@@ -758,7 +781,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printJsonPassing(passing: SqlJsonPassing): Unit =
         printExpr(passing.expr)
-        sqlBuilder.append(s" AS $leftQuote${passing.alias}$rightQuote")
+        sqlBuilder.append(" AS ")
+        printIdent(passing.alias)
 
     def printJsonNullConstructor(cons: SqlJsonNullConstructor): Unit =
         sqlBuilder.append(cons.constructor)
@@ -854,7 +878,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printCountAsteriskFuncExpr(expr: SqlExpr.CountAsteriskFunc): Unit =
         sqlBuilder.append("COUNT(")
         for n <- expr.tableName do
-            sqlBuilder.append(s"$leftQuote$n$rightQuote.")
+            printIdent(n)
+            sqlBuilder.append(".")
         sqlBuilder.append("*)")
         for f <- expr.filter do
             sqlBuilder.append(" FILTER (WHERE ")
@@ -979,14 +1004,15 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(expr.snippet)
 
     def printTableAlias(alias: SqlTableAlias): Unit =
-        sqlBuilder.append(s" AS $leftQuote${alias.tableAlias}$rightQuote")
+        sqlBuilder.append(" AS ")
+        printIdent(alias.tableAlias)
         if alias.columnAlias.nonEmpty then
             sqlBuilder.append("(")
-            printList(alias.columnAlias)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            printList(alias.columnAlias)(i => printIdent(i))
             sqlBuilder.append(")")
 
     def printStandardTable(table: SqlTable.Standard): Unit =
-        sqlBuilder.append(s"$leftQuote${table.name}$rightQuote")
+        printIdent(table.name)
         for p <- table.period do
             p match
                 case SqlTablePeriodMode.ForSystemTimeAsOf(expr) =>
@@ -1054,9 +1080,10 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         def printJsonTableColumn(column: SqlJsonTableColumn): Unit =
             column match
                 case SqlJsonTableColumn.Ordinality(name) =>
-                    sqlBuilder.append(s"$leftQuote$name$rightQuote FOR ORDINALITY")
+                    printIdent(name)
+                    sqlBuilder.append(" FOR ORDINALITY")
                 case c: SqlJsonTableColumn.Column =>
-                    sqlBuilder.append(s"$leftQuote${c.name}$rightQuote")
+                    printIdent(c.name)
                     sqlBuilder.append(" ")
                     printType(c.`type`)
                     for f <- c.format do
@@ -1080,7 +1107,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                         sqlBuilder.append(" ")
                         printJsonQueryErrorBehavior(b)
                 case e: SqlJsonTableColumn.Exists =>
-                    sqlBuilder.append(s"$leftQuote${e.name}$rightQuote")
+                    printIdent(e.name)
                     sqlBuilder.append(" ")
                     printType(e.`type`)
                     sqlBuilder.append(" EXISTS")
@@ -1094,7 +1121,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     sqlBuilder.append("NESTED PATH ")
                     printExpr(n.path)
                     for a <- n.pathAlias do
-                        sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
+                        printIdent(a)
                     sqlBuilder.append(" COLUMNS(\n")
                     push()
                     printList(n.columns, ",\n"): i =>
@@ -1113,7 +1140,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         sqlBuilder.append(", ")
         printExpr(table.path)
         for a <- table.pathAlias do
-            sqlBuilder.append(s" AS $leftQuote$a$rightQuote")
+            sqlBuilder.append(" AS ")
+            printIdent(a)
         if table.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
             printList(table.passingItems)(printJsonPassing)
@@ -1140,11 +1168,17 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
+    def printGraphTable(table: SqlTable.Graph): Unit =
+        if table.lateral then sqlBuilder.append("LATERAL ")
+        sqlBuilder.append("GRAPH_TABLE(\n")
+        // TODO
+
     def printJoinTable(table: SqlTable.Join): Unit =
         printTable(table.left)
         sqlBuilder.append("\n")
         printSpace()
-        sqlBuilder.append(s"${table.joinType.`type`} ")
+        sqlBuilder.append(table.joinType.`type`)
+        sqlBuilder.append(" ")
         table.right match
             case _: SqlTable.Join =>
                 sqlBuilder.append("(")
@@ -1167,7 +1201,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 case SqlJoinCondition.Using(usingCondition) =>
                     sqlBuilder.append(" USING (")
                     printList(usingCondition): n =>
-                        sqlBuilder.append(s"$leftQuote$n$rightQuote")
+                        printIdent(n)
                     sqlBuilder.append(")")
 
     def printTable(table: SqlTable): Unit = 
@@ -1176,12 +1210,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             case f: SqlTable.Func => printFuncTable(f)
             case s: SqlTable.SubQuery => printSubQueryTable(s)
             case j: SqlTable.Json => printJsonTable(j)
+            case g: SqlTable.Graph => printGraphTable(g)
             case j: SqlTable.Join => printJoinTable(j)
 
     def printMatchRecognize(matchRecognize: SqlMatchRecognize): Unit =
         def printMeasure(measure: SqlRecognizeMeasureItem): Unit =
             printExpr(measure.expr)
-            sqlBuilder.append(s" AS $leftQuote${measure.alias}$rightQuote")
+            sqlBuilder.append(" AS ")
+            printIdent(measure.alias)
 
         sqlBuilder.append("\n")
         printSpace()
@@ -1224,11 +1260,15 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
 
     def printSelectItem(item: SqlSelectItem): Unit = item match
         case SqlSelectItem.Asterisk(table) =>
-            table.foreach(n => sqlBuilder.append(s"$leftQuote$n$rightQuote."))
+            for n <- table do
+                printIdent(n)
+                sqlBuilder.append(".")
             sqlBuilder.append("*")
         case SqlSelectItem.Expr(expr, alias) =>
             printExpr(expr)
-            alias.foreach(a => sqlBuilder.append(s" AS $leftQuote$a$rightQuote"))
+            for a <- alias do
+                sqlBuilder.append(" AS ")
+                printIdent(a)
 
     def printGroupingItem(item: SqlGroupingItem): Unit = item match
         case SqlGroupingItem.Expr(item) => printExpr(item)
@@ -1246,7 +1286,8 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append(")")
 
     def printWindowItem(item: SqlWindowItem): Unit =
-        sqlBuilder.append(s"$leftQuote${item.name}$rightQuote AS ")
+        printIdent(item.name)
+        sqlBuilder.append(" AS ")
         printWindow(item.window)
 
     def printOrderingItem(item: SqlOrderingItem): Unit =
@@ -1254,9 +1295,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         val order = item.ordering match
             case None | Some(SqlOrdering.Asc) => SqlOrdering.Asc
             case _ => SqlOrdering.Desc
-        sqlBuilder.append(s" ${order.order}")
+        sqlBuilder.append(" ")
+        sqlBuilder.append(order.order)
         for o <- item.nullsOrdering do
-            sqlBuilder.append(s" ${o.order}")
+            sqlBuilder.append(" ")
+            sqlBuilder.append(o.order)
 
     def printLimit(limit: SqlLimit): Unit =
         for o <- limit.offset do
@@ -1319,7 +1362,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         def printPatternTerm(pattern: SqlRowPatternTerm): Unit =
             pattern match
                 case SqlRowPatternTerm.Pattern(name, _) =>
-                    sqlBuilder.append(s"$leftQuote$name$rightQuote")
+                    printIdent(name)
                 case SqlRowPatternTerm.Circumflex(_) =>
                     sqlBuilder.append("^")
                 case SqlRowPatternTerm.Dollar(_) =>
@@ -1364,12 +1407,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 printQuantifier(q)
 
         def printSubsetItem(subset: SqlRowPatternSubsetItem): Unit =
-            sqlBuilder.append(s"$leftQuote${subset.name}$rightQuote = (")
-            printList(subset.patternNames)(i => sqlBuilder.append(s"$leftQuote$i$rightQuote"))
+            printIdent(subset.name)
+            sqlBuilder.append(" = (")
+            printList(subset.patternNames)(i => printIdent(i))
             sqlBuilder.append(")")
 
         def printDefineItem(define: SqlRowPatternDefineItem): Unit =
-            sqlBuilder.append(s"$leftQuote${define.name}$rightQuote AS ")
+            printIdent(define.name)
+            sqlBuilder.append(" AS ")
             printExpr(define.expr)
         
         push()
@@ -1382,11 +1427,14 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                 case SqlRowPatternSkipMode.SkipPastLastRow =>
                     sqlBuilder.append("SKIP PAST LAST ROW")
                 case SqlRowPatternSkipMode.SkipToFirst(name) =>
-                    sqlBuilder.append(s"SKIP TO FIRST $leftQuote$name$rightQuote")
+                    sqlBuilder.append("SKIP TO FIRST ")
+                    printIdent(name)
                 case SqlRowPatternSkipMode.SkipToLast(name) =>
-                    sqlBuilder.append(s"SKIP TO LAST $leftQuote$name$rightQuote")
+                    sqlBuilder.append("SKIP TO LAST ")
+                    printIdent(name)
                 case SqlRowPatternSkipMode.SkipTo(name) =>
-                    sqlBuilder.append(s"SKIP TO $leftQuote$name$rightQuote")
+                    sqlBuilder.append("SKIP TO ")
+                    printIdent(name)
         sqlBuilder.append("\n")
         printSpace()
         for s <- pattern.strategy do
@@ -1406,6 +1454,11 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
             sqlBuilder.append("DEFINE\n")
             printList(pattern.define, ",\n")(printDefineItem |> printWithSpace)
         pull()
+
+    def printIdent(name: String): Unit =
+        sqlBuilder.append(leftQuote)
+        sqlBuilder.append(name)
+        sqlBuilder.append(rightQuote)
     
     def printList[T](list: List[T], separator: String = ", ")(printer: T => Unit): Unit =
         for i <- list.indices do

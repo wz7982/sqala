@@ -83,7 +83,11 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
     override def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(maxLength) =>
-                sqlBuilder.append(s"CHAR${maxLength.map(l => s"($l)").getOrElse("")}")
+                sqlBuilder.append("CHAR")
+                for l <- maxLength do
+                    sqlBuilder.append("(")
+                    sqlBuilder.append(l)
+                    sqlBuilder.append(")")
             case SqlType.Int => 
                 sqlBuilder.append("SIGNED")
             case SqlType.Long => 
@@ -162,10 +166,14 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)
-                sqlBuilder.append(s" ${order.order}")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)
             case (Asc, Some(Last)) | (Desc, Some(First)) =>
                 printExpr(orderExpr)
-                sqlBuilder.append(s" ${order.order},\n")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)
+                sqlBuilder.append(",\n")
                 printSpace()
                 printExpr(orderBy.expr)
-                sqlBuilder.append(s" ${order.order}")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)

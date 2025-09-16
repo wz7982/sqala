@@ -36,6 +36,15 @@ enum SqlTable:
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
+    case Graph(
+        reference: String,
+        rows: Option[SqlGraphRowsMode],
+        columns: List[SqlGraphColumn],
+        `export`: Option[SqlGraphExportMode],
+        lateral: Boolean,
+        alias: Option[SqlTableAlias],
+        matchRecognize: Option[SqlMatchRecognize]
+    )
     case Join(
         left: SqlTable, 
         joinType: SqlJoinType, 
