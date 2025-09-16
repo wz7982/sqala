@@ -40,51 +40,38 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
 
     override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         expr.operator match
-            case SqlBinaryOperator.EuclideanDistance =>
-                val func = 
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.CosineDistance =>
-                val func =
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil)
-                printExpr(func)
-            case SqlBinaryOperator.DotDistance =>
-                val func =
-                    SqlExpr.Func("DISTANCE", expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil)
-                printExpr(func)
             case SqlBinaryOperator.Concat =>
-                val func = SqlExpr.Func("CONCAT", expr.left :: expr.right :: Nil)
-                printExpr(func)
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "CONCAT", 
+                        expr.left :: expr.right :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlBinaryOperator.IsNotDistinctFrom =>
+                printExpr(
+                    SqlExpr.Binary(
+                        expr.left,
+                        SqlBinaryOperator.Custom("<=>"),
+                        expr.right
+                    )
+                )
+            case SqlBinaryOperator.IsDistinctFrom =>
+                printExpr(
+                    SqlExpr.Unary(
+                        SqlExpr.Binary(
+                            expr.left,
+                            SqlBinaryOperator.Custom("<=>"),
+                            expr.right
+                        ),
+                        SqlUnaryOperator.Not
+                    )
+                )
             case _ =>
-                super.printBinaryExpr(expr) 
-
-    override def printIntervalExpr(expr: SqlExpr.Interval): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
-        sqlBuilder.append(expr.unit.unit)
-
-    override def printVectorExpr(expr: SqlExpr.Vector): Unit =
-        sqlBuilder.append("STRING_TO_VECTOR(")
-        super.printVectorExpr(expr)
-        sqlBuilder.append(")")
-
-    override def printFuncExpr(expr: SqlExpr.Func): Unit =
-        if expr.name.equalsIgnoreCase("STRING_AGG") && expr.quantifier.isEmpty && expr.filter.isEmpty && expr.withinGroup.isEmpty then
-            val (args, separator) = if expr.args.size == 2 then
-                (expr.args.head :: Nil) -> expr.args.last
-            else
-                expr.args -> SqlExpr.StringLiteral("")
-            sqlBuilder.append("GROUP_CONCAT")
-            sqlBuilder.append("(")
-            printList(args)(printExpr)
-            if expr.orderBy.nonEmpty then
-                sqlBuilder.append(" ORDER BY ")
-                printList(expr.orderBy)(printOrderingItem)
-            sqlBuilder.append(" SEPARATOR ")
-            printExpr(separator)
-            sqlBuilder.append(")")
-        else super.printFuncExpr(expr)
+                super.printExpr(expr)
 
     override def printValues(values: SqlQuery.Values): Unit =
         printSpace()
@@ -93,31 +80,100 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
             sqlBuilder.append("ROW")
             printExpr(v)
 
-    override def printCastType(castType: SqlCastType): Unit =
-        val t = castType match
-            case SqlCastType.Varchar => "CHAR"
-            case SqlCastType.Int4 => "SIGNED"
-            case SqlCastType.Int8 => "SIGNED"
-            case SqlCastType.Float4 => "FLOAT"
-            case SqlCastType.Float8 => "DOUBLE"
-            case SqlCastType.DateTime => "DATETIME"
-            case SqlCastType.Json => "JSON"
-            case SqlCastType.Custom(c) => c
-        sqlBuilder.append(t)
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(maxLength) =>
+                sqlBuilder.append("CHAR")
+                for l <- maxLength do
+                    sqlBuilder.append("(")
+                    sqlBuilder.append(l)
+                    sqlBuilder.append(")")
+            case SqlType.Int => 
+                sqlBuilder.append("SIGNED")
+            case SqlType.Long => 
+                sqlBuilder.append("SIGNED")
+            case SqlType.Timestamp(None | Some(SqlTimeZoneMode.Without)) =>
+                sqlBuilder.append("DATETIME")
+            case _ =>
+                super.printType(`type`)
+
+    override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
+        sqlBuilder.append("GROUP_CONCAT(")
+        expr.quantifier.foreach: q => 
+            sqlBuilder.append(q.quantifier)
+            sqlBuilder.append(" ")
+        printExpr(expr.expr)
+        if expr.withinGroup.nonEmpty then
+            sqlBuilder.append(" ORDER BY ")
+            printList(expr.withinGroup)(printOrderingItem)
+        sqlBuilder.append(" SEPARATOR ")
+        printExpr(expr.separator)
+        sqlBuilder.append(")")
+        for f <- expr.filter do
+            sqlBuilder.append(" FILTER (WHERE ")
+            printExpr(f)
+            sqlBuilder.append(")")
+
+    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
+        expr.mode match
+            case SqlVectorDistanceMode.Euclidean =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlVectorDistanceMode.Cosine =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlVectorDistanceMode.Dot =>
+                printExpr(
+                    SqlExpr.StandardFunc(
+                        "DISTANCE", 
+                        expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil,
+                        None,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlVectorDistanceMode.Manhattan =>
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
         val orderExpr = 
-            SqlExpr.Case(SqlWhen(SqlExpr.NullTest(orderBy.expr, false), SqlExpr.NumberLiteral(1)) :: Nil, Some(SqlExpr.NumberLiteral(0)))
+            SqlExpr.Case(
+                SqlWhen(
+                    SqlExpr.NullTest(orderBy.expr, false), 
+                    SqlExpr.NumberLiteral(1)
+                ) :: Nil, 
+                Some(SqlExpr.NumberLiteral(0))
+            )
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)
-                sqlBuilder.append(s" ${order.order}")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)
             case (Asc, Some(Last)) | (Desc, Some(First)) =>
                 printExpr(orderExpr)
-                sqlBuilder.append(s" ${order.order},\n")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)
+                sqlBuilder.append(",\n")
                 printSpace()
                 printExpr(orderBy.expr)
-                sqlBuilder.append(s" ${order.order}")
+                sqlBuilder.append(" ")
+                sqlBuilder.append(order.order)

@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import scala.quoted.*
+import scala.quoted.{Expr, FromExpr, Quotes, Type}
 
 given [T](using Type[T]): FromExpr[SetDefaultValue[T]] with
     override def unapply(x: Expr[SetDefaultValue[T]])(using Quotes): Option[SetDefaultValue[T]] = x match

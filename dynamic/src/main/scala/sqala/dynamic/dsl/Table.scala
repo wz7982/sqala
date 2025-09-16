@@ -3,7 +3,6 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.dynamic.parser.SqlParser
-import sqala.metadata.TableMetaData
 
 import scala.language.dynamics
 
@@ -17,11 +16,12 @@ sealed trait AnyTable:
     infix def fullJoin(table: AnyTable): JoinTable = JoinTable(this, SqlJoinType.Full, table, None)
 
     def toSqlTable: SqlTable = this match
-        case Table(name, alias) => SqlTable.Standard(name, alias.map(a => SqlTableAlias(a)))
-        case EntityTable(name, alias, _) => SqlTable.Standard(name, Some(SqlTableAlias(alias)))
-        case SubQueryTable(query, alias, lateral) => SqlTable.SubQuery(query.tree, lateral, Some(SqlTableAlias(alias, Nil)))
+        case Table(name, alias) => 
+            SqlTable.Standard(name, None, alias.map(a => SqlTableAlias(a, Nil)), None, None)
+        case SubQueryTable(query, alias, lateral) => 
+            SqlTable.SubQuery(query.tree, lateral, Some(SqlTableAlias(alias, Nil)), None)
         case JoinTable(left, joinType, right, condition) => 
-            SqlTable.Join(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)), None)
+            SqlTable.Join(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)))
 
 case class Table(
     private[sqala] val name: String, 
@@ -30,24 +30,6 @@ case class Table(
     infix def as(name: String): Table =
         new SqlParser().parseIdent(name)
         copy(alias = Some(name))
-
-case class EntityTable(
-    private[sqala] val __name__ : String, 
-    private[sqala] val __alias__ : String, 
-    private[sqala] val __metaData__ : TableMetaData 
-) extends AnyTable with Dynamic:
-    infix def as(name: String): EntityTable =
-        new SqlParser().parseIdent(name) 
-        copy(__alias__ = name)
-
-    def selectDynamic(name: String): Expr =
-        val columnName = __metaData__.fieldNames
-            .zip(__metaData__.columnNames)
-            .find: (f, _) =>
-                f == name
-            .map(_._2)
-            .get
-        Expr(SqlExpr.Column(Some(__alias__), columnName))
 
 case class JoinTable(
     private[sqala] val left: AnyTable, 

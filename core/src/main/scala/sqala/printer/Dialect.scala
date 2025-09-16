@@ -15,29 +15,11 @@ object PostgresqlDialect extends Dialect:
 
 type PostgresqlDialect = PostgresqlDialect.type
 
-object SqliteDialect extends Dialect:
-    def printer(enableJdbcPrepare: Boolean): SqlPrinter =
-        new SqlitePrinter(enableJdbcPrepare)
-
-type SqliteDialect = SqliteDialect.type
-
 object OracleDialect extends Dialect:
     def printer(enableJdbcPrepare: Boolean): SqlPrinter =
         new OraclePrinter(enableJdbcPrepare)
 
 type OracleDialect = OracleDialect.type
-
-object MssqlDialect extends Dialect:
-    def printer(enableJdbcPrepare: Boolean): SqlPrinter =
-        new MssqlPrinter(enableJdbcPrepare)
-
-type MssqlDialect = MssqlDialect.type
-
-object Db2Dialect extends Dialect:
-    def printer(enableJdbcPrepare: Boolean): SqlPrinter =
-        new Db2Printer(enableJdbcPrepare)
-
-type Db2Dialect = Db2Dialect.type
 
 object H2Dialect extends Dialect:
     def printer(enableJdbcPrepare: Boolean): SqlPrinter =

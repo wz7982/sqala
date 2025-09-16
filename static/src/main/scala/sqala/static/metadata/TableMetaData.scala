@@ -1,4 +1,4 @@
-package sqala.metadata
+package sqala.static.metadata
 
 case class TableMetaData(
     tableName: String,
@@ -7,3 +7,7 @@ case class TableMetaData(
     columnNames: List[String],
     fieldNames: List[String]
 )
+
+private[sqala] val tableCte = "__cte__"
+
+private[sqala] val columnPseudoLevel = "__pseudo__level__"

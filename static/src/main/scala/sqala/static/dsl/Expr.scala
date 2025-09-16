@@ -1,11 +1,13 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
-import sqala.static.dsl.statement.dml.UpdatePair
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator, SqlWindow}
+import sqala.static.dsl.statement.dml.{UpdatePair, UpdateSetContext}
 
 import scala.annotation.targetName
 
-case class Expr[T](private[sqala] val expr: SqlExpr):
+class OverContext
+
+case class Expr[T](private val expr: SqlExpr):
     @targetName("eq")
     def ==[R](that: R)(using
         a: AsRightOperand[R],
@@ -22,49 +24,45 @@ case class Expr[T](private[sqala] val expr: SqlExpr):
     ): Expr[Option[Boolean]] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
-    infix def over(over: Over | Unit)(using QueryContext): Expr[T] =
+    infix def over(over: OverContext ?=> (Over | Unit))(using QueryContext): Expr[T] =
+        given OverContext = new OverContext
         over match
             case o: Over =>
                 Expr(
                     SqlExpr.Window(
-                        asSqlExpr, 
-                        o.partitionBy.map(_.asSqlExpr),
-                        o.sortBy.map(_.asSqlOrderBy),
-                        o.frame
+                        asSqlExpr,
+                        SqlWindow(
+                            o.partitionBy.map(_.asSqlExpr),
+                            o.sortBy.map(_.asSqlOrderBy),
+                            o.frame
+                        )
                     )
                 )
             case u: Unit =>
                 Expr(
                     SqlExpr.Window(
-                        asSqlExpr, 
-                        Nil,
-                        Nil,
-                        None
+                        asSqlExpr,
+                        SqlWindow(
+                            Nil,
+                            Nil,
+                            None
+                        )
                     )
                 )
 
     @targetName("to")
     def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R]
+        Compare[T, a.R],
+        UpdateSetContext
     ): UpdatePair = this match
         case Expr(SqlExpr.Column(_, columnName)) =>
             UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
-        case _ => throw MatchError(this)
+        case _ => throw MatchError("The left-hand side of a set operation must be a simple field.")
 
     def asSqlExpr: SqlExpr =
         import SqlExpr.*
         
         expr match
-            case Binary(left, SqlBinaryOperator.Equal, SqlExpr.NullLiteral) =>
-                NullTest(left, false)
-            case Binary(left, SqlBinaryOperator.NotEqual, SqlExpr.NullLiteral) =>
-                NullTest(left, true)
-            case Binary(left, SqlBinaryOperator.NotEqual, right) =>
-                Binary(
-                    Binary(left, SqlBinaryOperator.NotEqual, right),
-                    SqlBinaryOperator.Or,
-                    NullTest(left, false)
-                )
             case Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(Nil)) =>
                 BooleanLiteral(false)
             case Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(Nil)) =>
@@ -79,6 +77,10 @@ case class Expr[T](private[sqala] val expr: SqlExpr):
                         Binary(left, SqlBinaryOperator.NotIn, right)
                     case Binary(left, SqlBinaryOperator.NotIn, right) =>
                         Binary(left, SqlBinaryOperator.In, right)
+                    case Binary(left, SqlBinaryOperator.IsDistinctFrom, right) =>
+                        Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right)
+                    case Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right) =>
+                        Binary(left, SqlBinaryOperator.IsDistinctFrom, right)
                     case NullTest(ne, not) =>
                          NullTest(ne, !not)
                     case Between(expr, s, e, n) =>

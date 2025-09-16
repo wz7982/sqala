@@ -2,9 +2,10 @@ package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlStatement
-import sqala.ast.table.SqlTable
-import sqala.metadata.{AsSqlExpr, TableMacro}
-import sqala.static.dsl.{AsExpr, QueryContext, Table}
+import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.static.dsl.table.Table
+import sqala.static.dsl.{AsExpr, QueryContext}
+import sqala.static.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
 
 import scala.deriving.Mirror
 
@@ -18,11 +19,16 @@ type UpdateTable = UpdateState.Table.type
 
 type UpdateEntity = UpdateState.Entity.type
 
+class UpdateSetContext
+
 class Update[T, S <: UpdateState](
     private[sqala] val table: Table[T],
     val tree: SqlStatement.Update
 ):
-    def set(f: Table[T] => UpdatePair)(using S =:= UpdateTable): Update[T, UpdateTable] =
+    def set(f: UpdateSetContext ?=> Table[T] => UpdatePair)(using 
+        S =:= UpdateTable
+    ): Update[T, UpdateTable] =
+        given UpdateSetContext = new UpdateSetContext
         val pair = f(table)
         val expr = SqlExpr.Column(None, pair.columnName)
         val updateExpr = pair.updateExpr
@@ -30,26 +36,39 @@ class Update[T, S <: UpdateState](
 
     def where[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using 
         S =:= UpdateTable, 
-        a.R <:< (Boolean | Option[Boolean])
+        SqlBoolean[a.R]
     ): Update[T, UpdateTable] =
         given QueryContext = QueryContext(0)
         val condition = a.asExpr(f(table))
         new Update(table, tree.addWhere(condition.asSqlExpr))
 
 object Update:
-    inline def apply[T <: Product]: Update[T, UpdateTable] =
-        val tableName = TableMacro.tableName[T]
+    inline def apply[T <: Product](using c: QueryContext): Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]
-        val table = Table[T](tableName, tableName, metaData)
-        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Standard(tableName, None), Nil, None)
+        val alias = c.fetchAlias
+        val sqlTable: SqlTable.Standard = SqlTable.Standard(
+            metaData.tableName,
+            None,
+            Some(SqlTableAlias(alias, Nil)),
+            None,
+            None
+        )
+        val table = Table[T](Some(alias), metaData, sqlTable)
+        val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, Nil, None)
         new Update(table, tree)
 
-    inline def apply[T <: Product](entity: T, skipNone: Boolean = false)(using 
+    inline def updateByEntity[T <: Product](entity: T, skipNone: Boolean = false)(using 
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
-        val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val table = Table[T](tableName, tableName, metaData)
+        val sqlTable: SqlTable.Standard = SqlTable.Standard(
+            metaData.tableName,
+            None,
+            None,
+            None,
+            None
+        )
+        val table = Table[T](None, metaData, sqlTable)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)
@@ -65,9 +84,10 @@ object Update:
             .map((_, column, instance, field) => (SqlExpr.Column(None, column), instance.asSqlExpr(field)))
         val conditions = updateMetaData
             .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
-            .map((_, column, instance, field) => SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, instance.asSqlExpr(field)))
+            .map: (_, column, instance, field) => 
+                SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, instance.asSqlExpr(field))
         val condition = 
             if conditions.isEmpty then None 
             else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
-        val tree: SqlStatement.Update = SqlStatement.Update(SqlTable.Standard(tableName, None), updateColumns, condition)
+        val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, updateColumns, condition)
         new Update(table, tree)

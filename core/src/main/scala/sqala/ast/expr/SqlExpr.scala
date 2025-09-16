@@ -11,32 +11,117 @@ enum SqlExpr:
     case NumberLiteral[N: Numeric](number: N)
     case BooleanLiteral(boolean: Boolean)
     case TimeLiteral(unit: SqlTimeLiteralUnit, time: String)
+    case IntervalLiteral(value: String, field: SqlIntervalField)
     case Tuple(items: List[SqlExpr])
     case Array(items: List[SqlExpr])
-    case Vector(items: List[Float])
     case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
-    case Func(
-        name: String,
-        args: List[SqlExpr],
-        quantifier: Option[SqlQuantifier] = None,
-        orderBy: List[SqlOrderingItem] = Nil,
-        withinGroup: List[SqlOrderingItem] = Nil,
-        filter: Option[SqlExpr] = None
+    case JsonTest(
+        expr: SqlExpr, 
+        not: Boolean, 
+        nodeType: Option[SqlJsonNodeType],
+        uniqueness: Option[SqlJsonUniqueness]
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
-    case Match(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
-    case Cast(expr: SqlExpr, castType: SqlCastType)
-    case Window(
-        expr: SqlExpr, 
-        partitionBy: List[SqlExpr], 
-        orderBy: List[SqlOrderingItem], 
-        frame: Option[SqlWindowFrame]
-    )
+    case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
+    case Coalesce(items: List[SqlExpr])
+    case NullIf(expr: SqlExpr, `then`: SqlExpr)
+    case Cast(expr: SqlExpr, castType: SqlType)
+    case Window(expr: SqlExpr, window: SqlWindow)
     case SubQuery(query: SqlQuery)
     case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
-    case Interval(value: Double, unit: SqlTimeUnit)
-    case Extract(expr: SqlExpr, unit: SqlTimeUnit)
+    case Grouping(items: List[SqlExpr])
+    case IdentFunc(name: String)
+    case SubstringFunc(expr: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
+    case TrimFunc(expr: SqlExpr, trim: Option[(Option[SqlTrimMode], Option[SqlExpr])])
+    case OverlayFunc(expr: SqlExpr, placing: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
+    case PositionFunc(expr: SqlExpr, in: SqlExpr)
+    case ExtractFunc(expr: SqlExpr, unit: SqlTimeUnit)
+    case VectorDistanceFunc(left: SqlExpr, right: SqlExpr, mode: SqlVectorDistanceMode)
+    case JsonSerializeFunc(expr: SqlExpr, output: Option[SqlJsonOutput])
+    case JsonParseFunc(
+        expr: SqlExpr,
+        input: Option[SqlJsonInput],
+        uniqueness: Option[SqlJsonUniqueness]
+    )
+    case JsonQueryFunc(
+        expr: SqlExpr,
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        output: Option[SqlJsonOutput],
+        wrapper: Option[SqlJsonQueryWrapperBehavior],
+        quotes: Option[SqlJsonQueryQuotesBehavior],
+        onEmpty: Option[SqlJsonQueryEmptyBehavior],
+        onError: Option[SqlJsonQueryErrorBehavior]
+    )
+    case JsonValueFunc(
+        expr: SqlExpr, 
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        output: Option[SqlJsonOutput],
+        onEmpty: Option[SqlJsonValueEmptyBehavior],
+        onError: Option[SqlJsonValueErrorBehavior]
+    )
+    case JsonObjectFunc(
+        items: List[(SqlExpr, SqlExpr)],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        uniqueness: Option[SqlJsonUniqueness],
+        output: Option[SqlJsonOutput]
+    )
+    case JsonArrayFunc(
+        items: List[(SqlExpr, Option[SqlJsonInput])],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        output: Option[SqlJsonOutput]
+    )
+    case JsonExistsFunc(
+        expr: SqlExpr, 
+        path: SqlExpr,
+        passingItems: List[SqlJsonPassing],
+        onError: Option[SqlJsonExistsErrorBehavior]
+    )
+    case CountAsteriskFunc(tableName: Option[String], filter: Option[SqlExpr])
+    case ListAggFunc(
+        expr: SqlExpr,
+        separator: SqlExpr,
+        quantifier: Option[SqlQuantifier],
+        onOverflow: Option[SqlListAggOnOverflow],
+        withinGroup: List[SqlOrderingItem],
+        filter: Option[SqlExpr]
+    )
+    case JsonObjectAggFunc(
+        item: (SqlExpr, SqlExpr),
+        nullConstructor: Option[SqlJsonNullConstructor],
+        uniqueness: Option[SqlJsonUniqueness],
+        output: Option[SqlJsonOutput],
+        filter: Option[SqlExpr]
+    )
+    case JsonArrayAggFunc(
+        item: (SqlExpr, Option[SqlJsonInput]),
+        orderBy: List[SqlOrderingItem],
+        nullConstructor: Option[SqlJsonNullConstructor],
+        output: Option[SqlJsonOutput],
+        filter: Option[SqlExpr]
+    )
+    case NullsTreatmentFunc(
+        name: String, 
+        args: List[SqlExpr], 
+        nullsMode: Option[SqlWindowNullsMode]
+    )
+    case NthValueFunc(
+        expr: SqlExpr,
+        row: SqlExpr,
+        fromMode: Option[SqlNthValueFromMode],
+        nullsMode: Option[SqlWindowNullsMode]
+    )
+    case StandardFunc(
+        name: String,
+        args: List[SqlExpr],
+        quantifier: Option[SqlQuantifier],
+        orderBy: List[SqlOrderingItem],
+        withinGroup: List[SqlOrderingItem],
+        filter: Option[SqlExpr]
+    )
+    case MatchPhase(expr: SqlExpr, phase: SqlMatchPhase)
     case Custom(snippet: String)

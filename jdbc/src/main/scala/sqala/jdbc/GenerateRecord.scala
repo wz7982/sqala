@@ -4,7 +4,7 @@ import sqala.dynamic.dsl.NativeSql
 
 import java.sql.Connection
 import scala.language.unsafeNulls
-import scala.quoted.*
+import scala.quoted.{Expr, Quotes, Type}
 
 private[sqala] object GenerateRecord:
     private[sqala] 

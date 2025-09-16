@@ -1,11 +1,11 @@
 package sqala.jdbc
 
 import sqala.dynamic.dsl.{DynamicQuery, NativeSql}
-import sqala.metadata.InsertMacro
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
+import sqala.static.metadata.{FetchPk, InsertMacro}
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
@@ -51,7 +51,7 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): Int =
-        val i = Insert[A](entity :: Nil)
+        val i = Insert.insertByEntities[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, t.dialect, true)
         jdbcExec(t.connection, sql, args)
 
@@ -60,7 +60,7 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): Int =
-        val i = Insert[A](entities)
+        val i = Insert.insertByEntities[A](entities)
         val (sql, args) = statementToString(i.tree, t.dialect, true)
         jdbcExec(t.connection, sql, args)
 
@@ -69,7 +69,7 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): A =
-        val i = Insert[A](entity :: Nil)
+        val i = Insert.insertByEntities[A](entity :: Nil)
         val (sql, args) = statementToString(i.tree, t.dialect, true)
         val id = jdbcExecReturnKey(t.connection, sql, args).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
@@ -82,7 +82,7 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): Int =
-        val u = Update[A](entity, skipNone)
+        val u = Update.updateByEntity[A](entity, skipNone)
         if u.tree.setList.isEmpty then
             0
         else
@@ -96,9 +96,31 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): Int =
-        val s = Save[A](entity)
+        val s = Save.saveByEntity[A](entity)
         val (sql, args) = statementToString(s.tree, t.dialect, true)
         jdbcExec(t.connection, sql, args)
+
+    inline def fetchByPrimaryKeys[T](using 
+        fp: FetchPk[T],
+        d: JdbcDecoder[T], 
+        t: JdbcTransactionContext, 
+        l: Logger
+    )(pks: Seq[fp.R]): List[T] =
+        val tree = fp.createTree(pks)
+        val (sql, args) = queryToString(tree, t.dialect, true)
+        l(sql, args)
+        jdbcQuery(t.connection, sql, args)
+
+    inline def findByPrimaryKey[T](using 
+        fp: FetchPk[T],
+        d: JdbcDecoder[T], 
+        t: JdbcTransactionContext, 
+        l: Logger
+    )(pk: fp.R): Option[T] =
+        val tree = fp.createTree(pk :: Nil)
+        val (sql, args) = queryToString(tree, t.dialect, true)
+        l(sql, args)
+        jdbcQuery(t.connection, sql, args).headOption
 
     inline def fetchTo[T](inline query: Query[?])(using 
         d: JdbcDecoder[T], 
