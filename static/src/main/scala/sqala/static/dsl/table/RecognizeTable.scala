@@ -230,7 +230,7 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def min[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
+    def least[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
         new Pattern(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
@@ -241,7 +241,7 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def max[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
+    def most[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
         new Pattern(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
@@ -252,7 +252,7 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def apply[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
+    def at[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
         new Pattern(
             setQuantifier(
                 SqlRowPatternQuantifier.Quantity(
