@@ -65,7 +65,7 @@ case class Recognize[N <: Tuple, T](
             .copy(rowPattern = recognize.rowPattern.copy(define = defines))
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def pattern(f: RecognizePattern[N, T] => Pattern)(using
+    def pattern(f: RecognizePattern[N, T] => RecognizePatternTerm)(using
         QueryContext, 
         MatchRecognizeContext
     ): Recognize[N, T] =
@@ -179,15 +179,15 @@ case class RecognizeDefine[N <: Tuple, T](
 case class RecognizePattern[N <: Tuple, T](
     private[sqala] val __table__ : T
 )(using AsRecognizeTable[T]) extends Dynamic:
-    def selectDynamic(name: String): Pattern =
-        new Pattern(SqlRowPatternTerm.Pattern(name, None))
+    def selectDynamic(name: String): RecognizePatternTerm =
+        new RecognizePatternTerm(SqlRowPatternTerm.Pattern(name, None))
 
 case class RecognizePatternName[N <: Tuple, T](
     private[sqala] val __table__ : T
 )(using AsRecognizeTable[T]) extends Dynamic:
     def selectDynamic(name: String): String = name
 
-class Pattern(val pattern: SqlRowPatternTerm):
+class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
     private def setQuantifier(quantifier: SqlRowPatternQuantifier): SqlRowPatternTerm =
         pattern match
             case p: SqlRowPatternTerm.Pattern =>
@@ -205,22 +205,22 @@ class Pattern(val pattern: SqlRowPatternTerm):
             case o: SqlRowPatternTerm.Or =>
                 o.copy(quantifier = Some(quantifier))
 
-    def +(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(setQuantifier(SqlRowPatternQuantifier.Plus(false)))
+    def +(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Plus(false)))
 
-    def *(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(setQuantifier(SqlRowPatternQuantifier.Asterisk(false)))
+    def *(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Asterisk(false)))
 
-    def ?(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(setQuantifier(SqlRowPatternQuantifier.Question(false)))
+    def ?(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Question(false)))
 
     def between[S: AsExpr as s, E: AsExpr as e](start: S, end: E)(using
         SqlNumber[s.R],
         SqlNumber[e.R],
         QueryContext,
         MatchRecognizeContext
-    ): Pattern =
-        new Pattern(
+    ): RecognizePatternTerm =
+        new RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
                     Some(s.asExpr(start).asSqlExpr),
@@ -230,8 +230,12 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def min[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(
+    def least[T: AsExpr as a](x: T)(using 
+        SqlNumber[a.R],
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePatternTerm =
+        new RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
                     Some(a.asExpr(x).asSqlExpr),
@@ -241,8 +245,12 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def max[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(
+    def most[T: AsExpr as a](x: T)(using 
+        SqlNumber[a.R],
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePatternTerm =
+        new RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
                     None,
@@ -252,8 +260,12 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def apply[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(
+    def at[T: AsExpr as a](x: T)(using 
+        SqlNumber[a.R],
+        QueryContext, 
+        MatchRecognizeContext
+    ): RecognizePatternTerm =
+        new RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Quantity(
                     a.asExpr(x).asSqlExpr
@@ -261,8 +273,8 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def ~(that: Pattern)(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(
+    def ~(that: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+        new RecognizePatternTerm(
             SqlRowPatternTerm.Then(
                 this.pattern,
                 that.pattern,
@@ -270,8 +282,8 @@ class Pattern(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def |(that: Pattern)(using QueryContext, MatchRecognizeContext): Pattern =
-        new Pattern(
+    def |(that: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+        new RecognizePatternTerm(
             SqlRowPatternTerm.Or(
                 this.pattern,
                 that.pattern,

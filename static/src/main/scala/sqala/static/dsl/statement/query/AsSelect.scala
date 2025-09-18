@@ -2,8 +2,8 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
-import sqala.static.dsl.{AsExpr, Expr, ToTuple}
 import sqala.static.dsl.table.*
+import sqala.static.dsl.{AsExpr, Expr, ToTuple}
 import sqala.static.metadata.AsSqlExpr
 
 import scala.NamedTuple.NamedTuple
@@ -69,6 +69,24 @@ object AsSelect:
         def offset(x: JsonTable[N, V]): Int = s.offset(x.__items__)
 
         def selectItems(x: JsonTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            s.selectItems(x.__items__, cursor)
+
+    given graphTable[N <: Tuple, V <: Tuple](using 
+        s: AsMap[V],
+        t: ToTuple[s.R]
+    ): Aux[GraphTable[N, V], GraphTable[N, t.R]] = new AsSelect[GraphTable[N, V]]:
+        type R = GraphTable[N, t.R]
+
+        def transform(x: GraphTable[N, V]): R =
+            new GraphTable(
+                x.__aliasName__, 
+                t.toTuple(s.transform(x.__items__)), 
+                x.__sqlTable__
+            )
+
+        def offset(x: GraphTable[N, V]): Int = s.offset(x.__items__)
+
+        def selectItems(x: GraphTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.__items__, cursor)
 
     given recognizeTable[N <: Tuple, V <: Tuple](using 

@@ -316,17 +316,17 @@ def sortBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over 
 def orderBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
     Over(sortBy = a.asSort(sortValue))
 
-def ^(using QueryContext, MatchRecognizeContext): Pattern =
-    new Pattern(SqlRowPatternTerm.Circumflex(None))
+def ^(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
 
-def $(using QueryContext, MatchRecognizeContext): Pattern =
-    new Pattern(SqlRowPatternTerm.Circumflex(None))
+def $(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
 
-def permute(terms: Pattern*)(using QueryContext, MatchRecognizeContext): Pattern =
-    new Pattern(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
+def permute(terms: RecognizePatternTerm*)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
 
-def exclusion(term: Pattern)(using QueryContext, MatchRecognizeContext): Pattern =
-    new Pattern(SqlRowPatternTerm.Exclusion(term.pattern, None))
+def exclusion(term: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
 def `final`[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Expr[a.R] =
     Expr(SqlExpr.MatchPhase(a.asExpr(x).asSqlExpr, SqlMatchPhase.Final))
@@ -431,3 +431,62 @@ inline def createTableFunction[T](
         None
     )
     FuncTable(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
+
+inline def vertex[T]: GraphVertex[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertex(None, metaData)
+
+inline def edge[T]: GraphEdge[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdge(None, metaData, None, None)
+
+def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): Graph[N, V] =
+    Graph(name, labels.toTuple)
+
+extension (s: String)
+    infix def is[V](v: GraphVertex[V])(using 
+        QueryContext, 
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[GraphVertex[V]]] =
+        GraphPattern(
+            Tuple1(v), 
+            SqlGraphPatternTerm.Vertex(
+                v.__alias__, 
+                Some(SqlGraphLabel.Label(v.__metaData__.tableName)), 
+                None
+            ) :: Nil
+        )
+
+    infix def is[V](v: GraphEdge[V])(using 
+        QueryContext, 
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[GraphEdge[V]]] =
+        val pattern = 
+            v.__quantifier__.map: q =>
+                SqlGraphPatternTerm.Quantified(
+                    SqlGraphPatternTerm.Edge(
+                        SqlGraphSymbol.Dash,
+                        v.__alias__,
+                        Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
+                        v.__where__,
+                        SqlGraphSymbol.Dash
+                    ),
+                    q
+                )
+            .getOrElse:
+                SqlGraphPatternTerm.Edge(
+                    SqlGraphSymbol.Dash,
+                    v.__alias__,
+                    Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
+                    v.__where__,
+                    SqlGraphSymbol.Dash
+                )
+        GraphPattern(Tuple1(v), pattern :: Nil)
+
+def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
+    graph: Graph[N, V]
+)(f: GraphContext ?=> Graph[N, V] => GraphTable[TN, TV])(using 
+    QueryContext
+): GraphTable[TN, TV] =
+    given GraphContext = new GraphContext
+    f(graph)

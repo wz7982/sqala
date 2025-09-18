@@ -90,6 +90,13 @@ object AsTable:
             def table(x: RecognizeTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
+    given graphTable[N <: Tuple, V <: Tuple]: Aux[GraphTable[N, V], GraphTable[N, V]] =
+        new AsTable[GraphTable[N, V]]:
+            type R = GraphTable[N, V]
+
+            def table(x: GraphTable[N, V])(using QueryContext): (R, SqlTable) =
+                (x, x.__sqlTable__)
+
     inline given values[T <: Product, S <: Seq[T]](using 
         p: Mirror.ProductOf[T]
     ): Aux[S, Table[T]] =

@@ -32,6 +32,12 @@ object Result:
         new Result[JsonTable[N, V]]:
             type R = r.R
 
+    given graphTable[N <: Tuple, V <: Tuple](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[GraphTable[N, V], r.R] =
+        new Result[GraphTable[N, V]]:
+            type R = r.R
+
     given recognizeTable[N <: Tuple, V <: Tuple](using
         r: Result[NamedTuple[N, V]]
     ): Aux[RecognizeTable[N, V], r.R] =
