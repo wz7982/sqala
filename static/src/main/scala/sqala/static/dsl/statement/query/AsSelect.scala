@@ -89,6 +89,24 @@ object AsSelect:
         def selectItems(x: GraphTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
             s.selectItems(x.__items__, cursor)
 
+    given recursiveTable[N <: Tuple, V <: Tuple](using 
+        s: AsMap[V],
+        t: ToTuple[s.R]
+    ): Aux[RecursiveTable[N, V], RecursiveTable[N, t.R]] = new AsSelect[RecursiveTable[N, V]]:
+        type R = RecursiveTable[N, t.R]
+
+        def transform(x: RecursiveTable[N, V]): R =
+            new RecursiveTable(
+                x.__aliasName__, 
+                t.toTuple(s.transform(x.__items__)), 
+                x.__sqlTable__
+            )
+
+        def offset(x: RecursiveTable[N, V]): Int = s.offset(x.__items__)
+
+        def selectItems(x: RecursiveTable[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            s.selectItems(x.__items__, cursor)
+
     given recognizeTable[N <: Tuple, V <: Tuple](using 
         s: AsMap[V],
         t: ToTuple[s.R]

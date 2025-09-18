@@ -97,6 +97,13 @@ object AsTable:
             def table(x: GraphTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
+    given recursiveTable[N <: Tuple, V <: Tuple]: Aux[RecursiveTable[N, V], RecursiveTable[N, V]] =
+        new AsTable[RecursiveTable[N, V]]:
+            type R = RecursiveTable[N, V]
+
+            def table(x: RecursiveTable[N, V])(using QueryContext): (R, SqlTable) =
+                (x, x.__sqlTable__)
+
     inline given values[T <: Product, S <: Seq[T]](using 
         p: Mirror.ProductOf[T]
     ): Aux[S, Table[T]] =

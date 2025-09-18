@@ -1,10 +1,11 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.*
-import sqala.ast.statement.SqlQuery
+import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.{SqlQuery, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.*
 import sqala.static.dsl.statement.dml.*
-import sqala.static.dsl.statement.query.{AsSelect, ConnectByContext, GroupingContext, SelectQuery}
+import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
 import sqala.static.metadata.*
 
@@ -490,3 +491,36 @@ def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
 ): GraphTable[TN, TV] =
     given GraphContext = new GraphContext
     f(graph)
+
+def withRecursive[N <: Tuple, V <: Tuple, R](
+    baseQuery: Query[NamedTuple[N, V]]
+)(
+    f: RecursiveTable[N, V] => Query[NamedTuple[N, V]]
+)(
+    g: RecursiveTable[N, V] => Query[R]
+)(using
+    p: AsTableParam[V],
+    m: AsMap[V],
+    c: QueryContext
+): Query[R] =
+    val alias = c.fetchAlias
+    val withTable = RecursiveTable[N, V](Some(alias))
+    val unionQuery = f(withTable)
+    val finalTable = RecursiveTable[N, V](Some(tableCte))
+    val finalQuery = g(finalTable)
+    val columns = m.selectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
+    val withTree = SqlQuery.Set(
+        baseQuery.tree,
+        SqlSetOperator.Union(Some(SqlQuantifier.All)),
+        unionQuery.tree,
+        Nil,
+        None,
+        None
+    )
+    val tree = SqlQuery.Cte(
+        SqlWithItem(tableCte, withTree, columns) :: Nil,
+        true,
+        finalQuery.tree,
+        None
+    )
+    Query(finalQuery.params, tree)
