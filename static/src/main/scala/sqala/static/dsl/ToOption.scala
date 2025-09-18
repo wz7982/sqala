@@ -52,6 +52,16 @@ object ToOption:
             def toOption(x: JsonTable[N, V]): R =
                 x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
+    given graphTable[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[GraphTable[N, V], GraphTable[N, tt.R]] =
+        new ToOption[GraphTable[N, V]]:
+            type R = GraphTable[N, tt.R]
+
+            def toOption(x: GraphTable[N, V]): R =
+                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+
     given recognizeTable[N <: Tuple, V <: Tuple](using
         t: ToOption[V],
         tt: ToTuple[t.R]

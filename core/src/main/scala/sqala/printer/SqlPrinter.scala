@@ -1179,12 +1179,12 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     for l <- label do
                         if name.isDefined then
                             sqlBuilder.append(" ")
-                        sqlBuilder.append(" IS ")
+                        sqlBuilder.append("IS ")
                         printPatternLabel(l)
                     for w <- where do
                         if name.isDefined || label.isDefined then
                             sqlBuilder.append(" ")
-                        sqlBuilder.append(" WHERE ")
+                        sqlBuilder.append("WHERE ")
                         printExpr(w)
                     sqlBuilder.append(")")
                 case SqlGraphPatternTerm.Edge(leftSymbol, name, label, where, rightSymbol) =>
@@ -1195,12 +1195,12 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
                     for l <- label do
                         if name.isDefined then
                             sqlBuilder.append(" ")
-                        sqlBuilder.append(" IS ")
+                        sqlBuilder.append("IS ")
                         printPatternLabel(l)
                     for w <- where do
                         if name.isDefined || label.isDefined then
                             sqlBuilder.append(" ")
-                        sqlBuilder.append(" WHERE ")
+                        sqlBuilder.append("WHERE ")
                         printExpr(w)
                     sqlBuilder.append("]")
                     sqlBuilder.append(rightSymbol.symbol)
@@ -1363,6 +1363,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         printSpace()
         sqlBuilder.append("COLUMNS(\n")
         printList(table.columns, ",\n")(printSelectItem |> printWithSpace)
+        sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
 
