@@ -71,7 +71,7 @@ class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(e
                     )
                 )
             case _ =>
-                super.printExpr(expr)
+                super.printBinaryExpr(expr)
 
     override def printValues(values: SqlQuery.Values): Unit =
         printSpace()
