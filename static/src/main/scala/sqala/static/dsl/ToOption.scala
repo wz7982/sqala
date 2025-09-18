@@ -2,6 +2,8 @@ package sqala.static.dsl
 
 import sqala.static.dsl.table.*
 
+import scala.NamedTuple.NamedTuple
+
 trait ToOption[T]:
     type R
 
@@ -99,3 +101,13 @@ object ToOption:
 
             def toOption(x: H *: EmptyTuple): R =
                 h.toOption(x.head) *: EmptyTuple
+
+    given namedTuple[N <: Tuple, V <: Tuple](using
+        v: ToOption[V],
+        tt: ToTuple[v.R]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+        new ToOption[NamedTuple[N, V]]:
+            type R = NamedTuple[N, tt.R]
+
+            def toOption(x: NamedTuple[N, V]): R =
+                tt.toTuple(v.toOption(x.toTuple))
