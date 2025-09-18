@@ -38,6 +38,12 @@ object Result:
         new Result[GraphTable[N, V]]:
             type R = r.R
 
+    given recursiveTable[N <: Tuple, V <: Tuple](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[RecursiveTable[N, V], r.R] =
+        new Result[RecursiveTable[N, V]]:
+            type R = r.R
+
     given recognizeTable[N <: Tuple, V <: Tuple](using
         r: Result[NamedTuple[N, V]]
     ): Aux[RecognizeTable[N, V], r.R] =

@@ -33,6 +33,15 @@ object AsLateralTable:
                 val table = x.copy[N, V](__sqlTable__ = sqlTable)
                 (table, sqlTable)
 
+    given graphTable[N <: Tuple, V <: Tuple]: Aux[GraphTable[N, V], GraphTable[N, V]] =
+        new AsLateralTable[GraphTable[N, V]]:
+            type R = GraphTable[N, V]
+
+            def table(x: GraphTable[N, V])(using QueryContext): (R, SqlTable) =
+                val sqlTable: SqlTable.Graph = x.__sqlTable__.copy(lateral = true)
+                val table = x.copy[N, V](__sqlTable__ = sqlTable)
+                (table, sqlTable)
+
     given subQueryTable[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
         AsTableParam[V]
     ): Aux[Q, SubQueryTable[N, V]] =

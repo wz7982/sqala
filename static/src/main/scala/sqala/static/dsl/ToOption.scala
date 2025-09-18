@@ -62,6 +62,16 @@ object ToOption:
             def toOption(x: GraphTable[N, V]): R =
                 x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
+    given recursiveTable[N <: Tuple, V <: Tuple](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[RecursiveTable[N, V], RecursiveTable[N, tt.R]] =
+        new ToOption[RecursiveTable[N, V]]:
+            type R = RecursiveTable[N, tt.R]
+
+            def toOption(x: RecursiveTable[N, V]): R =
+                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+
     given recognizeTable[N <: Tuple, V <: Tuple](using
         t: ToOption[V],
         tt: ToTuple[t.R]
