@@ -13,7 +13,8 @@ import scala.deriving.Mirror
 
 class JdbcTransactionContext(
     val connection: Connection, 
-    val dialect: Dialect
+    val dialect: Dialect,
+    val standardEscapeStrings: Boolean
 )
 
 enum TransactionIsolation(val jdbcIsolation: Int):
@@ -27,19 +28,19 @@ val transaction = Transaction
 
 object Transaction:
     def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
-        val (sql, args) = statementToString(insert.tree, t.dialect, true)
-        l(sql, args)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(insert.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     def execute(update: Update[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
-        val (sql, args) = statementToString(update.tree, t.dialect, true)
-        l(sql, args)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(update.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcExec(t.connection, sql, Array.empty[Any])
         
     def execute(delete: Delete[?])(using t: JdbcTransactionContext, l: Logger): Int =
-        val (sql, args) = statementToString(delete.tree, t.dialect, true)
-        l(sql, args)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(delete.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     def execute(nativeSql: NativeSql)(using t: JdbcTransactionContext, l: Logger): Int =
         val NativeSql(sql, args) = nativeSql
@@ -52,8 +53,8 @@ object Transaction:
         l: Logger
     ): Int =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val (sql, args) = statementToString(i.tree, t.dialect, true)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(i.tree, t.dialect, t.standardEscapeStrings)
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     inline def insertBatch[A <: Product](entities: Seq[A])(using 
         m: Mirror.ProductOf[A],
@@ -61,8 +62,8 @@ object Transaction:
         l: Logger
     ): Int =
         val i = Insert.insertByEntities[A](entities)
-        val (sql, args) = statementToString(i.tree, t.dialect, true)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(i.tree, t.dialect, t.standardEscapeStrings)
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     inline def insertAndReturn[A <: Product](entity: A)(using 
         m: Mirror.ProductOf[A],
@@ -70,8 +71,8 @@ object Transaction:
         l: Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val (sql, args) = statementToString(i.tree, t.dialect, true)
-        val id = jdbcExecReturnKey(t.connection, sql, args).head
+        val sql = statementToString(i.tree, t.dialect, t.standardEscapeStrings)
+        val id = jdbcExecReturnKey(t.connection, sql, Array.empty[Any]).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
 
     inline def update[A <: Product](
@@ -86,8 +87,8 @@ object Transaction:
         if u.tree.setList.isEmpty then
             0
         else
-            val (sql, args) = statementToString(u.tree, t.dialect, true)
-            jdbcExec(t.connection, sql, args)
+            val sql = statementToString(u.tree, t.dialect, t.standardEscapeStrings)
+            jdbcExec(t.connection, sql, Array.empty[Any])
 
     inline def save[A <: Product](
         entity: A
@@ -97,8 +98,8 @@ object Transaction:
         l: Logger
     ): Int =
         val s = Save.saveByEntity[A](entity)
-        val (sql, args) = statementToString(s.tree, t.dialect, true)
-        jdbcExec(t.connection, sql, args)
+        val sql = statementToString(s.tree, t.dialect, t.standardEscapeStrings)
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     inline def fetchByPrimaryKeys[T](using 
         fp: FetchPk[T],
@@ -107,9 +108,9 @@ object Transaction:
         l: Logger
     )(pks: Seq[fp.R]): List[T] =
         val tree = fp.createTree(pks)
-        val (sql, args) = queryToString(tree, t.dialect, true)
-        l(sql, args)
-        jdbcQuery(t.connection, sql, args)
+        val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQuery(t.connection, sql, Array.empty[Any])
 
     inline def findByPrimaryKey[T](using 
         fp: FetchPk[T],
@@ -118,18 +119,18 @@ object Transaction:
         l: Logger
     )(pk: fp.R): Option[T] =
         val tree = fp.createTree(pk :: Nil)
-        val (sql, args) = queryToString(tree, t.dialect, true)
-        l(sql, args)
-        jdbcQuery(t.connection, sql, args).headOption
+        val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQuery(t.connection, sql, Array.empty[Any]).headOption
 
     inline def fetchTo[T](inline query: Query[?])(using 
         d: JdbcDecoder[T], 
         t: JdbcTransactionContext, 
         l: Logger
     ): List[T] =
-        val (sql, args) = queryToString(query.tree, t.dialect, true)
-        l(sql, args)
-        jdbcQuery(t.connection, sql, args)
+        val sql = queryToString(query.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQuery(t.connection, sql, Array.empty[Any])
         
     inline def fetch[T](inline query: Query[T])(using 
         r: Result[T], 
@@ -178,17 +179,17 @@ object Transaction:
         t: JdbcTransactionContext, 
         l: Logger
     ): List[T] =
-        val (sql, args) = queryToString(query.tree, t.dialect, true)
-        l(sql, args)
-        jdbcQuery(t.connection, sql, args)
+        val sql = queryToString(query.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQuery(t.connection, sql, Array.empty[Any])
 
     def fetchToMap(query: DynamicQuery)(using 
         t: JdbcTransactionContext, 
         l: Logger
     ): List[Map[String, Any]] =
-        val (sql, args) = queryToString(query.tree, t.dialect, true)
-        l(sql, args)
-        jdbcQueryToMap(t.connection, sql, args)
+        val sql = queryToString(query.tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQueryToMap(t.connection, sql, Array.empty[Any])
 
     inline def findTo[T](inline query: Query[?])(using 
         JdbcDecoder[T], 

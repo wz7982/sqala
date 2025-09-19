@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMod
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTableAlias
 
-class OraclePrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
+class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
     override def printCteRecursive(): Unit = {}
 
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =

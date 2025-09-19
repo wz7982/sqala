@@ -3,11 +3,7 @@ package sqala.printer
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 
-class H2Printer(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
-    override val leftQuote: String = "`"
-
-    override val rightQuote: String = "`"
-
+class H2Printer(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         printTable(upsert.table)

@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlVectorDistanceMode}
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
-class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
+class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
     override def printLimit(limit: SqlLimit): Unit =
         val standardMode = limit.fetch match
             case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>

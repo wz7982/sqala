@@ -8,16 +8,12 @@ import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.util.|>
 
-import scala.collection.mutable.ArrayBuffer
-
-abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
+abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     val sqlBuilder: StringBuilder = StringBuilder()
 
-    val leftQuote: String = "\""
+    val leftQuote: Char = '"'
 
-    val rightQuote: String = "\""
-
-    val args: ArrayBuffer[Any] = ArrayBuffer()
+    val rightQuote: Char = '"'
 
     val indent: Int = 4
 
@@ -270,46 +266,26 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
     def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
-        if enableJdbcPrepare then
-            sqlBuilder.append("?")
-            args.addOne(expr.string)
-        else
-            sqlBuilder.append("'")
-            sqlBuilder.append(expr.string)
-            sqlBuilder.append("'")
+        printChars(expr.string)
 
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
-        if enableJdbcPrepare then
-            sqlBuilder.append("?")
-            args.addOne(expr.number)
-        else
-            sqlBuilder.append(expr.number)
+        sqlBuilder.append(expr.number)
 
     def printBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
-        if enableJdbcPrepare then
-            sqlBuilder.append("?")
-            args.addOne(expr.boolean)
+        if expr.boolean then
+            sqlBuilder.append("TRUE")
         else
-            if expr.boolean then
-                sqlBuilder.append("TRUE")
-            else
-                sqlBuilder.append("FALSE")
+            sqlBuilder.append("FALSE")
 
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        if enableJdbcPrepare then
-            sqlBuilder.append("?")
-            args.addOne(expr.time)
-        else
-            sqlBuilder.append(expr.unit.unit)
-            sqlBuilder.append(" ")
-            sqlBuilder.append("'")
-            sqlBuilder.append(expr.time)
-            sqlBuilder.append("'")
+        sqlBuilder.append(expr.unit.unit)
+        sqlBuilder.append(" ")
+        printChars(expr.time)
 
     def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
-        sqlBuilder.append("INTERVAL '")
-        sqlBuilder.append(expr.value)
-        sqlBuilder.append("' ")
+        sqlBuilder.append("INTERVAL ")
+        printChars(expr.value)
+        sqlBuilder.append(" ")
         expr.field match
             case SqlIntervalField.To(s, e) =>
                 sqlBuilder.append(s.unit)
@@ -1675,9 +1651,26 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         pull()
 
     def printIdent(name: String): Unit =
+        val nameBuilder = new StringBuilder
+        for c <- name do
+            if c == rightQuote then
+                nameBuilder.append(rightQuote)
+            nameBuilder.append(c)
         sqlBuilder.append(leftQuote)
-        sqlBuilder.append(name)
+        sqlBuilder.append(nameBuilder.toString)
         sqlBuilder.append(rightQuote)
+
+    def printChars(chars: String): Unit =
+        val stringBuilder = new StringBuilder
+        for c <- chars do
+            if c == '\'' then
+                stringBuilder.append('\'')
+            if c == '\\' && !standardEscapeStrings then
+                stringBuilder.append('\\')
+            stringBuilder.append(c)
+        sqlBuilder.append("'")
+        sqlBuilder.append(stringBuilder.toString)
+        sqlBuilder.append("'")
     
     def printList[T](list: List[T], separator: String = ", ")(printer: T => Unit): Unit =
         for i <- list.indices do

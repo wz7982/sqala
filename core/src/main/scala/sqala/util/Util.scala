@@ -17,17 +17,17 @@ extension [A, B](a: A)
 def queryToString(
     query: SqlQuery, 
     dialect: Dialect, 
-    enableJdbcPrepare: Boolean
-): (String, Array[Any]) =
-    val printer = dialect.printer(enableJdbcPrepare)
+    standardEscapeStrings: Boolean
+): String =
+    val printer = dialect.printer(standardEscapeStrings)
     printer.printQuery(query)
-    printer.sql -> printer.args.toArray
+    printer.sql
 
 def statementToString(
     statement: SqlStatement, 
     dialect: Dialect, 
-    enableJdbcPrepare: Boolean
-): (String, Array[Any]) =
-    val printer = dialect.printer(enableJdbcPrepare)
+    standardEscapeStrings: Boolean
+): String =
+    val printer = dialect.printer(standardEscapeStrings)
     printer.printStatement(statement)
-    printer.sql -> printer.args.toArray
+    printer.sql

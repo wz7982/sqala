@@ -18,8 +18,8 @@ sealed trait DynamicQuery:
 
     def asExpr: Expr = Expr(SqlExpr.SubQuery(tree))
 
-    def sql(dialect: Dialect, enableJdbcPrepare: Boolean): (String, Array[Any]) =
-        queryToString(tree, dialect, enableJdbcPrepare)
+    def sql(dialect: Dialect, standardEscapeStrings: Boolean): String =
+        queryToString(tree, dialect, standardEscapeStrings)
 
     infix def union(query: DynamicQuery): Union = Union(this, SqlSetOperator.Union(None), query)
 
