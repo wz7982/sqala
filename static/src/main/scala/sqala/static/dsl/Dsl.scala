@@ -9,7 +9,6 @@ import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
 import sqala.static.metadata.*
 
-import java.time.{LocalDate, LocalDateTime}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
 
@@ -216,11 +215,8 @@ def grouping[T: AsExpr as a](x: T)(using QueryContext, GroupingContext): Expr[In
         )
     )
 
-def timestamp(s: String)(using QueryContext): Expr[LocalDateTime] =
-    Expr(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, s))
-
-def date(s: String)(using QueryContext): Expr[LocalDate] =
-    Expr(SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, s))
+extension [T: AsExpr as a](x: T)
+    def asExpr: Expr[a.R] = a.asExpr(x)
 
 def level()(using QueryContext, ConnectByContext): Expr[Int] =
     Expr(SqlExpr.Column(Some(tableCte), columnPseudoLevel))
