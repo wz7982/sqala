@@ -429,7 +429,7 @@ def percentileDisc[T: AsExpr as a, W](x: T, withinGroup: Sort[W])(using
     )
 
 @aggFunction
-def listagg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
+def listAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext
@@ -451,7 +451,7 @@ def stringAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGro
     SqlString[as.R],
     QueryContext
 ): Expr[Option[String]] =
-    listagg(x, separator, withinGroup)
+    listAgg(x, separator, withinGroup)
 
 @aggFunction
 def groupConcat[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
@@ -459,7 +459,35 @@ def groupConcat[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinG
     SqlString[as.R],
     QueryContext
 ): Expr[Option[String]] =
-    listagg(x, separator, withinGroup)
+    listAgg(x, separator, withinGroup)
+
+@aggFunction
+def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](k: K, v: V)(using 
+    QueryContext
+): Expr[Option[Json]] =
+    Expr(
+        SqlExpr.JsonObjectAggFunc(
+            (ak.asExpr(k).asSqlExpr, av.asExpr(v).asSqlExpr),
+            None,
+            None,
+            None,
+            None
+        )
+    )
+
+@aggFunction
+def jsonArrayAgg[A: AsExpr as aa](x: A)(using 
+    QueryContext
+): Expr[Option[Json]] =
+    Expr(
+        SqlExpr.JsonArrayAggFunc(
+            (aa.asExpr(x).asSqlExpr, None),
+            Nil,
+            None,
+            None,
+            None
+        )
+    )
 
 @function
 def substring[T: AsExpr as at, S: AsExpr as as](x: T, start: S)(using 
@@ -1268,6 +1296,33 @@ def jsonExists[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
             aa.asExpr(x).asSqlExpr,
             ap.asExpr(path).asSqlExpr,
             Nil,
+            None
+        )
+    )
+
+case class JsonObjectPair(k: SqlExpr, v: SqlExpr)
+
+extension [K: AsExpr as ak](k: K)
+    infix def value[V: AsExpr as av](v: V): JsonObjectPair =
+        JsonObjectPair(ak.asExpr(k).asSqlExpr, av.asExpr(v).asSqlExpr)
+
+@function
+def jsonObject(items: JsonObjectPair*)(using QueryContext): Expr[Option[Json]] =
+    Expr(
+        SqlExpr.JsonObjectFunc(
+            items.toList.map(i => (i.k, i.v)),
+            None,
+            None,
+            None
+        )
+    )
+
+@function
+def jsonArray[A: AsExpr as aa](items: A)(using QueryContext): Expr[Option[Json]] =
+    Expr(
+        SqlExpr.JsonArrayFunc(
+            aa.exprs(items).map(i => (i.asSqlExpr, None)),
+            None,
             None
         )
     )
