@@ -37,9 +37,9 @@ object AsExpr:
             def exprs(x: Expr[T]): List[Expr[?]] =
                 x :: Nil
 
-    given query[T: AsSqlExpr, Q <: Query[Expr[T]]]: Aux[Q, T] =
+    given query[T, Q <: Query[T]](using a: AsExpr[T]): Aux[Q, a.R] =
         new AsExpr[Q]:
-            type R = T
+            type R = a.R
 
             def exprs(x: Q): List[Expr[?]] =
                 Expr(SqlExpr.SubQuery(x.tree)) :: Nil
