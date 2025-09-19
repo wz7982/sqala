@@ -38,6 +38,15 @@ case class PivotTable[N <: Tuple, V <: Tuple](
             )
         PivotGroupBy[N, V, GN, tt.R](__items__, group, newQuery)
 
+    def agg[AN <: Tuple, AV <: Tuple](aggregations: NamedTuple[AN, AV])(using
+        m: AsMap[AV],
+        tt: ToTuple[m.R],
+        c: QueryContext,
+        pc: PivotContext
+    ): PivotAgg[N, V, EmptyTuple, EmptyTuple, AN, tt.R] =
+        val aggItems = m.selectItems(aggregations.toTuple, 1).map(_.expr)
+        PivotAgg[N, V, EmptyTuple, EmptyTuple, AN, tt.R](__items__, Nil, aggItems, __sqlQuery__)
+
 case class PivotGroupBy[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple](
     private[sqala] val __items__ : V,
     private[sqala] val __group__ : List[SqlExpr],
