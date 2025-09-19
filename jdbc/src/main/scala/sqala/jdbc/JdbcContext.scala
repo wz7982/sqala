@@ -14,7 +14,8 @@ import scala.deriving.Mirror
 
 class JdbcContext[Url <: String, Username <: String, Password <: String, Driver <: String](
     val dataSource: DataSource, 
-    val dialect: Dialect
+    val dialect: Dialect,
+    val standardEscapeStrings: Boolean
 ):
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
         val conn = dataSource.getConnection()
@@ -27,16 +28,16 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         execute(c => jdbcExec(c, sql, args))
 
     def execute(insert: Insert[?, ?])(using Logger): Int =
-        val (sql, args) = statementToString(insert.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(insert.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     def execute(update: Update[?, ?])(using Logger): Int =
-        val (sql, args) = statementToString(update.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(update.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     def execute(delete: Delete[?])(using Logger): Int =
-        val (sql, args) = statementToString(delete.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(delete.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     def execute(nativeSql: NativeSql)(using Logger): Int =
         val NativeSql(sql, args) = nativeSql
@@ -47,24 +48,24 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val (sql, args) = statementToString(i.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     inline def insertBatch[A <: Product](entities: Seq[A])(using
         Mirror.ProductOf[A],
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entities)
-        val (sql, args) = statementToString(i.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     inline def insertAndReturn[A <: Product](entity: A)(using
         Mirror.ProductOf[A],
         Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val (sql, args) = statementToString(i.tree, dialect, true)
-        val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
+        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        val id = execute(c => jdbcExecReturnKey(c, sql, Array.empty[Any])).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
 
     inline def update[A <: Product](
@@ -78,8 +79,8 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         if u.tree.setList.isEmpty then
             0
         else
-            val (sql, args) = statementToString(u.tree, dialect, true)
-            executeDml(sql, args)
+            val sql = statementToString(u.tree, dialect, standardEscapeStrings)
+            executeDml(sql, Array.empty[Any])
 
     inline def save[A <: Product](
         entity: A
@@ -88,8 +89,8 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         Logger
     ): Int =
         val s = Save.saveByEntity[A](entity)
-        val (sql, args) = statementToString(s.tree, dialect, true)
-        executeDml(sql, args)
+        val sql = statementToString(s.tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     inline def fetchByPrimaryKeys[T](using 
         fp: FetchPk[T], 
@@ -97,9 +98,9 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l: Logger
     )(pks: Seq[fp.R]): List[T] =
         val tree = fp.createTree(pks)
-        val (sql, args) = queryToString(tree, dialect, true)
-        l(sql, args)
-        execute(c => jdbcQuery(c, sql, args))
+        val sql = queryToString(tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     inline def findByPrimaryKey[T](using 
         fp: FetchPk[T], 
@@ -107,17 +108,17 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l: Logger
     )(pk: fp.R): Option[T] =
         val tree = fp.createTree(pk :: Nil)
-        val (sql, args) = queryToString(tree, dialect, true)
-        l(sql, args)
-        execute(c => jdbcQuery(c, sql, args)).headOption
+        val sql = queryToString(tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
 
     inline def fetchTo[T](inline query: Query[?])(using 
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        val (sql, args) = queryToString(query.tree, dialect, true)
-        l(sql, args)
-        execute(c => jdbcQuery(c, sql, args))
+        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     inline def fetch[T](inline query: Query[T])(using 
         r: Result[T], 
@@ -165,14 +166,14 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        val (sql, args) = queryToString(query.tree, dialect, true)
-        l(sql, args)
-        execute(c => jdbcQuery(c, sql, args))
+        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     def fetchToMap(query: DynamicQuery)(using l: Logger): List[Map[String, Any]] =
-        val (sql, args) = queryToString(query.tree, dialect, true)
-        l(sql, args)
-        execute(c => jdbcQueryToMap(c, sql, args))
+        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQueryToMap(c, sql, Array.empty[Any]))
 
     inline def pageTo[T]( 
         inline query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
@@ -219,7 +220,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         fetch(existsQuery).head
 
     def showSql[T](query: Query[T]): String =
-        queryToString(query.tree, dialect, true)._1
+        queryToString(query.tree, dialect, standardEscapeStrings)
 
     inline def cursorFetch[T, R](
         inline query: Query[T],
@@ -229,20 +230,20 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         d: JdbcDecoder[r.R],
         l: Logger
     )(f: Cursor[r.R] => R): Unit =
-        val (sql, args) = queryToString(query.tree, dialect, true)
-        l(sql, args)
+        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
         val conn = dataSource.getConnection()
-        jdbcCursorQuery(conn, sql, args, fetchSize, f)
+        jdbcCursorQuery(conn, sql, Array.empty[Any], fetchSize, f)
         conn.close()
 
-    transparent inline def executeTransaction[T](
+    def executeTransaction[T](
         block: JdbcTransactionContext ?=> T
     ): T =
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         try
             given JdbcTransactionContext = 
-                new JdbcTransactionContext(conn, dialect)
+                new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
             val result = block
             conn.commit()
             result
@@ -253,7 +254,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
             conn.setAutoCommit(true)
             conn.close()
 
-    transparent inline def executeTransactionWithIsolation[T](
+    def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
     )(block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
@@ -261,7 +262,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         conn.setTransactionIsolation(isolation.jdbcIsolation)
         try
             given JdbcTransactionContext = 
-                new JdbcTransactionContext(conn, dialect)
+                new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
             val result = block
             conn.commit()
             result
@@ -275,9 +276,10 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
 object JdbcContext:
     inline def apply[S <: DataSource](
         dialect: Dialect,
+        standardEscapeStrings: Boolean,
         url: String, 
         username: String, 
         password: String, 
         driverClassName: String
     )(using c: JdbcConnection[S]): JdbcContext[url.type, username.type, password.type, driverClassName.type] =
-        new JdbcContext(c.init(url, username, password, driverClassName), dialect)
+        new JdbcContext(c.init(url, username, password, driverClassName), dialect, standardEscapeStrings)

@@ -7,10 +7,10 @@ import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 
-class MysqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrinter(enableJdbcPrepare):
-    override val leftQuote: String = "`"
+class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+    override val leftQuote: Char = '`'
 
-    override val rightQuote: String = "`"
+    override val rightQuote: Char = '`'
 
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")

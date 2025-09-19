@@ -21,8 +21,8 @@ sealed class Query[T](
 
 object Query:
     extension [T](query: Query[T])
-        def sql(dialect: Dialect, enableJdbcPrepare: Boolean = true): (String, Array[Any]) =
-            queryToString(query.tree, dialect, enableJdbcPrepare)
+        def sql(dialect: Dialect, standardEscapeStrings: Boolean = true): String =
+            queryToString(query.tree, dialect, standardEscapeStrings)
 
         infix def union[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
