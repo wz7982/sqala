@@ -514,21 +514,25 @@ def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
     given GraphContext = new GraphContext
     f(graph)
 
-def withRecursive[N <: Tuple, V <: Tuple, R](
+def withRecursive[N <: Tuple, V <: Tuple, UN <: Tuple, UV <: Tuple, R](
     baseQuery: Query[NamedTuple[N, V]]
 )(
-    f: RecursiveTable[N, V] => Query[NamedTuple[N, V]]
+    f: RecursiveTable[N, V] => Query[NamedTuple[UN, UV]]
+)(using
+    u: Union[V, UV],
+    t: ToTuple[u.R]
 )(
-    g: RecursiveTable[N, V] => Query[R]
+    g: RecursiveTable[N, t.R] => Query[R]
 )(using
     p: AsTableParam[V],
+    pt: AsTableParam[t.R],
     m: AsMap[V],
     c: QueryContext
 ): Query[R] =
     val alias = c.fetchAlias
     val withTable = RecursiveTable[N, V](Some(alias))
     val unionQuery = f(withTable)
-    val finalTable = RecursiveTable[N, V](Some(tableCte))
+    val finalTable = RecursiveTable[N, t.R](Some(tableCte))
     val finalQuery = g(finalTable)
     val columns = m.selectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
     val withTree = SqlQuery.Set(
