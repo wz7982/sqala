@@ -46,13 +46,6 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
             sqlBuilder.append("EXCLUDED.")
             printExpr(u)
 
-    override def printType(`type`: SqlType): Unit =
-        `type` match
-            case SqlType.Json => 
-                sqlBuilder.append("JSONB")
-            case _ =>
-                super.printType(`type`)
-
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")
         expr.quantifier.foreach: q => 
