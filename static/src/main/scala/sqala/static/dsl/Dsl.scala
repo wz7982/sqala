@@ -84,6 +84,20 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
 
+def any[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
+    SubLink(query.tree, SqlSubLinkQuantifier.Any)
+
+def all[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
+    SubLink(query.tree, SqlSubLinkQuantifier.All)
+
+def exists[T](query: Query[T]): Expr[Option[Boolean]] =
+    Expr(
+        SqlExpr.SubLink(
+            query.tree,
+            SqlSubLinkQuantifier.Exists
+        )
+    )
+
 case class Unnest[T](x: Option[T])
 
 def unnest[T: AsExpr as a](x: T)(using
