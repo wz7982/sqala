@@ -1303,7 +1303,7 @@ def jsonExists[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
 case class JsonObjectPair(k: SqlExpr, v: SqlExpr)
 
 extension [K: AsExpr as ak](k: K)
-    infix def value[V: AsExpr as av](v: V): JsonObjectPair =
+    infix def value[V: AsExpr as av](v: V)(using QueryContext): JsonObjectPair =
         JsonObjectPair(ak.asExpr(k).asSqlExpr, av.asExpr(v).asSqlExpr)
 
 @function
