@@ -1310,7 +1310,7 @@ abstract class SqlPrinter(val enableJdbcPrepare: Boolean):
         push()
         printSpace()
         printIdent(table.name)
-        sqlBuilder.append(",\n")
+        sqlBuilder.append("\n")
 
         printSpace()
         sqlBuilder.append("MATCH")

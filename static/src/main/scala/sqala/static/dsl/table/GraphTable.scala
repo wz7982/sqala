@@ -329,19 +329,6 @@ case class GraphMatch[T](
     ): GraphMatch[T] =
         filter(f)
 
-    def oneRowPerMatch(using QueryContext, GraphContext): GraphMatch[T] =
-        copy(__rows__ = Some(SqlGraphRowsMode.Match))
-
-    def oneRowPerVertex(f: T => GraphVertex[?])(using QueryContext, GraphContext): GraphMatch[T] =
-        copy(__rows__ = Some(SqlGraphRowsMode.Vertex(f(__pattern__).__alias__.get, Nil)))
-
-    def oneRowPerStep(f: T => (GraphVertex[?], GraphEdge[?], GraphVertex[?]))(using 
-        QueryContext, 
-        GraphContext
-    ): GraphMatch[T] =
-        val (v1, e, v2) = f(__pattern__)
-        copy(__rows__ = Some(SqlGraphRowsMode.Step(v1.__alias__.get, e.__alias__.get, v2.__alias__.get, Nil)))
-
 case class GraphTable[N <: Tuple, V <: Tuple](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,

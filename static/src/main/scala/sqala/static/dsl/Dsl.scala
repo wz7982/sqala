@@ -451,9 +451,17 @@ inline def vertex[T]: GraphVertex[T] =
     val metaData = TableMacro.tableMetaData[T]
     GraphVertex(None, metaData)
 
+inline def vertex[T](label: String): GraphVertex[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertex(None, metaData.copy(tableName = label))
+
 inline def edge[T]: GraphEdge[T] =
     val metaData = TableMacro.tableMetaData[T]
     GraphEdge(None, metaData, None, None)
+
+inline def edge[T](label: String): GraphEdge[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdge(None, metaData.copy(tableName = label), None, None)
 
 def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): Graph[N, V] =
     Graph(name, labels.toTuple)

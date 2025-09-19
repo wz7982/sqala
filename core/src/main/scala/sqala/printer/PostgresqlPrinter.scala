@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMode}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlVectorDistanceMode}
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
@@ -45,13 +45,6 @@ class PostgresqlPrinter(override val enableJdbcPrepare: Boolean) extends SqlPrin
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")
             printExpr(u)
-
-    override def printType(`type`: SqlType): Unit =
-        `type` match
-            case SqlType.Json => 
-                sqlBuilder.append("JSONB")
-            case _ =>
-                super.printType(`type`)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")
