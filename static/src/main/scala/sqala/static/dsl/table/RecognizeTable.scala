@@ -19,7 +19,7 @@ case class RecognizePredefine[T](
         MatchRecognizeContext
     ): RecognizePredefine[T] =
         val sort = a.asSort(sortValue).map(_.asSqlOrderBy)
-        RecognizePredefine(r.setOrderBy(__table__, sort))
+        RecognizePredefine(r.appendOrderBy(__table__, sort))
 
     def orderBy[S: AsSort as a](sortValue: S)(using
         QueryContext, 

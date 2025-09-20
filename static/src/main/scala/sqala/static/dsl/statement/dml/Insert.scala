@@ -41,7 +41,7 @@ class Insert[T, S <: InsertState](
             SqlStatement.Insert(sqlTable, columns, Nil, None)
         new Insert(tree)
 
-    inline infix def values(rows: List[T])(using 
+    inline def values(rows: List[T])(using 
         S =:= InsertTable
     ): Insert[T, InsertValues] =
         val instances = AsSqlExpr.summonInstances[T]
@@ -53,7 +53,7 @@ class Insert[T, S <: InsertState](
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(tree.copy(values = insertValues))
 
-    inline infix def values(row: T)(using 
+    inline def values(row: T)(using 
         S =:= InsertTable
     ): Insert[T, InsertValues] = 
         values(row :: Nil)

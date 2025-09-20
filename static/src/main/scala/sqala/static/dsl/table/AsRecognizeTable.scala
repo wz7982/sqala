@@ -12,7 +12,7 @@ trait AsRecognizeTable[T]:
 
     def setPartitionBy(x: T, items: List[SqlExpr]): T
 
-    def setOrderBy(x: T, items: List[SqlOrderingItem]): T
+    def appendOrderBy(x: T, items: List[SqlOrderingItem]): T
 
     def setPerMatch(x: T, perMatch: SqlRecognizePatternRowsPerMatchMode): T
 
@@ -61,13 +61,13 @@ object AsRecognizeTable:
                     )
             )
 
-        def setOrderBy(x: Table[T], items: List[SqlOrderingItem]): Table[T] =
+        def appendOrderBy(x: Table[T], items: List[SqlOrderingItem]): Table[T] =
             x.copy(
                 __sqlTable__ =
                     x.__sqlTable__.copy(
                         matchRecognize = 
                             x.__sqlTable__.matchRecognize.map: m =>
-                                m.copy(orderBy = items)
+                                m.copy(orderBy = m.orderBy ++ items)
                     )
             )
 
@@ -117,13 +117,13 @@ object AsRecognizeTable:
                     )
             )
 
-        def setOrderBy(x: SubQueryTable[N, V], items: List[SqlOrderingItem]): SubQueryTable[N, V] =
+        def appendOrderBy(x: SubQueryTable[N, V], items: List[SqlOrderingItem]): SubQueryTable[N, V] =
             x.copy(
                 __sqlTable__ =
                     x.__sqlTable__.copy(
                         matchRecognize = 
                             x.__sqlTable__.matchRecognize.map: m =>
-                                m.copy(orderBy = items)
+                                m.copy(orderBy = m.orderBy ++ items)
                     )
             )
 
