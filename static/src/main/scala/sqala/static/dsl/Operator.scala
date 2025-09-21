@@ -4,7 +4,6 @@ import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.static.metadata.*
 
-import java.time.OffsetDateTime
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
