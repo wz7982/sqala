@@ -24,7 +24,7 @@ object Query:
         def sql(dialect: Dialect, standardEscapeStrings: Boolean = true): String =
             queryToString(query.tree, dialect, standardEscapeStrings)
 
-        infix def union[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def union[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -37,7 +37,7 @@ object Query:
                 )
             )(using query.context)
 
-        infix def unionAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def unionAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -50,7 +50,7 @@ object Query:
                 )
             )(using query.context)
 
-        infix def except[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def except[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -63,7 +63,7 @@ object Query:
                 )
             )(using query.context)
 
-        infix def exceptAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def exceptAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -76,7 +76,7 @@ object Query:
                 )
             )(using query.context)
 
-        infix def intersect[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def intersect[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -89,7 +89,7 @@ object Query:
                 )
             )(using query.context)
 
-        infix def intersectAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
+        def intersectAll[R](unionQuery: Query[R])(using u: Union[T, R]): UnionQuery[u.R] =
             UnionQuery(
                 u.unionQueryItems(query.params, 1),
                 SqlQuery.Set(
@@ -278,11 +278,11 @@ class SelectQuery[T](
 
 object SelectQuery:
     extension [T](query: SelectQuery[T])
-        infix def filter[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
+        def filter[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
             val cond = a.asExpr(f(query.params))
             SelectQuery(query.params, query.tree.addWhere(cond.asSqlExpr))(using query.context)
 
-        infix def where[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
+        def where[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
             filter(f)
 
         def filterIf[F: AsExpr as a](test: => Boolean)(f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
@@ -294,17 +294,17 @@ object SelectQuery:
         def withFilter[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
             filter(f)
 
-        infix def sortBy[S: AsSort as s](f: T => S): SelectQuery[T] =
+        def sortBy[S: AsSort as s](f: T => S): SelectQuery[T] =
             val sort = s.asSort(f(query.params))
             SelectQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        infix def orderBy[S: AsSort](f: T => S): SelectQuery[T] =
+        def orderBy[S: AsSort](f: T => S): SelectQuery[T] =
             sortBy(f)
 
-        infix def map[M: AsMap as m](f: T => M): Query[m.R] =
+        def map[M: AsMap as m](f: T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -312,10 +312,10 @@ object SelectQuery:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def select[M: AsMap as m](f: T => M): Query[m.R] =
+        def select[M: AsMap as m](f: T => M): Query[m.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        def mapDistinct[M: AsMap as m](f: T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -323,10 +323,10 @@ object SelectQuery:
                 query.tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
             )(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
             mapDistinct(f)
 
-        infix def groupBy[G: AsGroup as a](f: T => G): Grouping[T] =
+        def groupBy[G: AsGroup as a](f: T => G): Grouping[T] =
             val group = a.exprs(f(query.params))
             Grouping(
                 query.params, 
@@ -337,7 +337,7 @@ object SelectQuery:
                 )
             )(using query.context)
 
-        infix def groupByCube[G](f: T => G)(using
+        def groupByCube[G](f: T => G)(using
             o: ToOption[T],
             a: AsGroup[G]
         ): MultiDimGrouping[o.R] =
@@ -351,7 +351,7 @@ object SelectQuery:
                 )
             )(using query.context)
 
-        infix def groupByRollup[G](f: T => G)(using
+        def groupByRollup[G](f: T => G)(using
             o: ToOption[T],
             a: AsGroup[G]
         ): MultiDimGrouping[o.R] =
@@ -365,7 +365,7 @@ object SelectQuery:
                 )
             )(using query.context)
 
-        infix def groupBySets[G](f: T => G)(using
+        def groupBySets[G](f: T => G)(using
             o: ToOption[T],
             g: GroupingSets[G]
         ): MultiDimGrouping[o.R] =
@@ -424,21 +424,21 @@ object Grouping:
     given GroupingContext = new GroupingContext
 
     extension [T](query: Grouping[T])
-        infix def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): Grouping[T] =
+        def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): Grouping[T] =
             val cond = a.asExpr(f(query.params))
             Grouping(query.params, query.tree.addHaving(cond.asSqlExpr))(using query.context)
 
-        infix def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): Grouping[T] =
+        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): Grouping[T] =
             val sort = s.asSort(f(query.params))
             Grouping(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        infix def orderBy[S: AsSort](f: GroupingContext ?=> T => S): Grouping[T] =
+        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): Grouping[T] =
             sortBy(f)
 
-        infix def map[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
+        def map[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -446,10 +446,10 @@ object Grouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def select[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
+        def select[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
+        def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -457,7 +457,7 @@ object Grouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
+        def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             mapDistinct(f)
 
 final class MultiDimGrouping[T](
@@ -471,21 +471,21 @@ object MultiDimGrouping:
     given GroupingContext = new GroupingContext
 
     extension [T](query: MultiDimGrouping[T])
-        infix def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): MultiDimGrouping[T] =
+        def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): MultiDimGrouping[T] =
             val cond = a.asExpr(f(query.params))
             MultiDimGrouping(query.params, query.tree.addHaving(cond.asSqlExpr))(using query.context)
 
-        infix def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
+        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
             val sort = s.asSort(f(query.params))
             MultiDimGrouping(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        infix def orderBy[S: AsSort](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
+        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
             sortBy(f)
 
-        infix def map[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
+        def map[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -493,10 +493,10 @@ object MultiDimGrouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def select[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
+        def select[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
+        def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
             Query(
@@ -504,7 +504,7 @@ object MultiDimGrouping:
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
+        def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             mapDistinct(f)
 
 class UnionQuery[T](
@@ -514,14 +514,14 @@ class UnionQuery[T](
 
 object UnionQuery:
     extension [T](query: UnionQuery[T])
-        infix def sortBy[S: AsSort as s](f: T => S): UnionQuery[T] =
+        def sortBy[S: AsSort as s](f: T => S): UnionQuery[T] =
             val sort = s.asSort(f(query.params))
             UnionQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        infix def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
+        def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
             sortBy(f)
 
 class ConnectByContext
@@ -549,23 +549,23 @@ object ConnectBy:
     given ConnectByContext = new ConnectByContext
     
     extension [T](query: ConnectBy[T])
-        infix def startWith[F: AsExpr as a](f: Table[T] => F)(using SqlBoolean[a.R]): ConnectBy[T] =
+        def startWith[F: AsExpr as a](f: Table[T] => F)(using SqlBoolean[a.R]): ConnectBy[T] =
             val cond = a.asExpr(f(query.table))
             query.copy(
                 startWithTree = query.startWithTree.addWhere(cond.asSqlExpr)
             )(using query.context)
 
-        infix def sortBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
+        def sortBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             val sort = f(query.table.copy(__aliasName__ = Some(tableCte)))
             val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
             query.copy(
                 mapTree = query.mapTree.copy(orderBy = query.mapTree.orderBy ++ sqlOrderBy)
             )(using query.context)
 
-        infix def orderBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
+        def orderBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortBy(f)
 
-        infix def maxDepth(n: Int): ConnectBy[T] =
+        def maxDepth(n: Int): ConnectBy[T] =
             val cond = SqlExpr.Binary(
                 SqlExpr.Column(Some(tableCte), columnPseudoLevel),
                 SqlBinaryOperator.LessThan,
@@ -575,17 +575,17 @@ object ConnectBy:
                 connectByTree = query.connectByTree.addWhere(cond)
             )(using query.context)
 
-        infix def sortSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
+        def sortSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             val sort = f(query.table)
             val sqlOrderBy = s.asSort(sort).map(_.asSqlOrderBy)
             query.copy(
                 connectByTree = query.connectByTree.copy(orderBy = query.connectByTree.orderBy ++ sqlOrderBy)
             )(using query.context)
 
-        infix def orderSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
+        def orderSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortSiblingsBy(f)
 
-        infix def map[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
+        def map[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
                     Some(tableCte), 
@@ -616,10 +616,10 @@ object ConnectBy:
             )
             Query(m.transform(mapped), cteTree)(using query.context)
 
-        infix def select[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
+        def select[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             map(f)
 
-        infix def mapDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
+        def mapDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(
                 Table[T](
                     Some(tableCte), 
@@ -650,5 +650,5 @@ object ConnectBy:
             )
             Query(m.transform(mapped), cteTree)(using query.context)
 
-        infix def selectDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
+        def selectDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             mapDistinct(f)

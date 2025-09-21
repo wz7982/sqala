@@ -26,13 +26,13 @@ inline def delete[T <: Product](using c: QueryContext): Delete[T] =
     Delete.apply[T]
 
 extension [A](a: => A)(using c: QueryContext)
-    infix def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
+    def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
-    infix def joinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+    def joinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
         tb: AsLateralTable[B], 
         j: TableJoin[ta.R, tb.R]
     ): JoinPart[j.R] =
@@ -41,13 +41,13 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
-    infix def crossJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinTable[j.R] = 
+    def crossJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinTable[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
-    infix def crossJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+    def crossJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
         tb: AsLateralTable[B], 
         j: TableJoin[ta.R, tb.R]
     ): JoinTable[j.R] =
@@ -56,13 +56,13 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
-    infix def leftJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableLeftJoin[ta.R, tb.R]): JoinPart[j.R] = 
+    def leftJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableLeftJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
-    infix def leftJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
+    def leftJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using 
         tb: AsLateralTable[B], 
         j: TableLeftJoin[ta.R, tb.R]
     ): JoinPart[j.R] =
@@ -71,13 +71,13 @@ extension [A](a: => A)(using c: QueryContext)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
-    infix def rightJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableRightJoin[ta.R, tb.R]): JoinPart[j.R] = 
+    def rightJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableRightJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Right, rightSqlTable, None))
 
-    infix def fullJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableFullJoin[ta.R, tb.R]): JoinPart[j.R] = 
+    def fullJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableFullJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
