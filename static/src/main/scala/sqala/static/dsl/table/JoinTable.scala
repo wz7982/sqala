@@ -13,7 +13,7 @@ case class JoinPart[T](
     private[sqala] val params: T,
     private[sqala] val sqlTable: SqlTable.Join
 ):
-    infix def on[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): JoinTable[T] =
+    def on[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): JoinTable[T] =
         val cond = a.asExpr(f(params))
         JoinTable(
             params,

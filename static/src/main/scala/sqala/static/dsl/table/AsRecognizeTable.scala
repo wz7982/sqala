@@ -67,7 +67,7 @@ object AsRecognizeTable:
                     x.__sqlTable__.copy(
                         matchRecognize = 
                             x.__sqlTable__.matchRecognize.map: m =>
-                                m.copy(orderBy = items)
+                                m.copy(orderBy = m.orderBy ++ items)
                     )
             )
 
@@ -123,7 +123,7 @@ object AsRecognizeTable:
                     x.__sqlTable__.copy(
                         matchRecognize = 
                             x.__sqlTable__.matchRecognize.map: m =>
-                                m.copy(orderBy = items)
+                                m.copy(orderBy = m.orderBy ++ items)
                     )
             )
 

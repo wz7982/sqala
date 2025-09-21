@@ -4,7 +4,6 @@ import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.static.metadata.*
 
-import java.time.OffsetDateTime
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
@@ -142,33 +141,11 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("plus")
     def +[R](that: R)(using
-        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: SqlNumber[ar.R],
-        r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        r: Plus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Plus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    def plusInterval[R](that: R)(using
-        d: SqlDateTime[at.R],
-        ar: AsExpr[R],
-        i: SqlInterval[ar.R],
-        qc: QueryContext
-    ): Expr[Option[OffsetDateTime]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Plus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
+        Expr(r.plus(at.asExpr(self).asSqlExpr, ar.asExpr(that).asSqlExpr))
 
     @targetName("minus")
     def -[R](that: R)(using
@@ -176,20 +153,6 @@ extension [T: AsExpr as at](self: T)
         r: Minus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Minus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    def minusInterval[R](that: R)(using
-        d: SqlDateTime[at.R],
-        ar: AsExpr[R],
-        i: SqlInterval[ar.R],
-        qc: QueryContext
-    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 
@@ -368,22 +331,22 @@ extension [T: AsExpr as at](self: T)
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Scalar), None)
         )
 
-    def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
+    def asc(using AsSqlExpr[at.R], QueryContext): Sort = 
         Sort(at.asExpr(self), SqlOrdering.Asc, None)
 
-    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
-    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
-    def desc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def desc(using AsSqlExpr[at.R], QueryContext): Sort =
         Sort(at.asExpr(self), SqlOrdering.Desc, None)
 
-    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
-    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
 extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))

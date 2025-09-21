@@ -24,31 +24,31 @@ case class Expr[T](private val expr: SqlExpr):
     ): Expr[Option[Boolean]] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
-    infix def over(over: OverContext ?=> (Over | Unit))(using QueryContext): Expr[T] =
+    def over(): Expr[T] =
+        Expr(
+            SqlExpr.Window(
+                asSqlExpr,
+                SqlWindow(
+                    Nil,
+                    Nil,
+                    None
+                )
+            )
+        )
+
+    def over(over: OverContext ?=> Over)(using QueryContext): Expr[T] =
         given OverContext = new OverContext
-        over match
-            case o: Over =>
-                Expr(
-                    SqlExpr.Window(
-                        asSqlExpr,
-                        SqlWindow(
-                            o.partitionBy.map(_.asSqlExpr),
-                            o.sortBy.map(_.asSqlOrderBy),
-                            o.frame
-                        )
-                    )
+        val o = over
+        Expr(
+            SqlExpr.Window(
+                asSqlExpr,
+                SqlWindow(
+                    o.partitionBy.map(_.asSqlExpr),
+                    o.sortBy.map(_.asSqlOrderBy),
+                    o.frame
                 )
-            case u: Unit =>
-                Expr(
-                    SqlExpr.Window(
-                        asSqlExpr,
-                        SqlWindow(
-                            Nil,
-                            Nil,
-                            None
-                        )
-                    )
-                )
+            )
+        )
 
     @targetName("to")
     def :=[R: AsExpr as a](updateExpr: R)(using
