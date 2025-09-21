@@ -148,19 +148,9 @@ object Query:
 
         def limit(n: Int): Query[T] = take(n)
 
-        def fetch(n: Int): Query[T] = take(n)
-
         def takeWithTies(n: Int): Query[T] = take(n, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
 
-        def fetchWithTies(n: Int): Query[T] = takeWithTies(n)
-
-        def takePercent(n: Int): Query[T] = take(n, SqlFetchUnit.Percentage, SqlFetchMode.Only)
-
-        def fetchPercent(n: Int): Query[T] = takePercent(n)
-
-        def takePercentWithTies(n: Int): Query[T] = take(n, SqlFetchUnit.Percentage, SqlFetchMode.WithTies)
-
-        def fetchPercentWithTies(n: Int): Query[T] = takePercentWithTies(n)
+        def limitWithTies(n: Int): Query[T] = takeWithTies(n)
 
         def forUpdate: Query[T] =
             val newTree = query.tree match

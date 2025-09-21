@@ -831,21 +831,16 @@ def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-@function
-def extract[A: AsExpr as aa](x: A, unit: TimeUnit)(using
-    SqlDateTime[aa.R],
-    QueryContext
-): Expr[Option[BigDecimal]] =
-    Expr(
-        SqlExpr.ExtractFunc(
-            aa.asExpr(x).asSqlExpr,
-            unit.unit
-        )
-    )
+trait ExtractArg[T]
+
+object ExtractArg:
+    given dateTime[T: SqlDateTime]: ExtractArg[T]()
+
+    given interval[T: SqlInterval]: ExtractArg[T]()
 
 @function
-def extractInterval[A: AsExpr as aa](x: A, unit: TimeUnit)(using
-    SqlInterval[aa.R],
+def extract[A: AsExpr as aa](x: A, unit: TimeUnit)(using
+    ExtractArg[aa.R],
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(

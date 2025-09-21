@@ -142,33 +142,11 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("plus")
     def +[R](that: R)(using
-        nt: SqlNumber[at.R],
         ar: AsExpr[R],
-        nr: SqlNumber[ar.R],
-        r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        r: Plus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Plus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    def plusInterval[R](that: R)(using
-        d: SqlDateTime[at.R],
-        ar: AsExpr[R],
-        i: SqlInterval[ar.R],
-        qc: QueryContext
-    ): Expr[Option[OffsetDateTime]] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Plus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
+        Expr(r.plus(at.asExpr(self).asSqlExpr, ar.asExpr(that).asSqlExpr))
 
     @targetName("minus")
     def -[R](that: R)(using
@@ -176,20 +154,6 @@ extension [T: AsExpr as at](self: T)
         r: Minus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
         qc: QueryContext
     ): Expr[r.R] =
-        Expr(
-            SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Minus, 
-                ar.asExpr(that).asSqlExpr
-            )
-        )
-
-    def minusInterval[R](that: R)(using
-        d: SqlDateTime[at.R],
-        ar: AsExpr[R],
-        i: SqlInterval[ar.R],
-        qc: QueryContext
-    ): Expr[Option[OffsetDateTime]] =
         Expr(
             SqlExpr.Binary(
                 at.asExpr(self).asSqlExpr, 

@@ -1,8 +1,9 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlExpr, SqlBinaryOperator}
 import sqala.static.metadata.*
 
+import java.time.OffsetDateTime
 import scala.NamedTuple.NamedTuple
 import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.||
@@ -44,6 +45,37 @@ object Compare:
         Compare[LH, RH]
     ): Compare[LH *: EmptyTuple, RH *: EmptyTuple]()
 
+@implicitNotFound("Types ${A} and ${B} cannot be add.")
+trait Plus[A, B, Nullable <: Boolean]:
+    type R
+
+    def plus(x: SqlExpr, y: SqlExpr): SqlExpr
+
+object Plus:
+    type Aux[A, B, N <: Boolean, O] = Plus[A, B, N]:
+        type R = O
+
+    given numberPlus[A: SqlNumber, B: SqlNumber, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
+        new Plus[A, B, N]:
+            type R = NumericResult[A, B, N]
+
+            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
+                SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
+
+    given dateTimePlusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, Option[OffsetDateTime]] =
+        new Plus[A, B, N]:
+            type R = Option[OffsetDateTime]
+
+            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
+                SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
+
+    given stringPlus[A: SqlString, B: SqlString, N <: Boolean]: Aux[A, B, N, Option[String]] =
+        new Plus[A, B, N]:
+            type R = Option[String]
+
+            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
+                SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
+
 @implicitNotFound("Types ${A} and ${B} cannot be subtract.")
 trait Minus[A, B, Nullable <: Boolean]:
     type R
@@ -56,13 +88,17 @@ object Minus:
         new Minus[A, B, N]:
             type R = NumericResult[A, B, N]
 
-    given dateTimeMinus[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, Interval] =
+    given dateTimeMinus[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, Option[Interval]] =
         new Minus[A, B, N]:
-            type R = Interval
+            type R = Option[Interval]
 
-    given timeMinus[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, Interval] =
+    given timeMinus[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, Option[Interval]] =
         new Minus[A, B, N]:
-            type R = Interval
+            type R = Option[Interval]
+
+    given dateTimeMinusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, Option[OffsetDateTime]] =
+        new Minus[A, B, N]:
+            type R = Option[OffsetDateTime]
 
 @implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait Return[A, B, Nullable <: Boolean]:
