@@ -304,12 +304,6 @@ object SelectQuery:
         infix def orderBy[S: AsSort](f: T => S): SelectQuery[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: T => S): SelectQuery[T] =
-            if test then sortBy(f) else query
-
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): SelectQuery[T] =
-            if test then sortBy(f) else query
-
         infix def map[M: AsMap as m](f: T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
@@ -444,12 +438,6 @@ object Grouping:
         infix def orderBy[S: AsSort](f: GroupingContext ?=> T => S): Grouping[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): Grouping[T] =
-            if test then sortBy(f) else query
-
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): Grouping[T] =
-            sortByIf(test)(f)
-
         infix def map[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
@@ -497,12 +485,6 @@ object MultiDimGrouping:
         infix def orderBy[S: AsSort](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
-            if test then sortBy(f) else query
-
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
-            sortByIf(test)(f)
-
         infix def map[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
@@ -541,12 +523,6 @@ object UnionQuery:
 
         infix def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
             sortBy(f)
-
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
-            if test then sortBy(f) else query
-
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: T => S): UnionQuery[T] =
-            if test then sortBy(f) else query
 
 class ConnectByContext
 
@@ -589,12 +565,6 @@ object ConnectBy:
         infix def orderBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortBy(f)
 
-        def sortByIf[S: AsSort as s](test: => Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
-            if test then sortBy(f) else query
-
-        def orderByIf[S: AsSort as s](test: => Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
-            sortByIf(test)(f)
-
         infix def maxDepth(n: Int): ConnectBy[T] =
             val cond = SqlExpr.Binary(
                 SqlExpr.Column(Some(tableCte), columnPseudoLevel),
@@ -614,12 +584,6 @@ object ConnectBy:
 
         infix def orderSiblingsBy[S: AsSort as s](f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
             sortSiblingsBy(f)
-
-        def sortSiblingsByIf[S: AsSort as s](test: Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
-            if test then sortSiblingsBy(f) else query
-
-        def orderSiblingsByIf[S: AsSort as s](test: Boolean)(f: ConnectByContext ?=> Table[T] => S): ConnectBy[T] =
-            sortSiblingsByIf(test)(f)
 
         infix def map[M: AsMap as m](f: ConnectByContext ?=> Table[T] => M): Query[m.R] =
             val mapped = f(

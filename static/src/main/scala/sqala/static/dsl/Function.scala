@@ -395,9 +395,8 @@ def regrSxy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     )
 
 @aggFunction
-def percentileCont[T: AsExpr as a, W](x: T, withinGroup: Sort[W])(using 
+def percentileCont[T: AsExpr as a](x: T, withinGroup: Sort)(using 
     SqlNumber[a.R],
-    SqlNumber[W],
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
@@ -412,9 +411,8 @@ def percentileCont[T: AsExpr as a, W](x: T, withinGroup: Sort[W])(using
     )
 
 @aggFunction
-def percentileDisc[T: AsExpr as a, W](x: T, withinGroup: Sort[W])(using 
+def percentileDisc[T: AsExpr as a](x: T, withinGroup: Sort)(using 
     SqlNumber[a.R],
-    SqlNumber[W],
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
@@ -429,7 +427,7 @@ def percentileDisc[T: AsExpr as a, W](x: T, withinGroup: Sort[W])(using
     )
 
 @aggFunction
-def listAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
+def listAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext
@@ -446,7 +444,7 @@ def listAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup
     )
 
 @aggFunction
-def stringAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
+def stringAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext
@@ -454,7 +452,7 @@ def stringAgg[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGro
     listAgg(x, separator, withinGroup)
 
 @aggFunction
-def groupConcat[T: AsExpr as at, S: AsExpr as as, W](x: T, separator: S, withinGroup: Sort[W])(using 
+def groupConcat[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext

@@ -4,14 +4,14 @@ import sqala.ast.expr.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameUnit}
 
 case class Over(
     private[sqala] val partitionBy: List[Expr[?]] = Nil,
-    private[sqala] val sortBy: List[Sort[?]] = Nil,
+    private[sqala] val sortBy: List[Sort] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
     infix def sortBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
-        copy(sortBy = a.asSort(sortValue))
+        copy(sortBy = sortBy ++ a.asSort(sortValue))
 
     infix def orderBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
-        copy(sortBy = a.asSort(sortValue))
+        sortBy(sortValue)
 
     infix def rows(start: SqlWindowFrameBound)(using QueryContext, OverContext): Over =
         copy(frame = Some(SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, start, None)))
