@@ -140,11 +140,15 @@ object JdbcDecoder:
         import q.reflect.*
 
         val tpr = TypeRepr.of[T]
+        val typeArgs = tpr match
+            case AppliedType(_, args) => args
+            case _ => Nil
         val symbol = tpr.typeSymbol
         val ctor = symbol.primaryConstructor
         val types = symbol.declaredFields.map: i =>
             i.tree match
-                case ValDef(_, typeTree, _) => typeTree.tpe.asType
+                case ValDef(_, _, _) =>
+                    tpr.memberType(i).asType
         val sizeExpr = Expr(types.size)
 
         def fetchExprs(data: Expr[ResultSet], cursor: Expr[Int]): List[Expr[Any]] =
@@ -161,7 +165,11 @@ object JdbcDecoder:
                 def decode(data: ResultSet, cursor: Int): T =
                     ${
                         val exprs = fetchExprs('data, 'cursor)
-                        New(Inferred(tpr)).select(ctor).appliedToArgs(exprs.map(_.asTerm)).asExprOf[T]
+                        val entity = if typeArgs.nonEmpty then
+                            New(Inferred(tpr)).select(ctor).appliedToTypes(typeArgs).appliedToArgs(exprs.map(_.asTerm))
+                        else
+                            New(Inferred(tpr)).select(ctor).appliedToArgs(exprs.map(_.asTerm))
+                        entity.asExprOf[T]
                     }
 
                 def offset: Int = $sizeExpr
