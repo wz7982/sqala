@@ -62,16 +62,16 @@ object Plus:
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
-    given dateTimePlusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, Option[OffsetDateTime]] =
+    given dateTimePlusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetDateTime, N, Option]] =
         new Plus[A, B, N]:
-            type R = Option[OffsetDateTime]
+            type R = WrapIf[OffsetDateTime, N, Option]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
-    given stringPlus[A: SqlString, B: SqlString, N <: Boolean]: Aux[A, B, N, Option[String]] =
+    given stringPlus[A: SqlString, B: SqlString, N <: Boolean]: Aux[A, B, N, WrapIf[String, N, Option]] =
         new Plus[A, B, N]:
-            type R = Option[String]
+            type R = WrapIf[String, N, Option]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
@@ -88,17 +88,29 @@ object Minus:
         new Minus[A, B, N]:
             type R = NumericResult[A, B, N]
 
-    given dateTimeMinus[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, Option[Interval]] =
+    given dateTimeMinus[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, WrapIf[Interval, N, Option]] =
         new Minus[A, B, N]:
-            type R = Option[Interval]
+            type R = WrapIf[Interval, N, Option]
 
-    given timeMinus[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, Option[Interval]] =
+    given timeMinus[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, WrapIf[Interval, N, Option]] =
         new Minus[A, B, N]:
-            type R = Option[Interval]
+            type R = WrapIf[Interval, N, Option]
 
-    given dateTimeMinusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, Option[OffsetDateTime]] =
+    given dateTimeMinusInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetDateTime, N, Option]] =
         new Minus[A, B, N]:
-            type R = Option[OffsetDateTime]
+            type R = WrapIf[OffsetDateTime, N, Option]
+
+@implicitNotFound("Types ${A} and ${B} be cannot compared.")
+trait Relation[A, B, N <: Boolean]:
+    type R
+
+object Relation:
+    type Aux[A, B, N <: Boolean, O] = Relation[A, B, N]:
+        type R = O
+
+    given relation[A, B, N <: Boolean](using Compare[A, B]): Aux[A, B, N, WrapIf[Boolean, N, Option]] =
+        new Relation[A, B, N]:
+            type R = WrapIf[Boolean, N, Option]
 
 @implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait Return[A, B, Nullable <: Boolean]:

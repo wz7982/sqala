@@ -11,6 +11,10 @@ type Wrap[T, F[_]] = T match
     case F[t] => T
     case _ => F[T]
 
+type WrapIf[T, B <: Boolean, F[_]] = B match
+    case true => Wrap[T, F]
+    case _ => T
+
 type Unwrap[T, F[_]] = T match
     case F[t] => t
     case _ => T

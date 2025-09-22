@@ -89,7 +89,7 @@ def any[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
 def all[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
     SubLink(query.tree, SqlSubLinkQuantifier.All)
 
-def exists[T](query: Query[T]): Expr[Option[Boolean]] =
+def exists[T](query: Query[T]): Expr[Boolean] =
     Expr(
         SqlExpr.SubLink(
             query.tree,

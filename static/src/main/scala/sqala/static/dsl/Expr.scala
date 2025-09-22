@@ -4,6 +4,7 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator, SqlWindow}
 import sqala.static.dsl.statement.dml.{UpdatePair, UpdateSetContext}
 
 import scala.annotation.targetName
+import scala.compiletime.ops.boolean.||
 
 class OverContext
 
@@ -11,17 +12,17 @@ case class Expr[T](private val expr: SqlExpr):
     @targetName("eq")
     def ==[R](that: R)(using
         a: AsRightOperand[R],
-        c: Compare[Unwrap[T, Option], Unwrap[a.R, Option]],
+        r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
         qc: QueryContext
-    ): Expr[Option[Boolean]] =
+    ): Expr[r.R] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Equal, a.asExpr(that).asSqlExpr))
 
     @targetName("ne")
     def !=[R](that: R)(using
         a: AsRightOperand[R],
-        c: Compare[Unwrap[T, Option], Unwrap[a.R, Option]],
+        r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
         qc: QueryContext
-    ): Expr[Option[Boolean]] =
+    ): Expr[r.R] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
     def over(): Expr[T] =
