@@ -1630,7 +1630,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlRowPatternSkipMode.SkipTo(name) =>
                     sqlBuilder.append("SKIP TO ")
                     printIdent(name)
-        sqlBuilder.append("\n")
+            sqlBuilder.append("\n")
         printSpace()
         for s <- pattern.strategy do
             sqlBuilder.append(s.strategy)
