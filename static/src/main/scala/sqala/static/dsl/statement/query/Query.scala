@@ -8,7 +8,7 @@ import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.printer.Dialect
 import sqala.static.dsl.*
-import sqala.static.dsl.table.Table
+import sqala.static.dsl.table.{AsUngroupedTable, Table}
 import sqala.static.metadata.{SqlBoolean, columnPseudoLevel, tableCte}
 import sqala.util.queryToString
 
@@ -316,54 +316,66 @@ object SelectQuery:
         def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
             mapDistinct(f)
 
-        def groupBy[G: AsGroup as a](f: T => G): Grouping[T] =
-            val group = a.exprs(f(query.params))
+        def groupBy[G: AsGroup as a](f: T => G)(using
+            au: AsUngroupedTable[T], 
+            t: ToTuple[au.R]
+        ): Grouping[G *: t.R] =
+            val group = f(query.params)
+            val groupExprs = a.exprs(group)
             Grouping(
-                query.params, 
+                group *: t.toTuple(au.asUngroupedTable(query.params)),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)
+                        SqlGroupBy(groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)
                     )
                 )
             )(using query.context)
 
-        def groupByCube[G](f: T => G)(using
-            o: ToOption[T],
-            a: AsGroup[G]
-        ): MultiDimGrouping[o.R] =
-            val group = a.exprs(f(query.params))
-            MultiDimGrouping(
-                o.toOption(query.params), 
+        def groupByCube[G: AsGroup as a](f: T => G)(using
+            to: ToOption[G],
+            au: AsUngroupedTable[T],
+            tt: ToTuple[au.R]
+        ): Grouping[to.R *: tt.R] =
+            val group = f(query.params)
+            val groupExprs = a.exprs(group)
+            Grouping(
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(SqlGroupingItem.Cube(group.map(_.asSqlExpr)) :: Nil, None)
+                        SqlGroupBy(SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil, None)
                     )
                 )
             )(using query.context)
 
-        def groupByRollup[G](f: T => G)(using
-            o: ToOption[T],
-            a: AsGroup[G]
-        ): MultiDimGrouping[o.R] =
-            val group = a.exprs(f(query.params))
-            MultiDimGrouping(
-                o.toOption(query.params), 
+        def groupByRollup[G: AsGroup as a](f: T => G)(using
+            to: ToOption[G],
+            au: AsUngroupedTable[T],
+            tt: ToTuple[au.R]
+        ): Grouping[to.R *: tt.R] =
+            val group = f(query.params)
+            val groupExprs = a.exprs(group)
+            Grouping(
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(SqlGroupingItem.Rollup(group.map(_.asSqlExpr)) :: Nil, None)
+                        SqlGroupBy(SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil, None)
                     )
                 )
             )(using query.context)
 
-        def groupBySets[G](f: T => G)(using
-            o: ToOption[T],
-            g: GroupingSets[G]
-        ): MultiDimGrouping[o.R] =
-            val group = g.asSqlExprs(f(query.params))
-            MultiDimGrouping(
-                o.toOption(query.params), 
+        def groupBySets[G: AsGroup as a, S: GroupingSets as s](f: T => G)(g: G => S)(using
+            to: ToOption[G],
+            au: AsUngroupedTable[T],
+            tt: ToTuple[au.R]
+        ): Grouping[to.R *: tt.R] =
+            val group = f(query.params)
+            val groupExprs = s.asSqlExprs(g(group))
+            Grouping(
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
                 query.tree.copy(
-                    groupBy = Some(SqlGroupBy(SqlGroupingItem.GroupingSets(group) :: Nil, None))
+                    groupBy = Some(
+                        SqlGroupBy(SqlGroupingItem.GroupingSets(groupExprs) :: Nil, None)
+                    )
                 )
             )(using query.context)
 
@@ -448,53 +460,6 @@ object Grouping:
             )(using query.context)
 
         def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
-            mapDistinct(f)
-
-final class MultiDimGrouping[T](
-    private[sqala] val params: T,
-    private[sqala] val tree: SqlQuery.Select
-)(using 
-    private[sqala] val context: QueryContext
-)
-
-object MultiDimGrouping:
-    given GroupingContext = new GroupingContext
-
-    extension [T](query: MultiDimGrouping[T])
-        def having[F: AsExpr as a](f: GroupingContext ?=> T => F)(using SqlBoolean[a.R]): MultiDimGrouping[T] =
-            val cond = a.asExpr(f(query.params))
-            MultiDimGrouping(query.params, query.tree.addHaving(cond.asSqlExpr))(using query.context)
-
-        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
-            val sort = s.asSort(f(query.params))
-            MultiDimGrouping(
-                query.params, 
-                query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
-            )(using query.context)
-
-        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): MultiDimGrouping[T] =
-            sortBy(f)
-
-        def map[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
-            val mapped = f(query.params)
-            val sqlSelect = m.selectItems(mapped, 1)
-            Query(
-                o.toOption(m.transform(mapped)), 
-                query.tree.copy(select = sqlSelect)
-            )(using query.context)
-
-        def select[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
-            map(f)
-
-        def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
-            val mapped = f(query.params)
-            val sqlSelect = m.selectItems(mapped, 1)
-            Query(
-                o.toOption(m.transform(mapped)), 
-                query.tree.copy(select = sqlSelect)
-            )(using query.context)
-
-        def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M)(using o: ToOption[m.R]): Query[o.R] =
             mapDistinct(f)
 
 class UnionQuery[T](

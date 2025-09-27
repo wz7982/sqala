@@ -301,3 +301,14 @@ case class RecognizeTable[N <: Tuple, V <: Tuple](
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)
+
+case class UngroupedRecognizeTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable
+) extends Selectable:
+    type Fields = NamedTuple[N, V]
+
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[N, name.type, 0]]
+        __items__.toList(index)
