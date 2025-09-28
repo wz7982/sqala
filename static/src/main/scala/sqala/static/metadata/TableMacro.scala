@@ -10,7 +10,6 @@ private[sqala] object TableMacro:
 
     inline def tableMetaData[T]: TableMetaData = ${ TableMacroImpl.tableMetaData[T] }
 
-
 private[sqala] object TableMacroImpl:
     val annoNameTable = "table"
     val annoNameColumn = "column"

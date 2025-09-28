@@ -4,6 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.*
+import sqala.static.dsl.analysis.AnalysisMacro
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
@@ -14,6 +15,7 @@ import scala.compiletime.ops.boolean.||
 
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
+    AnalysisMacro.analysis(q)
     q
 
 inline def insert[T <: Product]: Insert[T, InsertTable] =
@@ -208,10 +210,10 @@ def from[T](tables: T)(using
     )
     SelectQuery(params, tree)
 
-def grouping[T: AsExpr as a](x: T)(using QueryContext, GroupingContext): Expr[Int] =
+def grouping[T: AsSqlExpr](x: Expr[T])(using QueryContext, GroupingContext): Expr[Int] =
     Expr(
         SqlExpr.Grouping(
-            a.exprs(x).map(_.asSqlExpr)
+            x.asSqlExpr :: Nil
         )
     )
 

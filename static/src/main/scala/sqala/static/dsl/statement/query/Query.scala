@@ -259,7 +259,7 @@ object Query:
             )
             Query(expr, outerQuery)
 
-class SelectQuery[T](
+final class SelectQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Select
 )(using 
@@ -284,14 +284,14 @@ object SelectQuery:
         def withFilter[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
             filter(f)
 
-        def sortBy[S: AsSort as s](f: T => S): SelectQuery[T] =
+        def sortBy[S: AsSort as s](f: T => S): SortedQuery[T] =
             val sort = s.asSort(f(query.params))
-            SelectQuery(
+            SortedQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        def orderBy[S: AsSort](f: T => S): SelectQuery[T] =
+        def orderBy[S: AsSort](f: T => S): SortedQuery[T] =
             sortBy(f)
 
         def map[M: AsMap as m](f: T => M): Query[m.R] =
@@ -333,13 +333,14 @@ object SelectQuery:
 
         def groupByCube[G: AsGroup as a](f: T => G)(using
             to: ToOption[G],
-            au: AsUngroupedTable[T],
+            tot: ToOption[T],
+            au: AsUngroupedTable[tot.R],
             tt: ToTuple[au.R]
         ): Grouping[to.R *: tt.R] =
             val group = f(query.params)
             val groupExprs = a.exprs(group)
             Grouping(
-                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
                         SqlGroupBy(SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil, None)
@@ -349,13 +350,14 @@ object SelectQuery:
 
         def groupByRollup[G: AsGroup as a](f: T => G)(using
             to: ToOption[G],
-            au: AsUngroupedTable[T],
+            tot: ToOption[T],
+            au: AsUngroupedTable[tot.R],
             tt: ToTuple[au.R]
         ): Grouping[to.R *: tt.R] =
             val group = f(query.params)
             val groupExprs = a.exprs(group)
             Grouping(
-                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
                         SqlGroupBy(SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil, None)
@@ -365,13 +367,14 @@ object SelectQuery:
 
         def groupBySets[G: AsGroup as a, S: GroupingSets as s](f: T => G)(g: G => S)(using
             to: ToOption[G],
-            au: AsUngroupedTable[T],
+            tot: ToOption[T],
+            au: AsUngroupedTable[tot.R],
             tt: ToTuple[au.R]
         ): Grouping[to.R *: tt.R] =
             val group = f(query.params)
             val groupExprs = s.asSqlExprs(g(group))
             Grouping(
-                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(query.params)),
+                to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
                         SqlGroupBy(SqlGroupingItem.GroupingSets(groupExprs) :: Nil, None)
@@ -412,6 +415,25 @@ object SelectQuery:
                     )
                 )
             ConnectBy(query.params, joinTree, startTree)
+
+final class SortedQuery[T](
+    private[sqala] override val params: T,
+    override val tree: SqlQuery.Select
+)(using 
+    private[sqala] override val context: QueryContext
+) extends Query[T](params, tree)
+
+object SortedQuery:
+    extension [T](query: SortedQuery[T])
+        def sortBy[S: AsSort as s](f: T => S): SortedQuery[T] =
+            val sort = s.asSort(f(query.params))
+            SortedQuery(
+                query.params, 
+                query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            )(using query.context)
+
+        def orderBy[S: AsSort](f: T => S): SortedQuery[T] =
+            sortBy(f)
 
 class GroupingContext
 
@@ -462,7 +484,7 @@ object Grouping:
         def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             mapDistinct(f)
 
-class UnionQuery[T](
+final class UnionQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Set
 )(using QueryContext) extends Query[T](params, tree)
