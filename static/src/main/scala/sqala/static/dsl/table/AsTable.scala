@@ -146,7 +146,6 @@ object AsTable:
                 (x.params, x.sqlTable)
 
     given tuple[H: AsTable as ah, T <: Tuple : AsTable as at](using
-        n: NotGiven[T =:= EmptyTuple],
         t: ToTuple[at.R]
     ): Aux[H *: T, ah.R *: t.R] =
         new AsTable[H *: T]:

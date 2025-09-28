@@ -487,6 +487,180 @@ def jsonArrayAgg[A: AsExpr as aa](x: A)(using
         )
     )
 
+@aggFunction
+def classifier()(using QueryContext): Expr[String] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "CLASSIFIER",
+            Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@aggFunction
+def matchNumber()(using QueryContext): Expr[Int] =
+    Expr(
+        SqlExpr.StandardFunc(
+            "MATCH_NUMBER",
+            Nil,
+            None,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+@aggFunction
+def first[A: AsExpr as aa](x: A)(using
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "FIRST",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "FIRST",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def last[A: AsExpr as aa](x: A)(using
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "LAST",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "LAST",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def prev[A: AsExpr as aa](x: A)(using
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "PREV",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "PREV",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def next[A: AsExpr as aa](x: A)(using
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "NEXT",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
+@aggFunction
+def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    sn: SqlNumber[an.R],
+    to: ToOption[Expr[aa.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.StandardFunc(
+                "NEXT",
+                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
+                None,
+                Nil,
+                Nil,
+                None
+            )
+        )
+    )
+
 @function
 def substring[T: AsExpr as at, S: AsExpr as as](x: T, start: S)(using 
     SqlString[at.R],
@@ -1916,179 +2090,5 @@ def lead[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, def
             Nil,
             Nil,
             None
-        )
-    )
-
-@matchFunction
-def classifier()(using QueryContext): Expr[String] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "CLASSIFIER",
-            Nil,
-            None,
-            Nil,
-            Nil,
-            None
-        )
-    )
-
-@matchFunction
-def matchNumber()(using QueryContext): Expr[Int] =
-    Expr(
-        SqlExpr.StandardFunc(
-            "MATCH_NUMBER",
-            Nil,
-            None,
-            Nil,
-            Nil,
-            None
-        )
-    )
-
-@matchFunction
-def first[A: AsExpr as aa](x: A)(using
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "FIRST",
-                aa.asExpr(x).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    sn: SqlNumber[an.R],
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "FIRST",
-                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def last[A: AsExpr as aa](x: A)(using
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "LAST",
-                aa.asExpr(x).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    sn: SqlNumber[an.R],
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "LAST",
-                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def prev[A: AsExpr as aa](x: A)(using
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "PREV",
-                aa.asExpr(x).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    sn: SqlNumber[an.R],
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "PREV",
-                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def next[A: AsExpr as aa](x: A)(using
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "NEXT",
-                aa.asExpr(x).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
-        )
-    )
-
-@matchFunction
-def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    sn: SqlNumber[an.R],
-    to: ToOption[Expr[aa.R]],
-    c: QueryContext
-): to.R =
-    to.toOption(
-        Expr(
-            SqlExpr.StandardFunc(
-                "NEXT",
-                aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
-                None,
-                Nil,
-                Nil,
-                None
-            )
         )
     )

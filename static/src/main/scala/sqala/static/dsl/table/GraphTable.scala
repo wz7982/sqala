@@ -367,3 +367,14 @@ object GraphTable:
                 None
             )
         )
+
+case class UngroupedGraphTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable.Graph
+) extends Selectable:
+    type Fields = NamedTuple[N, V]
+
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[N, name.type, 0]]
+        __items__.toList(index)

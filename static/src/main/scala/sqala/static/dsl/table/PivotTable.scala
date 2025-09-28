@@ -25,10 +25,9 @@ case class PivotTable[N <: Tuple, V <: Tuple](
 
     def groupBy[GN <: Tuple, GV <: Tuple](grouping: NamedTuple[GN, GV])(using
         g: AsGroup[GV],
-        tt: ToTuple[g.R],
         c: QueryContext, 
         pc: PivotContext
-    ): PivotGroupBy[N, V, GN, tt.R] =
+    ): PivotGroupBy[N, V, GN, GV] =
         val group = g.exprs(grouping.toTuple).map(_.asSqlExpr)
         val newQuery = 
             __sqlQuery__.copy(
@@ -36,7 +35,7 @@ case class PivotTable[N <: Tuple, V <: Tuple](
                     SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g)), None)
                 )
             )
-        PivotGroupBy[N, V, GN, tt.R](__items__, group, newQuery)
+        PivotGroupBy[N, V, GN, GV](__items__, group, newQuery)
 
     def agg[AN <: Tuple, AV <: Tuple](aggregations: NamedTuple[AN, AV])(using
         m: AsMap[AV],

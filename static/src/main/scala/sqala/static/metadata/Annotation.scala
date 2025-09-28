@@ -22,6 +22,3 @@ class aggFunction extends StaticAnnotation
 
 @scala.annotation.meta.field
 class windowFunction extends StaticAnnotation
-
-@scala.annotation.meta.field
-class matchFunction extends StaticAnnotation

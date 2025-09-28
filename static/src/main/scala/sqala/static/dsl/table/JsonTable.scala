@@ -73,3 +73,14 @@ case class JsonTablePathColumn[T](
     private[sqala] `type`: SqlType
 ) extends JsonTableColumn
 case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn
+
+case class UngroupedJsonTable[N <: Tuple, V <: Tuple](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable.Json
+) extends Selectable:
+    type Fields = NamedTuple[N, V]
+
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[N, name.type, 0]]
+        __items__.toList(index)
