@@ -7,13 +7,13 @@ import sqala.ast.table.SqlTable
 import scala.quoted.{Expr, Quotes, Type}
 
 trait FetchPk[T]:
-    type R
+    type Args
 
-    def createTree(x: Seq[R]): SqlQuery
+    def createTree(x: Seq[Args]): SqlQuery
 
 object FetchPk:
-    type Aux[T, O] = FetchPk[T]:
-        type R = O
+    type Aux[T, A] = FetchPk[T]:
+        type Args = A
 
     transparent inline given derived[T]: Aux[T, ?] =
         ${ derivedImpl[T] }
@@ -67,9 +67,9 @@ object FetchPk:
             case '[t] =>
                 '{
                     val pk = new FetchPk[T]:
-                        type R = t
+                        type Args = t
 
-                        def createTree(x: Seq[R]): SqlQuery =
+                        def createTree(x: Seq[Args]): SqlQuery =
                             val sqlConditions = x.map: p =>
                                 val values = p match
                                     case t: Tuple => t.toArray.toList

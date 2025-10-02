@@ -11,12 +11,13 @@ import sqala.util.{queryToString, statementToString}
 import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
+import scala.language.dynamics
 
 class JdbcContext[Url <: String, Username <: String, Password <: String, Driver <: String](
     val dataSource: DataSource, 
     val dialect: Dialect,
     val standardEscapeStrings: Boolean
-):
+) extends Dynamic:
     private[sqala] inline def execute[T](inline handler: Connection => T): T =
         val conn = dataSource.getConnection()
         val result = handler(conn)
@@ -96,7 +97,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         fp: FetchPk[T], 
         d: JdbcDecoder[T],
         l: Logger
-    )(pks: Seq[fp.R]): List[T] =
+    )(pks: Seq[fp.Args]): List[T] =
         val tree = fp.createTree(pks)
         val sql = queryToString(tree, dialect, standardEscapeStrings)
         l(sql, Array.empty[Any])
@@ -106,7 +107,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         fp: FetchPk[T], 
         d: JdbcDecoder[T],
         l: Logger
-    )(pk: fp.R): Option[T] =
+    )(pk: fp.Args): Option[T] =
         val tree = fp.createTree(pk :: Nil)
         val sql = queryToString(tree, dialect, standardEscapeStrings)
         l(sql, Array.empty[Any])
@@ -211,13 +212,29 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
     ): Option[r.R] =
         findTo[r.R](query)
 
-    inline def fetchSize[T](inline query: Query[T])(using Logger): Long =
+    inline def fetchCount[T](inline query: Query[T])(using Logger): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
     inline def fetchExists(inline query: Query[?])(using Logger): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
+
+    inline def applyDynamic[T](name: String)(using
+        r: Repository[T, name.type],
+        d: JdbcDecoder[T],
+        l: Logger
+    )(args: r.Args): r.R =
+        r.createQuery(
+            dialect, 
+            standardEscapeStrings, 
+            args, 
+            q => fetchTo[T](q),
+            q => findTo[T](q),
+            (q, ps, pn, rc) => pageTo[T](q, ps, pn, rc),
+            q => fetchCount(q),
+            q => fetchExists(q)
+        )
 
     def showSql[T](query: Query[T]): String =
         queryToString(query.tree, dialect, standardEscapeStrings)

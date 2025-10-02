@@ -10,6 +10,7 @@ import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
 import scala.deriving.Mirror
+import scala.language.dynamics
 
 class JdbcTransactionContext(
     val connection: Connection, 
@@ -26,7 +27,7 @@ enum TransactionIsolation(val jdbcIsolation: Int):
 
 val transaction = Transaction
 
-object Transaction:
+object Transaction extends Dynamic:
     def execute(insert: Insert[?, ?])(using t: JdbcTransactionContext, l: Logger): Int =
         val sql = statementToString(insert.tree, t.dialect, t.standardEscapeStrings)
         l(sql, Array.empty[Any])
@@ -106,7 +107,7 @@ object Transaction:
         d: JdbcDecoder[T], 
         t: JdbcTransactionContext, 
         l: Logger
-    )(pks: Seq[fp.R]): List[T] =
+    )(pks: Seq[fp.Args]): List[T] =
         val tree = fp.createTree(pks)
         val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
         l(sql, Array.empty[Any])
@@ -117,7 +118,7 @@ object Transaction:
         d: JdbcDecoder[T], 
         t: JdbcTransactionContext, 
         l: Logger
-    )(pk: fp.R): Option[T] =
+    )(pk: fp.Args): Option[T] =
         val tree = fp.createTree(pk :: Nil)
         val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
         l(sql, Array.empty[Any])
@@ -231,7 +232,7 @@ object Transaction:
     ): Page[r.R] =
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-    inline def fetchSize[T](inline query: Query[T])(using 
+    inline def fetchCount[T](inline query: Query[T])(using 
         JdbcTransactionContext, 
         Logger
     ): Long =
@@ -244,3 +245,20 @@ object Transaction:
     ): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
+
+    inline def applyDynamic[T](name: String)(using
+        r: Repository[T, name.type],
+        d: JdbcDecoder[T],
+        c: JdbcTransactionContext,
+        l: Logger
+    )(args: r.Args): r.R =
+        r.createQuery(
+            c.dialect, 
+            c.standardEscapeStrings, 
+            args, 
+            q => fetchTo[T](q),
+            q => findTo[T](q),
+            (q, ps, pn, rc) => pageTo[T](q, ps, pn, rc),
+            q => fetchCount(q),
+            q => fetchExists(q)
+        )
