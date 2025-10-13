@@ -68,7 +68,7 @@ case class Expr[T](private val expr: SqlExpr):
                 BooleanLiteral(false)
             case Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(Nil)) =>
                 BooleanLiteral(true)
-            case Unary(e, SqlUnaryOperator.Not) =>
+            case Unary(SqlUnaryOperator.Not, e) =>
                 e match
                     case BooleanLiteral(boolean) =>
                         BooleanLiteral(!boolean)
@@ -86,5 +86,5 @@ case class Expr[T](private val expr: SqlExpr):
                          NullTest(ne, !not)
                     case Between(expr, s, e, n) =>
                         Between(expr, s, e, !n)
-                    case _ => SqlExpr.Unary(e, SqlUnaryOperator.Not)
+                    case _ => SqlExpr.Unary(SqlUnaryOperator.Not, e)
             case _ => expr

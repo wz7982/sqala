@@ -86,16 +86,16 @@ extension [A](a: => A)(using c: QueryContext)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
 
 def any[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkQuantifier.Any)
+    SubLink(SqlSubLinkQuantifier.Any, query.tree)
 
 def all[T: AsExpr as a](query: Query[T]): SubLink[a.R] =
-    SubLink(query.tree, SqlSubLinkQuantifier.All)
+    SubLink(SqlSubLinkQuantifier.All, query.tree)
 
 def exists[T](query: Query[T]): Expr[Boolean] =
     Expr(
         SqlExpr.SubLink(
-            query.tree,
-            SqlSubLinkQuantifier.Exists
+            SqlSubLinkQuantifier.Exists,
+            query.tree
         )
     )
 
@@ -342,10 +342,10 @@ def exclusion(term: RecognizePatternTerm)(using QueryContext, MatchRecognizeCont
     new RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
 def `final`[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Expr[a.R] =
-    Expr(SqlExpr.MatchPhase(a.asExpr(x).asSqlExpr, SqlMatchPhase.Final))
+    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
 
 def running[T: AsExpr as a](x: T)(using QueryContext, MatchRecognizeContext): Expr[a.R] =
-    Expr(SqlExpr.MatchPhase(a.asExpr(x).asSqlExpr, SqlMatchPhase.Running))
+    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
 
 extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
     def matchRecognize[N <: Tuple, V <: Tuple](
@@ -408,9 +408,9 @@ extension [T: AsExpr as a](x: T)
 def createFunction[T](name: String, args: List[Expr[?]])(using QueryContext): Expr[T] =
     Expr(
         SqlExpr.StandardFunc(
+            None,
             name,
             args.map(_.asSqlExpr),
-            None,
             Nil,
             Nil,
             None
@@ -542,8 +542,8 @@ def withRecursive[N <: Tuple, V <: Tuple, UN <: Tuple, UV <: Tuple, R](
         None
     )
     val tree = SqlQuery.Cte(
-        SqlWithItem(tableCte, withTree, columns) :: Nil,
         true,
+        SqlWithItem(tableCte, withTree, columns) :: Nil,
         finalQuery.tree,
         None
     )

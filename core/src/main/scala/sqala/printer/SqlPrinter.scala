@@ -418,7 +418,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("NULLIF(")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
-        printExpr(expr.`then`)
+        printExpr(expr.test)
         sqlBuilder.append(")")
 
     def printCastExpr(expr: SqlExpr.Cast): Unit =

@@ -110,4 +110,4 @@ object With:
     def apply(items: List[SubQueryTable]): With =
         val queries = items.map: i =>
             SqlWithItem(i.__alias__, i.__query__.tree, Nil)
-        new With(tree = SqlQuery.Cte(queries, false, queries.head.query, None))
+        new With(tree = SqlQuery.Cte(false, queries, queries.head.query, None))

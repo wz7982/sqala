@@ -244,7 +244,7 @@ object Query:
 
         private[sqala] def exists: Query[Expr[Boolean]] =
             given QueryContext = query.context
-            val expr = Expr[Boolean](SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
+            val expr = Expr[Boolean](SqlExpr.SubLink(SqlSubLinkQuantifier.Exists, query.tree))
             val outerQuery: SqlQuery.Select = SqlQuery.Select(
                 None,
                 SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
@@ -326,7 +326,7 @@ object SelectQuery:
                 group *: t.toTuple(au.asUngroupedTable(query.params)),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)), None)
+                        SqlGroupBy(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)))
                     )
                 )
             )(using query.context)
@@ -343,7 +343,7 @@ object SelectQuery:
                 to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil, None)
+                        SqlGroupBy(None, SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil)
                     )
                 )
             )(using query.context)
@@ -360,7 +360,7 @@ object SelectQuery:
                 to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil, None)
+                        SqlGroupBy(None, SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil)
                     )
                 )
             )(using query.context)
@@ -377,7 +377,7 @@ object SelectQuery:
                 to.toOption(group) *: tt.toTuple(au.asUngroupedTable(tot.toOption(query.params))),
                 query.tree.copy(
                     groupBy = Some(
-                        SqlGroupBy(SqlGroupingItem.GroupingSets(groupExprs) :: Nil, None)
+                        SqlGroupBy(None, SqlGroupingItem.GroupingSets(groupExprs) :: Nil)
                     )
                 )
             )(using query.context)
@@ -586,8 +586,8 @@ object ConnectBy:
                 tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
             )
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(
+                true,
                 withItem :: Nil, 
-                true, 
                 query.mapTree.copy(select = sqlSelect),
                 None
             )
@@ -620,8 +620,8 @@ object ConnectBy:
                 tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
             )
             val cteTree: SqlQuery.Cte = SqlQuery.Cte(
+                true,
                 withItem :: Nil, 
-                true, 
                 query.mapTree.copy(select = sqlSelect),
                 None
             )

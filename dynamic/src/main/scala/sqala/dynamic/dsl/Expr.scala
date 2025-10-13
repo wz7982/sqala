@@ -59,10 +59,10 @@ case class Expr(sqlExpr: SqlExpr):
     def /(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Div, expr.sqlExpr))
 
     @targetName("positive")
-    def unary_+ : Expr = Expr(SqlExpr.Unary(sqlExpr, Positive))
+    def unary_+ : Expr = Expr(SqlExpr.Unary(Positive, sqlExpr))
 
     @targetName("negative")
-    def unary_- : Expr = Expr(SqlExpr.Unary(sqlExpr, Negative))
+    def unary_- : Expr = Expr(SqlExpr.Unary(Negative, sqlExpr))
 
     @targetName("and")
     def &&(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, And, expr.sqlExpr))
@@ -85,7 +85,7 @@ case class Expr(sqlExpr: SqlExpr):
                 SqlExpr.Binary(l, SqlBinaryOperator.In, r)
             case SqlExpr.Between(expr, start, end, not) =>
                 SqlExpr.Between(expr, start, end, !not)
-            case _ => SqlExpr.Unary(sqlExpr, Not)
+            case _ => SqlExpr.Unary(Not, sqlExpr)
         Expr(expr)
 
     def like(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Like, expr.sqlExpr))

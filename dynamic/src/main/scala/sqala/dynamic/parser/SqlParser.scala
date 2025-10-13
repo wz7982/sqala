@@ -135,7 +135,7 @@ class SqlParser extends StandardTokenParsers:
         not * ("AND" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.And, r) })
 
     def not: Parser[SqlExpr] = 
-        "NOT" ~> relation ^^ (SqlExpr.Unary(_, SqlUnaryOperator.Not)) |
+        "NOT" ~> relation ^^ (SqlExpr.Unary(SqlUnaryOperator.Not, _)) |
         relation
 
     def relation: Parser[SqlExpr] =
@@ -204,8 +204,8 @@ class SqlParser extends StandardTokenParsers:
         )
     
     def sign: Parser[SqlExpr] = 
-        "+" ~> convert ^^ (SqlExpr.Unary(_, SqlUnaryOperator.Positive)) |
-        "-" ~> convert ^^ (SqlExpr.Unary(_, SqlUnaryOperator.Negative)) |
+        "+" ~> convert ^^ (SqlExpr.Unary(SqlUnaryOperator.Positive, _)) |
+        "-" ~> convert ^^ (SqlExpr.Unary(SqlUnaryOperator.Negative, _)) |
         convert
 
     def convert: Parser[SqlExpr] =
@@ -247,14 +247,14 @@ class SqlParser extends StandardTokenParsers:
     def function: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ~> opt("FILTER" ~ "(" ~> where <~ ")") ^^ {
             case f => 
-                SqlExpr.StandardFunc("COUNT", Nil, None, Nil, Nil, f)
+                SqlExpr.StandardFunc(None, "COUNT", Nil, Nil, Nil, f)
         } |
         ident ~ ("(" ~> opt(quantifier) ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
             ~ opt("WITHIN" ~ "GROUP" ~ "(" ~> orderBy <~ ")")
             ~ opt("FILTER" ~ "(" ~> where <~ ")") 
         ^^ {
             case ident ~ (quantifier ~ args ~ orderBy) ~ withinGroup ~ filter =>
-                SqlExpr.StandardFunc(ident.toUpperCase, args, quantifier, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
+                SqlExpr.StandardFunc(quantifier, ident.toUpperCase, args, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
         }
 
     def frameBound: Parser[SqlWindowFrameBound] =
@@ -295,16 +295,16 @@ class SqlParser extends StandardTokenParsers:
 
     def subLink: Parser[SqlExpr] =
         "ANY" ~> "(" ~> query <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u, SqlSubLinkQuantifier.Any)
+            SqlExpr.SubLink(SqlSubLinkQuantifier.Any, u)
         } |
         "SOME" ~> "(" ~> query <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u, SqlSubLinkQuantifier.Some)
+            SqlExpr.SubLink(SqlSubLinkQuantifier.Some, u)
         } |
         "ALL" ~> "(" ~> query <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u, SqlSubLinkQuantifier.All)
+            SqlExpr.SubLink(SqlSubLinkQuantifier.All, u)
         } |
         "EXISTS" ~> "(" ~> query <~ ")" ^^ { u =>
-            SqlExpr.SubLink(u, SqlSubLinkQuantifier.Exists)
+            SqlExpr.SubLink(SqlSubLinkQuantifier.Exists, u)
         }
 
     def order: Parser[SqlOrderingItem] =
@@ -359,7 +359,7 @@ class SqlParser extends StandardTokenParsers:
                     case "HOUR" => SqlTimeUnit.Hour
                     case "MINUTE" => SqlTimeUnit.Minute
                     case "SECOND" => SqlTimeUnit.Second
-                SqlExpr.ExtractFunc(e, timeUnit)
+                SqlExpr.ExtractFunc(timeUnit, e)
         }
 
     def literal: Parser[SqlExpr] =
@@ -562,7 +562,7 @@ class SqlParser extends StandardTokenParsers:
     def groupBy: Parser[SqlGroupBy] =
         "GROUP" ~ "BY" ~> opt(quantifier) ~ rep1sep(groupingItem, ",") ^^ {
             case q ~ g =>
-                SqlGroupBy(g, q)
+                SqlGroupBy(q, g)
         }
 
     def having: Parser[SqlExpr] =

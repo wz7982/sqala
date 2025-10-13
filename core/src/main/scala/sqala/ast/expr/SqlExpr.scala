@@ -14,7 +14,7 @@ enum SqlExpr:
     case IntervalLiteral(value: String, field: SqlIntervalField)
     case Tuple(items: List[SqlExpr])
     case Array(items: List[SqlExpr])
-    case Unary(expr: SqlExpr, operator: SqlUnaryOperator)
+    case Unary(operator: SqlUnaryOperator, expr: SqlExpr)
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
     case JsonTest(
@@ -27,18 +27,18 @@ enum SqlExpr:
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
     case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
     case Coalesce(items: List[SqlExpr])
-    case NullIf(expr: SqlExpr, `then`: SqlExpr)
+    case NullIf(expr: SqlExpr, test: SqlExpr)
     case Cast(expr: SqlExpr, castType: SqlType)
     case Window(expr: SqlExpr, window: SqlWindow)
     case SubQuery(query: SqlQuery)
-    case SubLink(query: SqlQuery, quantifier: SqlSubLinkQuantifier)
+    case SubLink(quantifier: SqlSubLinkQuantifier, query: SqlQuery)
     case Grouping(items: List[SqlExpr])
     case IdentFunc(name: String)
     case SubstringFunc(expr: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
     case TrimFunc(expr: SqlExpr, trim: Option[(Option[SqlTrimMode], Option[SqlExpr])])
     case OverlayFunc(expr: SqlExpr, placing: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
     case PositionFunc(expr: SqlExpr, in: SqlExpr)
-    case ExtractFunc(expr: SqlExpr, unit: SqlTimeUnit)
+    case ExtractFunc(unit: SqlTimeUnit, expr: SqlExpr)
     case VectorDistanceFunc(left: SqlExpr, right: SqlExpr, mode: SqlVectorDistanceMode)
     case JsonSerializeFunc(expr: SqlExpr, output: Option[SqlJsonOutput])
     case JsonParseFunc(
@@ -83,9 +83,9 @@ enum SqlExpr:
     )
     case CountAsteriskFunc(tableName: Option[String], filter: Option[SqlExpr])
     case ListAggFunc(
+        quantifier: Option[SqlQuantifier],
         expr: SqlExpr,
         separator: SqlExpr,
-        quantifier: Option[SqlQuantifier],
         onOverflow: Option[SqlListAggOnOverflow],
         withinGroup: List[SqlOrderingItem],
         filter: Option[SqlExpr]
@@ -116,12 +116,12 @@ enum SqlExpr:
         nullsMode: Option[SqlWindowNullsMode]
     )
     case StandardFunc(
+        quantifier: Option[SqlQuantifier],
         name: String,
         args: List[SqlExpr],
-        quantifier: Option[SqlQuantifier],
         orderBy: List[SqlOrderingItem],
         withinGroup: List[SqlOrderingItem],
         filter: Option[SqlExpr]
     )
-    case MatchPhase(expr: SqlExpr, phase: SqlMatchPhase)
+    case MatchPhase(phase: SqlMatchPhase, expr: SqlExpr)
     case Custom(snippet: String)
