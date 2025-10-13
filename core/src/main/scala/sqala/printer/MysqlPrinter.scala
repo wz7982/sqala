@@ -43,9 +43,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlBinaryOperator.Concat =>
                 printExpr(
                     SqlExpr.StandardFunc(
+                        None,
                         "CONCAT", 
                         expr.left :: expr.right :: Nil,
-                        None,
                         Nil,
                         Nil,
                         None
@@ -62,12 +62,12 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlBinaryOperator.IsDistinctFrom =>
                 printExpr(
                     SqlExpr.Unary(
+                        SqlUnaryOperator.Not,
                         SqlExpr.Binary(
                             expr.left,
                             SqlBinaryOperator.Custom("<=>"),
                             expr.right
-                        ),
-                        SqlUnaryOperator.Not
+                        )
                     )
                 )
             case _ =>
@@ -119,9 +119,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlVectorDistanceMode.Euclidean =>
                 printExpr(
                     SqlExpr.StandardFunc(
+                        None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil,
-                        None,
                         Nil,
                         Nil,
                         None
@@ -130,9 +130,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlVectorDistanceMode.Cosine =>
                 printExpr(
                     SqlExpr.StandardFunc(
+                        None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil,
-                        None,
                         Nil,
                         Nil,
                         None
@@ -141,9 +141,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlVectorDistanceMode.Dot =>
                 printExpr(
                     SqlExpr.StandardFunc(
+                        None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil,
-                        None,
                         Nil,
                         Nil,
                         None

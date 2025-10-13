@@ -49,8 +49,8 @@ enum SqlQuery(val lock: Option[SqlLock]):
         override val lock: Option[SqlLock]
     ) extends SqlQuery(lock)
     case Cte(
-        queryItems: List[SqlWithItem],
         recursive: Boolean,
+        queryItems: List[SqlWithItem],
         query: SqlQuery,
         override val lock: Option[SqlLock]
     ) extends SqlQuery(lock)

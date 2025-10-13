@@ -29,31 +29,31 @@ def `case`(branches: List[(Expr, Expr)], default: Expr): Expr =
 def count(): Expr = Expr(SqlExpr.CountAsteriskFunc(None, None))
 
 def count(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc("COUNT", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "COUNT", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def sum(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc("SUM", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "SUM", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def avg(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc("AVG", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "AVG", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def max(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc("MAX", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "MAX", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def min(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc("MIN", expr.sqlExpr :: Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "MIN", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def rank(): Expr = 
-    Expr(SqlExpr.StandardFunc("RANK", Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "RANK", Nil, Nil, Nil, None))
 
 def denseRank(): Expr = 
-    Expr(SqlExpr.StandardFunc("DENSE_RANK", Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "DENSE_RANK", Nil, Nil, Nil, None))
 
 def rowNumber(): Expr = 
-    Expr(SqlExpr.StandardFunc("ROW_NUMBER", Nil, None, Nil, Nil, None))
+    Expr(SqlExpr.StandardFunc(None, "ROW_NUMBER", Nil, Nil, Nil, None))
 
-def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Any))
+def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(SqlSubLinkQuantifier.Any, query.tree))
 
-def all(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.All))
+def all(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(SqlSubLinkQuantifier.All, query.tree))
 
-def exists(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(query.tree, SqlSubLinkQuantifier.Exists))
+def exists(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(SqlSubLinkQuantifier.Exists, query.tree))

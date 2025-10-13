@@ -202,9 +202,9 @@ extension [T: AsExpr as at](self: T)
     ): Expr[Option[BigDecimal]] =
         Expr(
             SqlExpr.StandardFunc(
+                None,
                 "MOD",
                 at.asExpr(self).asSqlExpr :: ar.asExpr(that).asSqlExpr :: Nil,
-                None,
                 Nil,
                 Nil,
                 None
@@ -213,11 +213,11 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("positive")
     def unary_+(using SqlNumber[at.R], QueryContext): Expr[at.R] =
-        Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Positive))
+        Expr(SqlExpr.Unary(SqlUnaryOperator.Positive, at.asExpr(self).asSqlExpr))
 
     @targetName("negative")
     def unary_-(using SqlNumber[at.R], QueryContext): Expr[at.R] =
-        Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Negative))
+        Expr(SqlExpr.Unary(SqlUnaryOperator.Negative, at.asExpr(self).asSqlExpr))
 
     @targetName("and")
     def &&[R](that: R)(using
@@ -253,7 +253,7 @@ extension [T: AsExpr as at](self: T)
 
     @targetName("not")
     def unary_!(using SqlBoolean[at.R], QueryContext): Expr[at.R] =
-        Expr(SqlExpr.Unary(at.asExpr(self).asSqlExpr, SqlUnaryOperator.Not))
+        Expr(SqlExpr.Unary(SqlUnaryOperator.Not, at.asExpr(self).asSqlExpr))
 
     def like[R](that: R)(using
         rt: SqlString[at.R],

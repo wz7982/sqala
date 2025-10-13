@@ -32,7 +32,7 @@ case class PivotTable[N <: Tuple, V <: Tuple](
         val newQuery = 
             __sqlQuery__.copy(
                 groupBy = Some(
-                    SqlGroupBy(group.map(g => SqlGroupingItem.Expr(g)), None)
+                    SqlGroupBy(None, group.map(g => SqlGroupingItem.Expr(g)))
                 )
             )
         PivotGroupBy[N, V, GN, GV](__items__, group, newQuery)
