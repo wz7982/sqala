@@ -12,31 +12,32 @@ enum SqlTable:
         sample: Option[SqlTableSample]
     )
     case Func(
+        lateral: Boolean,
         name: String, 
         args: List[SqlExpr],
-        lateral: Boolean,
         withOrd: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
     case SubQuery(
+        lateral: Boolean,
         query: SqlQuery, 
-        lateral: Boolean, 
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
     case Json(
+        lateral: Boolean,
         expr: SqlExpr,
         path: SqlExpr,
         pathAlias: Option[String],
         passingItems: List[SqlJsonPassing],
         columns: List[SqlJsonTableColumn],
         onError: Option[SqlJsonTableErrorBehavior],
-        lateral: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
     case Graph(
+        lateral: Boolean,
         name: String,
         `match`: Option[SqlGraphMatchMode],
         patterns: List[SqlGraphPattern],
@@ -44,7 +45,6 @@ enum SqlTable:
         rows: Option[SqlGraphRowsMode],
         columns: List[SqlSelectItem],
         `export`: Option[SqlGraphExportMode],
-        lateral: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )

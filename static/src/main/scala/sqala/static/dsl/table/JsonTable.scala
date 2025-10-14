@@ -48,13 +48,13 @@ object JsonTable:
             alias,
             p.asTableParam(alias, 1),
             SqlTable.Json(
+                false,
                 expr,
                 path,
                 None,
                 Nil,
                 sqlColumns,
                 None,
-                false,
                 alias.map(SqlTableAlias(_, Nil)),
                 None
             )

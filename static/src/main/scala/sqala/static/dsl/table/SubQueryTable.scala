@@ -27,8 +27,8 @@ object SubQueryTable:
             alias, 
             p.asTableParam(alias, 1),
             SqlTable.SubQuery(
-                query,
                 lateral,
+                query,
                 alias.map(SqlTableAlias(_, Nil)),
                 None
             )

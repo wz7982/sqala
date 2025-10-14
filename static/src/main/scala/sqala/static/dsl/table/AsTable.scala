@@ -136,7 +136,7 @@ object AsTable:
                     instances.zip(datum.productIterator).map: (i, v) =>
                         i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
                 val sqlValues = SqlQuery.Values(exprList, None)
-                (table, SqlTable.SubQuery(sqlValues, false, Some(tableAlias), None))
+                (table, SqlTable.SubQuery(false, sqlValues, Some(tableAlias), None))
 
     given join[T]: Aux[JoinTable[T], T] =
         new AsTable[JoinTable[T]]:
