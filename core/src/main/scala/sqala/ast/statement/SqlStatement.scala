@@ -7,10 +7,12 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
 
+case class SqlUpdateSetPair(column: SqlExpr, value: SqlExpr)
+
 enum SqlStatement:
     case Delete(table: SqlTable, where: Option[SqlExpr])
     case Insert(table: SqlTable, columns: List[SqlExpr], values: List[List[SqlExpr]], query: Option[SqlQuery])
-    case Update(table: SqlTable, setList: List[(SqlExpr, SqlExpr)], where: Option[SqlExpr])
+    case Update(table: SqlTable, setList: List[SqlUpdateSetPair], where: Option[SqlExpr])
     case Truncate(table: SqlTable)
     case Upsert(table: SqlTable, columns: List[SqlExpr], values: List[SqlExpr], pkList: List[SqlExpr], updateList: List[SqlExpr])
 

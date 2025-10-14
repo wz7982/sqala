@@ -34,9 +34,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" SET ")
 
         printList(update.setList): i =>
-            printExpr(i._1)
+            printExpr(i.column)
             sqlBuilder.append(" = ")
-            printExpr(i._2)
+            printExpr(i.value)
 
         for i <- update.where do
             sqlBuilder.append(" WHERE ")
@@ -517,7 +517,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
         sqlBuilder.append(" AS ")
-        printType(expr.castType)
+        printType(expr.`type`)
         sqlBuilder.append(")")
 
     def printType(`type`: SqlType): Unit =
@@ -663,10 +663,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     def printTrimFuncExpr(expr: SqlExpr.TrimFunc): Unit =
         sqlBuilder.append("TRIM(")
         for t <- expr.trim do
-            for m <- t._1 do
+            for m <- t.mode do
                 sqlBuilder.append(m.mode)
-            for e <- t._2 do
-                if t._1.nonEmpty then
+            for e <- t.value do
+                if t.mode.nonEmpty then
                     sqlBuilder.append(" ")
                 printExpr(e)
             sqlBuilder.append(" FROM ")
@@ -765,10 +765,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printJsonObjectFuncExpr(expr: SqlExpr.JsonObjectFunc): Unit =
-        def printItem(item: (SqlExpr, SqlExpr)): Unit =
-            printExpr(item._1)
+        def printItem(item: SqlJsonObjectElement): Unit =
+            printExpr(item.key)
             sqlBuilder.append(" VALUE ")
-            printExpr(item._2)
+            printExpr(item.value)
         sqlBuilder.append("JSON_OBJECT(")
         printList(expr.items)(printItem)
         for n <- expr.nullConstructor do
@@ -783,9 +783,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printJsonArrayFuncExpr(expr: SqlExpr.JsonArrayFunc): Unit =
-        def printItem(item: (SqlExpr, Option[SqlJsonInput])): Unit =
-            printExpr(item._1)
-            for i <- item._2 do
+        def printItem(item: SqlJsonArrayElement): Unit =
+            printExpr(item.value)
+            for i <- item.input do
                 sqlBuilder.append(" ")
                 printJsonInput(i)
         sqlBuilder.append("JSON_ARRAY(")
@@ -950,14 +950,14 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(expr.separator)
         for o <- expr.onOverflow do
             sqlBuilder.append(" ON OVERFLOW ")
-            o.mode match
-                case SqlListAggOnOverflowMode.Error =>
+            o match
+                case SqlListAggOnOverflow.Error =>
                     sqlBuilder.append("ERROR")
-                case SqlListAggOnOverflowMode.Truncate(e) =>
+                case SqlListAggOnOverflow.Truncate(e, c) =>
                     sqlBuilder.append("TRUNCATE ")
                     printExpr(e)
-            sqlBuilder.append(" ")
-            sqlBuilder.append(o.countMode.mode)
+                    sqlBuilder.append(" ")
+                    sqlBuilder.append(c.mode)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
             sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
@@ -970,9 +970,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printJsonObjectAggFuncExpr(expr: SqlExpr.JsonObjectAggFunc): Unit =
         sqlBuilder.append("JSON_OBJECTAGG(")
-        printExpr(expr.item._1)
+        printExpr(expr.item.key)
         sqlBuilder.append(" VALUE ")
-        printExpr(expr.item._2)
+        printExpr(expr.item.value)
         for n <- expr.nullConstructor do
             sqlBuilder.append(" ")
             printJsonNullConstructor(n)
@@ -990,8 +990,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printJsonArrayAggFuncExpr(expr: SqlExpr.JsonArrayAggFunc): Unit =
         sqlBuilder.append("JSON_ARRAYAGG(")
-        printExpr(expr.item._1)
-        for i <- expr.item._2 do
+        printExpr(expr.item.value)
+        for i <- expr.item.input do
             sqlBuilder.append(" ")
             printJsonInput(i)
         if expr.orderBy.nonEmpty then

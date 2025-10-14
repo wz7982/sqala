@@ -30,14 +30,14 @@ enum SqlExpr:
     case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
     case Coalesce(items: List[SqlExpr])
     case NullIf(expr: SqlExpr, test: SqlExpr)
-    case Cast(expr: SqlExpr, castType: SqlType)
+    case Cast(expr: SqlExpr, `type`: SqlType)
     case Window(expr: SqlExpr, window: SqlWindow)
     case SubQuery(query: SqlQuery)
     case SubLink(quantifier: SqlSubLinkQuantifier, query: SqlQuery)
     case Grouping(items: List[SqlExpr])
     case IdentFunc(name: String)
     case SubstringFunc(expr: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
-    case TrimFunc(expr: SqlExpr, trim: Option[(Option[SqlTrimMode], Option[SqlExpr])])
+    case TrimFunc(expr: SqlExpr, trim: Option[SqlTrim])
     case OverlayFunc(expr: SqlExpr, placing: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
     case PositionFunc(expr: SqlExpr, in: SqlExpr)
     case ExtractFunc(unit: SqlTimeUnit, expr: SqlExpr)
@@ -67,13 +67,13 @@ enum SqlExpr:
         onError: Option[SqlJsonValueErrorBehavior]
     )
     case JsonObjectFunc(
-        items: List[(SqlExpr, SqlExpr)],
+        items: List[SqlJsonObjectElement],
         nullConstructor: Option[SqlJsonNullConstructor],
         uniqueness: Option[SqlJsonUniqueness],
         output: Option[SqlJsonOutput]
     )
     case JsonArrayFunc(
-        items: List[(SqlExpr, Option[SqlJsonInput])],
+        items: List[SqlJsonArrayElement],
         nullConstructor: Option[SqlJsonNullConstructor],
         output: Option[SqlJsonOutput]
     )
@@ -93,14 +93,14 @@ enum SqlExpr:
         filter: Option[SqlExpr]
     )
     case JsonObjectAggFunc(
-        item: (SqlExpr, SqlExpr),
+        item: SqlJsonObjectElement,
         nullConstructor: Option[SqlJsonNullConstructor],
         uniqueness: Option[SqlJsonUniqueness],
         output: Option[SqlJsonOutput],
         filter: Option[SqlExpr]
     )
     case JsonArrayAggFunc(
-        item: (SqlExpr, Option[SqlJsonInput]),
+        item: SqlJsonArrayElement,
         orderBy: List[SqlOrderingItem],
         nullConstructor: Option[SqlJsonNullConstructor],
         output: Option[SqlJsonOutput],

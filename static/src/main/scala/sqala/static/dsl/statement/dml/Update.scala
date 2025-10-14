@@ -1,7 +1,7 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.statement.SqlStatement
+import sqala.ast.statement.{SqlStatement, SqlUpdateSetPair}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.table.Table
 import sqala.static.dsl.{AsExpr, QueryContext}
@@ -32,7 +32,7 @@ class Update[T, S <: UpdateState](
         val pair = f(table)
         val expr = SqlExpr.Column(None, pair.columnName)
         val updateExpr = pair.updateExpr
-        new Update(table, tree.copy(setList = tree.setList :+ (expr, updateExpr)))
+        new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(expr, updateExpr)))
 
     def where[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using 
         S =:= UpdateTable, 
@@ -81,7 +81,8 @@ object Update:
                 (field, skipNone) match
                     case (None, true) => false
                     case _ => true
-            .map((_, column, instance, field) => (SqlExpr.Column(None, column), instance.asSqlExpr(field)))
+            .map: (_, column, instance, field) => 
+                SqlUpdateSetPair(SqlExpr.Column(None, column), instance.asSqlExpr(field))
         val conditions = updateMetaData
             .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
             .map: (_, column, instance, field) => 

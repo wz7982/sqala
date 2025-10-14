@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlExpr, SqlJsonUniqueness, SqlVectorDistanceMode}
+import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.static.metadata.*
 
@@ -460,12 +460,12 @@ def groupConcat[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGrou
     listAgg(x, separator, withinGroup)
 
 @aggFunction
-def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](k: K, v: V)(using 
+def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](key: K, value: V)(using 
     QueryContext
 ): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonObjectAggFunc(
-            (ak.asExpr(k).asSqlExpr, av.asExpr(v).asSqlExpr),
+            SqlJsonObjectElement(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr),
             None,
             None,
             None,
@@ -479,7 +479,7 @@ def jsonArrayAgg[A: AsExpr as aa](x: A)(using
 ): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonArrayAggFunc(
-            (aa.asExpr(x).asSqlExpr, None),
+            SqlJsonArrayElement(aa.asExpr(x).asSqlExpr, None),
             Nil,
             None,
             None,
@@ -1466,17 +1466,17 @@ def jsonExists[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
         )
     )
 
-case class JsonObjectPair(k: SqlExpr, v: SqlExpr)
+case class JsonObjectPair(key: SqlExpr, value: SqlExpr)
 
-extension [K: AsExpr as ak](k: K)
-    infix def value[V: AsExpr as av](v: V)(using QueryContext): JsonObjectPair =
-        JsonObjectPair(ak.asExpr(k).asSqlExpr, av.asExpr(v).asSqlExpr)
+extension [K: AsExpr as ak](key: K)
+    infix def value[V: AsExpr as av](value: V)(using QueryContext): JsonObjectPair =
+        JsonObjectPair(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr)
 
 @function
 def jsonObject(items: JsonObjectPair*)(using QueryContext): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonObjectFunc(
-            items.toList.map(i => (i.k, i.v)),
+            items.toList.map(i => SqlJsonObjectElement(i.key, i.value)),
             None,
             None,
             None
@@ -1487,7 +1487,7 @@ def jsonObject(items: JsonObjectPair*)(using QueryContext): Expr[Option[Json]] =
 def jsonArray[A: AsExpr as aa](items: A)(using QueryContext): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonArrayFunc(
-            aa.exprs(items).map(i => (i.asSqlExpr, None)),
+            aa.exprs(items).map(i => SqlJsonArrayElement(i.asSqlExpr, None)),
             None,
             None
         )
