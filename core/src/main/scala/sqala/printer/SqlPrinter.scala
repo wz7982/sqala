@@ -765,7 +765,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printJsonObjectFuncExpr(expr: SqlExpr.JsonObjectFunc): Unit =
-        def printItem(item: SqlJsonObjectElement): Unit =
+        def printItem(item: SqlJsonObjectItem): Unit =
             printExpr(item.key)
             sqlBuilder.append(" VALUE ")
             printExpr(item.value)
@@ -783,7 +783,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printJsonArrayFuncExpr(expr: SqlExpr.JsonArrayFunc): Unit =
-        def printItem(item: SqlJsonArrayElement): Unit =
+        def printItem(item: SqlJsonArrayItem): Unit =
             printExpr(item.value)
             for i <- item.input do
                 sqlBuilder.append(" ")

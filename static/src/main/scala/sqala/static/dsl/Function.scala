@@ -465,7 +465,7 @@ def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](key: K, value: V)(using
 ): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonObjectAggFunc(
-            SqlJsonObjectElement(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr),
+            SqlJsonObjectItem(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr),
             None,
             None,
             None,
@@ -479,7 +479,7 @@ def jsonArrayAgg[A: AsExpr as aa](x: A)(using
 ): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonArrayAggFunc(
-            SqlJsonArrayElement(aa.asExpr(x).asSqlExpr, None),
+            SqlJsonArrayItem(aa.asExpr(x).asSqlExpr, None),
             Nil,
             None,
             None,
@@ -1476,7 +1476,7 @@ extension [K: AsExpr as ak](key: K)
 def jsonObject(items: JsonObjectPair*)(using QueryContext): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonObjectFunc(
-            items.toList.map(i => SqlJsonObjectElement(i.key, i.value)),
+            items.toList.map(i => SqlJsonObjectItem(i.key, i.value)),
             None,
             None,
             None
@@ -1487,7 +1487,7 @@ def jsonObject(items: JsonObjectPair*)(using QueryContext): Expr[Option[Json]] =
 def jsonArray[A: AsExpr as aa](items: A)(using QueryContext): Expr[Option[Json]] =
     Expr(
         SqlExpr.JsonArrayFunc(
-            aa.exprs(items).map(i => SqlJsonArrayElement(i.asSqlExpr, None)),
+            aa.exprs(items).map(i => SqlJsonArrayItem(i.asSqlExpr, None)),
             None,
             None
         )

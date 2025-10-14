@@ -67,13 +67,13 @@ enum SqlExpr:
         onError: Option[SqlJsonValueErrorBehavior]
     )
     case JsonObjectFunc(
-        items: List[SqlJsonObjectElement],
+        items: List[SqlJsonObjectItem],
         nullConstructor: Option[SqlJsonNullConstructor],
         uniqueness: Option[SqlJsonUniqueness],
         output: Option[SqlJsonOutput]
     )
     case JsonArrayFunc(
-        items: List[SqlJsonArrayElement],
+        items: List[SqlJsonArrayItem],
         nullConstructor: Option[SqlJsonNullConstructor],
         output: Option[SqlJsonOutput]
     )
@@ -93,14 +93,14 @@ enum SqlExpr:
         filter: Option[SqlExpr]
     )
     case JsonObjectAggFunc(
-        item: SqlJsonObjectElement,
+        item: SqlJsonObjectItem,
         nullConstructor: Option[SqlJsonNullConstructor],
         uniqueness: Option[SqlJsonUniqueness],
         output: Option[SqlJsonOutput],
         filter: Option[SqlExpr]
     )
     case JsonArrayAggFunc(
-        item: SqlJsonArrayElement,
+        item: SqlJsonArrayItem,
         orderBy: List[SqlOrderingItem],
         nullConstructor: Option[SqlJsonNullConstructor],
         output: Option[SqlJsonOutput],
