@@ -180,8 +180,8 @@ class SqlParser extends StandardTokenParsers:
                 case (acc, (true, "in", in: SqlExpr.SubQuery)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, in)
                 case (acc, (false, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.In, SqlExpr.Tuple(in.asInstanceOf[List[SqlExpr]]))
                 case (acc, (true, "in", in: List[?])) => SqlExpr.Binary(acc, SqlBinaryOperator.NotIn, SqlExpr.Tuple(in.asInstanceOf[List[SqlExpr]]))
-                case (acc, (false, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.Like, expr)
-                case (acc, (true, "like", expr: SqlExpr)) => SqlExpr.Binary(acc, SqlBinaryOperator.NotLike, expr)
+                case (acc, (false, "like", expr: SqlExpr)) => SqlExpr.Like(acc, expr, None, false)
+                case (acc, (true, "like", expr: SqlExpr)) => SqlExpr.Like(acc, expr, None, true)
                 case _ => SqlExpr.NullLiteral
             }
         }

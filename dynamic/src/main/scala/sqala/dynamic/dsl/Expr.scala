@@ -75,10 +75,10 @@ case class Expr(sqlExpr: SqlExpr):
         val expr = sqlExpr match
             case SqlExpr.BooleanLiteral(b) =>
                 SqlExpr.BooleanLiteral(!b)
-            case SqlExpr.Binary(l, SqlBinaryOperator.Like, r) =>
-                SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r)
-            case SqlExpr.Binary(l, SqlBinaryOperator.NotLike, r) =>
-                SqlExpr.Binary(l, SqlBinaryOperator.Like, r)
+            case SqlExpr.Like(expr, pattern, escape, not) =>
+                SqlExpr.Like(expr, pattern, escape, !not)
+            case SqlExpr.SimilarTo(expr, pattern, escape, not) =>
+                SqlExpr.SimilarTo(expr, pattern, escape, !not)
             case SqlExpr.Binary(l, SqlBinaryOperator.In, r) =>
                 SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r)
             case SqlExpr.Binary(l, SqlBinaryOperator.NotIn, r) =>
@@ -88,7 +88,7 @@ case class Expr(sqlExpr: SqlExpr):
             case _ => SqlExpr.Unary(Not, sqlExpr)
         Expr(expr)
 
-    def like(expr: Expr): Expr = Expr(SqlExpr.Binary(sqlExpr, Like, expr.sqlExpr))
+    def like(expr: Expr): Expr = Expr(SqlExpr.Like(sqlExpr, expr.sqlExpr, None, false))
 
     def over: Expr = Expr(SqlExpr.Window(sqlExpr, SqlWindow(Nil, Nil, None)))
 

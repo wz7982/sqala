@@ -263,10 +263,11 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.Binary(
+            SqlExpr.Like(
                 at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Like, 
-                ar.asExpr(that).asSqlExpr
+                ar.asExpr(that).asSqlExpr,
+                None,
+                false
             )
         )
 
@@ -276,10 +277,11 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.Binary(
+            SqlExpr.Like(
                 at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Like, 
-                s"%$value%".asExpr.asSqlExpr
+                s"%$value%".asExpr.asSqlExpr,
+                None,
+                false
             )
         )
 
@@ -289,10 +291,11 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.Binary(
+            SqlExpr.Like(
                 at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Like, 
-                s"$value%".asExpr.asSqlExpr
+                s"$value%".asExpr.asSqlExpr,
+                None,
+                false
             )
         )
 
@@ -302,10 +305,11 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.Binary(
+            SqlExpr.Like(
                 at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Like, 
-                s"%$value".asExpr.asSqlExpr
+                s"%$value".asExpr.asSqlExpr,
+                None,
+                false
             )
         )
 
