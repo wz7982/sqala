@@ -6,6 +6,8 @@ enum SqlVectorDistanceMode:
     case Dot
     case Manhattan
 
+case class SqlTrim(mode: Option[SqlTrimMode], value: Option[SqlExpr])
+
 enum SqlTrimMode(val mode: String):
     case Both extends SqlTrimMode("BOTH")
     case Leading extends SqlTrimMode("LEADING")
@@ -109,14 +111,13 @@ enum SqlJsonTableColumn:
         columns: List[SqlJsonTableColumn]
     )
 
-case class SqlListAggOnOverflow(
-    mode: SqlListAggOnOverflowMode,
-    countMode: SqlListAggCountMode
-)
+case class SqlJsonObjectElement(key: SqlExpr, value: SqlExpr)
 
-enum SqlListAggOnOverflowMode:
+case class SqlJsonArrayElement(value: SqlExpr, input: Option[SqlJsonInput])
+
+enum SqlListAggOnOverflow:
     case Error
-    case Truncate(expr: SqlExpr)
+    case Truncate(expr: SqlExpr, countMode: SqlListAggCountMode)
 
 enum SqlListAggCountMode(val mode: String):
     case With extends SqlListAggCountMode("WITH COUNT")
