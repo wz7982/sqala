@@ -568,7 +568,7 @@ object ConnectBy:
                     Some(tableCte), 
                     query.table.__metaData__, 
                     query.table.__sqlTable__.copy(
-                        alias = query.table.__sqlTable__.alias.map(_.copy(tableAlias = tableCte))
+                        alias = query.table.__sqlTable__.alias.map(_.copy(alias = tableCte))
                     )
                 )
             )
@@ -602,7 +602,7 @@ object ConnectBy:
                     Some(tableCte), 
                     query.table.__metaData__, 
                     query.table.__sqlTable__.copy(
-                        alias = query.table.__sqlTable__.alias.map(_.copy(tableAlias = tableCte))
+                        alias = query.table.__sqlTable__.alias.map(_.copy(alias = tableCte))
                     )
                 )
             )

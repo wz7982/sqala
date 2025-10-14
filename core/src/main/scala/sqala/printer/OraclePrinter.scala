@@ -121,8 +121,8 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
 
     override def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(" ")
-        printIdent(alias.tableAlias)
-        if alias.columnAlias.nonEmpty then
+        printIdent(alias.alias)
+        if alias.columnAliases.nonEmpty then
             sqlBuilder.append("(")
-            printList(alias.columnAlias)(i => printIdent(i))
+            printList(alias.columnAliases)(i => printIdent(i))
             sqlBuilder.append(")")

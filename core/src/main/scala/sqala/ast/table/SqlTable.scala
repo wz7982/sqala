@@ -55,13 +55,14 @@ enum SqlTable:
         condition: Option[SqlJoinCondition]
     )
 
-case class SqlTableAlias(tableAlias: String, columnAlias: List[String])
+case class SqlTableAlias(alias: String, columnAliases: List[String])
 
 case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
 
 enum SqlTableSampleMode(val mode: String):
     case Bernoulli extends SqlTableSampleMode("BERNOULLI")
     case System extends SqlTableSampleMode("SYSTEM")
+    case Custom(override val mode: String) extends SqlTableSampleMode(mode)
 
 enum SqlTablePeriodMode:
     case ForSystemTimeAsOf(expr: SqlExpr)
