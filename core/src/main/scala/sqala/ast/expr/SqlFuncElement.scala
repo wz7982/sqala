@@ -111,9 +111,9 @@ enum SqlJsonTableColumn:
         columns: List[SqlJsonTableColumn]
     )
 
-case class SqlJsonObjectElement(key: SqlExpr, value: SqlExpr)
+case class SqlJsonObjectItem(key: SqlExpr, value: SqlExpr)
 
-case class SqlJsonArrayElement(value: SqlExpr, input: Option[SqlJsonInput])
+case class SqlJsonArrayItem(value: SqlExpr, input: Option[SqlJsonInput])
 
 enum SqlListAggOnOverflow:
     case Error
