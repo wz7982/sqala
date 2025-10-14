@@ -1059,10 +1059,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(" AS ")
-        printIdent(alias.tableAlias)
-        if alias.columnAlias.nonEmpty then
+        printIdent(alias.alias)
+        if alias.columnAliases.nonEmpty then
             sqlBuilder.append("(")
-            printList(alias.columnAlias)(i => printIdent(i))
+            printList(alias.columnAliases)(i => printIdent(i))
             sqlBuilder.append(")")
 
     def printStandardTable(table: SqlTable.Standard): Unit =
