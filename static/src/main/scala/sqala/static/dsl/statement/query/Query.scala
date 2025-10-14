@@ -227,8 +227,8 @@ object Query:
                         None,
                         SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
                         SqlTable.SubQuery(
+                            false,
                             removeLimitAndOrderBy(tree), 
-                            false, 
                             Some(SqlTableAlias("t", Nil)),
                             None
                         ) :: Nil,

@@ -520,7 +520,7 @@ class SqlParser extends StandardTokenParsers:
         } |
         opt("LATERAL") ~ ("(" ~> set <~ ")") ~ opt(tableAlias) ^^ {
             case lateral ~ s ~ alias =>
-                SqlTable.SubQuery(s, lateral.isDefined, alias, None)
+                SqlTable.SubQuery(lateral.isDefined, s, alias, None)
         }
 
     def joinType: Parser[SqlJoinType] =

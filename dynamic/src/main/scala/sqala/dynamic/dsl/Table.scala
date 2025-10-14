@@ -19,7 +19,7 @@ sealed trait AnyTable:
         case Table(name, alias) => 
             SqlTable.Standard(name, None, alias.map(a => SqlTableAlias(a, Nil)), None, None)
         case SubQueryTable(query, alias, lateral) => 
-            SqlTable.SubQuery(query.tree, lateral, Some(SqlTableAlias(alias, Nil)), None)
+            SqlTable.SubQuery(lateral, query.tree, Some(SqlTableAlias(alias, Nil)), None)
         case JoinTable(left, joinType, right, condition) => 
             SqlTable.Join(left.toSqlTable, joinType, right.toSqlTable, condition.map(c => SqlJoinCondition.On(c.sqlExpr)))
 

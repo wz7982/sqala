@@ -355,6 +355,7 @@ object GraphTable:
             alias,
             items,
             SqlTable.Graph(
+                lateral,
                 name,
                 None,
                 patterns,
@@ -362,7 +363,6 @@ object GraphTable:
                 rows,
                 columns,
                 None,
-                lateral,
                 alias.map(SqlTableAlias(_, Nil)),
                 None
             )

@@ -107,9 +107,9 @@ def unnest[T: AsExpr as a](x: T)(using
 ): FuncTable[Unnest[f.R]] =
     val alias = c.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
+        false,
         "UNNEST",
         a.asExpr(x).asSqlExpr :: Nil,
-        false,
         false,
         Some(SqlTableAlias(alias, "x" :: Nil)),
         None
@@ -124,9 +124,9 @@ def unnestWithOrdinal[T: AsExpr as a](x: T)(using
 ): FuncTable[UnnestWithOrdinal[f.R]] =
     val alias = c.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
+        false,
         "UNNEST",
         a.asExpr(x).asSqlExpr :: Nil,
-        false,
         true,
         Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
         None
@@ -436,9 +436,9 @@ inline def createTableFunction[T](
     val metaData = TableMacro.tableMetaData[T]
     val alias = c.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
+        false,
         name,
         args.map(_.asSqlExpr),
-        false,
         withOrdinal,
         Some(SqlTableAlias(alias, metaData.columnNames)),
         None
