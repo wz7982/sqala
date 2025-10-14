@@ -24,6 +24,8 @@ enum SqlExpr:
         uniqueness: Option[SqlJsonUniqueness]
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
+    case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], not: Boolean)
+    case SimilarTo(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], not: Boolean)
     case Case(branches: List[SqlWhen], default: Option[SqlExpr])
     case SimpleCase(expr: SqlExpr, branches: List[SqlWhen], default: Option[SqlExpr])
     case Coalesce(items: List[SqlExpr])

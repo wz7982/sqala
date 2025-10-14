@@ -312,23 +312,29 @@ object Repository:
                                             case "contains" =>
                                                 val value = valueIterator.next().asInstanceOf[String]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[String]]
-                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Like, instance.asSqlExpr("%" + value + "%")))
+                                                condBuffer.addOne(SqlExpr.Like(left, instance.asSqlExpr("%" + value + "%"), None, false))
                                             case "startsWith" =>
                                                 val value = valueIterator.next().asInstanceOf[String]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[String]]
-                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Like, instance.asSqlExpr(value + "%")))
+                                                condBuffer.addOne(SqlExpr.Like(left, instance.asSqlExpr(value + "%"), None, false))
                                             case "endsWith" =>
                                                 val value = valueIterator.next().asInstanceOf[String]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[String]]
-                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Like, instance.asSqlExpr("%" + value)))
+                                                condBuffer.addOne(SqlExpr.Like(left, instance.asSqlExpr("%" + value), None, false))
+                                            case "like" =>
+                                                val value = valueIterator.next().asInstanceOf[String]
+                                                val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[String]]
+                                                condBuffer.addOne(SqlExpr.Like(left, instance.asSqlExpr(value), None, false))
+                                            case "notLike" =>
+                                                val value = valueIterator.next().asInstanceOf[String]
+                                                val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[String]]
+                                                condBuffer.addOne(SqlExpr.Like(left, instance.asSqlExpr(value), None, true))
                                             case opString =>
                                                 val value = valueIterator.next()
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[Any]]
                                                 val op = opString match
                                                     case "equal" => SqlBinaryOperator.Equal
                                                     case "not" => SqlBinaryOperator.NotEqual
-                                                    case "like" => SqlBinaryOperator.Like
-                                                    case "notLike" => SqlBinaryOperator.NotLike
                                                     case "greaterThan" => SqlBinaryOperator.GreaterThan
                                                     case "greaterThanEqual" => SqlBinaryOperator.GreaterThanEqual
                                                     case "lessThan" => SqlBinaryOperator.LessThan

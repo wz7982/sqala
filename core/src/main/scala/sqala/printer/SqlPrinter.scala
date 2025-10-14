@@ -224,6 +224,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         case n: SqlExpr.NullTest => printNullTestExpr(n)
         case j: SqlExpr.JsonTest => printJsonTestExpr(j)
         case b: SqlExpr.Between => printBetweenExpr(b)
+        case l: SqlExpr.Like => printLikeExpr(l)
+        case s: SqlExpr.SimilarTo => printSimilarToExpr(s)
         case c: SqlExpr.Case => printCaseExpr(c)
         case s: SqlExpr.SimpleCase => printSimpleCaseExpr(s)
         case c: SqlExpr.Coalesce => printCoalesceExpr(c)
@@ -315,12 +317,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             child match
                 case SqlExpr.Binary(_, op, _)
                     if op.precedence < parent.operator.precedence || op.precedence == 0 => true
+                case SqlExpr.Like(_, _, _, _)
+                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence => true
+                case SqlExpr.SimilarTo(_, _, _, _)
+                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence => true
                 case _ => false
 
         def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, op, _)
                     if op.precedence <= parent.operator.precedence => true
+                case SqlExpr.Like(_, _, _, _)
+                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence => true
+                case SqlExpr.SimilarTo(_, _, _, _)
+                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence => true
                 case _ => false
 
         if hasBracketsLeft(expr, expr.left) then
@@ -383,6 +393,88 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(")")
         else
             printExpr(expr.end)
+
+    def printLikeExpr(expr: SqlExpr.Like): Unit =
+        val precedence = SqlBinaryOperator.Equal.precedence
+
+        def hasBracketsLeft(child: SqlExpr): Boolean =
+            child match
+                case SqlExpr.Binary(_, op, _)
+                    if op.precedence < precedence || op.precedence == 0 => true
+                case _ => false
+
+        def hasBracketsRight(child: SqlExpr): Boolean =
+            child match
+                case SqlExpr.Binary(_, op, _)
+                    if op.precedence <= precedence => true
+                case SqlExpr.Like(_, _, _, _) => true
+                case SqlExpr.SimilarTo(_, _, _, _) => true
+                case _ => false
+
+        if hasBracketsLeft(expr.expr) then
+            sqlBuilder.append("(")
+            printExpr(expr.expr)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.expr)
+
+        sqlBuilder.append(" ")
+        if expr.not then
+            sqlBuilder.append("NOT ")
+        sqlBuilder.append("LIKE")
+        sqlBuilder.append(" ")
+
+        if hasBracketsRight(expr.pattern) then
+            sqlBuilder.append("(")
+            printExpr(expr.pattern)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.pattern)
+
+        for e <- expr.escape do
+            sqlBuilder.append(" ESCAPE ")
+            printExpr(e)
+
+    def printSimilarToExpr(expr: SqlExpr.SimilarTo): Unit =
+        val precedence = SqlBinaryOperator.Equal.precedence
+
+        def hasBracketsLeft(child: SqlExpr): Boolean =
+            child match
+                case SqlExpr.Binary(_, op, _)
+                    if op.precedence < precedence || op.precedence == 0 => true
+                case _ => false
+
+        def hasBracketsRight(child: SqlExpr): Boolean =
+            child match
+                case SqlExpr.Binary(_, op, _)
+                    if op.precedence <= precedence => true
+                case SqlExpr.Like(_, _, _, _) => true
+                case SqlExpr.SimilarTo(_, _, _, _) => true
+                case _ => false
+
+        if hasBracketsLeft(expr.expr) then
+            sqlBuilder.append("(")
+            printExpr(expr.expr)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.expr)
+
+        sqlBuilder.append(" ")
+        if expr.not then
+            sqlBuilder.append("NOT ")
+        sqlBuilder.append("SIMILAR TO")
+        sqlBuilder.append(" ")
+
+        if hasBracketsRight(expr.pattern) then
+            sqlBuilder.append("(")
+            printExpr(expr.pattern)
+            sqlBuilder.append(")")
+        else
+            printExpr(expr.pattern)
+
+        for e <- expr.escape do
+            sqlBuilder.append(" ESCAPE ")
+            printExpr(e)
 
     def printCaseExpr(expr: SqlExpr.Case): Unit =
         sqlBuilder.append("CASE")

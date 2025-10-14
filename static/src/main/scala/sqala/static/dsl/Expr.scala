@@ -72,8 +72,10 @@ case class Expr[T](private val expr: SqlExpr):
                 e match
                     case BooleanLiteral(boolean) =>
                         BooleanLiteral(!boolean)
-                    case Binary(left, SqlBinaryOperator.Like, right) =>
-                        Binary(left, SqlBinaryOperator.NotLike, right)
+                    case Like(expr, pattern, escape, not) =>
+                        Like(expr, pattern, escape, !not)
+                    case SimilarTo(expr, pattern, escape, not) =>
+                        SimilarTo(expr, pattern, escape, !not)
                     case Binary(left, SqlBinaryOperator.In, right) =>
                         Binary(left, SqlBinaryOperator.NotIn, right)
                     case Binary(left, SqlBinaryOperator.NotIn, right) =>
