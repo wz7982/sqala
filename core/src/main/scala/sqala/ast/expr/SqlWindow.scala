@@ -21,12 +21,12 @@ enum SqlWindowFrame:
         exclude: Option[SqlWindowFrameExcludeMode]
     )
 
-enum SqlWindowFrameBound(val bound: String):
-    case CurrentRow extends SqlWindowFrameBound("CURRENT ROW")
-    case UnboundedPreceding extends SqlWindowFrameBound("UNBOUNDED PRECEDING")
-    case Preceding(n: Int) extends SqlWindowFrameBound(s"$n PRECEDING")
-    case UnboundedFollowing extends SqlWindowFrameBound("UNBOUNDED FOLLOWING")
-    case Following(n: Int) extends SqlWindowFrameBound(s"$n FOLLOWING")
+enum SqlWindowFrameBound:
+    case CurrentRow extends SqlWindowFrameBound
+    case UnboundedPreceding extends SqlWindowFrameBound
+    case Preceding(n: SqlExpr) extends SqlWindowFrameBound
+    case UnboundedFollowing extends SqlWindowFrameBound
+    case Following(n: SqlExpr) extends SqlWindowFrameBound
 
 enum SqlWindowFrameUnit(val unit: String):
     case Rows extends SqlWindowFrameUnit("ROWS")
