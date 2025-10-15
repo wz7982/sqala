@@ -260,9 +260,9 @@ class SqlParser extends StandardTokenParsers:
     def frameBound: Parser[SqlWindowFrameBound] =
         "CURRENT" ~ "ROW" ^^ (_ => SqlWindowFrameBound.CurrentRow) |
         "UNBOUNDED" ~ "PRECEDING" ^^ (_ => SqlWindowFrameBound.UnboundedPreceding) |
-        numericLit <~ "PRECEDING" ^^ (n => SqlWindowFrameBound.Preceding(BigDecimal(n).toInt)) |
+        numericLit <~ "PRECEDING" ^^ (n => SqlWindowFrameBound.Preceding(SqlExpr.NumberLiteral(BigDecimal(n).toInt))) |
         "UNBOUNDED" ~ "FOLLOWING" ^^ (_ => SqlWindowFrameBound.UnboundedPreceding) |
-        numericLit <~ "PRECEDING" ^^ (n => SqlWindowFrameBound.Preceding(BigDecimal(n).toInt))
+        numericLit <~ "PRECEDING" ^^ (n => SqlWindowFrameBound.Preceding(SqlExpr.NumberLiteral(BigDecimal(n).toInt)))
 
     def frame: Parser[SqlWindowFrame] =
         def unit(s: String): SqlWindowFrameUnit =

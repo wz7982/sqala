@@ -315,10 +315,10 @@ def unboundedFollowing(using QueryContext): SqlWindowFrameBound =
 
 extension (n: Int)
     def preceding(using QueryContext): SqlWindowFrameBound = 
-        SqlWindowFrameBound.Preceding(n)
+        SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr)
 
     def following(using QueryContext): SqlWindowFrameBound = 
-        SqlWindowFrameBound.Following(n)
+        SqlWindowFrameBound.Following(n.asExpr.asSqlExpr)
 
 def partitionBy[T: AsGroup as a](partitionValue: T)(using QueryContext, OverContext): Over =
     Over(partitionBy = a.exprs(partitionValue))

@@ -592,6 +592,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printWindow(expr.window)
 
     def printWindow(window: SqlWindow): Unit =
+        def printBound(bound: SqlWindowFrameBound): Unit =
+            bound match
+                case SqlWindowFrameBound.CurrentRow =>
+                    sqlBuilder.append("CURRENT ROW")
+                case SqlWindowFrameBound.UnboundedFollowing =>
+                    sqlBuilder.append("UNBOUNDED FOLLOWING")
+                case SqlWindowFrameBound.UnboundedPreceding =>
+                    sqlBuilder.append("UNBOUNDED PRECEDING")
+                case SqlWindowFrameBound.Following(n) =>
+                    printExpr(n)
+                    sqlBuilder.append(" FOLLOWING")
+                case SqlWindowFrameBound.Preceding(n) =>
+                    printExpr(n)
+                    sqlBuilder.append(" PRECEDING")
+
         sqlBuilder.append("(")
         if window.partitionBy.nonEmpty then
             sqlBuilder.append("PARTITION BY ")
@@ -607,7 +622,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" ")
                     sqlBuilder.append(unit.unit)
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(start.bound)
+                    printBound(start)
                     for e <- exclude do
                         sqlBuilder.append(" ")
                         sqlBuilder.append(e.mode)
@@ -615,9 +630,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" ")
                     sqlBuilder.append(unit.unit)
                     sqlBuilder.append(" BETWEEN ")
-                    sqlBuilder.append(start.bound)
+                    printBound(start)
                     sqlBuilder.append(" AND ")
-                    sqlBuilder.append(end.bound)
+                    printBound(end)
                     for e <- exclude do
                         sqlBuilder.append(" ")
                         sqlBuilder.append(e.mode)
