@@ -319,7 +319,7 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, None, None)
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, None, None, false)
         )
 
     def isJsonObject(using
@@ -328,7 +328,7 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Object), None)
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Object), None, false)
         )
 
     def isJsonArray(using
@@ -337,7 +337,7 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Array), None)
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Array), None, false)
         )
 
     def isJsonScalar(using
@@ -346,7 +346,7 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[r.R] =
         Expr(
-            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, false, Some(SqlJsonNodeType.Scalar), None)
+            SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Scalar), None, false)
         )
 
     def asc(using AsSqlExpr[at.R], QueryContext): Sort = 
