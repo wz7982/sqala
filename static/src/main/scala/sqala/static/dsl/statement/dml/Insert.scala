@@ -30,7 +30,7 @@ class Insert[T, S <: InsertState](
     inline def apply[I: AsExpr as a](f: Table[T] => I): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val sqlTable: SqlTable.Standard = SqlTable.Standard(tableName, None, None, None, None)
+        val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
         val table = Table[T](None, metaData, sqlTable)
         val insertItems = a.exprs(f(table))
         val columns = insertItems.map: i =>
@@ -62,7 +62,7 @@ object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree: SqlStatement.Insert = 
-            SqlStatement.Insert(SqlTable.Standard(tableName, None, None, None, None), Nil, Nil, None)
+            SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, Nil, None)
         new Insert(tree)
 
     inline def insertByEntities[T <: Product](entities: Seq[T])(using 
@@ -85,6 +85,6 @@ object Insert:
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(
             SqlStatement.Insert(
-                SqlTable.Standard(tableName, None, None, None, None), columns, values.toList, None
+                SqlTable.Ident(tableName, None, None, None, None), columns, values.toList, None
             )
         )

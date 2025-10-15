@@ -247,14 +247,14 @@ class SqlParser extends StandardTokenParsers:
     def function: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ~> opt("FILTER" ~ "(" ~> where <~ ")") ^^ {
             case f => 
-                SqlExpr.StandardFunc(None, "COUNT", Nil, Nil, Nil, f)
+                SqlExpr.GeneralFunc(None, "COUNT", Nil, Nil, Nil, f)
         } |
         ident ~ ("(" ~> opt(quantifier) ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
             ~ opt("WITHIN" ~ "GROUP" ~ "(" ~> orderBy <~ ")")
             ~ opt("FILTER" ~ "(" ~> where <~ ")") 
         ^^ {
             case ident ~ (quantifier ~ args ~ orderBy) ~ withinGroup ~ filter =>
-                SqlExpr.StandardFunc(quantifier, ident.toUpperCase, args, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
+                SqlExpr.GeneralFunc(quantifier, ident.toUpperCase, args, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
         }
 
     def frameBound: Parser[SqlWindowFrameBound] =
@@ -516,7 +516,7 @@ class SqlParser extends StandardTokenParsers:
     def simpleTable: Parser[SqlTable] =
         ident ~ opt(tableAlias) ^^ {
             case table ~ alias =>
-                SqlTable.Standard(table, None, alias, None, None)
+                SqlTable.Ident(table, None, alias, None, None)
         } |
         opt("LATERAL") ~ ("(" ~> set <~ ")") ~ opt(tableAlias) ^^ {
             case lateral ~ s ~ alias =>

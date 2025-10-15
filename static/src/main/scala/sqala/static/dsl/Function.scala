@@ -14,7 +14,7 @@ def count()(using QueryContext): Expr[Long] =
 @aggFunction
 def count[T: AsExpr as a](x: T)(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "COUNT",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -27,7 +27,7 @@ def count[T: AsExpr as a](x: T)(using QueryContext): Expr[Long] =
 @aggFunction
 def countDistinct[T: AsExpr as a](x: T)(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             Some(SqlQuantifier.Distinct),
             "COUNT",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -45,7 +45,7 @@ def sum[T: AsExpr as a](x: T)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "SUM",
                 a.asExpr(x).asSqlExpr :: Nil,
@@ -62,7 +62,7 @@ def avg[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "AVG",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -79,7 +79,7 @@ def max[T: AsExpr as a](x: T)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "MAX",
                 a.asExpr(x).asSqlExpr :: Nil,
@@ -97,7 +97,7 @@ def min[T: AsExpr as a](x: T)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "MIN",
                 a.asExpr(x).asSqlExpr :: Nil,
@@ -115,7 +115,7 @@ def anyValue[T: AsExpr as a](x: T)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ANY_VALUE",
                 a.asExpr(x).asSqlExpr :: Nil,
@@ -132,7 +132,7 @@ def stddevPop[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "STDDEV_POP",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -148,7 +148,7 @@ def stddevSamp[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "STDDEV_SAMP",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -164,7 +164,7 @@ def varPop[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "VAR_POP",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -180,7 +180,7 @@ def varSamp[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "VAR_SAMP",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -197,7 +197,7 @@ def covarPop[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "COVAR_POP",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -214,7 +214,7 @@ def covarSamp[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "COVAR_SAMP",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -231,7 +231,7 @@ def corr[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "CORR",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -248,7 +248,7 @@ def regrSlope[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_SLOPE",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -265,7 +265,7 @@ def regrIntercept[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_INTERCEPT",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -282,7 +282,7 @@ def regrCount[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_INTERCEPT",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -299,7 +299,7 @@ def regrR2[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_R2",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -316,7 +316,7 @@ def regrAvgx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_AVGX",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -333,7 +333,7 @@ def regrAvgy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_AVGY",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -350,7 +350,7 @@ def regrSxx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_SXX",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -367,7 +367,7 @@ def regrSyy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_SYY",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -384,7 +384,7 @@ def regrSxy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGR_SXY",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -400,7 +400,7 @@ def percentileCont[T: AsExpr as a](x: T, withinGroup: Sort)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "PERCENTILE_CONT",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -416,7 +416,7 @@ def percentileDisc[T: AsExpr as a](x: T, withinGroup: Sort)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "PERCENTILE_DISC",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -490,7 +490,7 @@ def jsonArrayAgg[A: AsExpr as aa](x: A)(using
 @aggFunction
 def classifier()(using QueryContext): Expr[String] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "CLASSIFIER",
             Nil,
@@ -503,7 +503,7 @@ def classifier()(using QueryContext): Expr[String] =
 @aggFunction
 def matchNumber()(using QueryContext): Expr[Int] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "MATCH_NUMBER",
             Nil,
@@ -520,7 +520,7 @@ def first[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "FIRST",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -539,7 +539,7 @@ def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "FIRST",
                 aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -557,7 +557,7 @@ def last[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "LAST",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -576,7 +576,7 @@ def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "LAST",
                 aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -594,7 +594,7 @@ def prev[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "PREV",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -613,7 +613,7 @@ def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "PREV",
                 aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -631,7 +631,7 @@ def next[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "NEXT",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -650,7 +650,7 @@ def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "NEXT",
                 aa.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -696,7 +696,7 @@ def upper[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[a.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "UPPER",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -712,7 +712,7 @@ def lower[T: AsExpr as a](x: T)(using
     QueryContext
 ): Expr[a.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LOWER",
             a.asExpr(x).asSqlExpr :: Nil,
@@ -729,7 +729,7 @@ def lpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LPAD",
             at.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -747,7 +747,7 @@ def lpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LPAD",
             at.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: ap.asExpr(pad).asSqlExpr :: Nil,
@@ -764,7 +764,7 @@ def rpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "RPAD",
             at.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: Nil,
@@ -782,7 +782,7 @@ def rpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "RPAD",
             at.asExpr(x).asSqlExpr :: an.asExpr(n).asSqlExpr :: ap.asExpr(pad).asSqlExpr :: Nil,
@@ -798,7 +798,7 @@ def btrim[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "BTRIM",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -815,7 +815,7 @@ def btrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "BTRIM",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -831,7 +831,7 @@ def ltrim[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LTRIM",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -848,7 +848,7 @@ def ltrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LTRIM",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -864,7 +864,7 @@ def rtrim[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "RTRIM",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -881,7 +881,7 @@ def rtrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "RTRIM",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -930,7 +930,7 @@ def regexpLike[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     SqlString[ab.R],
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "REGEXP_LIKE",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1030,7 +1030,7 @@ def charLength[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[Int]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "CHAR_LENGTH",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1046,7 +1046,7 @@ def octetLength[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[Int]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "OCTET_LENGTH",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1062,7 +1062,7 @@ def abs[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[aa.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ABS",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1079,7 +1079,7 @@ def mod[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "MOD",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1095,7 +1095,7 @@ def sin[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "SIN",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1111,7 +1111,7 @@ def cos[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "COS",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1127,7 +1127,7 @@ def tan[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "TAN",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1143,7 +1143,7 @@ def sinh[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "SINH",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1159,7 +1159,7 @@ def cosh[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "COSH",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1175,7 +1175,7 @@ def tanh[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "TANH",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1191,7 +1191,7 @@ def asin[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ASIN",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1207,7 +1207,7 @@ def acos[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ACOS",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1223,7 +1223,7 @@ def atan[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ATAN",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1240,7 +1240,7 @@ def log[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LOG",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1256,7 +1256,7 @@ def log10[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LOG10",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1272,7 +1272,7 @@ def ln[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LN",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1288,7 +1288,7 @@ def exp[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "EXP",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1305,7 +1305,7 @@ def power[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "POWER",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1321,7 +1321,7 @@ def sqrt[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "SQRT",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1337,7 +1337,7 @@ def floor[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[Long]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "FLOOR",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1353,7 +1353,7 @@ def ceil[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[Long]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "CEIL",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1370,7 +1370,7 @@ def round[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ROUND",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1389,7 +1389,7 @@ def widthBucket[A: AsExpr as aa, B: AsExpr as ab, C: AsExpr as ac, D: AsExpr as 
     QueryContext
 ): Expr[Option[Int]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "WIDTH_BUCKET",
             aa.asExpr(x).asSqlExpr :: 
@@ -1530,7 +1530,7 @@ def stGeomFromText[A: AsExpr as aa, S: AsExpr as as](x: A, srid: S)(using
     QueryContext
 ): Expr[Option[Geometry]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_GeomFromText",
             aa.asExpr(x).asSqlExpr :: as.asExpr(srid).asSqlExpr :: Nil,
@@ -1546,7 +1546,7 @@ def stAsText[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_AsText",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1562,7 +1562,7 @@ def stAsGeoJson[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_AsGeoJson",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1578,7 +1578,7 @@ def stGeometryType[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[String]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_GeometryType",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1594,7 +1594,7 @@ def stX[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_X",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1610,7 +1610,7 @@ def stY[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Y",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1626,7 +1626,7 @@ def stArea[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Area",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1642,7 +1642,7 @@ def stLength[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Length",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1659,7 +1659,7 @@ def stContains[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Contains",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1676,7 +1676,7 @@ def stWithin[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Within",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1693,7 +1693,7 @@ def stIntersects[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Intersects",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1710,7 +1710,7 @@ def stTouches[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Touches",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1727,7 +1727,7 @@ def stOverlaps[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Overlaps",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1744,7 +1744,7 @@ def stCrosses[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Crosses",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1761,7 +1761,7 @@ def stDisjoint[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Boolean]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Disjoint",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1778,7 +1778,7 @@ def stIntersection[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Geometry]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Intersection",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1795,7 +1795,7 @@ def stUnion[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Geometry]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Union",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1812,7 +1812,7 @@ def stDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Geometry]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Difference",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1829,7 +1829,7 @@ def stSymDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[Geometry]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_SymDifference",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1846,7 +1846,7 @@ def stDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     QueryContext
 ): Expr[Option[BigDecimal]] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ST_Distance",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
@@ -1859,7 +1859,7 @@ def stDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
 @windowFunction
 def rank()(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "RANK",
             Nil,
@@ -1872,7 +1872,7 @@ def rank()(using QueryContext): Expr[Long] =
 @windowFunction
 def denseRank()(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "DENSE_RANK",
             Nil,
@@ -1885,7 +1885,7 @@ def denseRank()(using QueryContext): Expr[Long] =
 @windowFunction
 def percentRank()(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "PERCENT_RANK",
             Nil,
@@ -1898,7 +1898,7 @@ def percentRank()(using QueryContext): Expr[Long] =
 @windowFunction
 def cumeDist()(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "CUME_DIST",
             Nil,
@@ -1911,7 +1911,7 @@ def cumeDist()(using QueryContext): Expr[Long] =
 @windowFunction
 def rowNumber()(using QueryContext): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "ROW_NUMBER",
             Nil,
@@ -1927,7 +1927,7 @@ def ntile[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[Long] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "NTILE",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -1944,7 +1944,7 @@ def firstValue[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "FIRST_VALUE",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -1962,7 +1962,7 @@ def lastValue[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "LAST_VALUE",
                 aa.asExpr(x).asSqlExpr :: Nil,
@@ -1995,7 +1995,7 @@ def lag[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[aa.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LAG",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -2011,7 +2011,7 @@ def lag[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
     QueryContext
 ): Expr[aa.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LAG",
             aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2028,7 +2028,7 @@ def lag[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, defa
     c: QueryContext
 ): Expr[r.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LAG",
             aa.asExpr(x).asSqlExpr :: 
@@ -2046,7 +2046,7 @@ def lead[A: AsExpr as aa](x: A)(using
     QueryContext
 ): Expr[aa.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LEAD",
             aa.asExpr(x).asSqlExpr :: Nil,
@@ -2062,7 +2062,7 @@ def lead[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
     QueryContext
 ): Expr[aa.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LEAD",
             aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2079,7 +2079,7 @@ def lead[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, def
     c: QueryContext
 ): Expr[r.R] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             "LEAD",
             aa.asExpr(x).asSqlExpr :: 

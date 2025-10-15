@@ -63,7 +63,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
         expr.mode match
             case SqlVectorDistanceMode.Euclidean =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "L2_DISTANCE", 
                         expr.left :: expr.right :: Nil,
@@ -74,7 +74,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                 )
             case SqlVectorDistanceMode.Cosine =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "COSINE_DISTANCE", 
                         expr.left :: expr.right :: Nil,
@@ -86,7 +86,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
             case SqlVectorDistanceMode.Dot =>
                 printExpr(
                     SqlExpr.Binary(
-                        SqlExpr.StandardFunc(
+                        SqlExpr.GeneralFunc(
                             None,
                             "INNER_PRODUCT", 
                             expr.left :: expr.right :: Nil,
@@ -100,7 +100,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                 )
             case SqlVectorDistanceMode.Manhattan =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "L1_DISTANCE", 
                         expr.left :: expr.right :: Nil,

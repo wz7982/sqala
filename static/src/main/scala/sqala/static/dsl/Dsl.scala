@@ -407,7 +407,7 @@ extension [T: AsExpr as a](x: T)
 
 def createFunction[T](name: String, args: List[Expr[?]])(using QueryContext): Expr[T] =
     Expr(
-        SqlExpr.StandardFunc(
+        SqlExpr.GeneralFunc(
             None,
             name,
             args.map(_.asSqlExpr),

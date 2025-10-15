@@ -46,7 +46,7 @@ object Update:
     inline def apply[T <: Product](using c: QueryContext): Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]
         val alias = c.fetchAlias
-        val sqlTable: SqlTable.Standard = SqlTable.Standard(
+        val sqlTable: SqlTable.Ident = SqlTable.Ident(
             metaData.tableName,
             None,
             Some(SqlTableAlias(alias, Nil)),
@@ -61,7 +61,7 @@ object Update:
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
         val metaData = TableMacro.tableMetaData[T]
-        val sqlTable: SqlTable.Standard = SqlTable.Standard(
+        val sqlTable: SqlTable.Ident = SqlTable.Ident(
             metaData.tableName,
             None,
             None,

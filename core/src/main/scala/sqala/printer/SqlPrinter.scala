@@ -255,7 +255,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         case j: SqlExpr.JsonArrayAggFunc => printJsonArrayAggFuncExpr(j)
         case n: SqlExpr.NullsTreatmentFunc => printNullsTreatmentFuncExpr(n)
         case n: SqlExpr.NthValueFunc => printNthValueFuncExpr(n)
-        case s: SqlExpr.StandardFunc => printStandardFuncExpr(s)
+        case g: SqlExpr.GeneralFunc => printGeneralFuncExpr(g)
         case m: SqlExpr.MatchPhase => printMatchPhaseExpr(m)
         case c: SqlExpr.Custom => printCustomExpr(c)
 
@@ -1029,7 +1029,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             sqlBuilder.append(m.mode)
 
-    def printStandardFuncExpr(expr: SqlExpr.StandardFunc): Unit =
+    def printGeneralFuncExpr(expr: SqlExpr.GeneralFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
         expr.quantifier.foreach: q => 
@@ -1065,7 +1065,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(alias.columnAliases)(i => printIdent(i))
             sqlBuilder.append(")")
 
-    def printStandardTable(table: SqlTable.Standard): Unit =
+    def printIdentTable(table: SqlTable.Ident): Unit =
         printIdent(table.name)
         for p <- table.period do
             p match
@@ -1493,7 +1493,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printTable(table: SqlTable): Unit = 
         table match
-            case s: SqlTable.Standard => printStandardTable(s)
+            case i: SqlTable.Ident => printIdentTable(i)
             case f: SqlTable.Func => printFuncTable(f)
             case s: SqlTable.SubQuery => printSubQueryTable(s)
             case j: SqlTable.Json => printJsonTable(j)

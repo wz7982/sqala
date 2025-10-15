@@ -403,7 +403,7 @@ object SelectQuery:
                     from = SqlTable.Join(
                         query.tree.from.head,
                         SqlJoinType.Inner,
-                        SqlTable.Standard(tableCte, None, None, None, None),
+                        SqlTable.Ident(tableCte, None, None, None, None),
                         Some(SqlJoinCondition.On(cond))
                     ) :: Nil
                 )
@@ -511,7 +511,7 @@ final case class ConnectBy[T](
         SqlQuery.Select(
             None,
             Nil, 
-            SqlTable.Standard(tableCte, None, None, None, None) :: Nil,
+            SqlTable.Ident(tableCte, None, None, None, None) :: Nil,
             None,
             None,
             None,

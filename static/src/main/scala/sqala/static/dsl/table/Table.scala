@@ -10,7 +10,7 @@ import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 case class Table[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
-    private[sqala] val __sqlTable__ : SqlTable.Standard
+    private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable:
     type Fields =
         NamedTuple[
@@ -25,7 +25,7 @@ case class Table[T](
 case class UngroupedTable[T](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
-    private[sqala] val __sqlTable__ : SqlTable.Standard
+    private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable:
     type Fields =
         NamedTuple[

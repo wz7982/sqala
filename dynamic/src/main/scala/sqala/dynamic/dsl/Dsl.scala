@@ -29,28 +29,28 @@ def `case`(branches: List[(Expr, Expr)], default: Expr): Expr =
 def count(): Expr = Expr(SqlExpr.CountAsteriskFunc(None, None))
 
 def count(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "COUNT", expr.sqlExpr :: Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "COUNT", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def sum(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "SUM", expr.sqlExpr :: Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "SUM", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def avg(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "AVG", expr.sqlExpr :: Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "AVG", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def max(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "MAX", expr.sqlExpr :: Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "MAX", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def min(expr: Expr): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "MIN", expr.sqlExpr :: Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "MIN", expr.sqlExpr :: Nil, Nil, Nil, None))
 
 def rank(): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "RANK", Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "RANK", Nil, Nil, Nil, None))
 
 def denseRank(): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "DENSE_RANK", Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "DENSE_RANK", Nil, Nil, Nil, None))
 
 def rowNumber(): Expr = 
-    Expr(SqlExpr.StandardFunc(None, "ROW_NUMBER", Nil, Nil, Nil, None))
+    Expr(SqlExpr.GeneralFunc(None, "ROW_NUMBER", Nil, Nil, Nil, None))
 
 def any(query: DynamicQuery): Expr = Expr(SqlExpr.SubLink(SqlSubLinkQuantifier.Any, query.tree))
 
