@@ -19,9 +19,9 @@ enum SqlExpr:
     case NullTest(expr: SqlExpr, not: Boolean)
     case JsonTest(
         expr: SqlExpr, 
-        not: Boolean, 
         nodeType: Option[SqlJsonNodeType],
-        uniqueness: Option[SqlJsonUniqueness]
+        uniqueness: Option[SqlJsonUniqueness],
+        not: Boolean
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
     case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], not: Boolean)
