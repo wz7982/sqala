@@ -85,7 +85,7 @@ object FetchPk:
                             val sqlCondition = 
                                 if sqlConditions.isEmpty then SqlExpr.BooleanLiteral(false)
                                 else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y)) 
-                            val table = SqlTable.Standard($tableNameExpr, None, None, None, None)
+                            val table = SqlTable.Ident($tableNameExpr, None, None, None, None)
                             SqlQuery.Select(
                                 None,
                                 $columnNamesExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),

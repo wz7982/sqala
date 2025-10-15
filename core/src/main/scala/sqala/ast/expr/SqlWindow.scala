@@ -8,18 +8,6 @@ case class SqlWindow(
     frame: Option[SqlWindowFrame]
 )
 
-enum SqlWindowFrameBound(val bound: String):
-    case CurrentRow extends SqlWindowFrameBound("CURRENT ROW")
-    case UnboundedPreceding extends SqlWindowFrameBound("UNBOUNDED PRECEDING")
-    case Preceding(n: Int) extends SqlWindowFrameBound(s"$n PRECEDING")
-    case UnboundedFollowing extends SqlWindowFrameBound("UNBOUNDED FOLLOWING")
-    case Following(n: Int) extends SqlWindowFrameBound(s"$n FOLLOWING")
-
-enum SqlWindowFrameUnit(val unit: String):
-    case Rows extends SqlWindowFrameUnit("ROWS")
-    case Range extends SqlWindowFrameUnit("RANGE")
-    case Groups extends SqlWindowFrameUnit("GROUPS")
-
 enum SqlWindowFrame:
     case Start(
         unit: SqlWindowFrameUnit, 
@@ -32,6 +20,18 @@ enum SqlWindowFrame:
         end: SqlWindowFrameBound,
         exclude: Option[SqlWindowFrameExcludeMode]
     )
+
+enum SqlWindowFrameBound(val bound: String):
+    case CurrentRow extends SqlWindowFrameBound("CURRENT ROW")
+    case UnboundedPreceding extends SqlWindowFrameBound("UNBOUNDED PRECEDING")
+    case Preceding(n: Int) extends SqlWindowFrameBound(s"$n PRECEDING")
+    case UnboundedFollowing extends SqlWindowFrameBound("UNBOUNDED FOLLOWING")
+    case Following(n: Int) extends SqlWindowFrameBound(s"$n FOLLOWING")
+
+enum SqlWindowFrameUnit(val unit: String):
+    case Rows extends SqlWindowFrameUnit("ROWS")
+    case Range extends SqlWindowFrameUnit("RANGE")
+    case Groups extends SqlWindowFrameUnit("GROUPS")
 
 enum SqlWindowFrameExcludeMode(val mode: String):
     case CurrentRow extends SqlWindowFrameExcludeMode("EXCLUDE CURRENT ROW")

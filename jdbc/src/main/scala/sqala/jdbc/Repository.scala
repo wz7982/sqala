@@ -340,7 +340,7 @@ object Repository:
                                                     case "lessThan" => SqlBinaryOperator.LessThan
                                                     case "lessThanEqual" => SqlBinaryOperator.LessThanEqual
                                                 condBuffer.addOne(SqlExpr.Binary(left, op, instance.asSqlExpr(value)))
-                                    val table = SqlTable.Standard($tableNameExpr, None, None, None, None)
+                                    val table = SqlTable.Ident($tableNameExpr, None, None, None, None)
                                     val sort = $sortExpr.map: (n, s) =>
                                         s match
                                             case "asc" => SqlOrderingItem(SqlExpr.Column(None, n), Some(SqlOrdering.Asc), None)

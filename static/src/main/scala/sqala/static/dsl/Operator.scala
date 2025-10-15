@@ -201,7 +201,7 @@ extension [T: AsExpr as at](self: T)
         qc: QueryContext
     ): Expr[Option[BigDecimal]] =
         Expr(
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "MOD",
                 at.asExpr(self).asSqlExpr :: ar.asExpr(that).asSqlExpr :: Nil,

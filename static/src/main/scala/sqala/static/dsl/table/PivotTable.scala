@@ -80,7 +80,7 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
 
     private def addFilter(expr: SqlExpr, filter: SqlExpr): SqlExpr =
         expr match
-            case f: SqlExpr.StandardFunc => f.copy(filter = Some(filter))
+            case f: SqlExpr.GeneralFunc => f.copy(filter = Some(filter))
             case f: SqlExpr.CountAsteriskFunc => f.copy(filter = Some(filter))
             case f: SqlExpr.ListAggFunc => f.copy(filter = Some(filter))
             case f: SqlExpr.JsonObjectAggFunc => f.copy(filter = Some(filter))

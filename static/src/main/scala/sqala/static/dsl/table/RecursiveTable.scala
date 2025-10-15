@@ -10,7 +10,7 @@ import scala.compiletime.constValue
 case class RecursiveTable[N <: Tuple, V <: Tuple](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.Standard
+    private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable:
     type Fields = NamedTuple[N, V]
 
@@ -25,7 +25,7 @@ object RecursiveTable:
         new RecursiveTable(
             alias, 
             p.asTableParam(alias, 1),
-            SqlTable.Standard(
+            SqlTable.Ident(
                 tableCte,
                 None,
                 alias.map(SqlTableAlias(_, Nil)),

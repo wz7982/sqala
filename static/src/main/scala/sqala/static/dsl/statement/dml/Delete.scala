@@ -21,7 +21,7 @@ object Delete:
     inline def apply[T <: Product](using c: QueryContext): Delete[T] =
         val metaData = TableMacro.tableMetaData[T]
         val alias = c.fetchAlias
-        val sqlTable: SqlTable.Standard = SqlTable.Standard(
+        val sqlTable: SqlTable.Ident = SqlTable.Ident(
             metaData.tableName,
             None,
             Some(SqlTableAlias(alias, Nil)),

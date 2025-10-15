@@ -42,7 +42,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         expr.operator match
             case SqlBinaryOperator.Concat =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "CONCAT", 
                         expr.left :: expr.right :: Nil,
@@ -118,7 +118,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         expr.mode match
             case SqlVectorDistanceMode.Euclidean =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil,
@@ -129,7 +129,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 )
             case SqlVectorDistanceMode.Cosine =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil,
@@ -140,7 +140,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 )
             case SqlVectorDistanceMode.Dot =>
                 printExpr(
-                    SqlExpr.StandardFunc(
+                    SqlExpr.GeneralFunc(
                         None,
                         "DISTANCE", 
                         expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil,

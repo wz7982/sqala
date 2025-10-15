@@ -34,7 +34,7 @@ object AsTable:
                 val table = Table[fc.R](
                     Some(alias),
                     metaData,
-                    SqlTable.Standard(
+                    SqlTable.Ident(
                         metaData.tableName,
                         None,
                         Some(SqlTableAlias(alias, Nil)),
@@ -124,7 +124,7 @@ object AsTable:
                 val table = Table[T](
                     Some(alias),
                     metaData,
-                    SqlTable.Standard(
+                    SqlTable.Ident(
                         metaData.tableName,
                         None, 
                         Some(tableAlias),

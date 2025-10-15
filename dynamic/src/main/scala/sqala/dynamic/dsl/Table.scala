@@ -17,7 +17,7 @@ sealed trait AnyTable:
 
     def toSqlTable: SqlTable = this match
         case Table(name, alias) => 
-            SqlTable.Standard(name, None, alias.map(a => SqlTableAlias(a, Nil)), None, None)
+            SqlTable.Ident(name, None, alias.map(a => SqlTableAlias(a, Nil)), None, None)
         case SubQueryTable(query, alias, lateral) => 
             SqlTable.SubQuery(lateral, query.tree, Some(SqlTableAlias(alias, Nil)), None)
         case JoinTable(left, joinType, right, condition) => 

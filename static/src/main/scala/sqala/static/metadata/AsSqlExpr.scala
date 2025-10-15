@@ -113,7 +113,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.Geometry
 
         def asSqlExpr(x: Geometry): SqlExpr = 
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -126,7 +126,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.Point
 
         def asSqlExpr(x: Point): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -139,7 +139,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.LineString
 
         def asSqlExpr(x: LineString): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -152,7 +152,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.Polygon
 
         def asSqlExpr(x: Polygon): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -165,7 +165,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.MultiPoint
 
         def asSqlExpr(x: MultiPoint): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -178,7 +178,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.MultiLineString
 
         def asSqlExpr(x: MultiLineString): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -191,7 +191,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.MultiPolygon
 
         def asSqlExpr(x: MultiPolygon): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,
@@ -204,7 +204,7 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.GeometryCollection
 
         def asSqlExpr(x: GeometryCollection): SqlExpr =
-            SqlExpr.StandardFunc(
+            SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",
                 SqlExpr.StringLiteral(x.value) :: SqlExpr.NumberLiteral(x.srid) :: Nil,

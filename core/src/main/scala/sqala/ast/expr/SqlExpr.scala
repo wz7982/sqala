@@ -117,7 +117,7 @@ enum SqlExpr:
         fromMode: Option[SqlNthValueFromMode],
         nullsMode: Option[SqlWindowNullsMode]
     )
-    case StandardFunc(
+    case GeneralFunc(
         quantifier: Option[SqlQuantifier],
         name: String,
         args: List[SqlExpr],

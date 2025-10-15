@@ -71,7 +71,7 @@ case class GraphEdge[T](
         val table = Table[T](
             __alias__,
             __metaData__,
-            SqlTable.Standard(__alias__.get, None, None, None, None)
+            SqlTable.Ident(__alias__.get, None, None, None, None)
         )
         val cond = a.asExpr(f(table)).asSqlExpr
         copy(__where__ = __where__.map(SqlExpr.Binary(_, SqlBinaryOperator.And, cond)).orElse(Some(cond)))

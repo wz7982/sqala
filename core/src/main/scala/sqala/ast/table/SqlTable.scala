@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlExpr, SqlJsonPassing, SqlJsonTableColumn, SqlJsonTable
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 
 enum SqlTable:
-    case Standard(
+    case Ident(
         name: String,
         period: Option[SqlTablePeriodMode],
         alias: Option[SqlTableAlias],
