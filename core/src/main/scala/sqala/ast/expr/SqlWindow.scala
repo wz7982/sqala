@@ -22,19 +22,19 @@ enum SqlWindowFrame:
     )
 
 enum SqlWindowFrameBound:
-    case CurrentRow extends SqlWindowFrameBound
-    case UnboundedPreceding extends SqlWindowFrameBound
-    case Preceding(n: SqlExpr) extends SqlWindowFrameBound
-    case UnboundedFollowing extends SqlWindowFrameBound
-    case Following(n: SqlExpr) extends SqlWindowFrameBound
+    case CurrentRow
+    case UnboundedPreceding
+    case Preceding(n: SqlExpr)
+    case UnboundedFollowing
+    case Following(n: SqlExpr)
 
-enum SqlWindowFrameUnit(val unit: String):
-    case Rows extends SqlWindowFrameUnit("ROWS")
-    case Range extends SqlWindowFrameUnit("RANGE")
-    case Groups extends SqlWindowFrameUnit("GROUPS")
+enum SqlWindowFrameUnit:
+    case Rows
+    case Range
+    case Groups
 
-enum SqlWindowFrameExcludeMode(val mode: String):
-    case CurrentRow extends SqlWindowFrameExcludeMode("EXCLUDE CURRENT ROW")
-    case Group extends SqlWindowFrameExcludeMode("EXCLUDE GROUP")
-    case Ties extends SqlWindowFrameExcludeMode("EXCLUDE TIES")
-    case NoOthers extends SqlWindowFrameExcludeMode("EXCLUDE NO OTHERS")
+enum SqlWindowFrameExcludeMode:
+    case CurrentRow
+    case Group
+    case Ties
+    case NoOthers

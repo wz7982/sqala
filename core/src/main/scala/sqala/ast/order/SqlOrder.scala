@@ -8,10 +8,10 @@ case class SqlOrderingItem(
     nullsOrdering: Option[SqlNullsOrdering]
 )
 
-enum SqlOrdering(val order: String):
-    case Asc extends SqlOrdering("ASC")
-    case Desc extends SqlOrdering("DESC")
+enum SqlOrdering:
+    case Asc
+    case Desc
 
-enum SqlNullsOrdering(val order: String):
-    case First extends SqlNullsOrdering("NULLS FIRST")
-    case Last extends SqlNullsOrdering("NULLS LAST")
+enum SqlNullsOrdering:
+    case First
+    case Last

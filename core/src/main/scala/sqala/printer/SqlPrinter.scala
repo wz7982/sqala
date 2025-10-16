@@ -2,8 +2,9 @@ package sqala.printer
 
 import sqala.ast.expr.*
 import sqala.ast.group.SqlGroupingItem
-import sqala.ast.limit.{SqlFetchUnit, SqlLimit}
-import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
+import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
+import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
+import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.util.|>
@@ -84,11 +85,22 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             printLock(l)
 
+    def printQuantifier(quantifier: SqlQuantifier): Unit =
+        quantifier match
+            case SqlQuantifier.All =>
+                sqlBuilder.append("ALL")
+            case SqlQuantifier.Distinct =>
+                sqlBuilder.append("DISTINCT")
+            case SqlQuantifier.Custom(q) =>
+                sqlBuilder.append(q)
+
     def printSelect(select: SqlQuery.Select): Unit =
         printSpace()
         sqlBuilder.append("SELECT")
 
-        select.quantifier.foreach(q => sqlBuilder.append(" " + q.quantifier))
+        select.quantifier.foreach: q => 
+            sqlBuilder.append(" ")
+            printQuantifier(q)
 
         if select.select.nonEmpty then
             sqlBuilder.append("\n")
@@ -112,7 +124,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("GROUP BY")
             for q <- g.quantifier do
                 sqlBuilder.append(" ")
-                sqlBuilder.append(q.quantifier)
+                printQuantifier(q)
             sqlBuilder.append("\n")
             printList(g.items, ",\n")(printGroupingItem |> printWithSpace)
 
@@ -151,10 +163,16 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
 
         printSpace()
-        sqlBuilder.append(set.operator.operator)
+        set.operator match
+            case SqlSetOperator.Union(_) =>
+                sqlBuilder.append("UNION")
+            case SqlSetOperator.Except(_) =>
+                sqlBuilder.append("EXCEPT")
+            case SqlSetOperator.Intersect(_) =>
+                sqlBuilder.append("INTERSECT")
         for q <- set.operator.quantifier do
             sqlBuilder.append(" ")
-            sqlBuilder.append(q.quantifier)
+            printQuantifier(q)
         sqlBuilder.append("\n")
 
         printSpace()
@@ -280,9 +298,35 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("FALSE")
 
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        sqlBuilder.append(expr.unit.unit)
+        def printUnit(unit: SqlTimeLiteralUnit): Unit =
+            unit match
+                case SqlTimeLiteralUnit.Timestamp =>
+                    sqlBuilder.append("TIMESTAMP")
+                case SqlTimeLiteralUnit.Date =>
+                    sqlBuilder.append("DATE")
+                case SqlTimeLiteralUnit.Time =>
+                    sqlBuilder.append("TIME")
+                    
+        printUnit(expr.unit)
         sqlBuilder.append(" ")
         printChars(expr.time)
+
+    def printTimeUnit(unit: SqlTimeUnit): Unit =
+        unit match
+            case SqlTimeUnit.Year =>
+                sqlBuilder.append("YEAR")
+            case SqlTimeUnit.Month =>
+                sqlBuilder.append("MONTH")
+            case SqlTimeUnit.Day =>
+                sqlBuilder.append("DAY")
+            case SqlTimeUnit.Hour =>
+                sqlBuilder.append("HOUR")
+            case SqlTimeUnit.Minute =>
+                sqlBuilder.append("MINUTE")
+            case SqlTimeUnit.Second =>
+                sqlBuilder.append("SECOND")
+            case SqlTimeUnit.Custom(unit) =>
+                sqlBuilder.append(unit)
 
     def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
         sqlBuilder.append("INTERVAL ")
@@ -290,11 +334,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" ")
         expr.field match
             case SqlIntervalField.To(s, e) =>
-                sqlBuilder.append(s.unit)
+                printTimeUnit(s)
                 sqlBuilder.append(" TO ")
-                sqlBuilder.append(e.unit)
+                printTimeUnit(e)
             case SqlIntervalField.Single(u) =>
-                sqlBuilder.append(u.unit)
+                printTimeUnit(u)
 
     def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
@@ -306,11 +350,63 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printList(expr.items)(printExpr)
         sqlBuilder.append("]")
 
+    def printUnaryOperator(operator: SqlUnaryOperator): Unit =
+        operator match
+            case SqlUnaryOperator.Positive =>
+                sqlBuilder.append("+")
+            case SqlUnaryOperator.Negative =>
+                sqlBuilder.append("-")
+            case SqlUnaryOperator.Not =>
+                sqlBuilder.append("NOT")
+            case SqlUnaryOperator.Custom(op) =>
+                sqlBuilder.append(op)
+
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
-        sqlBuilder.append(expr.operator.operator)
+        printUnaryOperator(expr.operator)
         sqlBuilder.append("(")
         printExpr(expr.expr)
         sqlBuilder.append(")")
+
+    def printBinaryOperator(operator: SqlBinaryOperator): Unit =
+        operator match
+            case SqlBinaryOperator.Times =>
+                sqlBuilder.append("*")
+            case SqlBinaryOperator.Div =>
+                sqlBuilder.append("/")
+            case SqlBinaryOperator.Plus =>
+                sqlBuilder.append("+")
+            case SqlBinaryOperator.Minus =>
+                sqlBuilder.append("-")
+            case SqlBinaryOperator.Concat =>
+                sqlBuilder.append("||")
+            case SqlBinaryOperator.Equal =>
+                sqlBuilder.append("=")
+            case SqlBinaryOperator.NotEqual =>
+                sqlBuilder.append("<>")
+            case SqlBinaryOperator.IsDistinctFrom =>
+                sqlBuilder.append("IS DISTINCT FROM")
+            case SqlBinaryOperator.IsNotDistinctFrom =>
+                sqlBuilder.append("IS NOT DISTINCT FROM")
+            case SqlBinaryOperator.In =>
+                sqlBuilder.append("IN")
+            case SqlBinaryOperator.NotIn =>
+                sqlBuilder.append("NOT IN")
+            case SqlBinaryOperator.GreaterThan =>
+                sqlBuilder.append(">")
+            case SqlBinaryOperator.GreaterThanEqual =>
+                sqlBuilder.append(">=")
+            case SqlBinaryOperator.LessThan =>
+                sqlBuilder.append("<")
+            case SqlBinaryOperator.LessThanEqual =>
+                sqlBuilder.append("<=")
+            case SqlBinaryOperator.Overlaps =>
+                sqlBuilder.append("OVERLAPS")
+            case SqlBinaryOperator.And =>
+                sqlBuilder.append("AND")
+            case SqlBinaryOperator.Or =>
+                sqlBuilder.append("OR")
+            case SqlBinaryOperator.Custom(op) =>
+                sqlBuilder.append(op)
 
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
@@ -341,7 +437,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printExpr(expr.left)
 
         sqlBuilder.append(" ")
-        sqlBuilder.append(expr.operator.operator)
+        printBinaryOperator(expr.operator)
         sqlBuilder.append(" ")
 
         if hasBracketsRight(expr, expr.right) then
@@ -357,12 +453,23 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         else sqlBuilder.append(" IS NULL")
 
     def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
+        def printType(`type`: SqlJsonNodeType): Unit =
+            `type` match
+                case SqlJsonNodeType.Value =>
+                    sqlBuilder.append("VALUE")
+                case SqlJsonNodeType.Object =>
+                    sqlBuilder.append("OBJECT")
+                case SqlJsonNodeType.Array =>
+                    sqlBuilder.append("ARRAY")
+                case SqlJsonNodeType.Scalar =>
+                    sqlBuilder.append("SCALAR")
+
         printExpr(expr.expr)
         if expr.not then sqlBuilder.append(" IS NOT JSON")
         else sqlBuilder.append(" IS JSON")
         for t <- expr.nodeType do
             sqlBuilder.append(" ")
-            sqlBuilder.append(t.`type`)
+            printType(t)
         for u <- expr.uniqueness do
             sqlBuilder.append(" ")
             printJsonUniqueness(u)
@@ -521,6 +628,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printType(`type`: SqlType): Unit =
+        def printTimeZoneMode(mode: SqlTimeZoneMode): Unit =
+            mode match
+                case SqlTimeZoneMode.With =>
+                    sqlBuilder.append("WITH TIME ZONE")
+                case SqlTimeZoneMode.Without =>
+                    sqlBuilder.append("WITHOUT TIME ZONE")
+
         `type` match
             case SqlType.Varchar(maxLength) =>
                 sqlBuilder.append("VARCHAR")
@@ -550,12 +664,12 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("TIMESTAMP")
                 for m <- mode do
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(m.mode)
+                    printTimeZoneMode(m)
             case SqlType.Time(mode) =>
                 sqlBuilder.append("TIME")
                 for m <- mode do
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(m.mode)
+                    printTimeZoneMode(m)
             case SqlType.Json =>
                 sqlBuilder.append("JSON")
             case SqlType.Boolean =>
@@ -607,6 +721,27 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     printExpr(n)
                     sqlBuilder.append(" PRECEDING")
 
+        def printUnit(unit: SqlWindowFrameUnit): Unit =
+            unit match
+                case SqlWindowFrameUnit.Rows =>
+                    sqlBuilder.append("ROWS")
+                case SqlWindowFrameUnit.Range =>
+                    sqlBuilder.append("RANGE")
+                case SqlWindowFrameUnit.Groups =>
+                    sqlBuilder.append("GROUPS")
+
+        def printExcludeMode(mode: SqlWindowFrameExcludeMode): Unit =
+            sqlBuilder.append("EXCLUDE ")
+            mode match
+                case SqlWindowFrameExcludeMode.CurrentRow =>
+                    sqlBuilder.append("CURRENT ROW")
+                case SqlWindowFrameExcludeMode.Group =>
+                    sqlBuilder.append("GROUP")
+                case SqlWindowFrameExcludeMode.Ties =>
+                    sqlBuilder.append("TIES")
+                case SqlWindowFrameExcludeMode.NoOthers =>
+                    sqlBuilder.append("NO OTHERS")
+
         sqlBuilder.append("(")
         if window.partitionBy.nonEmpty then
             sqlBuilder.append("PARTITION BY ")
@@ -620,22 +755,22 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             f match
                 case SqlWindowFrame.Start(unit, start, exclude) =>
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(unit.unit)
+                    printUnit(unit)
                     sqlBuilder.append(" ")
                     printBound(start)
                     for e <- exclude do
                         sqlBuilder.append(" ")
-                        sqlBuilder.append(e.mode)
+                        printExcludeMode(e)
                 case SqlWindowFrame.Between(unit, start, end, exclude) =>
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(unit.unit)
+                    printUnit(unit)
                     sqlBuilder.append(" BETWEEN ")
                     printBound(start)
                     sqlBuilder.append(" AND ")
                     printBound(end)
                     for e <- exclude do
                         sqlBuilder.append(" ")
-                        sqlBuilder.append(e.mode)
+                        printExcludeMode(e)
         sqlBuilder.append(")")
 
     def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
@@ -648,8 +783,17 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printSubLinkExpr(expr: SqlExpr.SubLink): Unit =
+        def printQuantifier(quantifier: SqlSubLinkQuantifier): Unit =
+            quantifier match
+                case SqlSubLinkQuantifier.Any =>
+                    sqlBuilder.append("ANY")
+                case SqlSubLinkQuantifier.All =>
+                    sqlBuilder.append("ALL")
+                case SqlSubLinkQuantifier.Exists =>
+                    sqlBuilder.append("EXISTS")
+
         push()
-        sqlBuilder.append(expr.quantifier.quantifier)
+        printQuantifier(expr.quantifier)
         sqlBuilder.append("(\n")
         printQuery(expr.query)
         pull()
@@ -676,10 +820,19 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
 
     def printTrimFuncExpr(expr: SqlExpr.TrimFunc): Unit =
+        def printMode(mode: SqlTrimMode): Unit =
+            mode match
+                case SqlTrimMode.Both =>
+                    sqlBuilder.append("BOTH")
+                case SqlTrimMode.Leading =>
+                    sqlBuilder.append("LEADING")
+                case SqlTrimMode.Trailing =>
+                    sqlBuilder.append("TRAILING")
+
         sqlBuilder.append("TRIM(")
         for t <- expr.trim do
             for m <- t.mode do
-                sqlBuilder.append(m.mode)
+                printMode(m)
             for e <- t.value do
                 if t.mode.nonEmpty then
                     sqlBuilder.append(" ")
@@ -709,7 +862,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printExtractFuncExpr(expr: SqlExpr.ExtractFunc): Unit =
         sqlBuilder.append("EXTRACT(")
-        sqlBuilder.append(expr.unit.unit)
+        printTimeUnit(expr.unit)
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
         sqlBuilder.append(")")
@@ -828,13 +981,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printJsonEncoding(encoding: SqlJsonEncoding): Unit =
         sqlBuilder.append("ENCODING ")
-        sqlBuilder.append(encoding.encoding)
+        encoding match
+            case SqlJsonEncoding.Utf8 =>
+                sqlBuilder.append("UTF8")
+            case SqlJsonEncoding.Utf16 =>
+                sqlBuilder.append("UTF16")
+            case SqlJsonEncoding.Utf32 =>
+                sqlBuilder.append("UTF32")
+            case SqlJsonEncoding.Custom(e) =>
+                sqlBuilder.append(e)
 
     def printJsonInput(input: SqlJsonInput): Unit =
         sqlBuilder.append("FORMAT JSON")
         for e <- input.format do
-            sqlBuilder.append(" ENCODING ")
-            sqlBuilder.append(e.encoding)
+            printJsonEncoding(e)
 
     def printJsonOutput(output: SqlJsonOutput): Unit =
         sqlBuilder.append("RETURNING ")
@@ -842,11 +1002,14 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- output.format do
             sqlBuilder.append(" FORMAT JSON")
             for e <- f do
-                sqlBuilder.append(" ENCODING ")
-                sqlBuilder.append(e.encoding)
+                printJsonEncoding(e)
 
     def printJsonUniqueness(uniqueness: SqlJsonUniqueness): Unit =
-        sqlBuilder.append(uniqueness.uniqueness)
+        uniqueness match
+            case SqlJsonUniqueness.With =>
+                sqlBuilder.append("WITH UNIQUE KEYS")
+            case SqlJsonUniqueness.Without =>
+                sqlBuilder.append("WITHOUT UNIQUE KEYS")
 
     def printJsonPassing(passing: SqlJsonPassing): Unit =
         printExpr(passing.expr)
@@ -854,9 +1017,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printIdent(passing.alias)
 
     def printJsonNullConstructor(cons: SqlJsonNullConstructor): Unit =
-        sqlBuilder.append(cons.constructor)
+        cons match
+            case SqlJsonNullConstructor.Null =>
+                sqlBuilder.append("NULL ON NULL")
+            case SqlJsonNullConstructor.Absent =>
+                sqlBuilder.append("ABSENT ON NULL")
 
     def printJsonQueryWrapperBehavior(behavior: SqlJsonQueryWrapperBehavior): Unit =
+        def printMode(mode: SqlJsonQueryWrapperBehaviorMode): Unit =
+            mode match
+                case SqlJsonQueryWrapperBehaviorMode.Conditional =>
+                    sqlBuilder.append("CONDITIONAL")
+                case SqlJsonQueryWrapperBehaviorMode.Unconditional =>
+                    sqlBuilder.append("UNCONDITIONAL")
+
         behavior match
             case SqlJsonQueryWrapperBehavior.Without(a) =>
                 sqlBuilder.append("WITHOUT")
@@ -867,13 +1041,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("WITH")
                 for m <- mode do
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(m.mode)
+                    printMode(m)
                 if a then
                     sqlBuilder.append(" ARRAY")
                 sqlBuilder.append(" WRAPPER")
 
     def printJsonQueryQuotesBehavior(behavior: SqlJsonQueryQuotesBehavior): Unit =
-        sqlBuilder.append(behavior.mode.mode)
+        def printMode(mode: SqlJsonQueryQuotesBehaviorMode): Unit =
+            mode match
+                case SqlJsonQueryQuotesBehaviorMode.Keep =>
+                    sqlBuilder.append("KEEP")
+                case SqlJsonQueryQuotesBehaviorMode.Omit =>
+                    sqlBuilder.append("OMIT")
+
+        printMode(behavior.mode)
         sqlBuilder.append(" QUOTES")
         if behavior.onScalarString then
             sqlBuilder.append(" ON SCALAR STRING")
@@ -931,7 +1112,15 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" ON ERROR")
 
     def printJsonExistsErrorBehavior(behavior: SqlJsonExistsErrorBehavior): Unit =
-        sqlBuilder.append(behavior.mode)
+        behavior match
+            case SqlJsonExistsErrorBehavior.Error =>
+                sqlBuilder.append("ERROR")
+            case SqlJsonExistsErrorBehavior.True =>
+                sqlBuilder.append("TRUE")
+            case SqlJsonExistsErrorBehavior.False =>
+                sqlBuilder.append("FALSE")
+            case SqlJsonExistsErrorBehavior.Unknown =>
+                sqlBuilder.append("UNKNOWN")
         sqlBuilder.append(" ON ERROR")
 
     def printJsonTableErrorBehavior(behavior: SqlJsonTableErrorBehavior): Unit =
@@ -956,9 +1145,16 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(")")
 
     def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
+        def printCountMode(mode: SqlListAggCountMode): Unit =
+            mode match
+                case SqlListAggCountMode.With =>
+                    sqlBuilder.append("WITH COUNT")
+                case SqlListAggCountMode.Without =>
+                    sqlBuilder.append("WITHOUT COUNT")
+
         sqlBuilder.append("LISTAGG(")
         expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
+            printQuantifier(q)
             sqlBuilder.append(" ")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
@@ -972,7 +1168,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append("TRUNCATE ")
                     printExpr(e)
                     sqlBuilder.append(" ")
-                    sqlBuilder.append(c.mode)
+                    printCountMode(c)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
             sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
@@ -1024,6 +1220,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printExpr(f)
             sqlBuilder.append(")")
 
+    def printWindowNullsMode(mode: SqlWindowNullsMode): Unit =
+        mode match
+            case SqlWindowNullsMode.Respect =>
+                sqlBuilder.append("RESPECT NULLS")
+            case SqlWindowNullsMode.Ignore =>
+                sqlBuilder.append("IGNORE NULLS")
+
     def printNullsTreatmentFuncExpr(expr: SqlExpr.NullsTreatmentFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
@@ -1031,24 +1234,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(")")
         for m <- expr.nullsMode do
             sqlBuilder.append(" ")
-            sqlBuilder.append(m.mode)
+            printWindowNullsMode(m)
 
     def printNthValueFuncExpr(expr: SqlExpr.NthValueFunc): Unit =
+        def printFromMode(mode: SqlNthValueFromMode): Unit =
+            mode match
+                case SqlNthValueFromMode.First =>
+                    sqlBuilder.append("FROM FIRST")
+                case SqlNthValueFromMode.Last =>
+                    sqlBuilder.append("FROM LAST")
+
         sqlBuilder.append("NTH_VALUE(")
         printList(List(expr.expr, expr.row))(printExpr)
         sqlBuilder.append(")")
         for m <- expr.fromMode do
             sqlBuilder.append(" ")
-            sqlBuilder.append(m.mode)
+            printFromMode(m)
         for m <- expr.nullsMode do
             sqlBuilder.append(" ")
-            sqlBuilder.append(m.mode)
+            printWindowNullsMode(m)
 
     def printGeneralFuncExpr(expr: SqlExpr.GeneralFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
         expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
+            printQuantifier(q)
             sqlBuilder.append(" ")
         printList(expr.args)(printExpr)
         if expr.orderBy.nonEmpty then
@@ -1065,7 +1275,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(")")
 
     def printMatchPhaseExpr(expr: SqlExpr.MatchPhase): Unit =
-        sqlBuilder.append(expr.phase.phase)
+        expr.phase match
+            case SqlMatchPhase.Final =>
+                sqlBuilder.append("FINAL")
+            case SqlMatchPhase.Running =>
+                sqlBuilder.append("RUNNING")
         sqlBuilder.append(" ")
         printExpr(expr.expr)
 
@@ -1081,6 +1295,22 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(")")
 
     def printIdentTable(table: SqlTable.Ident): Unit =
+        def printPeriodBetweenMode(mode: SqlTablePeriodBetweenMode): Unit =
+            mode match
+                case SqlTablePeriodBetweenMode.Asymmetric =>
+                    sqlBuilder.append("ASYMMETRIC")
+                case SqlTablePeriodBetweenMode.Symmetric =>
+                    sqlBuilder.append("SYMMETRIC")
+
+        def printSimpleMode(mode: SqlTableSampleMode): Unit =
+            mode match
+                case SqlTableSampleMode.Bernoulli =>
+                    sqlBuilder.append("BERNOULLI")
+                case SqlTableSampleMode.System =>
+                    sqlBuilder.append("SYSTEM")
+                case SqlTableSampleMode.Custom(m) =>
+                    sqlBuilder.append(m)
+
         printIdent(table.name)
         for p <- table.period do
             p match
@@ -1090,7 +1320,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlTablePeriodMode.ForSystemTimeBetween(mode, start, end) =>
                     sqlBuilder.append(" FOR SYSTEM_TIME BETWEEN ")
                     for m <- mode do
-                        sqlBuilder.append(m.mode)
+                        printPeriodBetweenMode(m)
                         sqlBuilder.append(" ")
                     printExpr(start)
                     sqlBuilder.append(" AND ")
@@ -1107,7 +1337,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printMatchRecognize(m)
         for s <- table.sample do
             sqlBuilder.append(" TABLESAMPLE ")
-            sqlBuilder.append(s.mode.mode)
+            printSimpleMode(s.mode)
             sqlBuilder.append(" (")
             printExpr(s.percentage)
             sqlBuilder.append(")")
@@ -1158,8 +1388,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     for f <- c.format do
                         sqlBuilder.append(" FORMAT JSON")
                         for e <- f do
-                            sqlBuilder.append(" ENCODING ")
-                            sqlBuilder.append(e.encoding)
+                            printJsonEncoding(e)
                     for p <- c.path do
                         sqlBuilder.append(" PATH ")
                         printExpr(p)
@@ -1244,6 +1473,39 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append(" = ")
             printPatternTerm(pattern.term)
 
+        def printSymbol(symbol: SqlGraphSymbol): Unit =
+            symbol match
+                case SqlGraphSymbol.Dash =>
+                    sqlBuilder.append("-")
+                case SqlGraphSymbol.Tilde =>
+                    sqlBuilder.append("~")
+                case SqlGraphSymbol.LeftArrow =>
+                    sqlBuilder.append("<-")
+                case SqlGraphSymbol.RightArrow =>
+                    sqlBuilder.append("->")
+                case SqlGraphSymbol.LeftTildeArrow =>
+                    sqlBuilder.append("<~")
+                case SqlGraphSymbol.RightTildeArrow =>
+                    sqlBuilder.append("~>")
+
+        def printRepeatableMode(mode: SqlGraphRepeatableMode): Unit =
+            mode match
+                case SqlGraphRepeatableMode.Element =>
+                    sqlBuilder.append("ELEMENT")
+                case SqlGraphRepeatableMode.ElementBindings =>
+                    sqlBuilder.append("ELEMENT BINDINGS")
+                case SqlGraphRepeatableMode.Elements =>
+                    sqlBuilder.append("ELEMENTS")
+
+        def printDifferentMode(mode: SqlGraphDifferentMode): Unit =
+            mode match
+                case SqlGraphDifferentMode.Edge =>
+                    sqlBuilder.append("EDGE")
+                case SqlGraphDifferentMode.EdgeBindings =>
+                    sqlBuilder.append("EDGE BINDINGS")
+                case SqlGraphDifferentMode.Edges =>
+                    sqlBuilder.append("EDGES")
+
         def printPatternTerm(term: SqlGraphPatternTerm): Unit =
             term match
                 case SqlGraphPatternTerm.Quantified(term, quantifier) =>
@@ -1271,7 +1533,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         printExpr(w)
                     sqlBuilder.append(")")
                 case SqlGraphPatternTerm.Edge(leftSymbol, name, label, where, rightSymbol) =>
-                    sqlBuilder.append(leftSymbol.symbol)
+                    printSymbol(leftSymbol)
                     sqlBuilder.append("[")
                     for n <- name do
                         printIdent(n)
@@ -1286,7 +1548,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         sqlBuilder.append("WHERE ")
                         printExpr(w)
                     sqlBuilder.append("]")
-                    sqlBuilder.append(rightSymbol.symbol)
+                    printSymbol(rightSymbol)
                 case SqlGraphPatternTerm.And(left, right) =>
                     left match
                         case _: SqlGraphPatternTerm.Or | SqlGraphPatternTerm.Alternation =>
@@ -1402,10 +1664,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             m match
                 case SqlGraphMatchMode.Repeatable(mode) =>
                     sqlBuilder.append("REPEATABLE ")
-                    sqlBuilder.append(mode.mode)
+                    printRepeatableMode(mode)
                 case SqlGraphMatchMode.Different(mode) =>
                     sqlBuilder.append("DIFFERENT ")
-                    sqlBuilder.append(mode.mode)
+                    printDifferentMode(mode)
         sqlBuilder.append("\n")
         printList(table.patterns, ",\n")(printPattern |> printWithSpace)
 
@@ -1476,10 +1738,25 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printMatchRecognize(m)
 
     def printJoinTable(table: SqlTable.Join): Unit =
+        def printJoinType(`type`: SqlJoinType): Unit =
+            `type` match
+                case SqlJoinType.Inner =>
+                    sqlBuilder.append("INNER JOIN")
+                case SqlJoinType.Left =>
+                    sqlBuilder.append("LEFT OUTER JOIN")
+                case SqlJoinType.Right =>
+                    sqlBuilder.append("RIGHT OUTER JOIN")
+                case SqlJoinType.Full =>
+                    sqlBuilder.append("FULL OUTER JOIN")
+                case SqlJoinType.Cross =>
+                    sqlBuilder.append("CROSS JOIN")
+                case SqlJoinType.Custom(t) =>
+                    sqlBuilder.append(t) 
+
         printTable(table.left)
         sqlBuilder.append("\n")
         printSpace()
-        sqlBuilder.append(table.joinType.`type`)
+        printJoinType(table.joinType)
         sqlBuilder.append(" ")
         table.right match
             case _: SqlTable.Join =>
@@ -1521,6 +1798,15 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" AS ")
             printIdent(measure.alias)
 
+        def printEmptyMatchMode(mode: SqlRecognizePatternEmptyMatchMode): Unit =
+            mode match
+                case SqlRecognizePatternEmptyMatchMode.ShowEmptyMatches =>
+                    sqlBuilder.append("SHOW EMPTY MATCHES")
+                case SqlRecognizePatternEmptyMatchMode.OmitEmptyMatches =>
+                    sqlBuilder.append("OMIT EMPTY MATCHES")
+                case SqlRecognizePatternEmptyMatchMode.WithUnmatchedRows =>
+                    sqlBuilder.append("WITH UNMATCHED ROWS")  
+
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append("MATCH_RECOGNIZE(")
@@ -1550,7 +1836,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append("ALL ROWS PER MATCH")
                     for em <- mode do
                         sqlBuilder.append(" ")
-                        sqlBuilder.append(em.mode)
+                        printEmptyMatchMode(em)
         pull()
         sqlBuilder.append("\n")
         printRowPattern(matchRecognize.rowPattern)
@@ -1598,10 +1884,18 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case None | Some(SqlOrdering.Asc) => SqlOrdering.Asc
             case _ => SqlOrdering.Desc
         sqlBuilder.append(" ")
-        sqlBuilder.append(order.order)
+        order match
+            case SqlOrdering.Asc => 
+                sqlBuilder.append("ASC")
+            case SqlOrdering.Desc =>
+                sqlBuilder.append("DESC")
         for o <- item.nullsOrdering do
-            sqlBuilder.append(" ")
-            sqlBuilder.append(o.order)
+            sqlBuilder.append(" NULLS ")
+            o match
+                case SqlNullsOrdering.First =>
+                    sqlBuilder.append("FIRST")
+                case SqlNullsOrdering.Last =>
+                    sqlBuilder.append("Last")
 
     def printLimit(limit: SqlLimit): Unit =
         for o <- limit.offset do
@@ -1618,16 +1912,27 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append(" FIRST ")
             printExpr(f.limit)
             if f.unit == SqlFetchUnit.Percentage then
-                sqlBuilder.append(" ")
-            sqlBuilder.append(f.unit.unit)
+                sqlBuilder.append(" PERCENT")
             sqlBuilder.append(" ROWS ")
-            sqlBuilder.append(f.mode.mode)
+            f.mode match
+                case SqlFetchMode.Only =>
+                    sqlBuilder.append("ONLY")
+                case SqlFetchMode.WithTies =>
+                    sqlBuilder.append("WITH TIES")
 
     def printLock(lock: SqlLock): Unit =
-        sqlBuilder.append(lock.lockMode)
+        lock match
+            case SqlLock.Update(_) =>
+                sqlBuilder.append("FOR UPDATE")
+            case SqlLock.Share(_) =>
+                sqlBuilder.append("FOR SHARE")
         for w <- lock.waitMode do
             sqlBuilder.append(" ")
-            sqlBuilder.append(w.waitMode)
+            w match
+                case SqlLockWaitMode.NoWait =>
+                    sqlBuilder.append("NOWAIT")
+                case SqlLockWaitMode.SkipLocked =>
+                    sqlBuilder.append("SKIP LOCKED")
 
     def printCteRecursive(): Unit = sqlBuilder.append(" RECURSIVE")
 
@@ -1718,6 +2023,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printIdent(define.name)
             sqlBuilder.append(" AS ")
             printExpr(define.expr)
+
+        def printStrategy(strategy: SqlRowPatternStrategy): Unit =
+            strategy match
+                case SqlRowPatternStrategy.Initial =>
+                    sqlBuilder.append("INITIAL")
+                case SqlRowPatternStrategy.Seek =>
+                    sqlBuilder.append("SEEK")
         
         push()
         for m <- pattern.afterMatch do
@@ -1740,7 +2052,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("\n")
         printSpace()
         for s <- pattern.strategy do
-            sqlBuilder.append(s.strategy)
+            printStrategy(s)
             sqlBuilder.append(" ")
         sqlBuilder.append("PATTERN (")
         printPatternTerm(pattern.pattern)

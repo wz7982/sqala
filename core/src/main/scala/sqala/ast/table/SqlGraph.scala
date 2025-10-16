@@ -24,15 +24,15 @@ enum SqlGraphMatchMode:
     case Repeatable(mode: SqlGraphRepeatableMode)
     case Different(mode: SqlGraphDifferentMode)
 
-enum SqlGraphRepeatableMode(val mode: String):
-    case Element extends SqlGraphRepeatableMode("ELEMENT")
-    case ElementBindings extends SqlGraphRepeatableMode("ELEMENT BINDINGS")
-    case Elements extends SqlGraphRepeatableMode("ELEMENTS")
+enum SqlGraphRepeatableMode:
+    case Element
+    case ElementBindings
+    case Elements
 
-enum SqlGraphDifferentMode(val mode: String):
-    case Edge extends SqlGraphDifferentMode("EDGE")
-    case EdgeBindings extends SqlGraphDifferentMode("EDGE BINDINGS")
-    case Edges extends SqlGraphDifferentMode("EDGES")
+enum SqlGraphDifferentMode:
+    case Edge
+    case EdgeBindings
+    case Edges
 
 case class SqlGraphPattern(
     name: Option[String],
@@ -83,10 +83,10 @@ enum SqlGraphQuantifier:
     case Between(start: Option[SqlExpr], end: Option[SqlExpr])
     case Quantity(quantity: SqlExpr)
 
-enum SqlGraphSymbol(val symbol: String):
-    case Dash extends SqlGraphSymbol("-")
-    case Tilde extends SqlGraphSymbol("~")
-    case LeftArrow extends SqlGraphSymbol("<-")
-    case RightArrow extends SqlGraphSymbol("->")
-    case LeftTildeArrow extends SqlGraphSymbol("<~")
-    case RightTildeArrow extends SqlGraphSymbol("~>")
+enum SqlGraphSymbol:
+    case Dash
+    case Tilde
+    case LeftArrow
+    case RightArrow
+    case LeftTildeArrow
+    case RightTildeArrow

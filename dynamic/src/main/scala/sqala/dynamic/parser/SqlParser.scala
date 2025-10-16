@@ -297,9 +297,6 @@ class SqlParser extends StandardTokenParsers:
         "ANY" ~> "(" ~> query <~ ")" ^^ { u =>
             SqlExpr.SubLink(SqlSubLinkQuantifier.Any, u)
         } |
-        "SOME" ~> "(" ~> query <~ ")" ^^ { u =>
-            SqlExpr.SubLink(SqlSubLinkQuantifier.Some, u)
-        } |
         "ALL" ~> "(" ~> query <~ ")" ^^ { u =>
             SqlExpr.SubLink(SqlSubLinkQuantifier.All, u)
         } |

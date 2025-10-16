@@ -49,7 +49,7 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")
         expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
+            printQuantifier(q)
             sqlBuilder.append(" ")
         printExpr(expr.expr)
         sqlBuilder.append(", ")
