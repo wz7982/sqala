@@ -3,6 +3,7 @@ package sqala.printer
 import sqala.ast.expr.*
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
+import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
@@ -100,7 +101,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("GROUP_CONCAT(")
         expr.quantifier.foreach: q => 
-            sqlBuilder.append(q.quantifier)
+            printQuantifier(q)
             sqlBuilder.append(" ")
         printExpr(expr.expr)
         if expr.withinGroup.nonEmpty then
@@ -152,6 +153,11 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case SqlVectorDistanceMode.Manhattan =>
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
+        def printOrdering(ordering: SqlOrdering): Unit =
+            ordering match
+                case Asc => sqlBuilder.append("ASC")
+                case Desc => sqlBuilder.append("DESC")
+
         val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
@@ -167,13 +173,13 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)
                 sqlBuilder.append(" ")
-                sqlBuilder.append(order.order)
+                printOrdering(order)
             case (Asc, Some(Last)) | (Desc, Some(First)) =>
                 printExpr(orderExpr)
                 sqlBuilder.append(" ")
-                sqlBuilder.append(order.order)
+                printOrdering(order)
                 sqlBuilder.append(",\n")
                 printSpace()
                 printExpr(orderBy.expr)
                 sqlBuilder.append(" ")
-                sqlBuilder.append(order.order)
+                printOrdering(order)

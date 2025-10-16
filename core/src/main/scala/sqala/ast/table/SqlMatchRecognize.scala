@@ -18,10 +18,10 @@ enum SqlRecognizePatternRowsPerMatchMode:
     case OneRow
     case AllRows(emptyMatchMode: Option[SqlRecognizePatternEmptyMatchMode])
 
-enum SqlRecognizePatternEmptyMatchMode(val mode: String):
-    case ShowEmptyMatches extends SqlRecognizePatternEmptyMatchMode("SHOW EMPTY MATCHES")
-    case OmitEmptyMatches extends SqlRecognizePatternEmptyMatchMode("OMIT EMPTY MATCHES")
-    case WithUnmatchedRows extends SqlRecognizePatternEmptyMatchMode("WITH UNMATCHED ROWS")
+enum SqlRecognizePatternEmptyMatchMode:
+    case ShowEmptyMatches
+    case OmitEmptyMatches
+    case WithUnmatchedRows
 
 case class SqlRowPattern(
     afterMatch: Option[SqlRowPatternSkipMode],
@@ -38,9 +38,9 @@ enum SqlRowPatternSkipMode:
     case SkipToLast(name: String)
     case SkipTo(name: String)
 
-enum SqlRowPatternStrategy(val strategy: String):
-    case Initial extends SqlRowPatternStrategy("INITIAL")
-    case Seek extends SqlRowPatternStrategy("SEEK")
+enum SqlRowPatternStrategy:
+    case Initial
+    case Seek
 
 enum SqlRowPatternQuantifier:
     case Asterisk(withQuestion: Boolean)

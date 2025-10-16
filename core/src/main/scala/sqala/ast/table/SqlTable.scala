@@ -57,13 +57,6 @@ enum SqlTable:
 
 case class SqlTableAlias(alias: String, columnAliases: List[String])
 
-case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
-
-enum SqlTableSampleMode(val mode: String):
-    case Bernoulli extends SqlTableSampleMode("BERNOULLI")
-    case System extends SqlTableSampleMode("SYSTEM")
-    case Custom(override val mode: String) extends SqlTableSampleMode(mode)
-
 enum SqlTablePeriodMode:
     case ForSystemTimeAsOf(expr: SqlExpr)
     case ForSystemTimeBetween(
@@ -73,6 +66,13 @@ enum SqlTablePeriodMode:
     )
     case ForSystemTimeFrom(from: SqlExpr, to: SqlExpr)
 
-enum SqlTablePeriodBetweenMode(val mode: String):
-    case Asymmetric extends SqlTablePeriodBetweenMode("ASYMMETRIC")
-    case Symmetric extends SqlTablePeriodBetweenMode("SYMMETRIC")
+enum SqlTablePeriodBetweenMode:
+    case Asymmetric
+    case Symmetric
+
+case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
+
+enum SqlTableSampleMode:
+    case Bernoulli
+    case System
+    case Custom(mode: String)

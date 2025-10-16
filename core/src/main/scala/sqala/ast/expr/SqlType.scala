@@ -25,6 +25,6 @@ enum SqlType:
     case Array(`type`: SqlType)
     case Custom(`type`: String)
 
-enum SqlTimeZoneMode(val mode: String):
-    case With extends SqlTimeZoneMode("WITH TIME ZONE")
-    case Without extends SqlTimeZoneMode("WITHOUT TIME ZONE")
+enum SqlTimeZoneMode:
+    case With
+    case Without
