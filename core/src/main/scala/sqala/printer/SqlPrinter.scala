@@ -1314,10 +1314,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printIdent(table.name)
         for p <- table.period do
             p match
-                case SqlTablePeriodMode.ForSystemTimeAsOf(expr) =>
+                case SqlTablePeriodForMode.SystemTimeAsOf(expr) =>
                     sqlBuilder.append(" FOR SYSTEM_TIME AS OF ")
                     printExpr(expr)
-                case SqlTablePeriodMode.ForSystemTimeBetween(mode, start, end) =>
+                case SqlTablePeriodForMode.SystemTimeBetween(mode, start, end) =>
                     sqlBuilder.append(" FOR SYSTEM_TIME BETWEEN ")
                     for m <- mode do
                         printPeriodBetweenMode(m)
@@ -1325,7 +1325,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     printExpr(start)
                     sqlBuilder.append(" AND ")
                     printExpr(end)
-                case SqlTablePeriodMode.ForSystemTimeFrom(from, to) =>
+                case SqlTablePeriodForMode.SystemTimeFrom(from, to) =>
                     sqlBuilder.append(" FOR SYSTEM_TIME FROM ")
                     printExpr(from)
                     sqlBuilder.append(" TO ")

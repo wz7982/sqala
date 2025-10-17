@@ -6,7 +6,7 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 enum SqlTable:
     case Ident(
         name: String,
-        period: Option[SqlTablePeriodMode],
+        period: Option[SqlTablePeriodForMode],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize],
         sample: Option[SqlTableSample]
@@ -57,14 +57,14 @@ enum SqlTable:
 
 case class SqlTableAlias(alias: String, columnAliases: List[String])
 
-enum SqlTablePeriodMode:
-    case ForSystemTimeAsOf(expr: SqlExpr)
-    case ForSystemTimeBetween(
+enum SqlTablePeriodForMode:
+    case SystemTimeAsOf(expr: SqlExpr)
+    case SystemTimeBetween(
         mode: Option[SqlTablePeriodBetweenMode], 
         start: SqlExpr,
         end: SqlExpr
     )
-    case ForSystemTimeFrom(from: SqlExpr, to: SqlExpr)
+    case SystemTimeFrom(from: SqlExpr, to: SqlExpr)
 
 enum SqlTablePeriodBetweenMode:
     case Asymmetric
