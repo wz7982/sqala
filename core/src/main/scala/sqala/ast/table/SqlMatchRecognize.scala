@@ -32,11 +32,11 @@ case class SqlRowPattern(
 )
 
 enum SqlRowPatternSkipMode:
-    case SkipToNextRow
-    case SkipPastLastRow
-    case SkipToFirst(name: String)
-    case SkipToLast(name: String)
-    case SkipTo(name: String)
+    case ToNextRow
+    case PastLastRow
+    case ToFirst(name: String)
+    case ToLast(name: String)
+    case To(name: String)
 
 enum SqlRowPatternStrategy:
     case Initial
