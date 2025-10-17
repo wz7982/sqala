@@ -82,7 +82,7 @@ case class Recognize[N <: Tuple, T](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(SqlRowPatternSkipMode.SkipToNextRow)
+                    afterMatch = Some(SqlRowPatternSkipMode.ToNextRow)
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
@@ -93,7 +93,7 @@ case class Recognize[N <: Tuple, T](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(SqlRowPatternSkipMode.SkipPastLastRow)
+                    afterMatch = Some(SqlRowPatternSkipMode.PastLastRow)
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
@@ -108,7 +108,7 @@ case class Recognize[N <: Tuple, T](
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.SkipToFirst(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T](__table__)))
                     )
                 )
             )
@@ -124,7 +124,7 @@ case class Recognize[N <: Tuple, T](
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.SkipToLast(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T](__table__)))
                     )
                 )
             )
@@ -140,7 +140,7 @@ case class Recognize[N <: Tuple, T](
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.SkipTo(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T](__table__)))
                     )
                 )
             )

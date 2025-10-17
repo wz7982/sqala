@@ -2036,17 +2036,17 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             sqlBuilder.append("AFTER MATCH ")
             m match
-                case SqlRowPatternSkipMode.SkipToNextRow =>
+                case SqlRowPatternSkipMode.ToNextRow =>
                     sqlBuilder.append("SKIP TO NEXT ROW")
-                case SqlRowPatternSkipMode.SkipPastLastRow =>
+                case SqlRowPatternSkipMode.PastLastRow =>
                     sqlBuilder.append("SKIP PAST LAST ROW")
-                case SqlRowPatternSkipMode.SkipToFirst(name) =>
+                case SqlRowPatternSkipMode.ToFirst(name) =>
                     sqlBuilder.append("SKIP TO FIRST ")
                     printIdent(name)
-                case SqlRowPatternSkipMode.SkipToLast(name) =>
+                case SqlRowPatternSkipMode.ToLast(name) =>
                     sqlBuilder.append("SKIP TO LAST ")
                     printIdent(name)
-                case SqlRowPatternSkipMode.SkipTo(name) =>
+                case SqlRowPatternSkipMode.To(name) =>
                     sqlBuilder.append("SKIP TO ")
                     printIdent(name)
             sqlBuilder.append("\n")
