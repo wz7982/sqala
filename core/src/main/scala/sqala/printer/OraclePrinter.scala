@@ -23,7 +23,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
         sqlBuilder.append(" FROM ")
-        printIdent("dual")
+        printIdent("DUAL")
         sqlBuilder.append(") ")
         printIdent("t2")
 

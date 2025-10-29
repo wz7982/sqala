@@ -20,7 +20,7 @@ class H2Printer(override val standardEscapeStrings: Boolean) extends SqlPrinter(
                 sqlBuilder.append(",")
                 sqlBuilder.append(" ")
         sqlBuilder.append(") ")
-        printIdent("t1")
+        printIdent("t2")
 
         sqlBuilder.append(" ON (")
         for index <- upsert.pkList.indices do
