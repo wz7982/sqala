@@ -13,6 +13,10 @@ import sqala.static.metadata.*
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
 
+extension [T](data: List[T])
+    def toView[V](using m: ViewMapping[T, V]): List[V] =
+        m.mapToList(data)
+
 inline def query[T](inline q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     AnalysisMacro.analysis(q)

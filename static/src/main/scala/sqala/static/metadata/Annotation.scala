@@ -22,3 +22,12 @@ class aggFunction extends StaticAnnotation
 
 @scala.annotation.meta.field
 class windowFunction extends StaticAnnotation
+
+@scala.annotation.meta.field
+case class view(prefix: String, key: String) extends StaticAnnotation
+
+@scala.annotation.meta.field
+case class derivedField[T, R](source: String, mapper: T => R) extends StaticAnnotation
+
+@scala.annotation.meta.field
+class nested extends StaticAnnotation
