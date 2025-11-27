@@ -435,6 +435,28 @@ object SortedQuery:
         def orderBy[S: AsSort](f: T => S): SortedQuery[T] =
             sortBy(f)
 
+        def map[M: AsMap as m](f: T => M): Query[m.R] =
+            val mapped = f(query.params)
+            val sqlSelect = m.selectItems(mapped, 1)
+            Query(
+                m.transform(mapped), 
+                query.tree.copy(select = sqlSelect)
+            )(using query.context)
+
+        def select[M: AsMap as m](f: T => M): Query[m.R] =
+            map(f)
+
+        def mapDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+            val mapped = f(query.params)
+            val sqlSelect = m.selectItems(mapped, 1)
+            Query(
+                m.transform(mapped), 
+                query.tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
+            )(using query.context)
+
+        def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+            mapDistinct(f)
+
 class GroupingContext
 
 final class Grouping[T](

@@ -395,39 +395,45 @@ def regrSxy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     )
 
 @aggFunction
-def percentileCont[T: AsExpr as a](x: T, withinGroup: Sort)(using 
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal]] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "PERCENTILE_CONT",
-            a.asExpr(x).asSqlExpr :: Nil,
-            Nil,
-            withinGroup.asSqlOrderBy :: Nil,
-            None
+def percentileCont[T: AsExpr as at, S: AsExpr as as](x: T, withinGroup: Sort[S])(using 
+    n: SqlNumber[at.R],
+    to: ToOption[Expr[as.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "PERCENTILE_CONT",
+                at.asExpr(x).asSqlExpr :: Nil,
+                Nil,
+                withinGroup.asSqlOrderBy :: Nil,
+                None
+            )
         )
     )
 
 @aggFunction
-def percentileDisc[T: AsExpr as a](x: T, withinGroup: Sort)(using 
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal]] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "PERCENTILE_DISC",
-            a.asExpr(x).asSqlExpr :: Nil,
-            Nil,
-            withinGroup.asSqlOrderBy :: Nil,
-            None
+def percentileDisc[T: AsExpr as at, S: AsExpr as as](x: T, withinGroup: Sort[S])(using 
+    n: SqlNumber[at.R],
+    to: ToOption[Expr[as.R]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "PERCENTILE_DISC",
+                at.asExpr(x).asSqlExpr :: Nil,
+                Nil,
+                withinGroup.asSqlOrderBy :: Nil,
+                None
+            )
         )
     )
 
 @aggFunction
-def listAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
+def listAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort[?])(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext
@@ -444,7 +450,7 @@ def listAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: S
     )
 
 @aggFunction
-def stringAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
+def stringAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort[?])(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext
@@ -452,7 +458,7 @@ def stringAgg[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup:
     listAgg(x, separator, withinGroup)
 
 @aggFunction
-def groupConcat[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort)(using 
+def groupConcat[T: AsExpr as at, S: AsExpr as as](x: T, separator: S, withinGroup: Sort[?])(using 
     SqlString[at.R],
     SqlString[as.R],
     QueryContext

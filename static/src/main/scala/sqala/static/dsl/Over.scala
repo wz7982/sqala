@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameUnit}
 
 case class Over(
     private[sqala] val partitionBy: List[Expr[?]] = Nil,
-    private[sqala] val sortBy: List[Sort] = Nil,
+    private[sqala] val sortBy: List[Sort[?]] = Nil,
     private[sqala] val frame: Option[SqlWindowFrame] = None
 ):
     def sortBy[T: AsSort as a](sortValue: T)(using QueryContext, OverContext): Over =
