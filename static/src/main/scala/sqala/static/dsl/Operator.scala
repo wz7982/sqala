@@ -349,22 +349,22 @@ extension [T: AsExpr as at](self: T)
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Scalar), None, false)
         )
 
-    def asc(using AsSqlExpr[at.R], QueryContext): Sort = 
+    def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
         Sort(at.asExpr(self), SqlOrdering.Asc, None)
 
-    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort =
+    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
-    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort =
+    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
-    def desc(using AsSqlExpr[at.R], QueryContext): Sort =
+    def desc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Desc, None)
 
-    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort =
+    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
-    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort =
+    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
 extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))
