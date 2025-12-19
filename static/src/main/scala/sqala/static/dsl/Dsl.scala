@@ -208,7 +208,6 @@ def from[T](tables: T)(using
         None,
         None,
         Nil,
-        Nil,
         None,
         None
     )

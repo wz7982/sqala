@@ -205,7 +205,7 @@ object Query:
             val expr = count()
             val tree = query.tree
             tree match
-                case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _, _) 
+                case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _) 
                     if p != Some(SqlQuantifier.Distinct)
                 =>
                     Query(
@@ -236,7 +236,6 @@ object Query:
                         None,
                         None,
                         Nil,
-                        Nil,
                         None,
                         None
                     )
@@ -252,7 +251,6 @@ object Query:
                 None,
                 None,
                 None,
-                Nil,
                 Nil,
                 None,
                 None
@@ -537,7 +535,6 @@ final case class ConnectBy[T](
             None,
             None,
             None,
-            Nil,
             Nil,
             None,
             None
