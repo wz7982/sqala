@@ -482,7 +482,6 @@ class SqlParser extends StandardTokenParsers:
                     w, 
                     g,
                     h,
-                    Nil, 
                     o.getOrElse(Nil), 
                     l.flatten,
                     None

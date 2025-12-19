@@ -353,7 +353,6 @@ object Repository:
                                             Some(condBuffer.toList.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y))),
                                             None,
                                             None,
-                                            Nil,
                                             sort,
                                             None,
                                             None

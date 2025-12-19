@@ -134,12 +134,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("HAVING\n")
             h |> printWithSpace(printExpr)
 
-        if select.window.nonEmpty then
-            sqlBuilder.append("\n")
-            printSpace()
-            sqlBuilder.append("WINDOW\n")
-            printList(select.window, ",\n")(printWindowItem |> printWithSpace)
-
         if select.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
