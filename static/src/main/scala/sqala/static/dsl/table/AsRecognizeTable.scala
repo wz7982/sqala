@@ -3,7 +3,6 @@ package sqala.static.dsl.table
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.table.*
-import sqala.static.metadata.TableMetaData
 
 trait AsRecognizeTable[T]:
     def asRecognizeTable(x: T): T

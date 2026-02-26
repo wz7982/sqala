@@ -31,6 +31,17 @@ inline def update[T <: Product](using c: QueryContext = QueryContext(0)): Update
 inline def delete[T <: Product](using c: QueryContext): Delete[T] =
     Delete.apply[T]
 
+extension [T](x: T)(using t: AsTable[T], refl: t.R <:< Table[?], c: QueryContext)
+    def withTableName(tableName: String): t.R =
+        val (table, _) = t.table(x)
+        val baseTable = table.asInstanceOf[Table[?]]
+        baseTable
+            .copy(
+                __metaData__ = baseTable.__metaData__.copy(tableName = tableName),
+                __sqlTable__ = baseTable.__sqlTable__.copy(name = tableName)
+            )
+            .asInstanceOf[t.R]
+
 extension [A](a: => A)(using c: QueryContext)
     def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] = 
         val (leftTable, leftSqlTable) = ta.table(a)
