@@ -15,7 +15,7 @@ trait Compare[A, B]
 object Compare:
     given idCompare[A: AsSqlExpr]: Compare[A, A]()
 
-    given numericCompare[A: SqlNumber, B: SqlNumber](using
+    given numberCompare[A: SqlNumber, B: SqlNumber](using
         NotGiven[A =:= B]
     ): Compare[A, B]()
 
@@ -25,24 +25,29 @@ object Compare:
 
     given dateTimeAndStringCompare[A: SqlDateTime, B: SqlString]: Compare[A, B]()
 
-    given stringAndDateTimeCompare[A <: String, B: SqlDateTime]: Compare[A, B]()
+    given stringAndDateTimeCompare[A: SqlString, B: SqlDateTime]: Compare[A, B]()
 
     given timeAndStringCompare[A: SqlTime, B: SqlString]: Compare[A, B]()
 
-    given stringAndTimeCompare[A <: String, B: SqlTime]: Compare[A, B]()
+    given stringAndTimeCompare[A: SqlString, B: SqlTime]: Compare[A, B]()
 
-    given arrayCompare[A, B](using 
-        Compare[Unwrap[A, Option], 
-        Unwrap[B, Option]]
+    given arrayCompare[A, B](using
+        aa: AsExpr[A],
+        ab: AsExpr[B],
+        c: Compare[Unwrap[aa.R, Option], Unwrap[ab.R, Option]]
     ): Compare[Array[A], Array[B]]()
 
     given tupleCompare[LH, LT <: Tuple, RH, RT <: Tuple](using
-        Compare[Unwrap[LH, Option], Unwrap[RH, Option]],
-        Compare[LT, RT]
+        al: AsExpr[LH],
+        ar: AsExpr[RH],
+        ch: Compare[Unwrap[al.R, Option], Unwrap[ar.R, Option]],
+        ct: Compare[LT, RT]
     ): Compare[LH *: LT, RH *: RT]()
 
     given tuple1Compare[LH, RH](using
-        Compare[LH, RH]
+        al: AsExpr[LH],
+        ar: AsExpr[RH],
+        c: Compare[Unwrap[al.R, Option], Unwrap[ar.R, Option]]
     ): Compare[LH *: EmptyTuple, RH *: EmptyTuple]()
 
 @implicitNotFound("Types ${A} and ${B} cannot be add.")
