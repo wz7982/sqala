@@ -5,7 +5,7 @@ import sqala.static.dsl.table.{JsonTableExistsColumn, JsonTableNestedColumns, Js
 import java.time.*
 import scala.compiletime.ops.any.ToString
 import scala.compiletime.ops.int.S
-import scala.compiletime.ops.string.+
+import scala.compiletime.ops.string.{+, Length, Substring}
 
 type Wrap[T, F[_]] = T match
     case F[t] => T
@@ -122,12 +122,42 @@ type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
     case EmptyTuple => 
         EmptyTuple
 
+type UpperCase[S <: String] =
+    S match
+        case "a" => "A"
+        case "b" => "B"
+        case "c" => "C"
+        case "d" => "D"
+        case "e" => "E"
+        case "f" => "F"
+        case "g" => "G"
+        case "h" => "H"
+        case "i" => "I"
+        case "j" => "J"
+        case "k" => "K"
+        case "l" => "L"
+        case "m" => "M"
+        case "n" => "N"
+        case "o" => "O"
+        case "p" => "P"
+        case "q" => "Q"
+        case "r" => "R"
+        case "s" => "S"
+        case "t" => "T"
+        case "u" => "U"
+        case "v" => "V"
+        case "w" => "W"
+        case "x" => "X"
+        case "y" => "Y"
+        case "z" => "Z"
+        case _ => S
+
 type CombinePivotNames[A <: Tuple, F <: Tuple] =
     Tuple.FlatMap[
         A,
         [i] =>> Tuple.Map[
             CombinePivotForNames[F],
-            [ii] =>> ToString[i] + "_" + ToString[ii]
+            [ii] =>> ToString[i] + UpperCase[Substring[ToString[ii], 0, 1]] + Substring[ToString[ii], 1, Length[ToString[ii]]]
         ]
     ]
 
@@ -149,6 +179,6 @@ type CombinePivotForNames[F <: Tuple] <: Tuple =
                 x, 
                 [i] =>> Tuple.Map[
                     CombinePivotForNames[xs], 
-                    [ii] =>> i + "_" + ii
+                    [ii] =>> i + UpperCase[Substring[ii, 0, 1]] + Substring[ii, 1, Length[ii]]
                 ]
             ]
