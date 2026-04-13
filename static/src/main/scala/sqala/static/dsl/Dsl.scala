@@ -12,7 +12,6 @@ import sqala.static.metadata.*
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
-import sqala.static.{dsl => unit}
 
 extension [T](data: List[T])
     def toView[V](using m: ViewMapping[T, V]): List[V] =
