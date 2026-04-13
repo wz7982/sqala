@@ -1011,25 +1011,6 @@ def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-trait ExtractArg[T]
-
-object ExtractArg:
-    given dateTime[T: SqlDateTime]: ExtractArg[T]()
-
-    given interval[T: SqlInterval]: ExtractArg[T]()
-
-@function
-def extract[A: AsExpr as aa](x: A, unit: TimeUnit)(using
-    ExtractArg[aa.R],
-    QueryContext
-): Expr[Option[BigDecimal]] =
-    Expr(
-        SqlExpr.ExtractFunc(
-            unit.unit,
-            aa.asExpr(x).asSqlExpr
-        )
-    )
-
 @function
 def charLength[A: AsExpr as aa](x: A)(using
     SqlString[aa.R],

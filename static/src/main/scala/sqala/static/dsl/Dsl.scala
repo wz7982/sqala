@@ -12,6 +12,7 @@ import sqala.static.metadata.*
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
+import sqala.static.{dsl => unit}
 
 extension [T](data: List[T])
     def toView[V](using m: ViewMapping[T, V]): List[V] =
@@ -237,16 +238,80 @@ extension [T: AsExpr as a](x: T)
 def level()(using QueryContext, ConnectByContext): Expr[Int] =
     Expr(SqlExpr.Column(Some(tableCte), columnPseudoLevel))
 
-sealed class TimeUnit(val unit: SqlTimeUnit)
-case object Year extends TimeUnit(SqlTimeUnit.Year)
-case object Month extends TimeUnit(SqlTimeUnit.Month)
-case object Day extends TimeUnit(SqlTimeUnit.Day)
-case object Hour extends TimeUnit(SqlTimeUnit.Hour)
-case object Minute extends TimeUnit(SqlTimeUnit.Minute)
-case object Second extends TimeUnit(SqlTimeUnit.Second)
+extension (n: Int)(using QueryContext)
+    def year: Interval =
+        Interval(n.toString, SqlTimeUnit.Year)
 
-def interval(n: Double, unit: TimeUnit)(using QueryContext): Interval =
-    Interval(n.toString, unit.unit)
+    def month: Interval =
+        Interval(n.toString, SqlTimeUnit.Month)
+
+    def day: Interval =
+        Interval(n.toString, SqlTimeUnit.Day)
+
+    def hour: Interval =
+        Interval(n.toString, SqlTimeUnit.Hour)
+
+    def minute: Interval =
+        Interval(n.toString, SqlTimeUnit.Minute)
+
+    def second: Interval =
+        Interval(n.toString, SqlTimeUnit.Second)
+
+trait ExtractArg[T]
+
+object ExtractArg:
+    given dateTime[T: SqlDateTime]: ExtractArg[T]()
+
+    given interval[T: SqlInterval]: ExtractArg[T]()
+
+extension [T: AsExpr as a](x: T)(using QueryContext, ExtractArg[a.R])
+    def year: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Year,
+                a.asExpr(x).asSqlExpr
+            )
+        )
+
+    def month: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Month,
+                a.asExpr(x).asSqlExpr
+            )
+        )
+
+    def day: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Day,
+                a.asExpr(x).asSqlExpr
+            )
+        )
+
+    def hour: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Hour,
+                a.asExpr(x).asSqlExpr
+            )
+        )
+
+    def minute: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Minute,
+                a.asExpr(x).asSqlExpr
+            )
+        )
+
+    def second: Expr[Option[BigDecimal]] =
+        Expr(
+            SqlExpr.ExtractFunc(
+                SqlTimeUnit.Second,
+                a.asExpr(x).asSqlExpr
+            )
+        )
 
 class EmptyIf(private[sqala] val exprs: List[Expr[?]]):
     infix def `then`[E: AsExpr as a](expr: E)(using QueryContext): IfThen[a.R] =
