@@ -122,7 +122,8 @@ object Query:
                 case _ => query.tree
             Query(query.params, newTree)(using query.context)
 
-        def offset(n: Int): Query[T] = drop(n)
+        def offset(n: Int): Query[T] = 
+            drop(n)
 
         private[sqala] def take(n: Int, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T] =
             val limit = query.tree match
@@ -144,13 +145,11 @@ object Query:
                 case _ => query.tree
             Query(query.params, newTree)(using query.context)
 
-        def take(n: Int): Query[T] = take(n, SqlFetchUnit.RowCount, SqlFetchMode.Only)
+        def take(n: Int): Query[T] = 
+            take(n, SqlFetchUnit.RowCount, SqlFetchMode.Only)
 
-        def limit(n: Int): Query[T] = take(n)
-
-        def takeWithTies(n: Int): Query[T] = take(n, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
-
-        def limitWithTies(n: Int): Query[T] = takeWithTies(n)
+        def limit(n: Int): Query[T] = 
+            take(n)
 
         def forUpdate: Query[T] =
             val newTree = query.tree match
@@ -257,6 +256,64 @@ object Query:
             )
             Query(expr, outerQuery)
 
+sealed class SortedQuery[T](
+    private[sqala] val params: T,
+    val tree: SqlQuery
+)(using 
+    private[sqala] val context: QueryContext
+)
+
+object SortedQuery:
+    extension [T](query: SortedQuery[T])
+        def drop(n: Int): SortedQuery[T] =
+            val limit = query.tree match
+                case s: SqlQuery.Select => s.limit
+                case s: SqlQuery.Set => s.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+                case _ => None
+            val sqlLimit = limit
+                .map(l => SqlLimit(Some(SqlExpr.NumberLiteral(n)), l.fetch))
+                .orElse(Some(SqlLimit(Some(SqlExpr.NumberLiteral(n)), None)))
+            val newTree = query.tree match
+                case s: SqlQuery.Select => s.copy(limit = sqlLimit)
+                case s: SqlQuery.Set => s.copy(limit = sqlLimit)
+                case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+                case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+                case _ => query.tree
+            SortedQuery(query.params, newTree)(using query.context)
+
+        def offset(n: Int): SortedQuery[T] = 
+            drop(n)
+
+        private[sqala] def take(n: Int, unit: SqlFetchUnit, mode: SqlFetchMode): SortedQuery[T] =
+            val limit = query.tree match
+                case s: SqlQuery.Select => s.limit
+                case s: SqlQuery.Set => s.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
+                case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+                case _ => None
+            val sqlLimit = limit
+                .map(l => SqlLimit(l.offset, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode))))
+                .orElse(Some(SqlLimit(None, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode)))))
+            val newTree = query.tree match
+                case s: SqlQuery.Select => s.copy(limit = sqlLimit)
+                case s: SqlQuery.Set => s.copy(limit = sqlLimit)
+                case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+                case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
+                    SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+                case _ => query.tree
+            SortedQuery(query.params, newTree)(using query.context)
+
+        def takeWithTies(n: Int): SortedQuery[T] = 
+            take(n, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
+
+        def limitWithTies(n: Int): SortedQuery[T] = 
+            takeWithTies(n)
+
 final class SelectQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Select
@@ -282,14 +339,14 @@ object SelectQuery:
         def withFilter[F: AsExpr as a](f: T => F)(using SqlBoolean[a.R]): SelectQuery[T] =
             filter(f)
 
-        def sortBy[S: AsSort as s](f: T => S): SortedQuery[T] =
+        def sortBy[S: AsSort as s](f: T => S): SortedSelectQuery[T] =
             val sort = s.asSort(f(query.params))
-            SortedQuery(
+            SortedSelectQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        def orderBy[S: AsSort](f: T => S): SortedQuery[T] =
+        def orderBy[S: AsSort](f: T => S): SortedSelectQuery[T] =
             sortBy(f)
 
         def map[M: AsMap as m](f: T => M): Query[m.R] =
@@ -414,45 +471,45 @@ object SelectQuery:
                 )
             ConnectBy(query.params, joinTree, startTree)
 
-final class SortedQuery[T](
+final class SortedSelectQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Select
 )(using 
     private[sqala] override val context: QueryContext
-) extends Query[T](params, tree)
+) extends SortedQuery[T](params, tree)
 
-object SortedQuery:
-    extension [T](query: SortedQuery[T])
-        def sortBy[S: AsSort as s](f: T => S): SortedQuery[T] =
+object SortedSelectQuery:
+    extension [T](query: SortedSelectQuery[T])
+        def sortBy[S: AsSort as s](f: T => S): SortedSelectQuery[T] =
             val sort = s.asSort(f(query.params))
-            SortedQuery(
+            SortedSelectQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        def orderBy[S: AsSort](f: T => S): SortedQuery[T] =
+        def orderBy[S: AsSort](f: T => S): SortedSelectQuery[T] =
             sortBy(f)
 
-        def map[M: AsMap as m](f: T => M): Query[m.R] =
+        def map[M: AsMap as m](f: T => M): SortedQuery[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
-            Query(
+            SortedQuery(
                 m.transform(mapped), 
                 query.tree.copy(select = sqlSelect)
             )(using query.context)
 
-        def select[M: AsMap as m](f: T => M): Query[m.R] =
+        def select[M: AsMap as m](f: T => M): SortedQuery[m.R] =
             map(f)
 
-        def mapDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        def mapDistinct[M: AsMap as m](f: T => M): SortedQuery[m.R] =
             val mapped = f(query.params)
             val sqlSelect = m.selectItems(mapped, 1)
-            Query(
+            SortedQuery(
                 m.transform(mapped), 
                 query.tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
             )(using query.context)
 
-        def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
+        def selectDistinct[M: AsMap as m](f: T => M): SortedQuery[m.R] =
             mapDistinct(f)
 
 final class Grouping[T](
@@ -470,14 +527,14 @@ object Grouping:
             val cond = a.asExpr(f(query.params))
             Grouping(query.params, query.tree.addHaving(cond.asSqlExpr))(using query.context)
 
-        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): Grouping[T] =
+        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): SortedGrouping[T] =
             val sort = s.asSort(f(query.params))
-            Grouping(
+            SortedGrouping(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): Grouping[T] =
+        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): SortedGrouping[T] =
             sortBy(f)
 
         def map[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
@@ -502,6 +559,49 @@ object Grouping:
         def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): Query[m.R] =
             mapDistinct(f)
 
+final class SortedGrouping[T](
+    private[sqala] val params: T,
+    private[sqala] val tree: SqlQuery.Select
+)(using 
+    private[sqala] val context: QueryContext
+)
+
+object SortedGrouping:
+    given GroupingContext = new GroupingContext
+
+    extension [T](query: SortedGrouping[T])
+        def sortBy[S: AsSort as s](f: GroupingContext ?=> T => S): SortedGrouping[T] =
+            val sort = s.asSort(f(query.params))
+            SortedGrouping(
+                query.params, 
+                query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            )(using query.context)
+
+        def orderBy[S: AsSort](f: GroupingContext ?=> T => S): SortedGrouping[T] =
+            sortBy(f)
+
+        def map[M: AsMap as m](f: GroupingContext ?=> T => M): SortedQuery[m.R] =
+            val mapped = f(query.params)
+            val sqlSelect = m.selectItems(mapped, 1)
+            SortedQuery(
+                m.transform(mapped), 
+                query.tree.copy(select = sqlSelect)
+            )(using query.context)
+
+        def select[M: AsMap as m](f: GroupingContext ?=> T => M): SortedQuery[m.R] =
+            map(f)
+
+        def mapDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): SortedQuery[m.R] =
+            val mapped = f(query.params)
+            val sqlSelect = m.selectItems(mapped, 1)
+            SortedQuery(
+                m.transform(mapped), 
+                query.tree.copy(select = sqlSelect)
+            )(using query.context)
+
+        def selectDistinct[M: AsMap as m](f: GroupingContext ?=> T => M): SortedQuery[m.R] =
+            mapDistinct(f)
+
 final class UnionQuery[T](
     private[sqala] override val params: T,
     override val tree: SqlQuery.Set
@@ -509,14 +609,31 @@ final class UnionQuery[T](
 
 object UnionQuery:
     extension [T](query: UnionQuery[T])
-        def sortBy[S: AsSort as s](f: T => S): UnionQuery[T] =
+        def sortBy[S: AsSort as s](f: T => S): SortedUnionQuery[T] =
             val sort = s.asSort(f(query.params))
-            UnionQuery(
+            SortedUnionQuery(
                 query.params, 
                 query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
             )(using query.context)
 
-        def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
+        def orderBy[S: AsSort](f: T => S): SortedUnionQuery[T] =
+            sortBy(f)
+
+final class SortedUnionQuery[T](
+    private[sqala] override val params: T,
+    override val tree: SqlQuery.Set
+)(using QueryContext) extends SortedQuery[T](params, tree)
+
+object SortedUnionQuery:
+    extension [T](query: SortedUnionQuery[T])
+        def sortBy[S: AsSort as s](f: T => S): SortedUnionQuery[T] =
+            val sort = s.asSort(f(query.params))
+            SortedUnionQuery(
+                query.params, 
+                query.tree.copy(orderBy = query.tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            )(using query.context)
+
+        def orderBy[S: AsSort](f: T => S): SortedUnionQuery[T] =
             sortBy(f)
 
 final case class ConnectBy[T](
