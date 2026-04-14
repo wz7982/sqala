@@ -10,8 +10,6 @@ import sqala.static.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.compiletime.constValue
 
-class GraphContext
-
 case class Graph[N <: Tuple, V <: Tuple](
     private[sqala] val __name__ : String,
     private[sqala] val __items__ : V

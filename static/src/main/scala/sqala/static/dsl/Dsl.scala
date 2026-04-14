@@ -160,8 +160,6 @@ def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
     val alias = c.fetchAlias
     JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, Some(alias), columns)
 
-class JsonTableColumnContext
-
 def ordinalColumn(using QueryContext, JsonTableColumnContext): JsonTableOrdinalColumn =
     new JsonTableOrdinalColumn
 
