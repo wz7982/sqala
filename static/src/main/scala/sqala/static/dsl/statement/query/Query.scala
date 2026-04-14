@@ -455,8 +455,6 @@ object SortedQuery:
         def selectDistinct[M: AsMap as m](f: T => M): Query[m.R] =
             mapDistinct(f)
 
-class GroupingContext
-
 final class Grouping[T](
     private[sqala] val params: T,
     private[sqala] val tree: SqlQuery.Select
@@ -520,8 +518,6 @@ object UnionQuery:
 
         def orderBy[S: AsSort](f: T => S): UnionQuery[T] =
             sortBy(f)
-
-class ConnectByContext
 
 final case class ConnectBy[T](
     private[sqala] val table: Table[T],

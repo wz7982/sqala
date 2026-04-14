@@ -9,8 +9,6 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.{constValue, constValueTuple}
 import scala.language.dynamics
 
-class MatchRecognizeContext
-
 case class RecognizePredefine[T](
     private[sqala] val __table__ : T
 )(using r: AsRecognizeTable[T]):

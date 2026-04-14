@@ -9,8 +9,6 @@ import sqala.static.dsl.statement.query.AsMap
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
-class PivotContext
-
 case class PivotWithin[N](expr: SqlExpr, conditions: List[SqlExpr])
 
 case class PivotTable[N <: Tuple, V <: Tuple](

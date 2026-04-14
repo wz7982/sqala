@@ -6,8 +6,6 @@ import sqala.static.dsl.statement.dml.{UpdatePair, UpdateSetContext}
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
-class OverContext
-
 case class Expr[T](private val expr: SqlExpr):
     @targetName("eq")
     def ==[R](that: R)(using
