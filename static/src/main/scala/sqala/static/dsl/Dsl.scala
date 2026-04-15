@@ -389,7 +389,7 @@ def unboundedPreceding(using QueryContext): SqlWindowFrameBound =
 def unboundedFollowing(using QueryContext): SqlWindowFrameBound = 
     SqlWindowFrameBound.UnboundedFollowing
 
-extension (n: Int)
+extension [T: AsExpr as a](n: T)
     def preceding(using QueryContext): SqlWindowFrameBound = 
         SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr)
 
