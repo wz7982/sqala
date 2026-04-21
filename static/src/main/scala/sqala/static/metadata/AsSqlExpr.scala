@@ -3,10 +3,8 @@ package sqala.static.metadata
 import sqala.ast.expr.*
 
 import java.time.*
-import scala.annotation.implicitNotFound
 import scala.compiletime.{erasedValue, summonInline}
 
-@implicitNotFound("The type ${T} cannot be converted to SQL expression.")
 trait AsSqlExpr[T]:
     def sqlType: SqlType
 

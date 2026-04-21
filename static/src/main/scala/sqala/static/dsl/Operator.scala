@@ -12,12 +12,13 @@ extension [T: AsExpr as at](self: T)
     def ===[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Equal, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Equal,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -26,17 +27,18 @@ extension [T: AsExpr as at](self: T)
     def <>[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.NotEqual, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.NotEqual,
                 ar.asExpr(that).asSqlExpr
             )
         )
 
-    def isNull(using QueryContext): Expr[Boolean] =
+    def isNull(using QueryContext): Expr[Boolean, at.K] =
         Expr(
             SqlExpr.NullTest(at.asExpr(self).asSqlExpr, false)
         )
@@ -45,12 +47,13 @@ extension [T: AsExpr as at](self: T)
     def <=>[R](that: R)(using
         ar: AsRightOperand[R],
         c: Compare[Unwrap[at.R, Option], Unwrap[ar.R, Option]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[Boolean] =
+    ): Expr[Boolean, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.IsNotDistinctFrom, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.IsNotDistinctFrom,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -59,12 +62,13 @@ extension [T: AsExpr as at](self: T)
     def >[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.GreaterThan, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.GreaterThan,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -73,12 +77,13 @@ extension [T: AsExpr as at](self: T)
     def >=[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.GreaterThanEqual, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.GreaterThanEqual,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -87,12 +92,13 @@ extension [T: AsExpr as at](self: T)
     def <[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.LessThan, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.LessThan,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -101,39 +107,43 @@ extension [T: AsExpr as at](self: T)
     def <=[R](that: R)(using
         ar: AsRightOperand[R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.LessThanEqual, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.LessThanEqual,
                 ar.asExpr(that).asSqlExpr
             )
         )
 
     def in[R](exprs: R)(using
-        c: CanIn[at.R, R],
+        c: CanIn[T, R],
         qc: QueryContext
-    ): Expr[c.R] =
+    ): Expr[c.R, c.K] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.In, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.In,
                 c.asExpr(exprs).asSqlExpr
             )
         )
 
     def between[S, E](start: S, end: E)(using
         as: AsExpr[S],
-        rs: Relation[Unwrap[at.R, Option], Unwrap[as.R, Option], IsOption[at.R] || IsOption[as.R]],
         ae: AsExpr[E],
+        rs: Relation[Unwrap[at.R, Option], Unwrap[as.R, Option], IsOption[at.R] || IsOption[as.R]],
         re: Relation[Unwrap[at.R, Option], Unwrap[ae.R, Option], IsOption[at.R] || IsOption[ae.R]],
         r: Relation[Unwrap[rs.R, Option], Unwrap[re.R, Option], IsOption[rs.R] || IsOption[re.R]],
+        os: KindOperation[at.K, as.K],
+        oe: KindOperation[at.K, ae.K],
+        o: KindOperation[os.R, oe.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Between(
-                at.asExpr(self).asSqlExpr, 
+                at.asExpr(self).asSqlExpr,
                 as.asExpr(start).asSqlExpr,
                 ae.asExpr(end).asSqlExpr,
                 false
@@ -144,20 +154,22 @@ extension [T: AsExpr as at](self: T)
     def +[R](that: R)(using
         ar: AsExpr[R],
         r: Plus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(r.plus(at.asExpr(self).asSqlExpr, ar.asExpr(that).asSqlExpr))
 
     @targetName("minus")
     def -[R](that: R)(using
         ar: AsExpr[R],
         r: Minus[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Minus, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Minus,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -168,12 +180,13 @@ extension [T: AsExpr as at](self: T)
         ar: AsExpr[R],
         nr: SqlNumber[ar.R],
         r: Return[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Times, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Times,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -183,12 +196,13 @@ extension [T: AsExpr as at](self: T)
         nt: SqlNumber[at.R],
         ar: AsExpr[R],
         nr: SqlNumber[ar.R],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[Option[BigDecimal]] =
+    ): Expr[Option[BigDecimal], o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Div, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Div,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -198,8 +212,9 @@ extension [T: AsExpr as at](self: T)
         nt: SqlNumber[at.R],
         ar: AsExpr[R],
         nr: SqlNumber[ar.R],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[Option[BigDecimal]] =
+    ): Expr[Option[BigDecimal], o.R] =
         Expr(
             SqlExpr.GeneralFunc(
                 None,
@@ -212,11 +227,19 @@ extension [T: AsExpr as at](self: T)
         )
 
     @targetName("positive")
-    def unary_+(using SqlNumber[at.R], QueryContext): Expr[at.R] =
+    def unary_+(using
+        n: SqlNumber[at.R],
+        o: KindOperation[at.K, Value],
+        qc: QueryContext
+    ): Expr[at.R, o.R] =
         Expr(SqlExpr.Unary(SqlUnaryOperator.Positive, at.asExpr(self).asSqlExpr))
 
     @targetName("negative")
-    def unary_-(using SqlNumber[at.R], QueryContext): Expr[at.R] =
+    def unary_-(using
+        n: SqlNumber[at.R],
+        o: KindOperation[at.K, Value],
+        qc: QueryContext
+    ): Expr[at.R, o.R] =
         Expr(SqlExpr.Unary(SqlUnaryOperator.Negative, at.asExpr(self).asSqlExpr))
 
     @targetName("and")
@@ -225,12 +248,13 @@ extension [T: AsExpr as at](self: T)
         ar: AsExpr[R],
         rr: SqlBoolean[ar.R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.And, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.And,
                 ar.asExpr(that).asSqlExpr
             )
         )
@@ -241,18 +265,23 @@ extension [T: AsExpr as at](self: T)
         ar: AsExpr[R],
         rr: SqlBoolean[ar.R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
-                at.asExpr(self).asSqlExpr, 
-                SqlBinaryOperator.Or, 
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Or,
                 ar.asExpr(that).asSqlExpr
             )
         )
 
     @targetName("not")
-    def unary_!(using SqlBoolean[at.R], QueryContext): Expr[at.R] =
+    def unary_!(using
+        b: SqlBoolean[at.R],
+        o: KindOperation[at.K, Value],
+        qc: QueryContext
+    ): Expr[at.R, o.R] =
         Expr(SqlExpr.Unary(SqlUnaryOperator.Not, at.asExpr(self).asSqlExpr))
 
     def like[R](that: R)(using
@@ -260,53 +289,57 @@ extension [T: AsExpr as at](self: T)
         ar: AsExpr[R],
         rr: SqlString[ar.R],
         r: Relation[Unwrap[at.R, Option], Unwrap[ar.R, Option], IsOption[at.R] || IsOption[ar.R]],
+        o: KindOperation[at.K, ar.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Like(
-                at.asExpr(self).asSqlExpr, 
+                at.asExpr(self).asSqlExpr,
                 ar.asExpr(that).asSqlExpr,
                 None,
                 false
             )
         )
 
-    def contains(value: String)(using 
+    def contains(value: String)(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Like(
-                at.asExpr(self).asSqlExpr, 
+                at.asExpr(self).asSqlExpr,
                 s"%$value%".asExpr.asSqlExpr,
                 None,
                 false
             )
         )
 
-    def startsWith(value: String)(using 
+    def startsWith(value: String)(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Like(
-                at.asExpr(self).asSqlExpr, 
+                at.asExpr(self).asSqlExpr,
                 s"$value%".asExpr.asSqlExpr,
                 None,
                 false
             )
         )
 
-    def endsWith(value: String)(using 
+    def endsWith(value: String)(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Like(
-                at.asExpr(self).asSqlExpr, 
+                at.asExpr(self).asSqlExpr,
                 s"%$value".asExpr.asSqlExpr,
                 None,
                 false
@@ -316,8 +349,9 @@ extension [T: AsExpr as at](self: T)
     def isJson(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, None, None, false)
         )
@@ -325,8 +359,9 @@ extension [T: AsExpr as at](self: T)
     def isJsonObject(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Object), None, false)
         )
@@ -334,8 +369,9 @@ extension [T: AsExpr as at](self: T)
     def isJsonArray(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Array), None, false)
         )
@@ -343,28 +379,29 @@ extension [T: AsExpr as at](self: T)
     def isJsonScalar(using
         rt: SqlString[at.R],
         r: Relation[Unwrap[at.R, Option], String, IsOption[at.R]],
+        o: KindOperation[at.K, Value],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.JsonTest(at.asExpr(self).asSqlExpr, Some(SqlJsonNodeType.Scalar), None, false)
         )
 
-    def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] = 
+    def asc(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Asc, None)
 
-    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def ascNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
-    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def ascNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
-    def desc(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def desc(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Desc, None)
 
-    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def descNullsFirst(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
-    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R] =
+    def descNullsLast(using AsSqlExpr[at.R], QueryContext): Sort[at.R, at.K] =
         Sort(at.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
 extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))
@@ -376,18 +413,21 @@ extension [A: AsExpr as aa, B: AsExpr as ab](self: (A, B))
         r1: Relation[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[aa.R] || IsOption[ab.R]],
         r2: Relation[Unwrap[ac.R, Option], Unwrap[ad.R, Option], IsOption[ac.R] || IsOption[ad.R]],
         r: Relation[Unwrap[r1.R, Option], Unwrap[r2.R, Option], IsOption[r1.R] || IsOption[r2.R]],
+        o1: KindOperation[aa.K, ab.K],
+        o2: KindOperation[ac.K, ad.K],
+        o: KindOperation[o1.R, o2.R],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(
             SqlExpr.Binary(
                 SqlExpr.Tuple(
-                    aa.asExpr(self._1).asSqlExpr :: 
+                    aa.asExpr(self._1).asSqlExpr ::
                     ab.asExpr(self._2).asSqlExpr ::
                     Nil
                 ),
-                SqlBinaryOperator.Overlaps, 
+                SqlBinaryOperator.Overlaps,
                 SqlExpr.Tuple(
-                    ac.asExpr(that._1).asSqlExpr :: 
+                    ac.asExpr(that._1).asSqlExpr ::
                     ad.asExpr(that._2).asSqlExpr ::
                     Nil
                 )

@@ -3,8 +3,8 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.{SqlStatement, SqlUpdateSetPair}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.dsl.table.Table
-import sqala.static.dsl.{AsExpr, QueryContext}
+import sqala.static.dsl.table.{CanInFrom, Table}
+import sqala.static.dsl.{AsExpr, CanInFilter, Column, QueryContext}
 import sqala.static.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
 
 import scala.deriving.Mirror
@@ -22,10 +22,10 @@ type UpdateEntity = UpdateState.Entity.type
 class UpdateSetContext
 
 class Update[T, S <: UpdateState](
-    private[sqala] val table: Table[T],
+    private[sqala] val table: Table[T, Column, CanInFrom],
     val tree: SqlStatement.Update
 ):
-    def set(f: UpdateSetContext ?=> Table[T] => UpdatePair)(using 
+    def set(f: UpdateSetContext ?=> Table[T, Column, CanInFrom] => UpdatePair)(using
         S =:= UpdateTable
     ): Update[T, UpdateTable] =
         given UpdateSetContext = new UpdateSetContext
@@ -34,8 +34,9 @@ class Update[T, S <: UpdateState](
         val updateExpr = pair.updateExpr
         new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(expr, updateExpr)))
 
-    def where[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using 
-        S =:= UpdateTable, 
+    def where[F: AsExpr as a](f: QueryContext ?=> Table[T, Column, CanInFrom] => F)(using
+        S =:= UpdateTable,
+        CanInFilter[a.K],
         SqlBoolean[a.R]
     ): Update[T, UpdateTable] =
         given QueryContext = QueryContext(0)
@@ -53,11 +54,11 @@ object Update:
             None,
             None
         )
-        val table = Table[T](Some(alias), metaData, sqlTable)
+        val table = Table[T, Column, CanInFrom](Some(alias), metaData, sqlTable)
         val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, Nil, None)
         new Update(table, tree)
 
-    inline def updateByEntity[T <: Product](entity: T, skipNone: Boolean = false)(using 
+    inline def updateByEntity[T <: Product](entity: T, skipNone: Boolean = false)(using
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
         val metaData = TableMacro.tableMetaData[T]
@@ -68,7 +69,7 @@ object Update:
             None,
             None
         )
-        val table = Table[T](None, metaData, sqlTable)
+        val table = Table[T, Column, CanInFrom](None, metaData, sqlTable)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)
@@ -81,14 +82,14 @@ object Update:
                 (field, skipNone) match
                     case (None, true) => false
                     case _ => true
-            .map: (_, column, instance, field) => 
+            .map: (_, column, instance, field) =>
                 SqlUpdateSetPair(SqlExpr.Column(None, column), instance.asSqlExpr(field))
         val conditions = updateMetaData
             .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
-            .map: (_, column, instance, field) => 
+            .map: (_, column, instance, field) =>
                 SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, instance.asSqlExpr(field))
-        val condition = 
-            if conditions.isEmpty then None 
+        val condition =
+            if conditions.isEmpty then None
             else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
         val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, updateColumns, condition)
         new Update(table, tree)

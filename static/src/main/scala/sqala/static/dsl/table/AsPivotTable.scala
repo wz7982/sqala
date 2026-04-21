@@ -1,8 +1,8 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
+import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
-import sqala.static.dsl.{Expr, QueryContext, ToTuple, from}
 
 import scala.deriving.Mirror
 
@@ -18,29 +18,29 @@ object AsPivotTable:
     given table[T](using
         p: Mirror.ProductOf[T],
         m: AsMap[p.MirroredElemTypes],
-        tt: ToTuple[m.R],
-        ap: AsTableParam[tt.R]
-    ): Aux[Table[T], PivotTable[p.MirroredElemLabels, tt.R]] =
-        new AsPivotTable[Table[T]]:
+        ap: AsTableParam[m.R],
+        tt: ToTuple[ap.R],
+    ): Aux[Table[T, Column, CanNotInFrom], PivotTable[p.MirroredElemLabels, tt.R]] =
+        new AsPivotTable[Table[T, Column, CanNotInFrom]]:
             type R = PivotTable[p.MirroredElemLabels, tt.R]
 
-            def table(x: Table[T])(using c: QueryContext): R =
-                val query = from(x)
+            def table(x: Table[T, Column, CanNotInFrom])(using c: QueryContext): R =
+                val query = from(x.asInstanceOf[Table[T, Column, CanInFrom]])
                 PivotTable(
                     Tuple.fromArray(
                         x.__metaData__.columnNames.map(n => Expr(SqlExpr.Column(x.__aliasName__, n))).toArray
-                    ).asInstanceOf[tt.R], 
+                    ).asInstanceOf[tt.R],
                     query.tree
                 )
 
     given subQuery[N <: Tuple, V <: Tuple](using
         s: AsMap[V],
-        tt: ToTuple[s.R],
-        ap: AsTableParam[tt.R]
-    ): Aux[SubQueryTable[N, V], PivotTable[N, tt.R]] =
-        new AsPivotTable[SubQueryTable[N, V]]:
+        ap: AsTableParam[s.R],
+        tt: ToTuple[ap.R],
+    ): Aux[SubQueryTable[N, V, CanNotInFrom], PivotTable[N, tt.R]] =
+        new AsPivotTable[SubQueryTable[N, V, CanNotInFrom]]:
             type R = PivotTable[N, tt.R]
 
-            def table(x: SubQueryTable[N, V])(using c: QueryContext): R =
-                val query = from(x)
-                PivotTable(ap.asTableParam(x.__aliasName__, 1), query.tree)
+            def table(x: SubQueryTable[N, V, CanNotInFrom])(using c: QueryContext): R =
+                val query = from(x.asInstanceOf[SubQueryTable[N, V, CanInFrom]])
+                PivotTable(tt.toTuple(ap.asTableParam(x.__aliasName__, 1)), query.tree)

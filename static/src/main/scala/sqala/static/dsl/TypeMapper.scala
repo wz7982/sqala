@@ -4,6 +4,7 @@ import sqala.static.dsl.table.{JsonTableExistsColumn, JsonTableNestedColumns, Js
 
 import java.time.*
 import scala.compiletime.ops.any.ToString
+import scala.compiletime.ops.boolean.!
 import scala.compiletime.ops.int.S
 import scala.compiletime.ops.string.{+, Length, Substring}
 
@@ -40,9 +41,9 @@ object UnnestFlatten:
         new UnnestFlatten[T]:
             type R = UnnestFlattenImpl[T]
 
-type MapField[X, T] = T match
-    case Option[_] => Expr[Wrap[X, Option]]
-    case _ => Expr[X]
+type MapField[X, T, K <: ExprKind] = T match
+    case Option[_] => Expr[Wrap[X, Option], K]
+    case _ => Expr[X, K]
 
 type Index[T <: Tuple, X, N <: Int] <: Int = T match
     case X *: xs => N
@@ -103,9 +104,9 @@ type JsonTableColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = (N, V) match
         hv match
             case JsonTableNestedColumns[n, v] =>
                 Tuple.Concat[JsonTableColumnNameFlatten[n, v], JsonTableColumnNameFlatten[tn, tv]]
-            case _ => 
+            case _ =>
                 hn *: JsonTableColumnNameFlatten[tn, tv]
-    case (EmptyTuple, EmptyTuple) => 
+    case (EmptyTuple, EmptyTuple) =>
         EmptyTuple
 
 type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
@@ -113,13 +114,13 @@ type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
         h match
             case JsonTableNestedColumns[_, v] =>
                 Tuple.Concat[JsonTableColumnFlatten[v], JsonTableColumnFlatten[t]]
-            case JsonTableOrdinalColumn => 
-                Expr[Int] *: JsonTableColumnFlatten[t]
+            case JsonTableOrdinalColumn =>
+                Expr[Int, Column] *: JsonTableColumnFlatten[t]
             case JsonTablePathColumn[pt] =>
-                Expr[Wrap[pt, Option]] *: JsonTableColumnFlatten[t]
+                Expr[Wrap[pt, Option], Column] *: JsonTableColumnFlatten[t]
             case JsonTableExistsColumn =>
-                Expr[Option[Boolean]] *: JsonTableColumnFlatten[t]
-    case EmptyTuple => 
+                Expr[Option[Boolean], Column] *: JsonTableColumnFlatten[t]
+    case EmptyTuple =>
         EmptyTuple
 
 type UpperCase[S <: String] =
@@ -176,9 +177,37 @@ type CombinePivotForNames[F <: Tuple] <: Tuple =
         case (x *: xs) *: EmptyTuple => x *: xs
         case x *: xs =>
             Tuple.FlatMap[
-                x, 
+                x,
                 [i] =>> Tuple.Map[
-                    CombinePivotForNames[xs], 
+                    CombinePivotForNames[xs],
                     [ii] =>> i + UpperCase[Substring[ii, 0, 1]] + Substring[ii, 1, Length[ii]]
                 ]
             ]
+
+type InTuple[X, T <: Tuple] <: Boolean =
+    T match
+        case X *: xs => true
+        case x *: xs => InTuple[X, xs]
+        case EmptyTuple => false
+
+type NameFilter[N <: Tuple, P[_] <: Boolean] <: Tuple =
+    N match
+        case n *: ns =>
+            P[n] match
+                case true => n *: NameFilter[ns, P]
+                case false => NameFilter[ns, P]
+        case EmptyTuple => EmptyTuple
+
+type ValueFilter[N <: Tuple, V <: Tuple, P[_] <: Boolean] <: Tuple =
+    (N, V) match
+        case (n *: ns, v *: vs) =>
+            P[n] match
+                case true => v *: ValueFilter[ns, vs, P]
+                case false => ValueFilter[ns, vs, P]
+        case (EmptyTuple, EmptyTuple) => EmptyTuple
+
+type ExcludeName[EN <: Tuple, N <: Tuple] =
+    NameFilter[N, [x] =>> ![InTuple[x, EN]]]
+
+type ExcludeValue[EN <: Tuple, N <: Tuple, V <: Tuple] =
+    ValueFilter[N, V, [x] =>> ![InTuple[x, EN]]]

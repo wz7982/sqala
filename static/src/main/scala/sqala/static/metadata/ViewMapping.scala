@@ -41,10 +41,10 @@ object ViewMapping:
         val annotations = sym.annotations
         val (prefix, key) = annotations.collectFirst:
             case Apply(
-                Select(New(TypeIdent("view")), _), 
+                Select(New(TypeIdent("view")), _),
                 NamedArg("prefix", Literal(StringConstant(p))) ::
                 NamedArg("key", Literal(StringConstant(k))) :: Nil
-            ) => 
+            ) =>
                 (p, k)
         .get
         val keyWithPrefix = prefix + key.capitalize
@@ -62,7 +62,7 @@ object ViewMapping:
                     else
                         Select.unique(datum.asTerm, keyWithPrefix).asExpr
                 '{
-                    $data.groupBy(datum => 
+                    $data.groupBy(datum =>
                         ${
                             grouping('datum)
                         }
@@ -73,14 +73,14 @@ object ViewMapping:
 
         val elesInfo: collection.mutable.LinkedHashMap[String, (Expr[List[T]] => (q.reflect.Term, q.reflect.Term), Boolean)] =
             collection.mutable.LinkedHashMap()
-        
+
         eles.foreach: e =>
             val eleName = e.name
             val eleAnnotations = e.annotations
 
             val nested = eleAnnotations.exists:
                 case Apply(
-                    Select(New(TypeIdent("nested")), _), 
+                    Select(New(TypeIdent("nested")), _),
                     _
                 ) => true
                 case _ => false
@@ -152,18 +152,18 @@ object ViewMapping:
                             NamedArg("source", Literal(StringConstant(s))) ::
                             NamedArg("mapper", term) :: Nil
                         )
-                    => 
+                    =>
                         (s, term)
 
                 derivedInfo match
-                    case None => 
+                    case None =>
                         val eleNameWithPrefix =
                             prefix + eleName.capitalize
                         elesInfo.addOne(
                             eleName,
                             (
                                 (data: Expr[List[T]]) =>
-                                    val select = 
+                                    val select =
                                         if isTuple then
                                             val index = sourceFieldNames.indexOf(eleNameWithPrefix)
                                             val indexExpr = Expr(index)
@@ -212,7 +212,7 @@ object ViewMapping:
                         )
 
         val mapper = elesInfo.values.toList
-        
+
         '{
             new ViewMapping[T, R]:
                 def mapToList(data: List[T]): List[R] =

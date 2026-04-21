@@ -3,8 +3,8 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.dsl.table.Table
-import sqala.static.dsl.{AsExpr, Expr}
+import sqala.static.dsl.table.{CanInFrom, Table}
+import sqala.static.dsl.{AsExpr, Column, Expr}
 import sqala.static.metadata.{AsSqlExpr, TableMacro}
 
 import scala.deriving.Mirror
@@ -27,21 +27,21 @@ type InsertQuery = InsertState.Query.type
 class Insert[T, S <: InsertState](
     val tree: SqlStatement.Insert
 ):
-    inline def apply[I: AsExpr as a](f: Table[T] => I): Insert[a.R, InsertTable] =
+    inline def apply[I: AsExpr as a](f: Table[T, Column, CanInFrom] => I): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
-        val table = Table[T](None, metaData, sqlTable)
-        val insertItems = a.exprs(f(table))
+        val table = Table[T, Column, CanInFrom](None, metaData, sqlTable)
+        val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match
                 case Expr(SqlExpr.Column(_, c)) => SqlExpr.Column(None, c)
                 case _ => throw MatchError(i)
-        val tree: SqlStatement.Insert = 
+        val tree: SqlStatement.Insert =
             SqlStatement.Insert(sqlTable, columns, Nil, None)
         new Insert(tree)
 
-    inline def values(rows: List[T])(using 
+    inline def values(rows: List[T])(using
         S =:= InsertTable
     ): Insert[T, InsertValues] =
         val instances = AsSqlExpr.summonInstances[T]
@@ -53,19 +53,19 @@ class Insert[T, S <: InsertState](
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(tree.copy(values = insertValues))
 
-    inline def values(row: T)(using 
+    inline def values(row: T)(using
         S =:= InsertTable
-    ): Insert[T, InsertValues] = 
+    ): Insert[T, InsertValues] =
         values(row :: Nil)
 
 object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
-        val tree: SqlStatement.Insert = 
+        val tree: SqlStatement.Insert =
             SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, Nil, None)
         new Insert(tree)
 
-    inline def insertByEntities[T <: Product](entities: Seq[T])(using 
+    inline def insertByEntities[T <: Product](entities: Seq[T])(using
         p: Mirror.ProductOf[T]
     ): Insert[T, InsertEntity] =
         val tableName = TableMacro.tableName[T]

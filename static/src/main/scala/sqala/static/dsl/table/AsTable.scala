@@ -2,8 +2,8 @@ package sqala.static.dsl.table
 
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlJoinType, SqlTable, SqlTableAlias}
+import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
-import sqala.static.dsl.{QueryContext, ToTuple}
 import sqala.static.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
 
 import scala.NamedTuple.NamedTuple
@@ -19,19 +19,20 @@ object AsTable:
     type Aux[T, O] = AsTable[T]:
         type R = O
 
-    given entity[O](using 
+    given entity[O](using
         fc: FetchCompanion[O],
+        na: NotGiven[O <:< AnyTable],
         nt: NotGiven[O <:< Tuple],
-        nq: NotGiven[O <:< Query[?]],
+        nq: NotGiven[O <:< Query[?, ?]],
         ns: NotGiven[O <:< Seq[?]]
-    ): Aux[O, Table[fc.R]] =
+    ): Aux[O, Table[fc.R, Column, CanNotInFrom]] =
         new AsTable[O]:
-            type R = Table[fc.R]
+            type R = Table[fc.R, Column, CanNotInFrom]
 
             def table(x: O)(using c: QueryContext): (R, SqlTable) =
                 val metaData = fc.metaData
                 val alias = c.fetchAlias
-                val table = Table[fc.R](
+                val table = Table[fc.R, Column, CanNotInFrom](
                     Some(alias),
                     metaData,
                     SqlTable.Ident(
@@ -44,69 +45,77 @@ object AsTable:
                 )
                 (table, table.__sqlTable__)
 
-    given table[T]: Aux[Table[T], Table[T]] =
-        new AsTable[Table[T]]:
-            type R = Table[T]
+    given table[T]: Aux[Table[T, Column, CanInFrom], Table[T, Column, CanNotInFrom]] =
+        new AsTable[Table[T, Column, CanInFrom]]:
+            type R = Table[T, Column, CanNotInFrom]
 
-            def table(x: Table[T])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: Table[T, Column, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given funcTable[T]: Aux[FuncTable[T], FuncTable[T]] =
-        new AsTable[FuncTable[T]]:
-            type R = FuncTable[T]
+    given excluded[N <: Tuple, V <: Tuple]: Aux[ExcludedTable[N, V, CanInFrom], ExcludedTable[N, V, CanNotInFrom]] =
+        new AsTable[ExcludedTable[N, V, CanInFrom]]:
+            type R = ExcludedTable[N, V, CanNotInFrom]
 
-            def table(x: FuncTable[T])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: ExcludedTable[N, V, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given jsonTable[N <: Tuple, V <: Tuple]: Aux[JsonTable[N, V], JsonTable[N, V]] =
-        new AsTable[JsonTable[N, V]]:
-            type R = JsonTable[N, V]
+    given func[T]: Aux[FuncTable[T, Column, CanInFrom], FuncTable[T, Column, CanNotInFrom]] =
+        new AsTable[FuncTable[T, Column, CanInFrom]]:
+            type R = FuncTable[T, Column, CanNotInFrom]
 
-            def table(x: JsonTable[N, V])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: FuncTable[T, Column, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given subQuery[N <: Tuple, V <: Tuple, Q <: Query[NamedTuple[N, V]]](using 
-        AsTableParam[V]
-    ): Aux[Q, SubQueryTable[N, V]] =
+    given json[N <: Tuple, V <: Tuple]: Aux[JsonTable[N, V, CanInFrom], JsonTable[N, V, CanNotInFrom]] =
+        new AsTable[JsonTable[N, V, CanInFrom]]:
+            type R = JsonTable[N, V, CanNotInFrom]
+
+            def table(x: JsonTable[N, V, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
+
+    given subQuery[N <: Tuple, V <: Tuple, S <: QuerySize, Q <: Query[NamedTuple[N, V], S]](using
+        p: AsTableParam[V],
+        t: ToTuple[p.R]
+    ): Aux[Q, SubQueryTable[N, t.R, CanNotInFrom]] =
         new AsTable[Q]:
-            type R = SubQueryTable[N, V]
+            type R = SubQueryTable[N, t.R, CanNotInFrom]
 
             def table(x: Q)(using c: QueryContext): (R, SqlTable) =
                 val alias = c.fetchAlias
                 val subQuery = SubQueryTable[N, V](x, false, Some(alias))
-                (subQuery, subQuery.__sqlTable__)
+                (subQuery.copy(), subQuery.__sqlTable__)
 
-    given subQueryTable[N <: Tuple, V <: Tuple]: Aux[SubQueryTable[N, V], SubQueryTable[N, V]] =
-        new AsTable[SubQueryTable[N, V]]:
-            type R = SubQueryTable[N, V]
+    given subQueryTable[N <: Tuple, V <: Tuple]: Aux[SubQueryTable[N, V, CanInFrom], SubQueryTable[N, V, CanNotInFrom]] =
+        new AsTable[SubQueryTable[N, V, CanInFrom]]:
+            type R = SubQueryTable[N, V, CanNotInFrom]
 
-            def table(x: SubQueryTable[N, V])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: SubQueryTable[N, V, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given recognizeTable[N <: Tuple, V <: Tuple]: Aux[RecognizeTable[N, V], RecognizeTable[N, V]] =
-        new AsTable[RecognizeTable[N, V]]:
-            type R = RecognizeTable[N, V]
+    given recognize[N <: Tuple, V <: Tuple]: Aux[RecognizeTable[N, V, CanInFrom], RecognizeTable[N, V, CanNotInFrom]] =
+        new AsTable[RecognizeTable[N, V, CanInFrom]]:
+            type R = RecognizeTable[N, V, CanNotInFrom]
 
-            def table(x: RecognizeTable[N, V])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: RecognizeTable[N, V, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given graphTable[N <: Tuple, V <: Tuple]: Aux[GraphTable[N, V], GraphTable[N, V]] =
-        new AsTable[GraphTable[N, V]]:
-            type R = GraphTable[N, V]
+    given graph[N <: Tuple, V <: Tuple]: Aux[GraphTable[N, V, CanInFrom], GraphTable[N, V, CanNotInFrom]] =
+        new AsTable[GraphTable[N, V, CanInFrom]]:
+            type R = GraphTable[N, V, CanNotInFrom]
 
-            def table(x: GraphTable[N, V])(using QueryContext): (R, SqlTable) =
-                (x, x.__sqlTable__)
+            def table(x: GraphTable[N, V, CanInFrom])(using QueryContext): (R, SqlTable) =
+                (x.copy(), x.__sqlTable__)
 
-    given recursiveTable[N <: Tuple, V <: Tuple]: Aux[RecursiveTable[N, V], RecursiveTable[N, V]] =
+    given recursive[N <: Tuple, V <: Tuple]: Aux[RecursiveTable[N, V], RecursiveTable[N, V]] =
         new AsTable[RecursiveTable[N, V]]:
             type R = RecursiveTable[N, V]
 
             def table(x: RecursiveTable[N, V])(using QueryContext): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
-    inline given values[T <: Product, S <: Seq[T]](using 
+    inline given values[T <: Product, S <: Seq[T]](using
         p: Mirror.ProductOf[T]
-    ): Aux[S, Table[T]] =
+    ): Aux[S, Table[T, Column, CanNotInFrom]] =
         val metaData = TableMacro.tableMetaData[T]
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         createValues[T, S](metaData, instances)
@@ -114,19 +123,19 @@ object AsTable:
     private[sqala] def createValues[T <: Product, S <: Seq[T]](
         metaData: TableMetaData,
         instances: List[AsSqlExpr[?]]
-    ): Aux[S, Table[T]] =
+    ): Aux[S, Table[T, Column, CanNotInFrom]] =
         new AsTable[S]:
-            type R = Table[T]
+            type R = Table[T, Column, CanNotInFrom]
 
             def table(x: S)(using c: QueryContext): (R, SqlTable) =
                 val alias = c.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
-                val table = Table[T](
+                val table = Table[T, Column, CanNotInFrom](
                     Some(alias),
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
-                        None, 
+                        None,
                         Some(tableAlias),
                         None,
                         None

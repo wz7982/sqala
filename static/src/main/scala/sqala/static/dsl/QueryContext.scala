@@ -17,4 +17,4 @@ class PivotContext
 
 class MatchRecognizeContext
 
-class JsonTableColumnContext
+class JsonContext

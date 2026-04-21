@@ -1,7 +1,7 @@
 package sqala.static.dsl.table
 
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.dsl.Index
+import sqala.static.dsl.{Index, ToTuple}
 import sqala.static.metadata.tableCte
 
 import scala.NamedTuple.NamedTuple
@@ -11,7 +11,7 @@ case class RecursiveTable[N <: Tuple, V <: Tuple](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
-) extends Selectable:
+) extends Selectable with AnyTable:
     type Fields = NamedTuple[N, V]
 
     inline def selectDynamic(name: String): Any =
@@ -19,12 +19,13 @@ case class RecursiveTable[N <: Tuple, V <: Tuple](
         __items__.toList(index)
 
 object RecursiveTable:
-    def apply[N <: Tuple, V <: Tuple](alias: Option[String])(using 
-        p: AsTableParam[V]
-    ): RecursiveTable[N, V] =
+    def apply[N <: Tuple, V <: Tuple](alias: Option[String])(using
+        p: AsTableParam[V],
+        t: ToTuple[p.R]
+    ): RecursiveTable[N, t.R] =
         new RecursiveTable(
-            alias, 
-            p.asTableParam(alias, 1),
+            alias,
+            t.toTuple(p.asTableParam(alias, 1)),
             SqlTable.Ident(
                 tableCte,
                 None,
