@@ -1,66 +1,32 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator, SqlWindow}
-import sqala.static.dsl.statement.dml.{UpdatePair, UpdateSetContext}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
 
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
-case class Expr[T](private val expr: SqlExpr):
+case class Expr[T, K <: ExprKind](private val expr: SqlExpr):
     @targetName("eq")
     def ==[R](that: R)(using
         a: AsRightOperand[R],
         r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
+        o: KindOperation[K, a.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Equal, a.asExpr(that).asSqlExpr))
 
     @targetName("ne")
     def !=[R](that: R)(using
         a: AsRightOperand[R],
         r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
+        o: KindOperation[K, a.K],
         qc: QueryContext
-    ): Expr[r.R] =
+    ): Expr[r.R, o.R] =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
 
-    def over(): Expr[T] =
-        Expr(
-            SqlExpr.Window(
-                asSqlExpr,
-                SqlWindow(
-                    Nil,
-                    Nil,
-                    None
-                )
-            )
-        )
-
-    def over(over: OverContext ?=> Over)(using QueryContext): Expr[T] =
-        given OverContext = new OverContext
-        val o = over
-        Expr(
-            SqlExpr.Window(
-                asSqlExpr,
-                SqlWindow(
-                    o.partitionBy.map(_.asSqlExpr),
-                    o.sortBy.map(_.asSqlOrderBy),
-                    o.frame
-                )
-            )
-        )
-
-    @targetName("to")
-    def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R],
-        UpdateSetContext
-    ): UpdatePair = this match
-        case Expr(SqlExpr.Column(_, columnName)) =>
-            UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
-        case _ => throw MatchError("The left-hand side of a set operation must be a simple field.")
-
-    def asSqlExpr: SqlExpr =
+    private[sqala] def asSqlExpr: SqlExpr =
         import SqlExpr.*
-        
+
         expr match
             case Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(Nil)) =>
                 BooleanLiteral(false)

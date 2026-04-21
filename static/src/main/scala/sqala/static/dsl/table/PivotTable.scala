@@ -23,11 +23,11 @@ case class PivotTable[N <: Tuple, V <: Tuple](
 
     def groupBy[GN <: Tuple, GV <: Tuple](grouping: NamedTuple[GN, GV])(using
         g: AsGroup[GV],
-        c: QueryContext, 
+        c: QueryContext,
         pc: PivotContext
     ): PivotGroupBy[N, V, GN, GV] =
-        val group = g.exprs(grouping.toTuple).map(_.asSqlExpr)
-        val newQuery = 
+        val group = g.asExprs(grouping.toTuple).map(_.asSqlExpr)
+        val newQuery =
             __sqlQuery__.copy(
                 groupBy = Some(
                     SqlGroupBy(None, group.map(g => SqlGroupingItem.Expr(g)))
@@ -41,7 +41,7 @@ case class PivotTable[N <: Tuple, V <: Tuple](
         c: QueryContext,
         pc: PivotContext
     ): PivotAgg[N, V, EmptyTuple, EmptyTuple, AN, tt.R] =
-        val aggItems = m.selectItems(aggregations.toTuple, 1).map(_.expr)
+        val aggItems = m.asSelectItems(aggregations.toTuple, 1).map(_.expr)
         PivotAgg[N, V, EmptyTuple, EmptyTuple, AN, tt.R](__items__, Nil, aggItems, __sqlQuery__)
 
 case class PivotGroupBy[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple](
@@ -61,7 +61,7 @@ case class PivotGroupBy[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple](
         c: QueryContext,
         pc: PivotContext
     ): PivotAgg[N, V, GN, GV, AN, tt.R] =
-        val aggItems = m.selectItems(aggregations.toTuple, 1).map(_.expr)
+        val aggItems = m.asSelectItems(aggregations.toTuple, 1).map(_.expr)
         PivotAgg[N, V, GN, GV, AN, tt.R](__items__, __group__, aggItems, __sqlQuery__)
 
 case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple](
@@ -83,21 +83,22 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
             case f: SqlExpr.ListAggFunc => f.copy(filter = Some(filter))
             case f: SqlExpr.JsonObjectAggFunc => f.copy(filter = Some(filter))
             case f: SqlExpr.JsonArrayAggFunc => f.copy(filter = Some(filter))
-            case _ => throw MatchError("AGG clause only supports aggregate function expressions.")
+            case _ => throw MatchError(expr)
 
     def `for`[WS <: Tuple](items: WS)(using
         f: PivotFor[WS, GN, GV, AN, AV],
         m: AsMap[f.V],
-        tt: ToTuple[m.R],
-        a: AsTableParam[tt.R],
+        t: ToTuple[m.R],
+        a: AsTableParam[t.R],
+        tt: ToTuple[a.R],
         c: QueryContext,
         pc: PivotContext
-    ): SubQueryTable[f.N, tt.R] =
+    ): SubQueryTable[f.N, tt.R, CanInFrom] =
         def combineAll(withinList: List[List[SqlExpr]]): List[SqlExpr] = withinList match
             case Nil => Nil
             case head :: Nil => head
             case head :: tail =>
-                for 
+                for
                     x <- head
                     y <- combineAll(tail)
                 yield
@@ -105,7 +106,7 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
 
         val withinList = items.toList.map(_.asInstanceOf[PivotWithin[?]])
         val conditions = combineAll:
-            withinList.map: i => 
+            withinList.map: i =>
                 i.conditions.map(c => SqlExpr.Binary(i.expr, SqlBinaryOperator.Equal, c))
         val selectAggregations =
             for
@@ -125,11 +126,12 @@ case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <: Tupl
     def `for`[WN <: Tuple](item: PivotWithin[WN])(using
         f: PivotFor[PivotWithin[WN], GN, GV, AN, AV],
         m: AsMap[f.V],
-        tt: ToTuple[m.R],
-        a: AsTableParam[tt.R],
-        c: QueryContext, 
+        t: ToTuple[m.R],
+        a: AsTableParam[t.R],
+        tt: ToTuple[a.R],
+        c: QueryContext,
         pc: PivotContext
-    ): SubQueryTable[f.N, tt.R] =
+    ): SubQueryTable[f.N, tt.R, CanInFrom] =
         val conditions = item.conditions.map(c => SqlExpr.Binary(item.expr, SqlBinaryOperator.Equal, c))
         val selectAggregations =
             for
@@ -152,7 +154,7 @@ trait PivotFor[T, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple]:
     type V <: Tuple
 
 object PivotFor:
-    type Aux[T, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple, PN <: Tuple, PV <: Tuple] = 
+    type Aux[T, GN <: Tuple, GV <: Tuple, AN <: Tuple, AV <: Tuple, PN <: Tuple, PV <: Tuple] =
         PivotFor[T, GN, GV, AN, AV]:
             type N = PN
 

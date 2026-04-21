@@ -4,64 +4,77 @@ import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.statement.query.Query
 import sqala.static.metadata.AsSqlExpr
 
-import scala.annotation.implicitNotFound
-
-@implicitNotFound("Type ${T} cannot be converted to SQL expressions.")
 trait AsExpr[T]:
     type R
 
-    def exprs(x: T): List[Expr[?]]
+    type K <: ExprKind
 
-    def asExpr(x: T): Expr[R] =
-        val exprList = exprs(x)
+    def asExprs(x: T): List[Expr[?, ?]]
+
+    def asExpr(x: T): Expr[R, K] =
+        val exprList = asExprs(x)
         if exprList.size == 1 then
             Expr(exprList.head.asSqlExpr)
         else
             Expr(SqlExpr.Tuple(exprList.map(_.asSqlExpr)))
 
 object AsExpr:
-    type Aux[T, O] = AsExpr[T]:
+    type Aux[T, O, OK] = AsExpr[T]:
         type R = O
 
-    given value[T: AsSqlExpr as a]: Aux[T, T] =
+        type K = OK
+
+    given value[T: AsSqlExpr as a]: Aux[T, T, Value] =
         new AsExpr[T]:
             type R = T
 
-            def exprs(x: T): List[Expr[?]] =
+            type K = Value
+
+            def asExprs(x: T): List[Expr[?, ?]] =
                 Expr(a.asSqlExpr(x)) :: Nil
 
-    given expr[T: AsSqlExpr]: Aux[Expr[T], T] =
-        new AsExpr[Expr[T]]:
+    given expr[T: AsSqlExpr, EK <: ExprKind]: Aux[Expr[T, EK], T, EK] =
+        new AsExpr[Expr[T, EK]]:
             type R = T
 
-            def exprs(x: Expr[T]): List[Expr[?]] =
+            type K = EK
+
+            def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
                 x :: Nil
 
-    given query[T, Q <: Query[T]](using a: AsExpr[T]): Aux[Q, a.R] =
+    given query[T, Q <: Query[T, OneRow]](using a: AsExpr[T]): Aux[Q, a.R, Value] =
         new AsExpr[Q]:
             type R = a.R
 
-            def exprs(x: Q): List[Expr[?]] =
+            type K = Value
+
+            def asExprs(x: Q): List[Expr[?, ?]] =
                 Expr(SqlExpr.SubQuery(x.tree)) :: Nil
 
     given tuple[H, T <: Tuple](using
         h: AsExpr[H],
         t: AsExpr[T],
         tt: ToTuple[t.R],
-        a: AsSqlExpr[h.R]
-    ): Aux[H *: T, h.R *: tt.R] =
+        a: AsSqlExpr[h.R],
+        o: KindOperation[h.K, t.K]
+    ): Aux[H *: T, h.R *: tt.R, o.R] =
         new AsExpr[H *: T]:
             type R = h.R *: tt.R
 
-            def exprs(x: H *: T): List[Expr[?]] =
-                h.asExpr(x.head) :: t.exprs(x.tail)
+            type K = o.R
 
-    given tuple1[H](using 
+            def asExprs(x: H *: T): List[Expr[?, ?]] =
+                h.asExpr(x.head) :: t.asExprs(x.tail)
+
+    given tuple1[H](using
         h: AsExpr[H],
-        a: AsSqlExpr[h.R]
-    ): Aux[H *: EmptyTuple, h.R] =
+        a: AsSqlExpr[h.R],
+        o: KindOperation[h.K, Value]
+    ): Aux[H *: EmptyTuple, h.R, o.R] =
         new AsExpr[H *: EmptyTuple]:
             type R = h.R
 
-            def exprs(x: H *: EmptyTuple): List[Expr[?]] =
+            type K = o.R
+
+            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
                 h.asExpr(x.head) :: Nil

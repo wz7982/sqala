@@ -2,16 +2,17 @@ package sqala.static.dsl.statement.dml
 
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.dsl.table.Table
-import sqala.static.dsl.{AsExpr, QueryContext}
+import sqala.static.dsl.table.{CanInFrom, Table}
+import sqala.static.dsl.{AsExpr, CanInFilter, Column, QueryContext}
 import sqala.static.metadata.{SqlBoolean, TableMacro}
 
 class Delete[T](
-    private[sqala] val table: Table[T],
+    private[sqala] val table: Table[T, Column, CanInFrom],
     val tree: SqlStatement.Delete
 ):
-    def where[F: AsExpr as a](f: QueryContext ?=> Table[T] => F)(using 
-        SqlBoolean[a.R]
+    def where[F: AsExpr as a](f: QueryContext ?=> Table[T, Column, CanInFrom] => F)(using
+        SqlBoolean[a.R],
+        CanInFilter[a.K]
     ): Delete[T] =
         given QueryContext = QueryContext(0)
         val condition = a.asExpr(f(table)).asSqlExpr
@@ -28,6 +29,6 @@ object Delete:
             None,
             None
         )
-        val table = Table[T](Some(alias), metaData, sqlTable)
+        val table = Table[T, Column, CanInFrom](Some(alias), metaData, sqlTable)
         val tree: SqlStatement.Delete = SqlStatement.Delete(sqlTable, None)
         new Delete(table, tree)

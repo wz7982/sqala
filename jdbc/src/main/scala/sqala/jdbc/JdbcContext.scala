@@ -5,16 +5,17 @@ import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
-import sqala.static.metadata.{FetchPk, InsertMacro}
+import sqala.static.metadata.{FetchPrimaryKey, InsertMacro}
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
 import scala.language.dynamics
+import sqala.static.dsl.QuerySize
 
-class JdbcContext[Url <: String, Username <: String, Password <: String, Driver <: String](
-    val dataSource: DataSource, 
+class JdbcContext(
+    val dataSource: DataSource,
     val dialect: Dialect,
     val standardEscapeStrings: Boolean
 ) extends Dynamic:
@@ -93,8 +94,8 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         val sql = statementToString(s.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    inline def fetchByPrimaryKeys[T](using 
-        fp: FetchPk[T], 
+    inline def fetchByPrimaryKeys[T](using
+        fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
     )(pks: Seq[fp.Args]): List[T] =
@@ -103,8 +104,8 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
-    inline def findByPrimaryKey[T](using 
-        fp: FetchPk[T], 
+    inline def findByPrimaryKey[T](using
+        fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
     )(pk: fp.Args): Option[T] =
@@ -113,7 +114,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
 
-    inline def fetchTo[T](inline query: Query[?])(using 
+    inline def fetchTo[T](inline query: Query[?, ?])(using
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -121,14 +122,14 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
-    inline def fetch[T](inline query: Query[T])(using 
-        r: Result[T], 
+    inline def fetch[T, S <: QuerySize](inline query: Query[T, S])(using
+        r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
     ): List[r.R] =
         fetchTo[r.R](query)
 
-    def fetchTo[T](nativeSql: NativeSql)(using 
+    def fetchTo[T](nativeSql: NativeSql)(using
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -136,21 +137,12 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    transparent inline def fetch(inline nativeSql: NativeSql)(using l: Logger): Any =
-        val exec = (c: Connection) => (n: NativeSql) =>
-            val NativeSql(sql, args) = n
-            l(sql, args)
-            val result = jdbcQueryToMap(c, sql, args)
-            c.close()
-            result
-        GenerateRecord.run[Url, Username, Password, Driver](dataSource.getConnection, exec, nativeSql)
-
     def fetchToMap(nativeSql: NativeSql)(using l: Logger): List[Map[String, Any]] =
         val NativeSql(sql, args) = nativeSql
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
-    def fetchTo[T](nativeSql: (String, Array[Any]))(using 
+    def fetchTo[T](nativeSql: (String, Array[Any]))(using
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -163,7 +155,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
-    def fetchTo[T](query: DynamicQuery)(using 
+    def fetchTo[T](query: DynamicQuery)(using
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -176,9 +168,9 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l(sql, Array.empty[Any])
         execute(c => jdbcQueryToMap(c, sql, Array.empty[Any]))
 
-    inline def pageTo[T]( 
-        inline query: Query[?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
-    )(using 
+    inline def pageTo[T](
+        inline query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    )(using
         JdbcDecoder[T],
         Logger
     ): Page[T] =
@@ -190,33 +182,33 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
             else (count / pageSize + 1).toInt
         Page(total, count, pageSize, pageNo, data)
 
-    inline def page[T](
-        inline query: Query[T], pageSize: Int, pageNo: Int, returnCount: Boolean = true
-    )(using 
-        r: Result[T], 
+    inline def page[T, S <: QuerySize](
+        inline query: Query[T, S], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    )(using
+        r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
     ): Page[r.R] =
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-    inline def findTo[T](inline query: Query[?])(using 
+    inline def findTo[T](inline query: Query[?, ?])(using
         d: JdbcDecoder[T],
         l: Logger
     ): Option[T] =
         fetchTo[T](query.take(1)).headOption
 
-    inline def find[T](inline query: Query[T])(using 
-        r: Result[T], 
+    inline def find[T, S <: QuerySize](inline query: Query[T, S])(using
+        r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
     ): Option[r.R] =
         findTo[r.R](query)
 
-    inline def fetchCount[T](inline query: Query[T])(using Logger): Long =
+    inline def fetchCount[T, S <: QuerySize](inline query: Query[T, S])(using Logger): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    inline def fetchExists(inline query: Query[?])(using Logger): Boolean =
+    inline def fetchExists(inline query: Query[?, ?])(using Logger): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
@@ -226,9 +218,9 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         l: Logger
     )(args: r.Args): r.R =
         r.createQuery(
-            dialect, 
-            standardEscapeStrings, 
-            args, 
+            dialect,
+            standardEscapeStrings,
+            args,
             q => fetchTo[T](q),
             q => findTo[T](q),
             (q, ps, pn, rc) => pageTo[T](q, ps, pn, rc),
@@ -236,11 +228,11 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
             q => fetchExists(q)
         )
 
-    def showSql[T](query: Query[T]): String =
+    def showSql[T, S <: QuerySize](query: Query[T, S]): String =
         queryToString(query.tree, dialect, standardEscapeStrings)
 
-    inline def cursorFetch[T, R](
-        inline query: Query[T],
+    inline def cursorFetch[T, R, S <: QuerySize](
+        inline query: Query[T, S],
         fetchSize: Int
     )(using
         r: Result[T],
@@ -259,7 +251,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         val conn = dataSource.getConnection()
         conn.setAutoCommit(false)
         try
-            given JdbcTransactionContext = 
+            given JdbcTransactionContext =
                 new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
             val result = block
             conn.commit()
@@ -278,7 +270,7 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         conn.setAutoCommit(false)
         conn.setTransactionIsolation(isolation.jdbcIsolation)
         try
-            given JdbcTransactionContext = 
+            given JdbcTransactionContext =
                 new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
             val result = block
             conn.commit()
@@ -289,14 +281,3 @@ class JdbcContext[Url <: String, Username <: String, Password <: String, Driver 
         finally
             conn.setAutoCommit(true)
             conn.close()
-
-object JdbcContext:
-    inline def apply[S <: DataSource](
-        dialect: Dialect,
-        standardEscapeStrings: Boolean,
-        url: String, 
-        username: String, 
-        password: String, 
-        driverClassName: String
-    )(using c: JdbcConnection[S]): JdbcContext[url.type, username.type, password.type, driverClassName.type] =
-        new JdbcContext(c.init(url, username, password, driverClassName), dialect, standardEscapeStrings)

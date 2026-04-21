@@ -20,13 +20,13 @@ trait Repository[T, N <: String]:
     def createQuery(
         dialect: Dialect,
         standardEscapeStrings: Boolean,
-        args: Args, 
-        fetch: Query[?] => List[T],
-        find: Query[?] => Option[T],
-        page: (Query[?], Int, Int, Boolean) => Page[T],
-        count: Query[?] => Long,
-        exists: Query[?] => Boolean
-    )(using 
+        args: Args,
+        fetch: Query[?, ?] => List[T],
+        find: Query[?, ?] => Option[T],
+        page: (Query[?, ?], Int, Int, Boolean) => Page[T],
+        count: Query[?, ?] => Long,
+        exists: Query[?, ?] => Boolean
+    )(using
         JdbcDecoder[T],
         Logger
     ): R
@@ -48,7 +48,7 @@ object Repository:
 
         def recordIdent: Option[Token] =
             if context.ident.nonEmpty then
-                val token = 
+                val token =
                     Some(Column(context.ident.charAt(0).toLower + context.ident.substring(1)))
                 context.ident = ""
                 token
@@ -118,7 +118,7 @@ object Repository:
             case x :: xs =>
                 context.ident += x
                 lex(xs, context)
-            case Nil => 
+            case Nil =>
                 recordIdent.toList ++ Nil
 
     transparent inline given derived[T, N <: String]: Aux[T, N, ?, ?] =
@@ -157,7 +157,7 @@ object Repository:
         def split(list: List[Token], target: Token): List[List[Token]] =
             def splitRec(remaining: List[Token], current: List[Token], acc: List[List[Token]]): List[List[Token]] =
                 remaining match
-                    case Nil => 
+                    case Nil =>
                         if (current.nonEmpty) (current :: acc).reverse else acc.reverse
                     case x :: xs if x == target =>
                         splitRec(xs, Nil, current :: acc)
@@ -166,7 +166,7 @@ object Repository:
             splitRec(list, Nil, Nil)
 
         def createColumnInfo(fieldName: String): (String, Expr[AsSqlExpr[?]], TypeRef) =
-            val elementType = 
+            val elementType =
                 eles.find(_.name == fieldName).get.termRef.typeSymbol.typeRef.asType
             val elementTypeRef =
                 eles.find(_.name == fieldName).get.termRef.typeSymbol.typeRef
@@ -199,13 +199,13 @@ object Repository:
                 case _ =>
                     report.errorAndAbort("Unsupported operation.")
 
-        val types = 
+        val types =
             if !mode.startsWith("page") then conditions.flatMap(_._4)
             else conditions.flatMap(_._4) ++ List(TypeRepr.of[Int], TypeRepr.of[Int], TypeRepr.of[Boolean])
 
         val instances =
             conditions.flatMap(_._3)
-        
+
         def typesToTupleType(list: List[TypeRepr]): TypeRepr =
             list match
                 case x :: xs =>
@@ -218,7 +218,7 @@ object Repository:
                 case Nil =>
                     TypeRepr.of[EmptyTuple]
 
-        val argsType = 
+        val argsType =
             if types.size == 1 then types.head.asType
             else
                 typesToTupleType(types).asType
@@ -252,13 +252,13 @@ object Repository:
                                 def createQuery(
                                     dialect: Dialect,
                                     standardEscapeStrings: Boolean,
-                                    args: Args, 
-                                    fetch: Query[?] => List[T],
-                                    find: Query[?] => Option[T],
-                                    page: (Query[?], Int, Int, Boolean) => Page[T],
-                                    count: Query[?] => Long,
-                                    exists: Query[?] => Boolean
-                                )(using 
+                                    args: Args,
+                                    fetch: Query[?, ?] => List[T],
+                                    find: Query[?, ?] => Option[T],
+                                    page: (Query[?, ?], Int, Int, Boolean) => Page[T],
+                                    count: Query[?, ?] => Long,
+                                    exists: Query[?, ?] => Boolean
+                                )(using
                                     d: JdbcDecoder[T],
                                     l: Logger
                                 ): R =
@@ -345,7 +345,7 @@ object Repository:
                                         s match
                                             case "asc" => SqlOrderingItem(SqlExpr.Column(None, n), Some(SqlOrdering.Asc), None)
                                             case "desc" => SqlOrderingItem(SqlExpr.Column(None, n), Some(SqlOrdering.Desc), None)
-                                    val baseTree = 
+                                    val baseTree =
                                         SqlQuery.Select(
                                             if $distinctExpr then Some(SqlQuantifier.Distinct) else None,
                                             $columnExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
@@ -363,7 +363,7 @@ object Repository:
                                         find(query)
                                     else if $modeExpr.startsWith("page") then
                                         page(
-                                            query, 
+                                            query,
                                             valueIterator.next().asInstanceOf[Int],
                                             valueIterator.next().asInstanceOf[Int],
                                             valueIterator.next().asInstanceOf[Boolean]

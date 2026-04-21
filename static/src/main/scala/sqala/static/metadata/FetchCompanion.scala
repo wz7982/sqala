@@ -11,13 +11,14 @@ object FetchCompanion:
     type Aux[T, O] = FetchCompanion[T]:
         type R = O
 
-    transparent inline given derived[T]: Aux[T, ?] = 
+    transparent inline given derived[T]: Aux[T, ?] =
         ${ derivedImpl[T] }
 
     def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
         import q.reflect.*
 
         val typeSymbol = TypeTree.of[T].symbol
+        if !typeSymbol.flags.is(Flags.Module) then report.error(s"Object ${typeSymbol.name} is not a companion object.")
         val tpe = typeSymbol.companionClass.typeRef.asType
 
         tpe match

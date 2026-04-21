@@ -6,13 +6,13 @@ import sqala.ast.table.SqlTable
 
 import scala.quoted.{Expr, Quotes, Type}
 
-trait FetchPk[T]:
+trait FetchPrimaryKey[T]:
     type Args
 
     def createTree(x: Seq[Args]): SqlQuery
 
-object FetchPk:
-    type Aux[T, A] = FetchPk[T]:
+object FetchPrimaryKey:
+    type Aux[T, A] = FetchPrimaryKey[T]:
         type Args = A
 
     transparent inline given derived[T]: Aux[T, ?] =
@@ -53,11 +53,11 @@ object FetchPk:
                 case Nil =>
                     TypeRepr.of[EmptyTuple]
 
-        val tpe = 
+        val tpe =
             if types.size == 1 then types.head.asType
             else
                 typesToTupleType(types).asType
-                
+
         val pkColumNamesExpr = Expr.ofList(pkColumnNames.map(Expr(_)))
         val instancesExpr = Expr.ofList(instances)
         val tableNameExpr = Expr(metaData.tableName)
@@ -66,7 +66,7 @@ object FetchPk:
         tpe match
             case '[t] =>
                 '{
-                    val pk = new FetchPk[T]:
+                    val pk = new FetchPrimaryKey[T]:
                         type Args = t
 
                         def createTree(x: Seq[Args]): SqlQuery =
@@ -80,11 +80,11 @@ object FetchPk:
                                 val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
                                     SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
                                 sqlConditions
-                                    .reduce: (x, y) => 
+                                    .reduce: (x, y) =>
                                         SqlExpr.Binary(x, SqlBinaryOperator.And, y)
-                            val sqlCondition = 
+                            val sqlCondition =
                                 if sqlConditions.isEmpty then SqlExpr.BooleanLiteral(false)
-                                else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y)) 
+                                else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y))
                             val table = SqlTable.Ident($tableNameExpr, None, None, None, None)
                             SqlQuery.Select(
                                 None,

@@ -1,15 +1,13 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlExpr, SqlBinaryOperator}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.static.metadata.*
 
 import java.time.OffsetDateTime
 import scala.NamedTuple.NamedTuple
-import scala.annotation.implicitNotFound
 import scala.compiletime.ops.boolean.||
 import scala.util.NotGiven
 
-@implicitNotFound("Types ${A} and ${B} be cannot compared.")
 trait Compare[A, B]
 
 object Compare:
@@ -50,7 +48,6 @@ object Compare:
         c: Compare[Unwrap[al.R, Option], Unwrap[ar.R, Option]]
     ): Compare[LH *: EmptyTuple, RH *: EmptyTuple]()
 
-@implicitNotFound("Types ${A} and ${B} cannot be add.")
 trait Plus[A, B, Nullable <: Boolean]:
     type R
 
@@ -81,7 +78,6 @@ object Plus:
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
 
-@implicitNotFound("Types ${A} and ${B} cannot be subtract.")
 trait Minus[A, B, Nullable <: Boolean]:
     type R
 
@@ -105,7 +101,6 @@ object Minus:
         new Minus[A, B, N]:
             type R = WrapIf[OffsetDateTime, N, Option]
 
-@implicitNotFound("Types ${A} and ${B} be cannot compared.")
 trait Relation[A, B, N <: Boolean]:
     type R
 
@@ -117,7 +112,6 @@ object Relation:
         new Relation[A, B, N]:
             type R = WrapIf[Boolean, N, Option]
 
-@implicitNotFound("Types ${A} and ${B} cannot be returned as results.")
 trait Return[A, B, Nullable <: Boolean]:
     type R
 
@@ -195,19 +189,18 @@ object Return:
         new Return[A, B, true]:
             type R = TimeResult[A, B, true]
 
-    given arrayResult[A, B](using 
+    given arrayResult[A, B](using
         r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
     ): Aux[Array[A], Array[B], false, Array[r.R]] =
         new Return[Array[A], Array[B], false]:
             type R = Array[r.R]
 
-    given arrayOptionResult[A, B](using 
+    given arrayOptionResult[A, B](using
         r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
     ): Aux[Array[A], Array[B], true, Option[Array[r.R]]] =
         new Return[Array[A], Array[B], true]:
             type R = Option[Array[r.R]]
 
-@implicitNotFound("Types ${A} and ${B} cannot be UNION.")
 trait Union[A, B]:
     type R
 
@@ -218,16 +211,16 @@ trait Union[A, B]:
 object Union:
     type Aux[A, B, O] = Union[A, B]:
         type R = O
- 
-    given union[A, B](using
+
+    given union[A, AK <: ExprKind, B, BK <: ExprKind](using
         r: Return[Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]]
-    ): Aux[Expr[A], Expr[B], Expr[r.R]] =
-        new Union[Expr[A], Expr[B]]:
-            type R = Expr[r.R]
+    ): Aux[Expr[A, AK], Expr[B, BK], Expr[r.R, Column]] =
+        new Union[Expr[A, AK], Expr[B, BK]]:
+            type R = Expr[r.R, Column]
 
             def offset: Int = 1
 
-            def unionQueryItems(x: Expr[A], cursor: Int): R =
+            def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
                 Expr(SqlExpr.Column(None, s"c$cursor"))
 
     given tupleUnion[LH, LT <: Tuple, RH, RT <: Tuple](using
@@ -241,7 +234,7 @@ object Union:
             def offset: Int = h.offset + t.offset
 
             def unionQueryItems(x: LH *: LT, cursor: Int): R =
-                h.unionQueryItems(x.head, cursor) *: 
+                h.unionQueryItems(x.head, cursor) *:
                     tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset))
 
     given tuple1Union[LH, RH](using
