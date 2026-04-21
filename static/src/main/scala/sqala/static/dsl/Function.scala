@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.static.metadata.*
 
-import java.time.{LocalDate, LocalTime, OffsetDateTime, OffsetTime}
+import java.time.*
 import scala.compiletime.ops.boolean.||
 
 def count()(using QueryContext): Expr[Long, Agg] =
@@ -1583,7 +1583,7 @@ def localTime()(using QueryContext): Expr[LocalTime, Value] =
         SqlExpr.IdentFunc("LOCALTIME")
     )
 
-def localTimestamp()(using QueryContext): Expr[OffsetDateTime, Value] =
+def localTimestamp()(using QueryContext): Expr[LocalDateTime, Value] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIMESTAMP")
     )
