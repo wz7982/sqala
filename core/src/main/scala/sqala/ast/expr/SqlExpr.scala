@@ -18,7 +18,7 @@ enum SqlExpr:
     case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
     case NullTest(expr: SqlExpr, not: Boolean)
     case JsonTest(
-        expr: SqlExpr, 
+        expr: SqlExpr,
         nodeType: Option[SqlJsonNodeType],
         uniqueness: Option[SqlJsonUniqueness],
         not: Boolean
@@ -59,7 +59,7 @@ enum SqlExpr:
         onError: Option[SqlJsonQueryErrorBehavior]
     )
     case JsonValueFunc(
-        expr: SqlExpr, 
+        expr: SqlExpr,
         path: SqlExpr,
         passingItems: List[SqlJsonPassing],
         output: Option[SqlJsonOutput],
@@ -78,7 +78,7 @@ enum SqlExpr:
         output: Option[SqlJsonOutput]
     )
     case JsonExistsFunc(
-        expr: SqlExpr, 
+        expr: SqlExpr,
         path: SqlExpr,
         passingItems: List[SqlJsonPassing],
         onError: Option[SqlJsonExistsErrorBehavior]
@@ -107,8 +107,8 @@ enum SqlExpr:
         filter: Option[SqlExpr]
     )
     case NullsTreatmentFunc(
-        name: String, 
-        args: List[SqlExpr], 
+        name: String,
+        args: List[SqlExpr],
         nullsMode: Option[SqlWindowNullsMode]
     )
     case NthValueFunc(
@@ -126,4 +126,4 @@ enum SqlExpr:
         filter: Option[SqlExpr]
     )
     case MatchPhase(phase: SqlMatchPhase, expr: SqlExpr)
-    case Custom(snippet: String)
+    case Custom(words: List[String], exprs: List[SqlExpr])
