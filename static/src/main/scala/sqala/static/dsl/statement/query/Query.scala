@@ -384,6 +384,19 @@ final class SelectQuery[T](
     ): MappedDistinctSelectQuery[t.R, c.R] =
         mapDistinct(f)
 
+    def mapQuantified[M: AsMap as m](q: T => RawQuantifier)(f: T => M)(using c: CanInMap[m.K]): MappedSelectQuery[m.R, T, OneRow] =
+        val quantifier = q(params).asSqlQuantifier
+        val mapped = f(params)
+        val sqlSelect = m.asSelectItems(mapped, 1)
+        MappedSelectQuery(
+            m.transform(mapped),
+            params,
+            tree.copy(quantifier = Some(quantifier), select = sqlSelect)
+        )(using context)
+
+    def selectQuantified[M: AsMap as m](q: T => RawQuantifier)(f: T => M)(using c: CanInMap[m.K]): MappedSelectQuery[m.R, T, OneRow] =
+        mapQuantified(q)(f)
+
     def groupBy[G: AsGroup as a](f: T => G)(using
         tu: TransformTableKind[T, Ungrouped],
         t: ToTuple[tu.R]
@@ -758,41 +771,3 @@ final case class ConnectBy[T](
         KindOperation[m.K, Column]
     ): Query[m.R, ManyRows] =
         map(f)
-
-    def mapDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T, Column, CanNotInFrom] => M)(using
-        KindOperation[m.K, Column]
-    ): Query[m.R, ManyRows] =
-        val mapped = f(
-            Table[T, Column, CanNotInFrom](
-                Some(tableCte),
-                table.__metaData__,
-                table.__sqlTable__.copy(
-                    alias = table.__sqlTable__.alias.map(_.copy(alias = tableCte))
-                )
-            )
-        )
-        val sqlSelect = m.asSelectItems(mapped, 1)
-        val metaData = table.__metaData__
-        val unionQuery = SqlQuery.Set(
-            startWithTree,
-            SqlSetOperator.Union(Some(SqlQuantifier.All)),
-            connectByTree,
-            Nil,
-            None,
-            None
-        )
-        val withItem = SqlWithItem(
-            tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
-        )
-        val cteTree: SqlQuery.Cte = SqlQuery.Cte(
-            true,
-            withItem :: Nil,
-            mapTree.copy(select = sqlSelect),
-            None
-        )
-        Query(m.transform(mapped), cteTree)(using context)
-
-    def selectDistinct[M: AsMap as m](f: ConnectByContext ?=> Table[T, Column, CanNotInFrom] => M)(using
-        KindOperation[m.K, Column]
-    ): Query[m.R, ManyRows] =
-        mapDistinct(f)

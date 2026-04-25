@@ -21,6 +21,66 @@ def query[T](q: QueryContext ?=> T): T =
     given QueryContext = QueryContext(0)
     q
 
+def from[T](tables: T)(using
+    f: AsTable[T],
+    s: AsSelect[f.R],
+    c: QueryContext
+): SelectQuery[f.R] =
+    val (params, fromTable) = f.table(tables)
+    val selectItems = s.asSelectItems(params, 1)
+    val tree: SqlQuery.Select = SqlQuery.Select(
+        None,
+        selectItems,
+        fromTable :: Nil,
+        None,
+        None,
+        None,
+        Nil,
+        None,
+        None
+    )
+    SelectQuery(params, tree)
+
+def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tuple, US <: QuerySize, R, RS <: QuerySize](
+    baseQuery: Query[NamedTuple[N, V], S]
+)(using
+    p: AsTableParam[V],
+    tp: ToTuple[p.R]
+)(
+    f: RecursiveTable[N, tp.R] => Query[NamedTuple[UN, UV], US]
+)(using
+    u: Union[V, UV],
+    tu: ToTuple[u.R],
+    up: AsTableParam[tu.R],
+    t: ToTuple[up.R]
+)(
+    g: RecursiveTable[N, t.R] => Query[R, RS]
+)(using
+    m: AsMap[V],
+    c: QueryContext
+): Query[R, ManyRows] =
+    val alias = c.fetchAlias
+    val withTable = RecursiveTable[N, V](Some(alias))
+    val unionQuery = f(withTable)
+    val finalTable = RecursiveTable[N, tu.R](Some(tableCte))
+    val finalQuery = g(finalTable)
+    val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
+    val withTree = SqlQuery.Set(
+        baseQuery.tree,
+        SqlSetOperator.Union(Some(SqlQuantifier.All)),
+        unionQuery.tree,
+        Nil,
+        None,
+        None
+    )
+    val tree = SqlQuery.Cte(
+        true,
+        SqlWithItem(tableCte, withTree, columns) :: Nil,
+        finalQuery.tree,
+        None
+    )
+    Query(finalQuery.params, tree)
+
 inline def insert[T <: Product]: Insert[T, InsertTable] =
     Insert.apply[T]
 
@@ -112,20 +172,6 @@ extension [A](a: => A)(using c: QueryContext)
         val (rightTable, rightSqlTable) = tb.table(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
-
-def any[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
-    SubLink(SqlSubLinkQuantifier.Any, query.tree)
-
-def all[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
-    SubLink(SqlSubLinkQuantifier.All, query.tree)
-
-def exists[T, S <: QuerySize](query: Query[T, S])(using QueryContext): Expr[Boolean, Value] =
-    Expr(
-        SqlExpr.SubLink(
-            SqlSubLinkQuantifier.Exists,
-            query.tree
-        )
-    )
 
 case class Unnest[T](x: Option[T])
 
@@ -224,25 +270,158 @@ def nestedColumns[P: AsExpr as ap, N <: Tuple, V <: Tuple](
         case n: JsonTableNestedColumns[?, ?] => n
     JsonTableNestedColumns(ap.asExpr(path).asSqlExpr, jsonColumns)
 
-def from[T](tables: T)(using
-    f: AsTable[T],
-    s: AsSelect[f.R],
-    c: QueryContext
-): SelectQuery[f.R] =
-    val (params, fromTable) = f.table(tables)
-    val selectItems = s.asSelectItems(params, 1)
-    val tree: SqlQuery.Select = SqlQuery.Select(
-        None,
-        selectItems,
-        fromTable :: Nil,
-        None,
-        None,
-        None,
-        Nil,
-        None,
-        None
-    )
-    SelectQuery(params, tree)
+inline def vertex[T]: GraphVertex[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertex(None, metaData)
+
+inline def vertex[T](label: String): GraphVertex[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertex(None, metaData.copy(tableName = label))
+
+inline def edge[T]: GraphEdge[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdge(None, metaData, None, None)
+
+inline def edge[T](label: String): GraphEdge[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdge(None, metaData.copy(tableName = label), None, None)
+
+def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): Graph[N, V] =
+    Graph(name, labels.toTuple)
+
+extension (s: String)
+    infix def is[V](v: GraphVertex[V])(using
+        QueryContext,
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[GraphVertex[V]]] =
+        GraphPattern(
+            Tuple1(v),
+            SqlGraphPatternTerm.Vertex(
+                v.__alias__,
+                Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
+                None
+            ) :: Nil
+        )
+
+    infix def is[V](v: GraphEdge[V])(using
+        QueryContext,
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[GraphEdge[V]]] =
+        val pattern =
+            v.__quantifier__.map: q =>
+                SqlGraphPatternTerm.Quantified(
+                    SqlGraphPatternTerm.Edge(
+                        SqlGraphSymbol.Dash,
+                        v.__alias__,
+                        Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
+                        v.__where__,
+                        SqlGraphSymbol.Dash
+                    ),
+                    q
+                )
+            .getOrElse:
+                SqlGraphPatternTerm.Edge(
+                    SqlGraphSymbol.Dash,
+                    v.__alias__,
+                    Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
+                    v.__where__,
+                    SqlGraphSymbol.Dash
+                )
+        GraphPattern(Tuple1(v), pattern :: Nil)
+
+def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
+    graph: Graph[N, V]
+)(f: GraphContext ?=> Graph[N, V] => GraphTable[TN, TV, CanInFrom])(using
+    QueryContext
+): GraphTable[TN, TV, CanInFrom] =
+    given GraphContext = new GraphContext
+    f(graph)
+
+def ^(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+
+def $(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+
+def permute(terms: RecognizePatternTerm*)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
+
+def exclusion(term: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
+    new RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
+
+def `final`[T: AsExpr as a](x: T)(using
+    KindOperation[a.K, Agg],
+    QueryContext,
+    MatchRecognizeContext
+): Expr[a.R, a.K] =
+    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
+
+def running[T: AsExpr as a](x: T)(using
+    KindOperation[a.K, Agg],
+    QueryContext,
+    MatchRecognizeContext
+): Expr[a.R, a.K] =
+    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
+
+extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
+    def matchRecognize[N <: Tuple, V <: Tuple](
+        f: MatchRecognizeContext ?=> t.R => RecognizeTable[N, V, CanInFrom]
+    )(using
+        QueryContext
+    ): RecognizeTable[N, V, CanInFrom] =
+        given MatchRecognizeContext = new MatchRecognizeContext
+        val initialTable = r.asRecognizeTable(t.table(table)._1)
+        f(initialTable)
+
+extension [T](table: T)(using r: AsRecognizeTable[T])
+    def partitionBy[P: AsRecognizePartition as a](partitionValue: P)(using
+        QueryContext,
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPartitionBy(table, a.asExprs(partitionValue).map(_.asSqlExpr)))
+
+    def sortBy[S: AsColumnSort as a](sortValue: S)(using
+        QueryContext,
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
+        RecognizePredefine(r.setOrderBy(table, sort))
+
+    def orderBy[S: AsColumnSort as a](sortValue: S)(using
+        QueryContext,
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        sortBy(sortValue)
+
+    def oneRowPerMatch(using
+        QueryContext,
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.OneRow))
+
+    def allRowsPerMatch(using
+        QueryContext,
+        MatchRecognizeContext
+    ): RecognizePredefine[T] =
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
+
+extension [T](x: T)(using at: AsTable[T])
+    def pivot[N <: Tuple, V <: Tuple](using
+        ap: AsPivotTable[at.R],
+        qc: QueryContext
+    )(f: PivotContext ?=> ap.R => SubQueryTable[N, V, CanInFrom]): SubQueryTable[N, V, CanInFrom] =
+        given PivotContext = new PivotContext
+        f(ap.table(at.table(x)._1))
+
+extension [T: AsExpr as a](x: T)
+    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
+        av: AsExpr[V],
+        i: CanIn[T, V],
+        c: CanInAgg[i.K],
+        qc: QueryContext,
+        pc: PivotContext
+    ): PivotWithin[N] =
+        PivotWithin[N](a.asExpr(x).asSqlExpr, av.asExprs(items.toTuple).map(_.asSqlExpr))
 
 def grouping[T: AsSqlExpr](x: Expr[T, Grouped])(using QueryContext, GroupingContext): Expr[Int, Agg] =
     Expr(
@@ -444,17 +623,6 @@ extension [T, K <: ExprKind](expr: Expr[T, K])
             )
         )
 
-extension [T](expr: Expr[T, Column])
-    @targetName("to")
-    def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R],
-        UpdateSetContext
-    ): UpdatePair = expr match
-        case Expr(SqlExpr.Column(_, columnName)) =>
-            UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
-        case _ =>
-            throw MatchError(expr)
-
 def currentRow(using QueryContext): SqlWindowFrameBound =
     SqlWindowFrameBound.CurrentRow
 
@@ -492,91 +660,19 @@ def orderBy[T](sortValue: T)(using
 ): Over[a.K] =
     Over(sortBy = a.asSorts(sortValue))
 
-def ^(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+def any[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
+    SubLink(SqlSubLinkQuantifier.Any, query.tree)
 
-def $(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+def all[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
+    SubLink(SqlSubLinkQuantifier.All, query.tree)
 
-def permute(terms: RecognizePatternTerm*)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
-
-def exclusion(term: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
-
-def `final`[T: AsExpr as a](x: T)(using
-    KindOperation[a.K, Agg],
-    QueryContext,
-    MatchRecognizeContext
-): Expr[a.R, a.K] =
-    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
-
-def running[T: AsExpr as a](x: T)(using
-    KindOperation[a.K, Agg],
-    QueryContext,
-    MatchRecognizeContext
-): Expr[a.R, a.K] =
-    Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
-
-extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
-    def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> t.R => RecognizeTable[N, V, CanInFrom]
-    )(using
-        QueryContext
-    ): RecognizeTable[N, V, CanInFrom] =
-        given MatchRecognizeContext = new MatchRecognizeContext
-        val initialTable = r.asRecognizeTable(t.table(table)._1)
-        f(initialTable)
-
-extension [T](table: T)(using r: AsRecognizeTable[T])
-    def partitionBy[P: AsRecognizePartition as a](partitionValue: P)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPartitionBy(table, a.asExprs(partitionValue).map(_.asSqlExpr)))
-
-    def sortBy[S: AsColumnSort as a](sortValue: S)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
-        val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
-        RecognizePredefine(r.setOrderBy(table, sort))
-
-    def orderBy[S: AsColumnSort as a](sortValue: S)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
-        sortBy(sortValue)
-
-    def oneRowPerMatch(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.OneRow))
-
-    def allRowsPerMatch(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
-
-extension [T](x: T)(using at: AsTable[T])
-    def pivot[N <: Tuple, V <: Tuple](using
-        ap: AsPivotTable[at.R],
-        qc: QueryContext
-    )(f: PivotContext ?=> ap.R => SubQueryTable[N, V, CanInFrom]): SubQueryTable[N, V, CanInFrom] =
-        given PivotContext = new PivotContext
-        f(ap.table(at.table(x)._1))
-
-extension [T: AsExpr as a](x: T)
-    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
-        av: AsExpr[V],
-        i: CanIn[T, V],
-        c: CanInAgg[i.K],
-        qc: QueryContext,
-        pc: PivotContext
-    ): PivotWithin[N] =
-        PivotWithin[N](a.asExpr(x).asSqlExpr, av.asExprs(items.toTuple).map(_.asSqlExpr))
+def exists[T, S <: QuerySize](query: Query[T, S])(using QueryContext): Expr[Boolean, Value] =
+    Expr(
+        SqlExpr.SubLink(
+            SqlSubLinkQuantifier.Exists,
+            query.tree
+        )
+    )
 
 def createFunction[T](name: String, args: List[Expr[?, ?]])(using QueryContext): Expr[T, Value] =
     Expr(
@@ -618,109 +714,22 @@ inline def createTableFunction[T](
     )
     FuncTable(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
 
-inline def vertex[T]: GraphVertex[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphVertex(None, metaData)
+extension (s: StringContext)
+    inline def rawExpr(inline args: Any*)(using QueryContext): RawExpr =
+        val instances = RawMacro.asSqlInstances(args)
+        RawExpr(s.parts.toList, instances, args.toList)
 
-inline def vertex[T](label: String): GraphVertex[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphVertex(None, metaData.copy(tableName = label))
+    inline def rawQuantifier(inline args: Any*)(using QueryContext): RawQuantifier =
+        val instances = RawMacro.asSqlInstances(args)
+        RawQuantifier(s.parts.toList, instances, args.toList)
 
-inline def edge[T]: GraphEdge[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphEdge(None, metaData, None, None)
-
-inline def edge[T](label: String): GraphEdge[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphEdge(None, metaData.copy(tableName = label), None, None)
-
-def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): Graph[N, V] =
-    Graph(name, labels.toTuple)
-
-extension (s: String)
-    infix def is[V](v: GraphVertex[V])(using
-        QueryContext,
-        GraphContext
-    ): GraphPattern[Tuple1[s.type], Tuple1[GraphVertex[V]]] =
-        GraphPattern(
-            Tuple1(v),
-            SqlGraphPatternTerm.Vertex(
-                v.__alias__,
-                Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                None
-            ) :: Nil
-        )
-
-    infix def is[V](v: GraphEdge[V])(using
-        QueryContext,
-        GraphContext
-    ): GraphPattern[Tuple1[s.type], Tuple1[GraphEdge[V]]] =
-        val pattern =
-            v.__quantifier__.map: q =>
-                SqlGraphPatternTerm.Quantified(
-                    SqlGraphPatternTerm.Edge(
-                        SqlGraphSymbol.Dash,
-                        v.__alias__,
-                        Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                        v.__where__,
-                        SqlGraphSymbol.Dash
-                    ),
-                    q
-                )
-            .getOrElse:
-                SqlGraphPatternTerm.Edge(
-                    SqlGraphSymbol.Dash,
-                    v.__alias__,
-                    Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                    v.__where__,
-                    SqlGraphSymbol.Dash
-                )
-        GraphPattern(Tuple1(v), pattern :: Nil)
-
-def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
-    graph: Graph[N, V]
-)(f: GraphContext ?=> Graph[N, V] => GraphTable[TN, TV, CanInFrom])(using
-    QueryContext
-): GraphTable[TN, TV, CanInFrom] =
-    given GraphContext = new GraphContext
-    f(graph)
-
-def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tuple, US <: QuerySize, R, RS <: QuerySize](
-    baseQuery: Query[NamedTuple[N, V], S]
-)(using
-    p: AsTableParam[V],
-    tp: ToTuple[p.R]
-)(
-    f: RecursiveTable[N, tp.R] => Query[NamedTuple[UN, UV], US]
-)(using
-    u: Union[V, UV],
-    tu: ToTuple[u.R],
-    up: AsTableParam[tu.R],
-    t: ToTuple[up.R]
-)(
-    g: RecursiveTable[N, t.R] => Query[R, RS]
-)(using
-    m: AsMap[V],
-    c: QueryContext
-): Query[R, ManyRows] =
-    val alias = c.fetchAlias
-    val withTable = RecursiveTable[N, V](Some(alias))
-    val unionQuery = f(withTable)
-    val finalTable = RecursiveTable[N, tu.R](Some(tableCte))
-    val finalQuery = g(finalTable)
-    val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
-    val withTree = SqlQuery.Set(
-        baseQuery.tree,
-        SqlSetOperator.Union(Some(SqlQuantifier.All)),
-        unionQuery.tree,
-        Nil,
-        None,
-        None
-    )
-    val tree = SqlQuery.Cte(
-        true,
-        SqlWithItem(tableCte, withTree, columns) :: Nil,
-        finalQuery.tree,
-        None
-    )
-    Query(finalQuery.params, tree)
+extension [T](expr: Expr[T, Column])
+    @targetName("to")
+    def :=[R: AsExpr as a](updateExpr: R)(using
+        Compare[T, a.R],
+        UpdateSetContext
+    ): UpdatePair = expr match
+        case Expr(SqlExpr.Column(_, columnName)) =>
+            UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)
+        case _ =>
+            throw MatchError(expr)
