@@ -5,7 +5,6 @@ import sqala.ast.quantifier.SqlQuantifier
 import sqala.static.metadata.*
 
 import java.time.*
-import scala.compiletime.ops.boolean.||
 
 def count()(using QueryContext): Expr[Long, Agg] =
     Expr(SqlExpr.CountAsteriskFunc(None, None))
