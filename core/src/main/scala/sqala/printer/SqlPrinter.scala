@@ -259,7 +259,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         case o: SqlExpr.OverlayFunc => printOverlayFuncExpr(o)
         case p: SqlExpr.PositionFunc => printPositionFuncExpr(p)
         case e: SqlExpr.ExtractFunc => printExtractFuncExpr(e)
-        case v: SqlExpr.VectorDistanceFunc => printVectorDistanceFuncExpr(v)
         case j: SqlExpr.JsonSerializeFunc => printJsonSerializeFuncExpr(j)
         case j: SqlExpr.JsonParseFunc => printJsonParseFuncExpr(j)
         case j: SqlExpr.JsonQueryFunc => printJsonQueryFuncExpr(j)
@@ -676,8 +675,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("BOOLEAN")
             case SqlType.Interval =>
                 sqlBuilder.append("INTERVAL")
-            case SqlType.Vector =>
-                sqlBuilder.append("VECTOR")
             case SqlType.Geometry =>
                 sqlBuilder.append("GEOMETRY")
             case SqlType.Point =>
@@ -866,8 +863,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" FROM ")
         printExpr(expr.expr)
         sqlBuilder.append(")")
-
-    def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit
 
     def printJsonSerializeFuncExpr(expr: SqlExpr.JsonSerializeFunc): Unit =
         sqlBuilder.append("JSON_SERIALIZE(")
@@ -1942,7 +1937,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlLockWaitMode.SkipLocked =>
                     sqlBuilder.append("SKIP LOCKED")
 
-    def printCteRecursive(): Unit = sqlBuilder.append(" RECURSIVE")
+    def printCteRecursive(): Unit =
+        sqlBuilder.append(" RECURSIVE")
 
     def printRowPattern(pattern: SqlRowPattern): Unit =
         def printQuantifier(quantifier: SqlRowPatternQuantifier): Unit =

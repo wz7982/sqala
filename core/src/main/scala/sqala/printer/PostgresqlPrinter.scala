@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlVectorDistanceMode}
+import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
@@ -48,7 +48,7 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")
-        expr.quantifier.foreach: q => 
+        expr.quantifier.foreach: q =>
             printQuantifier(q)
             sqlBuilder.append(" ")
         printExpr(expr.expr)
@@ -62,22 +62,3 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
             sqlBuilder.append(" FILTER (WHERE ")
             printExpr(f)
             sqlBuilder.append(")")
-
-    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
-        expr.mode match
-            case SqlVectorDistanceMode.Euclidean =>
-                printExpr(
-                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<->"), expr.right)
-                )
-            case SqlVectorDistanceMode.Cosine =>
-                printExpr(
-                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<=>"), expr.right)
-                )
-            case SqlVectorDistanceMode.Dot =>
-                printExpr(
-                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<#>"), expr.right)
-                )
-            case SqlVectorDistanceMode.Manhattan =>
-                printExpr(
-                    SqlExpr.Binary(expr.left, SqlBinaryOperator.Custom("<+>"), expr.right)
-                )

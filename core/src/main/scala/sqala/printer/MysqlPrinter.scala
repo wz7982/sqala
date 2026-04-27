@@ -45,7 +45,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 printExpr(
                     SqlExpr.GeneralFunc(
                         None,
-                        "CONCAT", 
+                        "CONCAT",
                         expr.left :: expr.right :: Nil,
                         Nil,
                         Nil,
@@ -89,9 +89,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                     sqlBuilder.append("(")
                     sqlBuilder.append(l)
                     sqlBuilder.append(")")
-            case SqlType.Int => 
+            case SqlType.Int =>
                 sqlBuilder.append("SIGNED")
-            case SqlType.Long => 
+            case SqlType.Long =>
                 sqlBuilder.append("SIGNED")
             case SqlType.Timestamp(None | Some(SqlTimeZoneMode.Without)) =>
                 sqlBuilder.append("DATETIME")
@@ -100,7 +100,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("GROUP_CONCAT(")
-        expr.quantifier.foreach: q => 
+        expr.quantifier.foreach: q =>
             printQuantifier(q)
             sqlBuilder.append(" ")
         printExpr(expr.expr)
@@ -115,43 +115,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             printExpr(f)
             sqlBuilder.append(")")
 
-    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
-        expr.mode match
-            case SqlVectorDistanceMode.Euclidean =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("EUCLIDEAN") :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-            case SqlVectorDistanceMode.Cosine =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("COSINE") :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-            case SqlVectorDistanceMode.Dot =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "DISTANCE", 
-                        expr.left :: expr.right :: SqlExpr.StringLiteral("DOT") :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-            case SqlVectorDistanceMode.Manhattan =>
-
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
             ordering match
@@ -161,12 +124,12 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
-        val orderExpr = 
+        val orderExpr =
             SqlExpr.Case(
                 SqlWhen(
-                    SqlExpr.NullTest(orderBy.expr, false), 
+                    SqlExpr.NullTest(orderBy.expr, false),
                     SqlExpr.NumberLiteral(1)
-                ) :: Nil, 
+                ) :: Nil,
                 Some(SqlExpr.NumberLiteral(0))
             )
         (order, orderBy.nullsOrdering) match

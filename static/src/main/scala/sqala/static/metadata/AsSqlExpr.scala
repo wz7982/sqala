@@ -20,43 +20,43 @@ object AsSqlExpr:
     given int: AsSqlExpr[Int] with
         def sqlType: SqlType = SqlType.Int
 
-        def asSqlExpr(x: Int): SqlExpr = 
+        def asSqlExpr(x: Int): SqlExpr =
             SqlExpr.NumberLiteral(x)
 
     given long: AsSqlExpr[Long] with
         def sqlType: SqlType = SqlType.Long
 
-        def asSqlExpr(x: Long): SqlExpr = 
+        def asSqlExpr(x: Long): SqlExpr =
             SqlExpr.NumberLiteral(x)
 
     given float: AsSqlExpr[Float] with
         def sqlType: SqlType = SqlType.Float
 
-        def asSqlExpr(x: Float): SqlExpr = 
+        def asSqlExpr(x: Float): SqlExpr =
             SqlExpr.NumberLiteral(x)
 
     given double: AsSqlExpr[Double] with
         def sqlType: SqlType = SqlType.Double
 
-        def asSqlExpr(x: Double): SqlExpr = 
+        def asSqlExpr(x: Double): SqlExpr =
             SqlExpr.NumberLiteral(x)
 
     given decimal: AsSqlExpr[BigDecimal] with
         def sqlType: SqlType = SqlType.Decimal(None)
 
-        def asSqlExpr(x: BigDecimal): SqlExpr = 
+        def asSqlExpr(x: BigDecimal): SqlExpr =
             SqlExpr.NumberLiteral(x)
 
     given string: AsSqlExpr[String] with
         def sqlType: SqlType = SqlType.Varchar(None)
 
-        def asSqlExpr(x: String): SqlExpr = 
+        def asSqlExpr(x: String): SqlExpr =
             SqlExpr.StringLiteral(x)
 
     given boolean: AsSqlExpr[Boolean] with
         def sqlType: SqlType = SqlType.Boolean
 
-        def asSqlExpr(x: Boolean): SqlExpr = 
+        def asSqlExpr(x: Boolean): SqlExpr =
             SqlExpr.BooleanLiteral(x)
 
     given localDate: AsSqlExpr[LocalDate] with
@@ -92,7 +92,7 @@ object AsSqlExpr:
     given json: AsSqlExpr[Json] with
         def sqlType: SqlType = SqlType.Json
 
-        def asSqlExpr(x: Json): SqlExpr = 
+        def asSqlExpr(x: Json): SqlExpr =
             SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Json)
 
     given interval: AsSqlExpr[Interval] with
@@ -101,16 +101,10 @@ object AsSqlExpr:
         def asSqlExpr(x: Interval): SqlExpr =
             SqlExpr.IntervalLiteral(x.value, SqlIntervalField.Single(x.unit))
 
-    given vector: AsSqlExpr[Vector] with
-        def sqlType: SqlType = SqlType.Vector
-
-        def asSqlExpr(x: Vector): SqlExpr = 
-            SqlExpr.StringLiteral(x.toString)
-
     given geometry: AsSqlExpr[Geometry] with
         def sqlType: SqlType = SqlType.Geometry
 
-        def asSqlExpr(x: Geometry): SqlExpr = 
+        def asSqlExpr(x: Geometry): SqlExpr =
             SqlExpr.GeneralFunc(
                 None,
                 "ST_GeomFromText",

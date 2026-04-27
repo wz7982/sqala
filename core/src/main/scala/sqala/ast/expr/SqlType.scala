@@ -13,7 +13,6 @@ enum SqlType:
     case Json
     case Boolean
     case Interval
-    case Vector
     case Geometry
     case Point
     case LineString

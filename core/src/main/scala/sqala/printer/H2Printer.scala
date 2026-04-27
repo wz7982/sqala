@@ -53,5 +53,3 @@ class H2Printer(override val standardEscapeStrings: Boolean) extends SqlPrinter(
         sqlBuilder.append(" VALUES (")
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
-
-    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit = {}

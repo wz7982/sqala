@@ -1,11 +1,5 @@
 package sqala.ast.expr
 
-enum SqlVectorDistanceMode:
-    case Euclidean
-    case Cosine
-    case Dot
-    case Manhattan
-
 case class SqlTrim(mode: Option[SqlTrimMode], value: Option[SqlExpr])
 
 enum SqlTrimMode:
@@ -80,7 +74,7 @@ enum SqlJsonExistsErrorBehavior:
     case Unknown
 
 case class SqlJsonInput(format: Option[SqlJsonEncoding])
-    
+
 case class SqlJsonOutput(`type`: SqlType, format: Option[Option[SqlJsonEncoding]])
 
 enum SqlJsonTableErrorBehavior:
@@ -91,7 +85,7 @@ enum SqlJsonTableErrorBehavior:
 enum SqlJsonTableColumn:
     case Ordinality(name: String)
     case Column(
-        name: String, 
+        name: String,
         `type`: SqlType,
         format: Option[Option[SqlJsonEncoding]],
         path: Option[SqlExpr],

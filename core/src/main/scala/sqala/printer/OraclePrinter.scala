@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlType, SqlVectorDistanceMode}
+import sqala.ast.expr.{SqlExpr, SqlType}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTableAlias
 
@@ -59,60 +59,9 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
-    override def printVectorDistanceFuncExpr(expr: SqlExpr.VectorDistanceFunc): Unit =
-        expr.mode match
-            case SqlVectorDistanceMode.Euclidean =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "L2_DISTANCE", 
-                        expr.left :: expr.right :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-            case SqlVectorDistanceMode.Cosine =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "COSINE_DISTANCE", 
-                        expr.left :: expr.right :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-            case SqlVectorDistanceMode.Dot =>
-                printExpr(
-                    SqlExpr.Binary(
-                        SqlExpr.GeneralFunc(
-                            None,
-                            "INNER_PRODUCT", 
-                            expr.left :: expr.right :: Nil,
-                            Nil,
-                            Nil,
-                            None
-                        ),
-                        SqlBinaryOperator.Times,
-                        SqlExpr.NumberLiteral(-1)
-                    )
-                )
-            case SqlVectorDistanceMode.Manhattan =>
-                printExpr(
-                    SqlExpr.GeneralFunc(
-                        None,
-                        "L1_DISTANCE", 
-                        expr.left :: expr.right :: Nil,
-                        Nil,
-                        Nil,
-                        None
-                    )
-                )
-
     override def printType(`type`: SqlType): Unit =
         `type` match
-            case SqlType.Varchar(None) => 
+            case SqlType.Varchar(None) =>
                 sqlBuilder.append("VARCHAR(4000)")
             case SqlType.Long =>
                 sqlBuilder.append("INT")

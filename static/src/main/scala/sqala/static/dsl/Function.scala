@@ -982,62 +982,6 @@ def regexpLike[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def euclideanDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    va: SqlVector[aa.R],
-    vb: SqlVector[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
-    Expr(
-        SqlExpr.VectorDistanceFunc(
-            aa.asExpr(x).asSqlExpr,
-            ab.asExpr(y).asSqlExpr,
-            SqlVectorDistanceMode.Euclidean
-        )
-    )
-
-def cosineDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    va: SqlVector[aa.R],
-    vb: SqlVector[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
-    Expr(
-        SqlExpr.VectorDistanceFunc(
-            aa.asExpr(x).asSqlExpr,
-            ab.asExpr(y).asSqlExpr,
-            SqlVectorDistanceMode.Cosine
-        )
-    )
-
-def dotDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    va: SqlVector[aa.R],
-    vb: SqlVector[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
-    Expr(
-        SqlExpr.VectorDistanceFunc(
-            aa.asExpr(x).asSqlExpr,
-            ab.asExpr(y).asSqlExpr,
-            SqlVectorDistanceMode.Dot
-        )
-    )
-
-def manhattanDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    va: SqlVector[aa.R],
-    vb: SqlVector[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
-    Expr(
-        SqlExpr.VectorDistanceFunc(
-            aa.asExpr(x).asSqlExpr,
-            ab.asExpr(y).asSqlExpr,
-            SqlVectorDistanceMode.Manhattan
-        )
-    )
-
 def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
