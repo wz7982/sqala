@@ -623,42 +623,42 @@ extension [T, K <: ExprKind](expr: Expr[T, K])
             )
         )
 
-def currentRow(using QueryContext): SqlWindowFrameBound =
-    SqlWindowFrameBound.CurrentRow
+def currentRow(using QueryContext): FrameBound[Nothing] =
+    FrameBound(SqlWindowFrameBound.CurrentRow)
 
-def unboundedPreceding(using QueryContext): SqlWindowFrameBound =
-    SqlWindowFrameBound.UnboundedPreceding
+def unboundedPreceding(using QueryContext): FrameBound[Nothing] =
+    FrameBound(SqlWindowFrameBound.UnboundedPreceding)
 
-def unboundedFollowing(using QueryContext): SqlWindowFrameBound =
-    SqlWindowFrameBound.UnboundedFollowing
+def unboundedFollowing(using QueryContext): FrameBound[Nothing] =
+    FrameBound(SqlWindowFrameBound.UnboundedFollowing)
 
 extension [T: AsExpr as a](n: T)(using a.K =:= Value)
-    def preceding(using QueryContext): SqlWindowFrameBound =
-        SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr)
+    def preceding(using QueryContext): FrameBound[a.R] =
+        FrameBound(SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr))
 
-    def following(using QueryContext): SqlWindowFrameBound =
-        SqlWindowFrameBound.Following(n.asExpr.asSqlExpr)
+    def following(using QueryContext): FrameBound[a.R] =
+        FrameBound(SqlWindowFrameBound.Following(n.asExpr.asSqlExpr))
 
 def partitionBy[T](partitionValue: T)(using
     a: AsPartition[T],
     c: QueryContext,
     oc: OverContext
-): Over[a.K] =
-    Over(partitionBy = a.asExprs(partitionValue))
+): PartitionedOver[a.K] =
+    PartitionedOver(partitionBy = a.asExprs(partitionValue))
 
 def sortBy[T](sortValue: T)(using
     a: AsOverSort[T],
     c: QueryContext,
     oc: OverContext
-): Over[a.K] =
-    Over(sortBy = a.asSorts(sortValue))
+): SortedOver[a.R, a.K] =
+    SortedOver(sortBy = a.asSorts(sortValue))
 
 def orderBy[T](sortValue: T)(using
     a: AsOverSort[T],
     c: QueryContext,
     oc: OverContext
-): Over[a.K] =
-    Over(sortBy = a.asSorts(sortValue))
+): SortedOver[a.R, a.K] =
+    SortedOver(sortBy = a.asSorts(sortValue))
 
 def any[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
     SubLink(SqlSubLinkQuantifier.Any, query.tree)

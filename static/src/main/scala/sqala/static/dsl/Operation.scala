@@ -112,6 +112,24 @@ object Relation:
         new Relation[A, B, N]:
             type R = WrapIf[Boolean, N, Option]
 
+trait CanInRowsOrGroupsFrame[T]
+
+object CanInRowsOrGroupsFrame:
+    given int: CanInRowsOrGroupsFrame[Int]()
+
+    given long: CanInRowsOrGroupsFrame[Long]()
+
+    given nothing: CanInRowsOrGroupsFrame[Nothing]()
+
+trait CanInRangeFrame[S, T]
+
+object CanInRangeFrame:
+    given number[S: SqlNumber, N: SqlNumber](using Unwrap[S, Option] =:= Unwrap[N, Option]): CanInRangeFrame[S, N]()
+
+    given time[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given nothing[S]: CanInRangeFrame[S, Nothing]()
+
 trait Return[A, B, Nullable <: Boolean]:
     type R
 

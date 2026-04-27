@@ -17,7 +17,7 @@ type WrapIf[T, B <: Boolean, F[_]] = B match
     case _ => T
 
 type Unwrap[T, F[_]] = T match
-    case F[t] => t
+    case F[t] => Unwrap[t, F]
     case _ => T
 
 type TupleMap[T <: Tuple, F[_]] <: Tuple =
