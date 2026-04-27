@@ -1,6 +1,5 @@
 package sqala.static.dsl.statement.dml
 
-import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 import sqala.static.metadata.{AsSqlExpr, TableMacro}
