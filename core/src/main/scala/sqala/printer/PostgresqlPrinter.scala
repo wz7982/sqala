@@ -47,18 +47,12 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
             printIdent(u)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
-        sqlBuilder.append("STRING_AGG(")
-        expr.quantifier.foreach: q =>
-            printQuantifier(q)
-            sqlBuilder.append(" ")
-        printExpr(expr.expr)
-        sqlBuilder.append(", ")
-        printExpr(expr.separator)
-        if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
-        sqlBuilder.append(")")
-        for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+        val func = SqlExpr.GeneralFunc(
+            expr.quantifier,
+            "STRING_AGG",
+            expr.expr :: expr.separator :: Nil,
+            expr.withinGroup,
+            Nil,
+            expr.filter
+        )
+        printExpr(func)

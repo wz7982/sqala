@@ -1197,6 +1197,16 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("EMPTY ARRAY")
         sqlBuilder.append(" ON ERROR")
 
+    def printFuncWithinGroup(withinGroup: List[SqlOrderingItem]): Unit =
+        sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
+        printList(withinGroup)(printOrderingItem)
+        sqlBuilder.append(")")
+
+    def printFuncFilter(filter: SqlExpr): Unit =
+        sqlBuilder.append(" FILTER (WHERE ")
+        printExpr(filter)
+        sqlBuilder.append(")")
+
     def printCountAsteriskFuncExpr(expr: SqlExpr.CountAsteriskFunc): Unit =
         sqlBuilder.append("COUNT(")
         for n <- expr.tableName do
@@ -1204,9 +1214,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(".")
         sqlBuilder.append("*)")
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         def printCountMode(mode: SqlListAggCountMode): Unit =
@@ -1235,13 +1243,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     printCountMode(c)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
-            sqlBuilder.append(")")
+            printFuncWithinGroup(expr.withinGroup)
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     def printJsonObjectAggFuncExpr(expr: SqlExpr.JsonObjectAggFunc): Unit =
         sqlBuilder.append("JSON_OBJECTAGG(")
@@ -1259,9 +1263,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     def printJsonArrayAggFuncExpr(expr: SqlExpr.JsonArrayAggFunc): Unit =
         sqlBuilder.append("JSON_ARRAYAGG(")
@@ -1280,9 +1282,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     def printWindowNullsMode(mode: SqlWindowNullsMode): Unit =
         mode match
@@ -1330,13 +1330,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(expr.orderBy)(printOrderingItem)
         sqlBuilder.append(")")
         if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
-            sqlBuilder.append(")")
+            printFuncWithinGroup(expr.withinGroup)
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     def printMatchPhaseExpr(expr: SqlExpr.MatchPhase): Unit =
         expr.phase match

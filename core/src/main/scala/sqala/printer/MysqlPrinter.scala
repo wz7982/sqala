@@ -111,9 +111,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         printExpr(expr.separator)
         sqlBuilder.append(")")
         for f <- expr.filter do
-            sqlBuilder.append(" FILTER (WHERE ")
-            printExpr(f)
-            sqlBuilder.append(")")
+            printFuncFilter(f)
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
@@ -141,8 +139,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 printExpr(orderExpr)
                 sqlBuilder.append(" ")
                 printOrdering(order)
-                sqlBuilder.append(",\n")
-                printSpace()
+                sqlBuilder.append(", ")
                 printExpr(orderBy.expr)
                 sqlBuilder.append(" ")
                 printOrdering(order)
