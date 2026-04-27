@@ -14,6 +14,10 @@ enum SqlIntervalField:
     case Single(unit: SqlTimeUnit)
 
 enum SqlTimeLiteralUnit:
-    case Timestamp
+    case Timestamp(mode: Option[SqlTimeZoneMode])
     case Date
-    case Time
+    case Time(mode: Option[SqlTimeZoneMode])
+
+enum SqlTimeZoneMode:
+    case With
+    case Without

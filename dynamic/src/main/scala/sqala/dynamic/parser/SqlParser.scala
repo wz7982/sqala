@@ -18,8 +18,8 @@ class SqlParser extends StandardTokenParsers:
     class SqlLexical extends StdLexical:
         override protected def processIdent(name: String): Token =
             val upperCased = name.toUpperCase
-            if reserved.contains(upperCased) then 
-                Keyword(upperCased) 
+            if reserved.contains(upperCased) then
+                Keyword(upperCased)
             else Identifier(name)
 
         def numeric: Parser[Token] =
@@ -32,7 +32,7 @@ class SqlParser extends StandardTokenParsers:
             }
 
         def string: Parser[String] =
-            escapeSequence | 
+            escapeSequence |
             normalChar
 
         def escapeSequence: Parser[String] =
@@ -56,13 +56,13 @@ class SqlParser extends StandardTokenParsers:
 
         def normalChar: Parser[String] =
             elem(
-                "character", 
-                c => 
-                    c != '\'' && 
-                    c != '\\' && 
-                    c != '\n' && 
-                    c != '\t' && 
-                    c != '\r' && 
+                "character",
+                c =>
+                    c != '\'' &&
+                    c != '\\' &&
+                    c != '\n' &&
+                    c != '\t' &&
+                    c != '\r' &&
                     c != '\b' &&
                     c != '\f' &&
                     c != '\\'
@@ -99,7 +99,7 @@ class SqlParser extends StandardTokenParsers:
     lexical.reserved.addAll(
         List(
             "CAST", "AS", "AND", "OR", "OVER", "BY", "PARTITION", "ORDER", "DISTINCT", "NOT",
-            "CASE", "WHEN", "THEN", "ELSE", "END", 
+            "CASE", "WHEN", "THEN", "ELSE", "END",
             "TRUE", "FALSE", "NULL",
             "BETWEEN", "IN", "LIKE", "IS",
             "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "LIMIT", "OFFSET",
@@ -107,7 +107,7 @@ class SqlParser extends StandardTokenParsers:
             "UNION", "EXCEPT", "INTERSECT", "ALL", "ANY", "EXISTS", "SOME",
             "INTERVAL", "EXTRACT", "YEAR", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE", "SECOND",
             "TIMESTAMP", "DATE", "TIME",
-            "FILTER", "WITHIN", 
+            "FILTER", "WITHIN",
             "ASC", "DESC", "NULLS", "FIRST", "LAST", "PERCENT", "WITH", "TIES",
             "ARRAY", "ONLY", "NEXT", "FETCH",
             "CURRENT", "ROW", "UNBOUNDED", "PRECEDING", "FOLLOWING",
@@ -120,48 +120,48 @@ class SqlParser extends StandardTokenParsers:
     lexical.delimiters.addAll(
         List(
             "+", "-", "*", "/", "%", "||", "->", "->>",
-            "=", "<>", "!=", ">", ">=", "<", "<=", 
+            "=", "<>", "!=", ">", ">=", "<", "<=",
             "(", ")", ",", ".", "`", "\"", "[", "]", "::"
         )
     )
 
-    def expr: Parser[SqlExpr] = 
+    def expr: Parser[SqlExpr] =
         or
 
-    def or: Parser[SqlExpr] = 
+    def or: Parser[SqlExpr] =
         and * ("OR" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.Or, r) })
 
-    def and: Parser[SqlExpr] = 
+    def and: Parser[SqlExpr] =
         not * ("AND" ^^^ { (l: SqlExpr, r: SqlExpr) => SqlExpr.Binary(l, SqlBinaryOperator.And, r) })
 
-    def not: Parser[SqlExpr] = 
+    def not: Parser[SqlExpr] =
         "NOT" ~> relation ^^ (SqlExpr.Unary(SqlUnaryOperator.Not, _)) |
         relation
 
     def relation: Parser[SqlExpr] =
         concat ~ rep(
             ("=" | "<>" | "!=" | ">" | ">=" | "<" | "<=") ~ concat ^^ {
-                case op ~ right => 
+                case op ~ right =>
                     (op, right)
             } |
             "IS" ~ opt("NOT") ~ "NULL" ^^ {
-                case _ ~ n ~ right => 
+                case _ ~ n ~ right =>
                     (n.isDefined, "is", right)
             } |
             opt("NOT") ~ "BETWEEN" ~ concat ~ "AND" ~ concat ^^ {
-                case n ~ _ ~ start ~ _ ~ end => 
+                case n ~ _ ~ start ~ _ ~ end =>
                     (n.isDefined, "between", start, end)
             } |
             opt("NOT") ~ "IN" ~ "(" ~ select ~ ")" ^^ {
-                case n ~ _ ~ _ ~ in ~ _ => 
+                case n ~ _ ~ _ ~ in ~ _ =>
                     (n.isDefined, "in", in)
             } |
             opt("NOT") ~ "IN" ~ "(" ~ rep1sep(concat, ",") ~ ")" ^^ {
-                case n ~ _ ~ _ ~ in ~ _ => 
+                case n ~ _ ~ _ ~ in ~ _ =>
                     (n.isDefined, "in", in)
             } |
             opt("NOT") ~ "LIKE" ~ concat ^^ {
-                case n ~ _ ~ right => 
+                case n ~ _ ~ right =>
                     (n.isDefined, "like", right)
             }
         ) ^^ {
@@ -202,8 +202,8 @@ class SqlParser extends StandardTokenParsers:
             "*" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Times, b)) |
             "/" ^^^ ((a, b) => SqlExpr.Binary(a, SqlBinaryOperator.Div, b))
         )
-    
-    def sign: Parser[SqlExpr] = 
+
+    def sign: Parser[SqlExpr] =
         "+" ~> convert ^^ (SqlExpr.Unary(SqlUnaryOperator.Positive, _)) |
         "-" ~> convert ^^ (SqlExpr.Unary(SqlUnaryOperator.Negative, _)) |
         convert
@@ -246,12 +246,12 @@ class SqlParser extends StandardTokenParsers:
 
     def function: Parser[SqlExpr] =
         "COUNT" ~ "(" ~ "*" ~ ")" ~> opt("FILTER" ~ "(" ~> where <~ ")") ^^ {
-            case f => 
+            case f =>
                 SqlExpr.GeneralFunc(None, "COUNT", Nil, Nil, Nil, f)
         } |
         ident ~ ("(" ~> opt(quantifier) ~ repsep(expr, ",") ~ opt(orderBy) <~ ")")
             ~ opt("WITHIN" ~ "GROUP" ~ "(" ~> orderBy <~ ")")
-            ~ opt("FILTER" ~ "(" ~> where <~ ")") 
+            ~ opt("FILTER" ~ "(" ~> where <~ ")")
         ^^ {
             case ident ~ (quantifier ~ args ~ orderBy) ~ withinGroup ~ filter =>
                 SqlExpr.GeneralFunc(quantifier, ident.toUpperCase, args, orderBy.getOrElse(Nil), withinGroup.getOrElse(Nil), filter)
@@ -280,16 +280,16 @@ class SqlParser extends StandardTokenParsers:
         }
 
     def over: Parser[(List[SqlExpr], List[SqlOrderingItem], Option[SqlWindowFrame])] =
-        "(" ~> 
+        "(" ~>
             opt("PARTITION" ~> "BY" ~> rep1sep(expr, ",")) ~ opt(orderBy) ~ opt(frame)
         <~ ")" ^^ {
-            case partition ~ order ~ frame => 
+            case partition ~ order ~ frame =>
                 (partition.getOrElse(Nil), order.getOrElse(Nil), frame)
         }
 
     def windowFunction: Parser[SqlExpr] =
         function ~ "OVER" ~ over ^^ {
-            case agg ~ _ ~ o => 
+            case agg ~ _ ~ o =>
                 SqlExpr.Window(agg, SqlWindow(o._1, o._2, o._3))
         }
 
@@ -315,13 +315,13 @@ class SqlParser extends StandardTokenParsers:
         expr ~ opt("ASC" | "DESC") ~ opt("NULLS" ~> ("FIRST" | "LAST")) ^^ {
             case e ~ Some("DESC") ~ n =>
                 SqlOrderingItem(e, Some(SqlOrdering.Desc), n.map(nullsOrdering))
-            case e ~ _ ~ n => 
+            case e ~ _ ~ n =>
                 SqlOrderingItem(e, Some(SqlOrdering.Asc), n.map(nullsOrdering))
         }
 
     def cast: Parser[SqlExpr] =
         "CAST" ~> ("(" ~> expr ~ "AS" ~ ident <~ ")") ^^ {
-            case expr ~ _ ~ castType => 
+            case expr ~ _ ~ castType =>
                 SqlExpr.Cast(expr, SqlType.Custom(castType.toUpperCase))
         }
 
@@ -330,9 +330,9 @@ class SqlParser extends StandardTokenParsers:
             opt(expr) ~
             rep1("WHEN" ~> expr ~ "THEN" ~ expr ^^ { case e ~ _ ~ te => SqlWhen(e, te) }) ~
             opt("ELSE" ~> expr) <~ "END" ^^ {
-                case None ~ branches ~ default => 
+                case None ~ branches ~ default =>
                     SqlExpr.Case(branches, default.orElse(Some(SqlExpr.NullLiteral)))
-                case Some(test) ~ branches ~ default => 
+                case Some(test) ~ branches ~ default =>
                     SqlExpr.SimpleCase(test, branches, default.orElse(Some(SqlExpr.NullLiteral)))
             }
 
@@ -394,7 +394,7 @@ class SqlParser extends StandardTokenParsers:
                                 case _: Exception =>
                                     false
         "TIMESTAMP" ~> stringLit.filter(check) ^^ { d =>
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, d)
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp(None), d)
         }
 
     def dateLiteral: Parser[SqlExpr] =
@@ -430,7 +430,7 @@ class SqlParser extends StandardTokenParsers:
                 case _: Exception =>
                     false
         "TIME" ~> stringLit.filter(check) ^^ { d =>
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time, d)
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time(None), d)
         }
 
     def setOperator: Parser[SqlSetOperator] =
@@ -464,25 +464,25 @@ class SqlParser extends StandardTokenParsers:
         "(" ~> query <~ ")"
 
     def select: Parser[SqlQuery] =
-        "SELECT" ~> 
-            opt(quantifier) ~ 
-            selectItems ~ 
-            opt(from) ~ 
-            opt(where) ~ 
+        "SELECT" ~>
+            opt(quantifier) ~
+            selectItems ~
+            opt(from) ~
+            opt(where) ~
             opt(groupBy) ~
             opt(having) ~
-            opt(orderBy) ~ 
-            opt(limit) 
+            opt(orderBy) ~
+            opt(limit)
         ^^ {
             case q ~ s ~ f ~ w ~ g ~ h ~ o ~ l =>
                 SqlQuery.Select(
-                    q, 
-                    s, 
-                    f.getOrElse(Nil), 
-                    w, 
+                    q,
+                    s,
+                    f.getOrElse(Nil),
+                    w,
                     g,
                     h,
-                    o.getOrElse(Nil), 
+                    o.getOrElse(Nil),
                     l.flatten,
                     None
                 )
@@ -508,7 +508,7 @@ class SqlParser extends StandardTokenParsers:
 
     def tableAlias: Parser[SqlTableAlias] =
         opt("AS") ~> ident ~ opt("(" ~> rep1sep(ident, ",") <~ ")") ^^ {
-            case ta ~ ca => 
+            case ta ~ ca =>
                 SqlTableAlias(ta, ca.getOrElse(Nil))
         }
 
@@ -541,7 +541,7 @@ class SqlParser extends StandardTokenParsers:
             }
         ) ^^ {
             case t ~ joins => joins.foldLeft(t) {
-                case (l, r) => 
+                case (l, r) =>
                     SqlTable.Join(l, r._1, r._2, r._3.map(SqlJoinCondition.On(_)))
             }
         }
@@ -572,14 +572,14 @@ class SqlParser extends StandardTokenParsers:
 
     def limit: Parser[Option[SqlLimit]] =
         def create(
-            limit: Option[String], 
+            limit: Option[String],
             offset: Option[String],
             percent: Boolean = false,
             withTies: Boolean = false
         ): Option[SqlLimit] =
             val fetchValue = limit
                 .map { v =>
-                    val unit = 
+                    val unit =
                         if percent then SqlFetchUnit.Percentage
                         else SqlFetchUnit.RowCount
                     val mode =
@@ -593,7 +593,7 @@ class SqlParser extends StandardTokenParsers:
             else
                 Some(SqlLimit(offsetValue, fetchValue))
         "LIMIT" ~> numericLit ~ opt(("OFFSET" | ",") ~ numericLit) ^^ {
-            case limit ~ Some("OFFSET" ~ offset) => 
+            case limit ~ Some("OFFSET" ~ offset) =>
                 create(Some(limit), Some(offset))
             case offset ~ Some("," ~ limit) =>
                 create(Some(limit), Some(offset))
@@ -602,7 +602,7 @@ class SqlParser extends StandardTokenParsers:
         } |
         opt("OFFSET" ~> numericLit <~ ("ROW" | "ROWS")) ~
         opt(
-            "FETCH" ~ ("FIRST" | "NEXT") ~> numericLit ~ 
+            "FETCH" ~ ("FIRST" | "NEXT") ~> numericLit ~
             opt("PERCENT") ~ ("ROW" | "ROWS") ~ ("ONLY" | ("WITH" ~ "TIES"))
         ) ^^ {
             case offset ~ fetch =>

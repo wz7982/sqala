@@ -3,6 +3,7 @@ package sqala.static.metadata
 import sqala.ast.expr.*
 
 import java.time.*
+import java.time.format.DateTimeFormatter
 import scala.compiletime.{erasedValue, summonInline}
 
 trait AsSqlExpr[T]:
@@ -63,31 +64,36 @@ object AsSqlExpr:
         def sqlType: SqlType = SqlType.Date
 
         def asSqlExpr(x: LocalDate): SqlExpr =
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, x.toString)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, formatter.format(x))
 
     given localDateTime: AsSqlExpr[LocalDateTime] with
         def sqlType: SqlType = SqlType.Timestamp(None)
 
         def asSqlExpr(x: LocalDateTime): SqlExpr =
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp, x.toString)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp(None), formatter.format(x))
 
     given localTime: AsSqlExpr[LocalTime] with
         def sqlType: SqlType = SqlType.Time(None)
 
         def asSqlExpr(x: LocalTime): SqlExpr =
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time, x.toString)
+            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time(None), formatter.format(x))
 
     given offsetDateTime: AsSqlExpr[OffsetDateTime] with
         def sqlType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
 
         def asSqlExpr(x: OffsetDateTime): SqlExpr =
-            SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Timestamp(Some(SqlTimeZoneMode.With)))
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn XXX")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)), formatter.format(x))
 
     given offsetTime: AsSqlExpr[OffsetTime] with
         def sqlType: SqlType = SqlType.Time(Some(SqlTimeZoneMode.With))
 
         def asSqlExpr(x: OffsetTime): SqlExpr =
-            SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Time(Some(SqlTimeZoneMode.With)))
+            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss XXX")
+            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time(Some(SqlTimeZoneMode.With)), formatter.format(x))
 
     given json: AsSqlExpr[Json] with
         def sqlType: SqlType = SqlType.Json

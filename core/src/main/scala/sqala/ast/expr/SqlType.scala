@@ -23,7 +23,3 @@ enum SqlType:
     case GeometryCollection
     case Array(`type`: SqlType)
     case Custom(`type`: String)
-
-enum SqlTimeZoneMode:
-    case With
-    case Without

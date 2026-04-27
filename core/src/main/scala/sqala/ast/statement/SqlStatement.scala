@@ -5,7 +5,7 @@ import sqala.ast.group.SqlGroupBy
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
-import sqala.ast.table.{SqlJoinCondition, SqlTable}
+import sqala.ast.table.SqlTable
 
 case class SqlUpdateSetPair(column: SqlExpr, value: SqlExpr)
 
@@ -66,10 +66,3 @@ object SqlQuery:
 
         def addHaving(condition: SqlExpr): Select =
             select.copy(having = select.having.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
-
-        def setJoinOnCondition(condition: SqlExpr): Select =
-            select.from.last match
-                case SqlTable.Join(left, joinType, right, _) =>
-                    val newTable = SqlTable.Join(left, joinType, right, Some(SqlJoinCondition.On(condition)))
-                    select.copy(from = select.from.init :+ newTable)
-                case _ => select

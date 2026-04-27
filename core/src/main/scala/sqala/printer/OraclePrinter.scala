@@ -1,11 +1,12 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlExpr, SqlType}
+import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit, SqlTimeZoneMode, SqlType}
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTableAlias
 
 class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
-    override def printCteRecursive(): Unit = {}
+    override def printCteRecursive(): Unit =
+        ()
 
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
@@ -58,6 +59,41 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
         sqlBuilder.append(" VALUES (")
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
+
+    override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+        expr.unit match
+            case SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)) =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_TIMESTAMP_TZ",
+                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM") :: Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case SqlTimeLiteralUnit.Timestamp(_) =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_TIMESTAMP",
+                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9") :: Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case SqlTimeLiteralUnit.Date =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_DATE",
+                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD") :: Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case _ =>
+                super.printTimeLiteralExpr(expr)
 
     override def printType(`type`: SqlType): Unit =
         `type` match
