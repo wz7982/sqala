@@ -107,46 +107,62 @@ object AsDistinctSort:
             Nil
 
 trait AsOverSortItem[T]:
+    type R
+
     type K <: ExprKind
 
     def asSort(x: T): Sort[?, ?]
 
 object AsOverSortItem:
-    type Aux[T, O <: ExprKind] = AsOverSortItem[T]:
-        type K = O
+    type Aux[T, O, OK <: ExprKind] = AsOverSortItem[T]:
+        type R = O
 
-    given expr[T: AsSqlExpr, EK <: ExprKind](using CanInOver[EK]): Aux[Expr[T, EK], EK] =
+        type K = OK
+
+    given expr[T: AsSqlExpr, EK <: ExprKind](using CanInOver[EK]): Aux[Expr[T, EK], T, EK] =
         new AsOverSortItem[Expr[T, EK]]:
+            type R = T
+
             type K = EK
 
             def asSort(x: Expr[T, EK]): Sort[?, ?] =
                 Sort(x, SqlOrdering.Asc, None)
 
-    given sort[T, EK <: ExprKind](using CanInOver[EK]): Aux[Sort[T, EK], EK] =
+    given sort[T, EK <: ExprKind](using CanInOver[EK]): Aux[Sort[T, EK], T, EK] =
         new AsOverSortItem[Sort[T, EK]]:
+            type R = T
+
             type K = EK
 
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
 
-    given query[T: AsSqlExpr, K <: ExprKind, Q <: Query[Expr[T, K], OneRow]]: Aux[Q, Value] =
+    given query[T: AsSqlExpr, K <: ExprKind, Q <: Query[Expr[T, K], OneRow]]: Aux[Q, T, Value] =
         new AsOverSortItem[Q]:
+            type R = T
+
             type K = Value
 
             def asSort(x: Q): Sort[?, ?] =
                 Sort(Expr(SqlExpr.SubQuery(x.tree)), SqlOrdering.Asc, None)
 
 trait AsOverSort[T]:
+    type R
+
     type K <: ExprKind
 
     def asSorts(x: T): List[Sort[?, ?]]
 
 object AsOverSort:
-    type Aux[T, O <: ExprKind] = AsOverSort[T]:
-        type K = O
+    type Aux[T, O, OK <: ExprKind] = AsOverSort[T]:
+        type R = O
 
-    given sort[T](using a: AsOverSortItem[T]): Aux[T, a.K] =
+        type K = OK
+
+    given sort[T](using a: AsOverSortItem[T]): Aux[T, a.R, a.K] =
         new AsOverSort[T]:
+            type R = a.R
+
             type K = a.K
 
             def asSorts(x: T): List[Sort[?, ?]] =
@@ -155,16 +171,21 @@ object AsOverSort:
     given tuple[H, T <: Tuple](using
         h: AsOverSortItem[H],
         t: AsOverSort[T],
+        tt: ToTuple[t.R],
         o: KindOperation[h.K, t.K]
-    ): Aux[H *: T, o.R] =
+    ): Aux[H *: T, h.R *: tt.R, o.R] =
         new AsOverSort[H *: T]:
+            type R = h.R *: tt.R
+
             type K = o.R
 
             def asSorts(x: H *: T): List[Sort[?, ?]] =
                 h.asSort(x.head) :: t.asSorts(x.tail)
 
-    given emptyTuple: Aux[EmptyTuple, Value] =
+    given emptyTuple: Aux[EmptyTuple, EmptyTuple, Value] =
         new AsOverSort[EmptyTuple]:
+            type R = EmptyTuple
+            
             type K = Value
 
             def asSorts(x: EmptyTuple): List[Sort[?, ?]] =

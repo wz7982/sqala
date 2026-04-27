@@ -2004,13 +2004,25 @@ def firstValue[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.GeneralFunc(
-                None,
+            SqlExpr.NullsTreatmentFunc(
                 "FIRST_VALUE",
                 aa.asExpr(x).asSqlExpr :: Nil,
-                Nil,
-                Nil,
                 None
+            )
+        )
+    )
+
+def firstValueIgnoreNulls[A: AsExpr as aa](x: A)(using
+    w: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "FIRST_VALUE",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
@@ -2022,13 +2034,25 @@ def lastValue[A: AsExpr as aa](x: A)(using
 ): to.R =
     to.toOption(
         Expr(
-            SqlExpr.GeneralFunc(
-                None,
+            SqlExpr.NullsTreatmentFunc(
                 "LAST_VALUE",
                 aa.asExpr(x).asSqlExpr :: Nil,
-                Nil,
-                Nil,
                 None
+            )
+        )
+    )
+
+def lastValueIgnoreNulls[A: AsExpr as aa](x: A)(using
+    w: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LAST_VALUE",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
@@ -2051,35 +2075,121 @@ def nthValue[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
+def nthValueIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    wa: CanInWindow[aa.K],
+    nn: SqlNumber[an.R],
+    wn: CanInWindow[an.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NthValueFunc(
+                aa.asExpr(x).asSqlExpr,
+                an.asExpr(n).asSqlExpr,
+                None,
+                Some(SqlWindowNullsMode.Ignore)
+            )
+        )
+    )
+
+def nthValueFromLast[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    wa: CanInWindow[aa.K],
+    nn: SqlNumber[an.R],
+    wn: CanInWindow[an.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NthValueFunc(
+                aa.asExpr(x).asSqlExpr,
+                an.asExpr(n).asSqlExpr,
+                Some(SqlNthValueFromMode.Last),
+                None
+            )
+        )
+    )
+
+def nthValueFromLastIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
+    wa: CanInWindow[aa.K],
+    nn: SqlNumber[an.R],
+    wn: CanInWindow[an.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NthValueFunc(
+                aa.asExpr(x).asSqlExpr,
+                an.asExpr(n).asSqlExpr,
+                Some(SqlNthValueFromMode.Last),
+                Some(SqlWindowNullsMode.Ignore)
+            )
+        )
+    )
+
 def lag[A: AsExpr as aa](x: A)(using
-    CanInWindow[aa.K],
-    QueryContext
-): Expr[aa.R, WindowWithoutOver] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "LAG",
-            aa.asExpr(x).asSqlExpr :: Nil,
-            Nil,
-            Nil,
-            None
+    i: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None
+            )
+        )
+    )
+
+def lagIgnoreNulls[A: AsExpr as aa](x: A)(using
+    i: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )
 
 def lag[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    CanInWindow[aa.K],
-    SqlNumber[ao.R],
-    CanInWindow[ao.K],
-    QueryContext
-): Expr[aa.R, WindowWithoutOver] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "LAG",
-            aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
-            Nil,
-            Nil,
-            None
+    ia: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    io: CanInWindow[ao.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
+                None
+            )
+        )
+    )
+
+def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
+    ia: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    io: CanInWindow[ao.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )
 
@@ -2088,52 +2198,100 @@ def lag[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, defa
     no: SqlNumber[ao.R],
     wo: CanInWindow[ao.K],
     wd: CanInWindow[ad.K],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], IsOption[aa.R] || IsOption[ad.R]],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
     c: QueryContext
 ): Expr[r.R, WindowWithoutOver] =
     Expr(
-        SqlExpr.GeneralFunc(
-            None,
+        SqlExpr.NullsTreatmentFunc(
             "LAG",
             aa.asExpr(x).asSqlExpr ::
                 ao.asExpr(offset).asSqlExpr ::
                 ad.asExpr(default).asSqlExpr :: Nil
             ,
-            Nil,
-            Nil,
             None
+        )
+    )
+
+def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
+    wa: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    wo: CanInWindow[ao.K],
+    wd: CanInWindow[ad.K],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    c: QueryContext
+): Expr[r.R, WindowWithoutOver] =
+    Expr(
+        SqlExpr.NullsTreatmentFunc(
+            "LAG",
+            aa.asExpr(x).asSqlExpr ::
+                ao.asExpr(offset).asSqlExpr ::
+                ad.asExpr(default).asSqlExpr :: Nil
+            ,
+            Some(SqlWindowNullsMode.Ignore)
         )
     )
 
 def lead[A: AsExpr as aa](x: A)(using
-    CanInWindow[aa.K],
-    QueryContext
-): Expr[aa.R, WindowWithoutOver] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "LEAD",
-            aa.asExpr(x).asSqlExpr :: Nil,
-            Nil,
-            Nil,
-            None
+    i: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                None
+            )
+        )
+    )
+
+def leadIgnoreNulls[A: AsExpr as aa](x: A)(using
+    i: CanInWindow[aa.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )
 
 def lead[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    CanInWindow[aa.K],
-    SqlNumber[ao.R],
-    CanInWindow[ao.K],
-    QueryContext
-): Expr[aa.R, WindowWithoutOver] =
-    Expr(
-        SqlExpr.GeneralFunc(
-            None,
-            "LEAD",
-            aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
-            Nil,
-            Nil,
-            None
+    ia: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    io: CanInWindow[ao.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
+                None
+            )
+        )
+    )
+
+def leadIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
+    ia: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    io: CanInWindow[ao.K],
+    to: ToOption[Expr[aa.R, WindowWithoutOver]],
+    c: QueryContext
+): to.R =
+    to.toOption(
+        Expr(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )
 
@@ -2142,19 +2300,35 @@ def lead[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, def
     no: SqlNumber[ao.R],
     wo: CanInWindow[ao.K],
     wd: CanInWindow[ad.K],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], IsOption[aa.R] || IsOption[ad.R]],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
     c: QueryContext
 ): Expr[r.R, WindowWithoutOver] =
     Expr(
-        SqlExpr.GeneralFunc(
-            None,
+        SqlExpr.NullsTreatmentFunc(
             "LEAD",
             aa.asExpr(x).asSqlExpr ::
                 ao.asExpr(offset).asSqlExpr ::
                 ad.asExpr(default).asSqlExpr :: Nil
             ,
-            Nil,
-            Nil,
             None
+        )
+    )
+
+def leadIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
+    wa: CanInWindow[aa.K],
+    no: SqlNumber[ao.R],
+    wo: CanInWindow[ao.K],
+    wd: CanInWindow[ad.K],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    c: QueryContext
+): Expr[r.R, WindowWithoutOver] =
+    Expr(
+        SqlExpr.NullsTreatmentFunc(
+            "LEAD",
+            aa.asExpr(x).asSqlExpr ::
+                ao.asExpr(offset).asSqlExpr ::
+                ad.asExpr(default).asSqlExpr :: Nil
+            ,
+            Some(SqlWindowNullsMode.Ignore)
         )
     )
