@@ -36,7 +36,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" SET ")
 
         printList(update.setList): i =>
-            printExpr(i.column)
+            printIdent(i.column)
             sqlBuilder.append(" = ")
             printExpr(i.value)
 
@@ -50,7 +50,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
         if insert.columns.nonEmpty then
             sqlBuilder.append(" (")
-            printList(insert.columns)(printExpr)
+            printList(insert.columns)(printIdent)
             sqlBuilder.append(")")
 
         if insert.query.isDefined then
@@ -68,7 +68,67 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" WHERE ")
             printExpr(i)
 
-    def printUpsert(upsert: SqlStatement.Upsert): Unit
+    def printUpsert(upsert: SqlStatement.Upsert): Unit =
+        sqlBuilder.append("MERGE INTO ")
+        val table = upsert.table.copy(alias = Some(SqlTableAlias("t1", Nil)))
+        printTable(table)
+        sqlBuilder.append("\n")
+
+        sqlBuilder.append("USING (")
+        sqlBuilder.append("\n")
+        val query = SqlQuery.Select(
+            None,
+            upsert.values.zip(upsert.columns).map((v, c) => SqlSelectItem.Expr(v, Some(c))),
+            Nil,
+            None,
+            None,
+            None,
+            Nil,
+            None,
+            None
+        )
+        push()
+        printQuery(query)
+        pull()
+        sqlBuilder.append("\n")
+        sqlBuilder.append(")")
+        printTableAlias(SqlTableAlias("t2", Nil))
+        sqlBuilder.append("\n")
+
+        sqlBuilder.append("ON (")
+        for index <- upsert.pkList.indices do
+            printIdent("t1")
+            sqlBuilder.append(".")
+            printIdent(upsert.pkList(index))
+            sqlBuilder.append(" = ")
+            printIdent("t2")
+            sqlBuilder.append(".")
+            printIdent(upsert.pkList(index))
+            if index < upsert.pkList.size - 1 then
+                sqlBuilder.append(" AND ")
+        sqlBuilder.append(")")
+        sqlBuilder.append("\n")
+
+        sqlBuilder.append("WHEN MATCHED THEN UPDATE SET ")
+        printList(upsert.updateList): u =>
+            printIdent("t1")
+            sqlBuilder.append(".")
+            printIdent(u)
+            sqlBuilder.append(" = ")
+            printIdent("t2")
+            sqlBuilder.append(".")
+            printIdent(u)
+        sqlBuilder.append("\n")
+
+        sqlBuilder.append("WHEN NOT MATCHED THEN INSERT (")
+        printList(upsert.columns): c =>
+            printIdent(c)
+        sqlBuilder.append(")")
+        sqlBuilder.append("\n")
+
+        sqlBuilder.append("VALUES (")
+        printList(upsert.values)(printExpr)
+        sqlBuilder.append(")")
 
     def printTruncate(truncate: SqlStatement.Truncate): Unit =
         sqlBuilder.append("TRUNCATE ")

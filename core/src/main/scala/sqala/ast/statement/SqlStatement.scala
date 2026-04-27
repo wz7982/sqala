@@ -7,14 +7,14 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.SqlTable
 
-case class SqlUpdateSetPair(column: SqlExpr, value: SqlExpr)
+case class SqlUpdateSetPair(column: String, value: SqlExpr)
 
 enum SqlStatement:
-    case Delete(table: SqlTable, where: Option[SqlExpr])
-    case Insert(table: SqlTable, columns: List[SqlExpr], values: List[List[SqlExpr]], query: Option[SqlQuery])
-    case Update(table: SqlTable, setList: List[SqlUpdateSetPair], where: Option[SqlExpr])
-    case Truncate(table: SqlTable)
-    case Upsert(table: SqlTable, columns: List[SqlExpr], values: List[SqlExpr], pkList: List[SqlExpr], updateList: List[SqlExpr])
+    case Delete(table: SqlTable.Ident, where: Option[SqlExpr])
+    case Insert(table: SqlTable.Ident, columns: List[String], values: List[List[SqlExpr]], query: Option[SqlQuery])
+    case Update(table: SqlTable.Ident, setList: List[SqlUpdateSetPair], where: Option[SqlExpr])
+    case Truncate(table: SqlTable.Ident)
+    case Upsert(table: SqlTable.Ident, columns: List[String], values: List[SqlExpr], pkList: List[String], updateList: List[String])
 
 object SqlStatement:
     extension (delete: Delete)
