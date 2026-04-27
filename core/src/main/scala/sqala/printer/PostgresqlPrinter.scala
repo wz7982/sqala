@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.expr.SqlExpr
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
