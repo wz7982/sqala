@@ -41,7 +41,6 @@ enum SqlExpr:
     case OverlayFunc(expr: SqlExpr, placing: SqlExpr, from: SqlExpr, `for`: Option[SqlExpr])
     case PositionFunc(expr: SqlExpr, in: SqlExpr)
     case ExtractFunc(unit: SqlTimeUnit, expr: SqlExpr)
-    case VectorDistanceFunc(left: SqlExpr, right: SqlExpr, mode: SqlVectorDistanceMode)
     case JsonSerializeFunc(expr: SqlExpr, output: Option[SqlJsonOutput])
     case JsonParseFunc(
         expr: SqlExpr,

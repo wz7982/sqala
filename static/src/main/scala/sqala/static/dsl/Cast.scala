@@ -35,6 +35,3 @@ object Cast:
 
     given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
         def castType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
-
-    given vector[T: SqlString]: Cast[T, Vector] with
-        def castType: SqlType = SqlType.Vector

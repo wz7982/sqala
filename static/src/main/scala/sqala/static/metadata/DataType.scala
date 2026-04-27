@@ -60,13 +60,6 @@ object SqlJson:
 
     given option[T: SqlJson]: SqlJson[Option[T]]()
 
-trait SqlVector[T]
-
-object SqlVector:
-    given vector: SqlVector[Vector]()
-
-    given option[T: SqlVector]: SqlVector[Option[T]]()
-
 trait SqlGeometry[T]
 
 object SqlGeometry:
@@ -101,11 +94,6 @@ object Json:
     def apply(value: String): Json = value
 
 case class Interval(value: String, unit: SqlTimeUnit)
-
-opaque type Vector = String
-
-object Vector:
-    def apply(value: String): Vector = value
 
 case class Geometry(value: String, srid: Int)
 
