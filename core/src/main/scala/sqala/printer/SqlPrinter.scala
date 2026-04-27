@@ -22,12 +22,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def sql: String = sqlBuilder.toString
 
-    def printStatement(statement: SqlStatement): Unit = statement match
-        case update: SqlStatement.Update => printUpdate(update)
-        case insert: SqlStatement.Insert => printInsert(insert)
-        case delete: SqlStatement.Delete => printDelete(delete)
-        case upsert: SqlStatement.Upsert => printUpsert(upsert)
-        case truncate: SqlStatement.Truncate => printTruncate(truncate)
+    def printStatement(statement: SqlStatement): Unit =
+        statement match
+            case update: SqlStatement.Update => printUpdate(update)
+            case insert: SqlStatement.Insert => printInsert(insert)
+            case delete: SqlStatement.Delete => printDelete(delete)
+            case upsert: SqlStatement.Upsert => printUpsert(upsert)
+            case truncate: SqlStatement.Truncate => printTruncate(truncate)
 
     def printUpdate(update: SqlStatement.Update): Unit =
         sqlBuilder.append("UPDATE ")
@@ -227,54 +228,55 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
         printQuery(cte.query)
 
-    def printExpr(expr: SqlExpr): Unit = expr match
-        case c: SqlExpr.Column => printColumnExpr(c)
-        case SqlExpr.NullLiteral => printNullLiteralExpr()
-        case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
-        case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
-        case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
-        case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
-        case i: SqlExpr.IntervalLiteral => printIntervalLiteralExpr(i)
-        case v: SqlExpr.Tuple => printTupleExpr(v)
-        case a: SqlExpr.Array => printArrayExpr(a)
-        case u: SqlExpr.Unary => printUnaryExpr(u)
-        case b: SqlExpr.Binary => printBinaryExpr(b)
-        case n: SqlExpr.NullTest => printNullTestExpr(n)
-        case j: SqlExpr.JsonTest => printJsonTestExpr(j)
-        case b: SqlExpr.Between => printBetweenExpr(b)
-        case l: SqlExpr.Like => printLikeExpr(l)
-        case s: SqlExpr.SimilarTo => printSimilarToExpr(s)
-        case c: SqlExpr.Case => printCaseExpr(c)
-        case s: SqlExpr.SimpleCase => printSimpleCaseExpr(s)
-        case c: SqlExpr.Coalesce => printCoalesceExpr(c)
-        case n: SqlExpr.NullIf => printNullIfExpr(n)
-        case c: SqlExpr.Cast => printCastExpr(c)
-        case w: SqlExpr.Window => printWindowExpr(w)
-        case q: SqlExpr.SubQuery => printSubQueryExpr(q)
-        case q: SqlExpr.SubLink => printSubLinkExpr(q)
-        case g: SqlExpr.Grouping => printGroupingExpr(g)
-        case i: SqlExpr.IdentFunc => printIdentFuncExpr(i)
-        case s: SqlExpr.SubstringFunc => printSubstringFuncExpr(s)
-        case t: SqlExpr.TrimFunc => printTrimFuncExpr(t)
-        case o: SqlExpr.OverlayFunc => printOverlayFuncExpr(o)
-        case p: SqlExpr.PositionFunc => printPositionFuncExpr(p)
-        case e: SqlExpr.ExtractFunc => printExtractFuncExpr(e)
-        case j: SqlExpr.JsonSerializeFunc => printJsonSerializeFuncExpr(j)
-        case j: SqlExpr.JsonParseFunc => printJsonParseFuncExpr(j)
-        case j: SqlExpr.JsonQueryFunc => printJsonQueryFuncExpr(j)
-        case j: SqlExpr.JsonValueFunc => printJsonValueFuncExpr(j)
-        case j: SqlExpr.JsonObjectFunc => printJsonObjectFuncExpr(j)
-        case j: SqlExpr.JsonArrayFunc => printJsonArrayFuncExpr(j)
-        case j: SqlExpr.JsonExistsFunc => printJsonExistsFuncExpr(j)
-        case c: SqlExpr.CountAsteriskFunc => printCountAsteriskFuncExpr(c)
-        case l: SqlExpr.ListAggFunc => printListAggFuncExpr(l)
-        case j: SqlExpr.JsonObjectAggFunc => printJsonObjectAggFuncExpr(j)
-        case j: SqlExpr.JsonArrayAggFunc => printJsonArrayAggFuncExpr(j)
-        case n: SqlExpr.NullsTreatmentFunc => printNullsTreatmentFuncExpr(n)
-        case n: SqlExpr.NthValueFunc => printNthValueFuncExpr(n)
-        case g: SqlExpr.GeneralFunc => printGeneralFuncExpr(g)
-        case m: SqlExpr.MatchPhase => printMatchPhaseExpr(m)
-        case c: SqlExpr.Custom => printCustomExpr(c)
+    def printExpr(expr: SqlExpr): Unit =
+        expr match
+            case c: SqlExpr.Column => printColumnExpr(c)
+            case SqlExpr.NullLiteral => printNullLiteralExpr()
+            case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
+            case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
+            case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
+            case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
+            case i: SqlExpr.IntervalLiteral => printIntervalLiteralExpr(i)
+            case v: SqlExpr.Tuple => printTupleExpr(v)
+            case a: SqlExpr.Array => printArrayExpr(a)
+            case u: SqlExpr.Unary => printUnaryExpr(u)
+            case b: SqlExpr.Binary => printBinaryExpr(b)
+            case n: SqlExpr.NullTest => printNullTestExpr(n)
+            case j: SqlExpr.JsonTest => printJsonTestExpr(j)
+            case b: SqlExpr.Between => printBetweenExpr(b)
+            case l: SqlExpr.Like => printLikeExpr(l)
+            case s: SqlExpr.SimilarTo => printSimilarToExpr(s)
+            case c: SqlExpr.Case => printCaseExpr(c)
+            case s: SqlExpr.SimpleCase => printSimpleCaseExpr(s)
+            case c: SqlExpr.Coalesce => printCoalesceExpr(c)
+            case n: SqlExpr.NullIf => printNullIfExpr(n)
+            case c: SqlExpr.Cast => printCastExpr(c)
+            case w: SqlExpr.Window => printWindowExpr(w)
+            case q: SqlExpr.SubQuery => printSubQueryExpr(q)
+            case q: SqlExpr.SubLink => printSubLinkExpr(q)
+            case g: SqlExpr.Grouping => printGroupingExpr(g)
+            case i: SqlExpr.IdentFunc => printIdentFuncExpr(i)
+            case s: SqlExpr.SubstringFunc => printSubstringFuncExpr(s)
+            case t: SqlExpr.TrimFunc => printTrimFuncExpr(t)
+            case o: SqlExpr.OverlayFunc => printOverlayFuncExpr(o)
+            case p: SqlExpr.PositionFunc => printPositionFuncExpr(p)
+            case e: SqlExpr.ExtractFunc => printExtractFuncExpr(e)
+            case j: SqlExpr.JsonSerializeFunc => printJsonSerializeFuncExpr(j)
+            case j: SqlExpr.JsonParseFunc => printJsonParseFuncExpr(j)
+            case j: SqlExpr.JsonQueryFunc => printJsonQueryFuncExpr(j)
+            case j: SqlExpr.JsonValueFunc => printJsonValueFuncExpr(j)
+            case j: SqlExpr.JsonObjectFunc => printJsonObjectFuncExpr(j)
+            case j: SqlExpr.JsonArrayFunc => printJsonArrayFuncExpr(j)
+            case j: SqlExpr.JsonExistsFunc => printJsonExistsFuncExpr(j)
+            case c: SqlExpr.CountAsteriskFunc => printCountAsteriskFuncExpr(c)
+            case l: SqlExpr.ListAggFunc => printListAggFuncExpr(l)
+            case j: SqlExpr.JsonObjectAggFunc => printJsonObjectAggFuncExpr(j)
+            case j: SqlExpr.JsonArrayAggFunc => printJsonArrayAggFuncExpr(j)
+            case n: SqlExpr.NullsTreatmentFunc => printNullsTreatmentFuncExpr(n)
+            case n: SqlExpr.NthValueFunc => printNthValueFuncExpr(n)
+            case g: SqlExpr.GeneralFunc => printGeneralFuncExpr(g)
+            case m: SqlExpr.MatchPhase => printMatchPhaseExpr(m)
+            case c: SqlExpr.Custom => printCustomExpr(c)
 
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         for n <- expr.tableName do
@@ -282,7 +284,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(".")
         printIdent(expr.columnName)
 
-    def printNullLiteralExpr(): Unit = sqlBuilder.append("NULL")
+    def printNullLiteralExpr(): Unit =
+        sqlBuilder.append("NULL")
 
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         printChars(expr.string)
@@ -299,12 +302,18 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         def printUnit(unit: SqlTimeLiteralUnit): Unit =
             unit match
-                case SqlTimeLiteralUnit.Timestamp =>
+                case SqlTimeLiteralUnit.Timestamp(mode) =>
                     sqlBuilder.append("TIMESTAMP")
+                    for m <- mode do
+                        sqlBuilder.append(" ")
+                        printTimeZoneMode(m)
                 case SqlTimeLiteralUnit.Date =>
                     sqlBuilder.append("DATE")
-                case SqlTimeLiteralUnit.Time =>
+                case SqlTimeLiteralUnit.Time(mode) =>
                     sqlBuilder.append("TIME")
+                    for m <- mode do
+                        sqlBuilder.append(" ")
+                        printTimeZoneMode(m)
 
         printUnit(expr.unit)
         sqlBuilder.append(" ")
@@ -626,14 +635,14 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printType(expr.`type`)
         sqlBuilder.append(")")
 
-    def printType(`type`: SqlType): Unit =
-        def printTimeZoneMode(mode: SqlTimeZoneMode): Unit =
-            mode match
-                case SqlTimeZoneMode.With =>
-                    sqlBuilder.append("WITH TIME ZONE")
-                case SqlTimeZoneMode.Without =>
-                    sqlBuilder.append("WITHOUT TIME ZONE")
+    def printTimeZoneMode(mode: SqlTimeZoneMode): Unit =
+        mode match
+            case SqlTimeZoneMode.With =>
+                sqlBuilder.append("WITH TIME ZONE")
+            case SqlTimeZoneMode.Without =>
+                sqlBuilder.append("WITHOUT TIME ZONE")
 
+    def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(maxLength) =>
                 sqlBuilder.append("VARCHAR")
