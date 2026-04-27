@@ -35,7 +35,7 @@ class Insert[T, S <: InsertState](
         val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match
-                case Expr(SqlExpr.Column(_, c)) => SqlExpr.Column(None, c)
+                case Expr(SqlExpr.Column(_, c)) => c
                 case _ => throw MatchError(i)
         val tree: SqlStatement.Insert =
             SqlStatement.Insert(sqlTable, columns, Nil, None)
@@ -73,7 +73,7 @@ object Insert:
         val columns = metaData.columnNames
             .zip(metaData.fieldNames)
             .filterNot((_, field) => metaData.incrementField.contains(field))
-            .map((c, _) => SqlExpr.Column(None, c))
+            .map((c, _) => c)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val values = entities.map: entity =>
             val data = entity.productIterator.toList

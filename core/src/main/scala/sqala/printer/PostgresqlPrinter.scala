@@ -27,7 +27,7 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
         printTable(upsert.table)
 
         sqlBuilder.append(" (")
-        printList(upsert.columns)(printExpr)
+        printList(upsert.columns)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
@@ -35,16 +35,16 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON CONFLICT (")
-        printList(upsert.pkList)(printExpr)
+        printList(upsert.pkList)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" DO UPDATE SET ")
 
         printList(upsert.updateList): u =>
-            printExpr(u)
+            printIdent(u)
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")
-            printExpr(u)
+            printIdent(u)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("STRING_AGG(")

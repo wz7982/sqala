@@ -24,7 +24,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         printTable(upsert.table)
 
         sqlBuilder.append(" (")
-        printList(upsert.columns)(printExpr)
+        printList(upsert.columns)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
@@ -34,9 +34,9 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
 
         printList(upsert.updateList): u =>
-            printExpr(u)
+            printIdent(u)
             sqlBuilder.append(" = VALUES (")
-            printExpr(u)
+            printIdent(u)
             sqlBuilder.append(")")
 
     override def printBinaryExpr(expr: SqlExpr.Binary): Unit =

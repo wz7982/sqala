@@ -30,9 +30,8 @@ class Update[T, S <: UpdateState](
     ): Update[T, UpdateTable] =
         given UpdateSetContext = new UpdateSetContext
         val pair = f(table)
-        val expr = SqlExpr.Column(None, pair.columnName)
         val updateExpr = pair.updateExpr
-        new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(expr, updateExpr)))
+        new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
 
     def where[F: AsExpr as a](f: QueryContext ?=> Table[T, Column, CanInFrom] => F)(using
         S =:= UpdateTable,
@@ -83,7 +82,7 @@ object Update:
                     case (None, true) => false
                     case _ => true
             .map: (_, column, instance, field) =>
-                SqlUpdateSetPair(SqlExpr.Column(None, column), instance.asSqlExpr(field))
+                SqlUpdateSetPair(column, instance.asSqlExpr(field))
         val conditions = updateMetaData
             .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
             .map: (_, column, instance, field) =>
