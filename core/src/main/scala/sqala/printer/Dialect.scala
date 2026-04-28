@@ -15,10 +15,14 @@ object OracleDialect extends Dialect:
     def printer(standardEscapeStrings: Boolean): SqlPrinter =
         new OraclePrinter(standardEscapeStrings)
 
-object H2Dialect extends Dialect:
-    def printer(standardEscapeStrings: Boolean): SqlPrinter =
-        new H2Printer(standardEscapeStrings)
-
 object SqlserverDialect extends Dialect:
     def printer(standardEscapeStrings: Boolean): SqlPrinter =
         new SqlserverPrinter(standardEscapeStrings)
+
+object SqliteDialect extends Dialect:
+    def printer(standardEscapeStrings: Boolean): SqlPrinter =
+        new SqlitePrinter(standardEscapeStrings)
+
+object H2Dialect extends Dialect:
+    def printer(standardEscapeStrings: Boolean): SqlPrinter =
+        new H2Printer(standardEscapeStrings)
