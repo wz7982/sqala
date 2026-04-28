@@ -3,7 +3,7 @@ import xerial.sbt.Sonatype.*
 lazy val commonSettings = Seq(
     scalaVersion := "3.8.2",
 
-    version := "0.6.3",
+    version := "0.6.4",
 
     organization := "com.wz7982",
 
@@ -46,8 +46,5 @@ lazy val sqala = (project in file(".")).settings(commonSettings)
     .aggregate(core, static, dynamic, jdbc)
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
 lazy val static = project.in(file("static")).dependsOn(core).settings(commonSettings).settings(name := "sqala-static")
-lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(
-    name := "sqala-dynamic",
-    libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
-)
+lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
 lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(name := "sqala-jdbc")
