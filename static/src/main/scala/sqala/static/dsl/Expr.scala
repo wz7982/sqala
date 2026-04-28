@@ -48,8 +48,10 @@ case class Expr[T, K <: ExprKind](private val expr: SqlExpr):
                         Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right)
                     case Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right) =>
                         Binary(left, SqlBinaryOperator.IsDistinctFrom, right)
-                    case NullTest(ne, not) =>
-                         NullTest(ne, !not)
+                    case Binary(left, SqlBinaryOperator.Is, right) =>
+                        Binary(left, SqlBinaryOperator.IsNot, right)
+                    case Binary(left, SqlBinaryOperator.IsNot, right) =>
+                        Binary(left, SqlBinaryOperator.Is, right)
                     case Between(expr, s, e, n) =>
                         Between(expr, s, e, !n)
                     case _ => SqlExpr.Unary(SqlUnaryOperator.Not, e)

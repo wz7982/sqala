@@ -10,6 +10,8 @@ enum SqlBinaryOperator(val precedence: Int):
     case NotEqual extends SqlBinaryOperator(30)
     case IsDistinctFrom extends SqlBinaryOperator(30)
     case IsNotDistinctFrom extends SqlBinaryOperator(30)
+    case Is extends SqlBinaryOperator(30)
+    case IsNot extends SqlBinaryOperator(30)
     case In extends SqlBinaryOperator(30)
     case NotIn extends SqlBinaryOperator(30)
     case GreaterThan extends SqlBinaryOperator(30)
