@@ -274,9 +274,9 @@ object Repository:
                                         val left = SqlExpr.Column(None, columnName)
                                         op match
                                             case "isNull" =>
-                                                condBuffer.addOne(SqlExpr.NullTest(left, false))
+                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Is, SqlExpr.NullLiteral))
                                             case "isNotNull" =>
-                                                condBuffer.addOne(SqlExpr.NullTest(left, false))
+                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.IsNot, SqlExpr.NullLiteral))
                                             case "in" =>
                                                 val value = valueIterator.next().asInstanceOf[Seq[Any]]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[Any]]

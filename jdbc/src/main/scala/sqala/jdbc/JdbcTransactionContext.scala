@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.dynamic.dsl.{DynamicQuery, NativeSql}
+import sqala.dynamic.dsl.NativeSql
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
@@ -175,23 +175,6 @@ object Transaction extends Dynamic:
         val (sql, args) = nativeSql
         l(sql, args)
         jdbcQueryToMap(t.connection, sql, args)
-
-    def fetchTo[T](query: DynamicQuery)(using
-        d: JdbcDecoder[T],
-        t: JdbcTransactionContext,
-        l: Logger
-    ): List[T] =
-        val sql = queryToString(query.tree, t.dialect, t.standardEscapeStrings)
-        l(sql, Array.empty[Any])
-        jdbcQuery(t.connection, sql, Array.empty[Any])
-
-    def fetchToMap(query: DynamicQuery)(using
-        t: JdbcTransactionContext,
-        l: Logger
-    ): List[Map[String, Any]] =
-        val sql = queryToString(query.tree, t.dialect, t.standardEscapeStrings)
-        l(sql, Array.empty[Any])
-        jdbcQueryToMap(t.connection, sql, Array.empty[Any])
 
     inline def findTo[T](inline query: Query[?, ?])(using
         JdbcDecoder[T],

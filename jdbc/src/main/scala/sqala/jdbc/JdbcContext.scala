@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.dynamic.dsl.{DynamicQuery, NativeSql}
+import sqala.dynamic.dsl.NativeSql
 import sqala.printer.Dialect
 import sqala.static.dsl.Result
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
@@ -154,19 +154,6 @@ class JdbcContext(
         val (sql, args) = nativeSql
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
-
-    def fetchTo[T](query: DynamicQuery)(using
-        d: JdbcDecoder[T],
-        l: Logger
-    ): List[T] =
-        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
-        l(sql, Array.empty[Any])
-        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
-
-    def fetchToMap(query: DynamicQuery)(using l: Logger): List[Map[String, Any]] =
-        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
-        l(sql, Array.empty[Any])
-        execute(c => jdbcQueryToMap(c, sql, Array.empty[Any]))
 
     inline def pageTo[T](
         inline query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true

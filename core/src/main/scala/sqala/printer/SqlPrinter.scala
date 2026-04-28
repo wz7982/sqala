@@ -301,7 +301,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case a: SqlExpr.Array => printArrayExpr(a)
             case u: SqlExpr.Unary => printUnaryExpr(u)
             case b: SqlExpr.Binary => printBinaryExpr(b)
-            case n: SqlExpr.NullTest => printNullTestExpr(n)
             case j: SqlExpr.JsonTest => printJsonTestExpr(j)
             case b: SqlExpr.Between => printBetweenExpr(b)
             case l: SqlExpr.Like => printLikeExpr(l)
@@ -455,6 +454,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("IS DISTINCT FROM")
             case SqlBinaryOperator.IsNotDistinctFrom =>
                 sqlBuilder.append("IS NOT DISTINCT FROM")
+            case SqlBinaryOperator.Is =>
+                sqlBuilder.append("IS")
+            case SqlBinaryOperator.IsNot =>
+                sqlBuilder.append("IS NOT")
             case SqlBinaryOperator.In =>
                 sqlBuilder.append("IN")
             case SqlBinaryOperator.NotIn =>
@@ -514,11 +517,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(")")
         else
             printExpr(expr.right)
-
-    def printNullTestExpr(expr: SqlExpr.NullTest): Unit =
-        printExpr(expr.expr)
-        if expr.not then sqlBuilder.append(" IS NOT NULL")
-        else sqlBuilder.append(" IS NULL")
 
     def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
         def printType(`type`: SqlJsonNodeType): Unit =

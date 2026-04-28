@@ -40,7 +40,11 @@ extension [T: AsExpr as at](self: T)
 
     def isNull(using QueryContext): Expr[Boolean, at.K] =
         Expr(
-            SqlExpr.NullTest(at.asExpr(self).asSqlExpr, false)
+            SqlExpr.Binary(
+                at.asExpr(self).asSqlExpr,
+                SqlBinaryOperator.Is,
+                SqlExpr.NullLiteral
+            )
         )
 
     @targetName("eqIgnoreNulls")
