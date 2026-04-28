@@ -14,6 +14,10 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
     override def printCteRecursive(): Unit =
         ()
 
+    override def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
+        sqlBuilder.append("N")
+        printChars(expr.string)
+
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         expr.unit match
             case SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)) =>
@@ -40,7 +44,12 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
     override def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(None) =>
-                sqlBuilder.append("VARCHAR(MAX)")
+                sqlBuilder.append("NVARCHAR(MAX)")
+            case SqlType.Varchar(Some(l)) =>
+                sqlBuilder.append("NVARCHAR")
+                sqlBuilder.append("(")
+                sqlBuilder.append(l)
+                sqlBuilder.append(")")
             case SqlType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 sqlBuilder.append("DATETIMEOFFSET")
             case SqlType.Timestamp(_) =>
