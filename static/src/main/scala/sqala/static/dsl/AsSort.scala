@@ -137,11 +137,11 @@ object AsOverSortItem:
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
 
-    given query[T: AsSqlExpr, K <: ExprKind, Q <: Query[Expr[T, K], OneRow]]: Aux[Q, T, Value] =
+    given query[T: AsSqlExpr, K <: ExprKind, Q <: Query[Expr[T, K], OneRow]]: Aux[Q, T, ValueOperation] =
         new AsOverSortItem[Q]:
             type R = T
 
-            type K = Value
+            type K = ValueOperation
 
             def asSort(x: Q): Sort[?, ?] =
                 Sort(Expr(SqlExpr.SubQuery(x.tree)), SqlOrdering.Asc, None)
@@ -182,11 +182,11 @@ object AsOverSort:
             def asSorts(x: H *: T): List[Sort[?, ?]] =
                 h.asSort(x.head) :: t.asSorts(x.tail)
 
-    given emptyTuple: Aux[EmptyTuple, EmptyTuple, Value] =
+    given emptyTuple: Aux[EmptyTuple, EmptyTuple, ValueOperation] =
         new AsOverSort[EmptyTuple]:
             type R = EmptyTuple
-            
-            type K = Value
+
+            type K = ValueOperation
 
             def asSorts(x: EmptyTuple): List[Sort[?, ?]] =
                 Nil

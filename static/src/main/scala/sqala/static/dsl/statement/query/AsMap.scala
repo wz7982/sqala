@@ -256,11 +256,11 @@ object AsMap:
             def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr] =
                 SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c$cursor")) :: Nil
 
-    given scalarQuery[T: AsSqlExpr, EK <: ExprKind, Q <: Query[Expr[T, EK], OneRow]]: Aux[Q, Expr[T, Column], Value] =
+    given scalarQuery[T: AsSqlExpr, EK <: ExprKind, Q <: Query[Expr[T, EK], OneRow]]: Aux[Q, Expr[T, Column], ValueOperation] =
         new AsMap[Q]:
             type R = Expr[T, Column]
 
-            type K = Value
+            type K = ValueOperation
 
             def transform(x: Q): R =
                 Expr(SqlExpr.SubQuery(x.tree))

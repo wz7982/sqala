@@ -31,6 +31,8 @@ type Ungrouped <: ExprKind
 
 type Value <: ExprKind
 
+type ValueOperation <: ExprKind
+
 type Distinct <: ExprKind
 
 type QuerySize
@@ -86,6 +88,10 @@ object KindOperation:
         new KindOperation[Column, Value]:
             type R = Operation
 
+    given columnAndValueOperation: Aux[Column, ValueOperation, Operation] =
+        new KindOperation[Column, ValueOperation]:
+            type R = Operation
+
     given operationAndOperation: Aux[Operation, Operation, Operation] =
         new KindOperation[Operation, Operation]:
             type R = Operation
@@ -112,6 +118,10 @@ object KindOperation:
 
     given operationAndValue: Aux[Operation, Value, Operation] =
         new KindOperation[Operation, Value]:
+            type R = Operation
+
+    given operationAndValueOperation: Aux[Operation, ValueOperation, Operation] =
+        new KindOperation[Operation, ValueOperation]:
             type R = Operation
 
     given aggAndAgg: Aux[Agg, Agg, AggOperation] =
@@ -146,6 +156,10 @@ object KindOperation:
         new KindOperation[Agg, Value]:
             type R = AggOperation
 
+    given aggAndValueOperation: Aux[Agg, ValueOperation, AggOperation] =
+        new KindOperation[Agg, ValueOperation]:
+            type R = AggOperation
+
     given aggOperationAndAggOperation: Aux[AggOperation, AggOperation, AggOperation] =
         new KindOperation[AggOperation, AggOperation]:
             type R = AggOperation
@@ -174,6 +188,10 @@ object KindOperation:
         new KindOperation[AggOperation, Value]:
             type R = AggOperation
 
+    given aggOperationAndValueOperation: Aux[AggOperation, ValueOperation, AggOperation] =
+        new KindOperation[AggOperation, ValueOperation]:
+            type R = AggOperation
+
     given windowAndWindow: Aux[Window, Window, Window] =
         new KindOperation[Window, Window]:
             type R = Window
@@ -196,6 +214,10 @@ object KindOperation:
 
     given windowAndValue: Aux[Window, Value, Window] =
         new KindOperation[Window, Value]:
+            type R = Window
+
+    given windowAndValueOperation: Aux[Window, ValueOperation, Window] =
+        new KindOperation[Window, ValueOperation]:
             type R = Window
 
     given windowEmptyAndWindowEmpty: Aux[WindowEmpty, WindowEmpty, WindowEmpty] =
@@ -222,6 +244,10 @@ object KindOperation:
         new KindOperation[WindowEmpty, Value]:
             type R = WindowEmpty
 
+    given windowEmptyAndValueOperation: Aux[WindowEmpty, ValueOperation, WindowEmpty] =
+        new KindOperation[WindowEmpty, ValueOperation]:
+            type R = WindowEmpty
+
     given windowAggAndWindowAgg: Aux[WindowAgg, WindowAgg, WindowAgg] =
         new KindOperation[WindowAgg, WindowAgg]:
             type R = WindowAgg
@@ -242,6 +268,10 @@ object KindOperation:
         new KindOperation[WindowAgg, Value]:
             type R = WindowAgg
 
+    given windowAggAndValueOperation: Aux[WindowAgg, ValueOperation, WindowAgg] =
+        new KindOperation[WindowAgg, ValueOperation]:
+            type R = WindowAgg
+
     given windowGroupedAndWindowGrouped: Aux[WindowGrouped, WindowGrouped, WindowGrouped] =
         new KindOperation[WindowGrouped, WindowGrouped]:
             type R = WindowGrouped
@@ -258,6 +288,10 @@ object KindOperation:
         new KindOperation[WindowGrouped, Value]:
             type R = WindowGrouped
 
+    given windowGroupedAndValueOperation: Aux[WindowGrouped, ValueOperation, WindowGrouped] =
+        new KindOperation[WindowGrouped, ValueOperation]:
+            type R = WindowGrouped
+
     given groupedAndGrouped: Aux[Grouped, Grouped, GroupedOperation] =
         new KindOperation[Grouped, Grouped]:
             type R = GroupedOperation
@@ -270,12 +304,20 @@ object KindOperation:
         new KindOperation[Grouped, Value]:
             type R = GroupedOperation
 
+    given groupedAndValueOperation: Aux[Grouped, ValueOperation, GroupedOperation] =
+        new KindOperation[Grouped, ValueOperation]:
+            type R = GroupedOperation
+
     given groupedOperationAndGroupedOperation: Aux[GroupedOperation, GroupedOperation, GroupedOperation] =
         new KindOperation[GroupedOperation, GroupedOperation]:
             type R = GroupedOperation
 
     given groupedOperationAndValue: Aux[GroupedOperation, Value, GroupedOperation] =
         new KindOperation[GroupedOperation, Value]:
+            type R = GroupedOperation
+
+    given groupedOperationAndValueOperation: Aux[GroupedOperation, ValueOperation, GroupedOperation] =
+        new KindOperation[GroupedOperation, ValueOperation]:
             type R = GroupedOperation
 
     given ungroupedAndUngrouped: Aux[Ungrouped, Ungrouped, Ungrouped] =
@@ -286,9 +328,21 @@ object KindOperation:
         new KindOperation[Ungrouped, Value]:
             type R = Ungrouped
 
+    given ungroupedAndValueOperation: Aux[Ungrouped, ValueOperation, Ungrouped] =
+        new KindOperation[Ungrouped, ValueOperation]:
+            type R = Ungrouped
+
     given valueAndValue: Aux[Value, Value, Value] =
         new KindOperation[Value, Value]:
             type R = Value
+
+    given valueAndValueOperation: Aux[Value, ValueOperation, ValueOperation] =
+        new KindOperation[Value, ValueOperation]:
+            type R = ValueOperation
+
+    given valueOperationAndValueOperation: Aux[ValueOperation, ValueOperation, ValueOperation] =
+        new KindOperation[ValueOperation, ValueOperation]:
+            type R = ValueOperation
 
 trait CanInvokeOver[K <: ExprKind]
 
@@ -312,6 +366,8 @@ object CanInAgg:
 
     given value: CanInAgg[Value]()
 
+    given valueOperation: CanInAgg[ValueOperation]()
+
 trait CanInWindow[K <: ExprKind]
 
 object CanInWindow:
@@ -324,6 +380,8 @@ object CanInWindow:
     given groupedOperation: CanInWindow[GroupedOperation]()
 
     given value: CanInWindow[Value]()
+
+    given valueOperation: CanInWindow[ValueOperation]()
 
 trait CanInOver[K <: ExprKind]
 
@@ -342,6 +400,8 @@ object CanInOver:
 
     given value: CanInOver[Value]()
 
+    given valueOperation: CanInOver[ValueOperation]()
+
 trait WindowKind[K <: ExprKind]:
     type R <: ExprKind
 
@@ -351,6 +411,10 @@ object WindowKind:
 
     given value: Aux[Value, WindowEmpty] =
         new WindowKind[Value]:
+            type R = WindowEmpty
+
+    given valueOperation: Aux[ValueOperation, WindowEmpty] =
+        new WindowKind[ValueOperation]:
             type R = WindowEmpty
 
     given agg[K <: ExprKind : HasAgg]: Aux[K, WindowAgg] =
@@ -386,6 +450,8 @@ object CanInFilter:
 
     given value: CanInFilter[Value]()
 
+    given valueOperation: CanInFilter[ValueOperation]()
+
 trait CanInGroup[K <: ExprKind]
 
 object CanInGroup:
@@ -397,7 +463,7 @@ object CanInGroup:
 
     given groupedOperation: CanInGroup[GroupedOperation]()
 
-    given value: CanInGroup[Value]()
+    given valueOperation: CanInGroup[ValueOperation]()
 
 trait CanInMap[K <: ExprKind]:
     type R <: QuerySize
@@ -438,6 +504,10 @@ object CanInMap:
         new CanInMap[Value]:
             type R = ManyRows
 
+    given valueOperation: Aux[ValueOperation, ManyRows] =
+        new CanInMap[ValueOperation]:
+            type R = ManyRows
+
     given agg[K <: ExprKind : HasAgg]: Aux[K, OneRow] =
         new CanInMap[K]:
             type R = OneRow
@@ -459,6 +529,8 @@ object CanInGroupedMap:
 
     given value: CanInGroupedMap[Value]()
 
+    given valueOperation: CanInGroupedMap[ValueOperation]()
+
 trait CanInHaving[K <: ExprKind]
 
 object CanInHaving:
@@ -471,6 +543,8 @@ object CanInHaving:
     given groupedOperation: CanInHaving[GroupedOperation]()
 
     given value: CanInHaving[Value]()
+
+    given valueOperation: CanInHaving[ValueOperation]()
 
 trait CanInSort[K <: ExprKind, S <: QuerySize]
 
@@ -489,7 +563,7 @@ object CanInSort:
 
     given groupedOperationManyRows: CanInSort[GroupedOperation, ManyRows]()
 
-    given valueManyRows: CanInSort[Value, ManyRows]()
+    given valueOperationManyRows: CanInSort[ValueOperation, ManyRows]()
 
     given aggOneRow[K <: ExprKind : HasAgg]: CanInSort[K, OneRow]()
 
@@ -501,7 +575,7 @@ object CanInSort:
 
     given groupedOperationOneRow: CanInSort[GroupedOperation, OneRow]()
 
-    given valueOneRow: CanInSort[Value, OneRow]()
+    given valueOperationOneRow: CanInSort[ValueOperation, OneRow]()
 
 trait CanInGroupedSort[K <: ExprKind]
 
@@ -518,7 +592,7 @@ object CanInGroupedSort:
 
     given groupedOperation: CanInGroupedSort[GroupedOperation]()
 
-    given value: CanInGroupedSort[Value]()
+    given valueOperation: CanInGroupedSort[ValueOperation]()
 
 trait TransformKind[T, K <: ExprKind]:
     type R
@@ -573,6 +647,13 @@ object HasAgg:
 
     given windowAgg: HasAgg[WindowAgg]()
 
+trait IsValue[K <: ExprKind]
+
+object IsValue:
+    given value: IsValue[Value]()
+
+    given valueOperation: IsValue[ValueOperation]()
+
 trait TakeQuerySize[N]:
     type R <: QuerySize
 
@@ -591,3 +672,4 @@ object TakeQuerySize:
     given many[N <: Int](using NotGiven[N =:= 0], NotGiven[N =:= 1]): Aux[N, ManyRows] =
         new TakeQuerySize[N]:
             type R = ManyRows
+
