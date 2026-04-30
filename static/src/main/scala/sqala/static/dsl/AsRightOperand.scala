@@ -24,11 +24,11 @@ object AsRightOperand:
             def asExpr(x: T): Expr[R, K] =
                 a.asExpr(x)
 
-    given subLink[T]: Aux[SubLink[T], T, Value] =
+    given subLink[T]: Aux[SubLink[T], T, ValueOperation] =
         new AsRightOperand[SubLink[T]]:
             type R = T
 
-            type K = Value
+            type K = ValueOperation
 
             def asExpr(x: SubLink[T]): Expr[T, K] =
                 Expr(SqlExpr.SubLink(x.quantifier, x.tree))

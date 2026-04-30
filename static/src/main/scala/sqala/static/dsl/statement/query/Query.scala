@@ -9,7 +9,7 @@ import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.printer.Dialect
 import sqala.static.dsl.*
 import sqala.static.dsl.table.{CanNotInFrom, Table, TransformTableKind}
-import sqala.static.metadata.{SqlBoolean, columnPseudoLevel, tableCte}
+import sqala.static.metadata.{SqlBoolean, SqlNumber, columnPseudoLevel, tableCte}
 import sqala.util.queryToString
 
 sealed class Query[T, S <: QuerySize](
@@ -99,7 +99,8 @@ sealed class Query[T, S <: QuerySize](
             )
         )(using context)
 
-    def drop(n: Int): Query[T, S] =
+    def drop[N: AsExpr as a](n: N)(using SqlNumber[a.R], IsValue[a.K]): Query[T, S] =
+        val sqlExpr = a.asExpr(n).asSqlExpr
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
@@ -107,8 +108,8 @@ sealed class Query[T, S <: QuerySize](
             case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
-            .map(l => SqlLimit(Some(SqlExpr.NumberLiteral(n)), l.fetch))
-            .orElse(Some(SqlLimit(Some(SqlExpr.NumberLiteral(n)), None)))
+            .map(l => SqlLimit(Some(sqlExpr), l.fetch))
+            .orElse(Some(SqlLimit(Some(sqlExpr), None)))
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -119,10 +120,10 @@ sealed class Query[T, S <: QuerySize](
             case _ => tree
         Query(params, newTree)(using context)
 
-    def offset(n: Int): Query[T, S] =
+    def offset[N: AsExpr as a](n: N)(using SqlNumber[a.R], IsValue[a.K]): Query[T, S] =
         drop(n)
 
-    private[sqala] def take[TS <: QuerySize](n: Int, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T, TS] =
+    private[sqala] def take[TS <: QuerySize](n: SqlExpr, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T, TS] =
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
@@ -130,8 +131,8 @@ sealed class Query[T, S <: QuerySize](
             case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
-            .map(l => SqlLimit(l.offset, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode))))
-            .orElse(Some(SqlLimit(None, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode)))))
+            .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
+            .orElse(Some(SqlLimit(None, Some(SqlFetch(n, unit, mode)))))
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -143,9 +144,15 @@ sealed class Query[T, S <: QuerySize](
         Query(params, newTree)(using context)
 
     def take(n: Int)(using s: TakeQuerySize[n.type]): Query[T, s.R] =
-        take[s.R](n, SqlFetchUnit.RowCount, SqlFetchMode.Only)
+        take[s.R](n.asExpr.asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)
+
+    def take[N: AsExpr as a](n: N)(using sn: SqlNumber[a.R], v: IsValue[a.K]): Query[T, ManyRows] =
+        take[ManyRows](a.asExpr(n).asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)
 
     def limit(n: Int)(using s: TakeQuerySize[n.type]): Query[T, s.R] =
+        take(n)
+
+    def limit[N: AsExpr as a](n: N)(using sn: SqlNumber[a.R], v: IsValue[a.K]): Query[T, ManyRows] =
         take(n)
 
     def forUpdate: Query[T, S] =
@@ -259,7 +266,7 @@ sealed class SortedQuery[T, S <: QuerySize](
 )(using
     private[sqala] override val context: QueryContext
 ) extends Query[T, S](params, tree):
-    override def drop(n: Int): SortedQuery[T, S] =
+    override def drop[N: AsExpr as a](n: N)(using SqlNumber[a.R], IsValue[a.K]): SortedQuery[T, S] =
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
@@ -267,8 +274,8 @@ sealed class SortedQuery[T, S <: QuerySize](
             case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
-            .map(l => SqlLimit(Some(SqlExpr.NumberLiteral(n)), l.fetch))
-            .orElse(Some(SqlLimit(Some(SqlExpr.NumberLiteral(n)), None)))
+            .map(l => SqlLimit(Some(a.asExpr(n).asSqlExpr), l.fetch))
+            .orElse(Some(SqlLimit(Some(a.asExpr(n).asSqlExpr), None)))
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -279,10 +286,10 @@ sealed class SortedQuery[T, S <: QuerySize](
             case _ => tree
         SortedQuery(params, newTree)(using context)
 
-    override def offset(n: Int): SortedQuery[T, S] =
+    override def offset[N: AsExpr as a](n: N)(using SqlNumber[a.R], IsValue[a.K]): SortedQuery[T, S] =
         drop(n)
 
-    private[sqala] override def take[TS <: QuerySize](n: Int, unit: SqlFetchUnit, mode: SqlFetchMode): SortedQuery[T, TS] =
+    private[sqala] override def take[TS <: QuerySize](n: SqlExpr, unit: SqlFetchUnit, mode: SqlFetchMode): SortedQuery[T, TS] =
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
@@ -290,8 +297,8 @@ sealed class SortedQuery[T, S <: QuerySize](
             case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
-            .map(l => SqlLimit(l.offset, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode))))
-            .orElse(Some(SqlLimit(None, Some(SqlFetch(SqlExpr.NumberLiteral(n), unit, mode)))))
+            .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
+            .orElse(Some(SqlLimit(None, Some(SqlFetch(n, unit, mode)))))
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
@@ -303,9 +310,15 @@ sealed class SortedQuery[T, S <: QuerySize](
         SortedQuery(params, newTree)(using context)
 
     def takeWithTies(n: Int)(using s: TakeQuerySize[n.type]): SortedQuery[T, s.R] =
-        take[s.R](n, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
+        take[s.R](n.asExpr.asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
+
+    def takeWithTies[N: AsExpr as a](n: N)(using sn: SqlNumber[a.R], v: IsValue[a.K]): Query[T, ManyRows] =
+        take[ManyRows](a.asExpr(n).asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)
 
     def limitWithTies(n: Int)(using s: TakeQuerySize[n.type]): SortedQuery[T, s.R] =
+        takeWithTies(n)
+
+    def limitWithTies[N: AsExpr as a](n: N)(using sn: SqlNumber[a.R], v: IsValue[a.K]): Query[T, ManyRows] =
         takeWithTies(n)
 
 final class SelectQuery[T](

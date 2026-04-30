@@ -27,9 +27,9 @@ object AsPartition:
             def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
                 x :: Nil
 
-    given query[T, Q <: Query[T, OneRow]](using a: AsPartition[T]): Aux[Q, Value] =
+    given query[T, Q <: Query[T, OneRow]](using a: AsPartition[T]): Aux[Q, ValueOperation] =
         new AsPartition[Q]:
-            type K = Value
+            type K = ValueOperation
 
             def asExprs(x: Q): List[Expr[?, ?]] =
                 Expr(SqlExpr.SubQuery(x.tree)) :: Nil

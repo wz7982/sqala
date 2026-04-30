@@ -1506,27 +1506,27 @@ def jsonArray[A: AsExpr as aa](items: A)(using
         )
     )
 
-def currentDate()(using QueryContext): Expr[LocalDate, Value] =
+def currentDate()(using QueryContext): Expr[LocalDate, ValueOperation] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_DATE")
     )
 
-def currentTime()(using QueryContext): Expr[OffsetTime, Value] =
+def currentTime()(using QueryContext): Expr[OffsetTime, ValueOperation] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIME")
     )
 
-def currentTimestamp()(using QueryContext): Expr[OffsetDateTime, Value] =
+def currentTimestamp()(using QueryContext): Expr[OffsetDateTime, ValueOperation] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIMESTAMP")
     )
 
-def localTime()(using QueryContext): Expr[LocalTime, Value] =
+def localTime()(using QueryContext): Expr[LocalTime, ValueOperation] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIME")
     )
 
-def localTimestamp()(using QueryContext): Expr[LocalDateTime, Value] =
+def localTimestamp()(using QueryContext): Expr[LocalDateTime, ValueOperation] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIMESTAMP")
     )

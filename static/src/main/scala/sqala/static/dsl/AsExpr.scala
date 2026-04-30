@@ -42,11 +42,11 @@ object AsExpr:
             def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
                 x :: Nil
 
-    given query[T, Q <: Query[T, OneRow]](using a: AsExpr[T]): Aux[Q, a.R, Value] =
+    given query[T, Q <: Query[T, OneRow]](using a: AsExpr[T]): Aux[Q, a.R, ValueOperation] =
         new AsExpr[Q]:
             type R = a.R
 
-            type K = Value
+            type K = ValueOperation
 
             def asExprs(x: Q): List[Expr[?, ?]] =
                 Expr(SqlExpr.SubQuery(x.tree)) :: Nil
