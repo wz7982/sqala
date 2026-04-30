@@ -589,7 +589,7 @@ def nullIf[A: AsExpr as a, B: AsExpr as b](x: A, y: B)(using
     )
 
 extension [T: AsExpr as a](expr: T)
-    def as[R](using cast: Cast[a.R, R], c: QueryContext): Expr[Option[R], a.K] =
+    def as[R](using cast: Cast[a.R, R], o: KindOperation[a.K, Value], c: QueryContext): Expr[Option[R], o.R] =
         Expr(SqlExpr.Cast(a.asExpr(expr).asSqlExpr, cast.castType))
 
 extension [T, K <: ExprKind](expr: Expr[T, K])
@@ -632,7 +632,7 @@ def unboundedPreceding(using QueryContext): FrameBound[Nothing] =
 def unboundedFollowing(using QueryContext): FrameBound[Nothing] =
     FrameBound(SqlWindowFrameBound.UnboundedFollowing)
 
-extension [T: AsExpr as a](n: T)(using a.K =:= Value)
+extension [T: AsExpr as a](n: T)(using IsValue[a.K])
     def preceding(using QueryContext): FrameBound[a.R] =
         FrameBound(SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr))
 
