@@ -2048,6 +2048,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlRowPatternTerm.Permute(terms, _) =>
                     sqlBuilder.append("PERMUTE(")
                     printList(terms)(printPatternTerm)
+                    sqlBuilder.append(")")
                 case SqlRowPatternTerm.Then(left, right, quantifier) =>
                     if quantifier.isDefined then
                         sqlBuilder.append("(")
