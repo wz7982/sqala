@@ -311,8 +311,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case n: SqlExpr.NullIf => printNullIfExpr(n)
             case c: SqlExpr.Cast => printCastExpr(c)
             case w: SqlExpr.Window => printWindowExpr(w)
-            case q: SqlExpr.SubQuery => printSubQueryExpr(q)
-            case q: SqlExpr.SubLink => printSubLinkExpr(q)
+            case q: SqlExpr.Subquery => printSubqueryExpr(q)
             case g: SqlExpr.Grouping => printGroupingExpr(g)
             case i: SqlExpr.IdentFunc => printIdentFuncExpr(i)
             case s: SqlExpr.SubstringFunc => printSubstringFuncExpr(s)
@@ -837,27 +836,19 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         printExcludeMode(e)
         sqlBuilder.append(")")
 
-    def printSubQueryExpr(expr: SqlExpr.SubQuery): Unit =
-        push()
-        sqlBuilder.append("(\n")
-        printQuery(expr.query)
-        pull()
-        sqlBuilder.append("\n")
-        printSpace()
-        sqlBuilder.append(")")
-
-    def printSubLinkExpr(expr: SqlExpr.SubLink): Unit =
-        def printQuantifier(quantifier: SqlSubLinkQuantifier): Unit =
+    def printSubqueryExpr(expr: SqlExpr.Subquery): Unit =
+        def printQuantifier(quantifier: SqlSubqueryQuantifier): Unit =
             quantifier match
-                case SqlSubLinkQuantifier.Any =>
+                case SqlSubqueryQuantifier.Any =>
                     sqlBuilder.append("ANY")
-                case SqlSubLinkQuantifier.All =>
+                case SqlSubqueryQuantifier.All =>
                     sqlBuilder.append("ALL")
-                case SqlSubLinkQuantifier.Exists =>
+                case SqlSubqueryQuantifier.Exists =>
                     sqlBuilder.append("EXISTS")
 
         push()
-        printQuantifier(expr.quantifier)
+        for q <- expr.quantifier do
+            printQuantifier(q)
         sqlBuilder.append("(\n")
         printQuery(expr.query)
         pull()
@@ -1426,7 +1417,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
-    def printSubQueryTable(table: SqlTable.SubQuery): Unit =
+    def printSubqueryTable(table: SqlTable.Subquery): Unit =
         if table.lateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("(\n")
         push()
@@ -1853,7 +1844,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         table match
             case i: SqlTable.Ident => printIdentTable(i)
             case f: SqlTable.Func => printFuncTable(f)
-            case s: SqlTable.SubQuery => printSubQueryTable(s)
+            case s: SqlTable.Subquery => printSubqueryTable(s)
             case j: SqlTable.Json => printJsonTable(j)
             case g: SqlTable.Graph => printGraphTable(g)
             case j: SqlTable.Join => printJoinTable(j)

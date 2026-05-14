@@ -1,6 +1,6 @@
 package sqala.ast.expr
 
-enum SqlSubLinkQuantifier:
+enum SqlSubqueryQuantifier:
     case Any
     case All
     case Exists
