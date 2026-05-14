@@ -4,7 +4,9 @@ import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.statement.query.Query
 import sqala.static.metadata.AsSqlExpr
 
-trait AsExpr[T]:
+import scala.compiletime.ops.int.>
+
+trait AsExpr[T, CL <: Int]:
     type R
 
     type K <: ExprKind
@@ -19,13 +21,13 @@ trait AsExpr[T]:
             Expr(SqlExpr.Tuple(exprList.map(_.asSqlExpr)))
 
 object AsExpr:
-    type Aux[T, O, OK] = AsExpr[T]:
+    type Aux[T, CL <: Int, O, OK <: ExprKind] = AsExpr[T, CL]:
         type R = O
 
         type K = OK
 
-    given value[T: AsSqlExpr as a]: Aux[T, T, Value] =
-        new AsExpr[T]:
+    given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, T, Value] =
+        new AsExpr[T, CL]:
             type R = T
 
             type K = Value
@@ -33,8 +35,8 @@ object AsExpr:
             def asExprs(x: T): List[Expr[?, ?]] =
                 Expr(a.asSqlExpr(x)) :: Nil
 
-    given expr[T: AsSqlExpr, EK <: ExprKind]: Aux[Expr[T, EK], T, EK] =
-        new AsExpr[Expr[T, EK]]:
+    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, T, EK] =
+        new AsExpr[Expr[T, EK], CL]:
             type R = T
 
             type K = EK
@@ -42,39 +44,40 @@ object AsExpr:
             def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
                 x :: Nil
 
-    given query[T, Q <: Query[T, OneRow]](using a: AsExpr[T]): Aux[Q, a.R, ValueOperation] =
-        new AsExpr[Q]:
+    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
+        a: AsExpr[T, CL],
+        refl: L > CL =:= true
+    ): Aux[Q, CL, a.R, Composite[OKS]] =
+        new AsExpr[Q, CL]:
             type R = a.R
 
-            type K = ValueOperation
+            type K = Composite[OKS]
 
             def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.SubQuery(x.tree)) :: Nil
+                Expr(SqlExpr.Subquery(None, x.tree)) :: Nil
 
-    given tuple[H, T <: Tuple](using
-        h: AsExpr[H],
-        t: AsExpr[T],
-        tt: ToTuple[t.R],
-        a: AsSqlExpr[h.R],
-        o: KindOperation[h.K, t.K]
-    ): Aux[H *: T, h.R *: tt.R, o.R] =
-        new AsExpr[H *: T]:
-            type R = h.R *: tt.R
+    given tuple[H, T <: Tuple, CL <: Int](using
+        ah: AsExpr[H, CL],
+        at: AsExpr[T, CL],
+        tt: ToTuple[at.R],
+        ck: CombineKind[ah.K, at.K]
+    ): Aux[H *: T, CL, ah.R *: tt.R, ck.R] =
+        new AsExpr[H *: T, CL]:
+            type R = ah.R *: tt.R
 
-            type K = o.R
+            type K = ck.R
 
             def asExprs(x: H *: T): List[Expr[?, ?]] =
-                h.asExpr(x.head) :: t.asExprs(x.tail)
+                ah.asExpr(x.head) :: at.asExprs(x.tail)
 
-    given tuple1[H](using
-        h: AsExpr[H],
-        a: AsSqlExpr[h.R],
-        o: KindOperation[h.K, Value]
-    ): Aux[H *: EmptyTuple, h.R, o.R] =
-        new AsExpr[H *: EmptyTuple]:
-            type R = h.R
+    given tuple1[H, CL <: Int](using
+        h: AsExpr[H, CL],
+        kt: KindToTuple[h.K]
+    ): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple, Composite[kt.R]] =
+        new AsExpr[H *: EmptyTuple, CL]:
+            type R = h.R *: EmptyTuple
 
-            type K = o.R
+            type K = Composite[kt.R]
 
             def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
                 h.asExpr(x.head) :: Nil

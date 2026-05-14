@@ -1,20 +1,20 @@
 package sqala.static.dsl
 
-case class QueryContext(var tableIndex: Int):
+final case class QueryContext[L <: Int](private[sqala] var tableIndex: Int):
     private[sqala] def fetchAlias: String =
         tableIndex += 1
         s"t$tableIndex"
 
-class OverContext
+final class OverContext
 
-class GroupingContext
+final class GroupingContext
 
-class ConnectByContext
+final class ConnectByContext
 
-class GraphContext
+final class GraphContext
 
-class PivotContext
+final class PivotContext
 
-class MatchRecognizeContext
+final class MatchRecognizeContext
 
-class JsonContext
+final class JsonContext

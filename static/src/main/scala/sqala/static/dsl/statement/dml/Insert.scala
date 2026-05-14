@@ -3,7 +3,7 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.dsl.table.{CanInFrom, Table}
+import sqala.static.dsl.table.Table
 import sqala.static.dsl.{AsExpr, Column, Expr}
 import sqala.static.metadata.{AsSqlExpr, TableMacro}
 
@@ -27,11 +27,11 @@ type InsertQuery = InsertState.Query.type
 class Insert[T, S <: InsertState](
     val tree: SqlStatement.Insert
 ):
-    inline def apply[I: AsExpr as a](f: Table[T, Column, CanInFrom] => I): Insert[a.R, InsertTable] =
+    inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsExpr[I, 1]): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
-        val table = Table[T, Column, CanInFrom](None, metaData, sqlTable)
+        val table = Table[T, Column, 1](None, metaData, sqlTable)
         val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match

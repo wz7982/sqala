@@ -6,7 +6,14 @@ import sqala.static.dsl.*
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 
-case class FuncTable[T, K <: ExprKind, F <: InFrom](
+final case class FromFunc[T, K[_ <: Int] <: ExprKind, OKS <: Tuple, CL <: Int](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __fieldNames__ : List[String],
+    private[sqala] val __columnNames__ : List[String],
+    private[sqala] val __sqlTable__ : SqlTable.Func
+) extends AnyTable
+
+final case class FuncTable[T, K[_ <: Int] <: ExprKind, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __fieldNames__ : List[String],
     private[sqala] val __columnNames__ : List[String],
@@ -15,7 +22,7 @@ case class FuncTable[T, K <: ExprKind, F <: InFrom](
     type Fields =
         NamedTuple[
             Names[From[Unwrap[T, Option]]],
-            Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, K]]
+            Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, K, L]]
         ]
 
     def selectDynamic(name: String): Any =

@@ -7,7 +7,7 @@ import sqala.static.metadata.tableCte
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
-case class RecursiveTable[N <: Tuple, V <: Tuple](
+final case class RecursiveTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
@@ -19,10 +19,10 @@ case class RecursiveTable[N <: Tuple, V <: Tuple](
         __items__.toList(index)
 
 object RecursiveTable:
-    def apply[N <: Tuple, V <: Tuple](alias: Option[String])(using
-        p: AsTableParam[V],
+    def apply[N <: Tuple, V <: Tuple, H <: Int](alias: Option[String])(using
+        p: AsTableParam[V, H],
         t: ToTuple[p.R]
-    ): RecursiveTable[N, t.R] =
+    ): RecursiveTable[N, t.R, H] =
         new RecursiveTable(
             alias,
             t.toTuple(p.asTableParam(alias, 1)),

@@ -20,79 +20,86 @@ object ToOption:
             def toOption(x: Expr[T, K]): R =
                 Expr(x.asSqlExpr)
 
-    given table[T, K <: ExprKind, F <: InFrom]: Aux[Table[T, K, F], Table[Wrap[T, Option], K, F]] =
-        new ToOption[Table[T, K, F]]:
-            type R = Table[Wrap[T, Option], K, F]
+    given windowFunc[T, KS <: Tuple]: Aux[WindowFunc[T, KS], WindowFunc[Wrap[T, Option], KS]] =
+        new ToOption[WindowFunc[T, KS]]:
+            type R = WindowFunc[Wrap[T, Option], KS]
 
-            def toOption(x: Table[T, K, F]): R =
-                x.copy[Wrap[T, Option], K, F]()
+            def toOption(x: WindowFunc[T, KS]): R =
+                WindowFunc(x.asSqlExpr)
 
-    given excludedTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], Table[Wrap[T, Option], K, L]] =
+        new ToOption[Table[T, K, L]]:
+            type R = Table[Wrap[T, Option], K, L]
+
+            def toOption(x: Table[T, K, L]): R =
+                x.copy[Wrap[T, Option], K, L]()
+
+    given excludedTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[ExcludedTable[N, V, F], ExcludedTable[N, tt.R, F]] =
-        new ToOption[ExcludedTable[N, V, F]]:
-            type R = ExcludedTable[N, tt.R, F]
+    ): Aux[ExcludedTable[N, V, L], ExcludedTable[N, tt.R, L]] =
+        new ToOption[ExcludedTable[N, V, L]]:
+            type R = ExcludedTable[N, tt.R, L]
 
-            def toOption(x: ExcludedTable[N, V, F]): R =
-                x.copy[N, tt.R, F](__items__ = tt.toTuple(t.toOption(x.__items__.asInstanceOf[V])))
+            def toOption(x: ExcludedTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__.asInstanceOf[V])))
 
-    given funcTable[T, K <: ExprKind, F <: InFrom]: Aux[FuncTable[T, K, F], FuncTable[Wrap[T, Option], K, F]] =
-        new ToOption[FuncTable[T, K, F]]:
-            type R = FuncTable[Wrap[T, Option], K, F]
+    given funcTable[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[FuncTable[T, K, L], FuncTable[Wrap[T, Option], K, L]] =
+        new ToOption[FuncTable[T, K, L]]:
+            type R = FuncTable[Wrap[T, Option], K, L]
 
-            def toOption(x: FuncTable[T, K, F]): R =
-                x.copy[Wrap[T, Option], K, F]()
+            def toOption(x: FuncTable[T, K, L]): R =
+                x.copy[Wrap[T, Option], K, L]()
 
-    given subQueryTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[SubQueryTable[N, V, F], SubQueryTable[N, tt.R, F]] =
-        new ToOption[SubQueryTable[N, V, F]]:
-            type R = SubQueryTable[N, tt.R, F]
+    ): Aux[SubqueryTable[N, V, L], SubqueryTable[N, tt.R, L]] =
+        new ToOption[SubqueryTable[N, V, L]]:
+            type R = SubqueryTable[N, tt.R, L]
 
-            def toOption(x: SubQueryTable[N, V, F]): R =
-                x.copy[N, tt.R, F](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: SubqueryTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
-    given jsonTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given jsonTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[JsonTable[N, V, F], JsonTable[N, tt.R, F]] =
-        new ToOption[JsonTable[N, V, F]]:
-            type R = JsonTable[N, tt.R, F]
+    ): Aux[JsonTable[N, V, L], JsonTable[N, tt.R, L]] =
+        new ToOption[JsonTable[N, V, L]]:
+            type R = JsonTable[N, tt.R, L]
 
-            def toOption(x: JsonTable[N, V, F]): R =
-                x.copy[N, tt.R, F](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: JsonTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
-    given graphTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given graphTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[GraphTable[N, V, F], GraphTable[N, tt.R, F]] =
-        new ToOption[GraphTable[N, V, F]]:
-            type R = GraphTable[N, tt.R, F]
+    ): Aux[GraphTable[N, V, L], GraphTable[N, tt.R, L]] =
+        new ToOption[GraphTable[N, V, L]]:
+            type R = GraphTable[N, tt.R, L]
 
-            def toOption(x: GraphTable[N, V, F]): R =
-                x.copy[N, tt.R, F](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: GraphTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
-    given recursiveTable[N <: Tuple, V <: Tuple](using
+    given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[RecursiveTable[N, V], RecursiveTable[N, tt.R]] =
-        new ToOption[RecursiveTable[N, V]]:
-            type R = RecursiveTable[N, tt.R]
+    ): Aux[RecursiveTable[N, V, L], RecursiveTable[N, tt.R, L]] =
+        new ToOption[RecursiveTable[N, V, L]]:
+            type R = RecursiveTable[N, tt.R, L]
 
-            def toOption(x: RecursiveTable[N, V]): R =
-                x.copy[N, tt.R](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: RecursiveTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
-    given recognizeTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
-    ): Aux[RecognizeTable[N, V, F], RecognizeTable[N, tt.R, F]] =
-        new ToOption[RecognizeTable[N, V, F]]:
-            type R = RecognizeTable[N, tt.R, F]
+    ): Aux[RecognizeTable[N, V, L], RecognizeTable[N, tt.R, L]] =
+        new ToOption[RecognizeTable[N, V, L]]:
+            type R = RecognizeTable[N, tt.R, L]
 
-            def toOption(x: RecognizeTable[N, V, F]): R =
-                x.copy[N, tt.R, F](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: RecognizeTable[N, V, L]): R =
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
     given tuple[H, T <: Tuple](using
         h: ToOption[H],
@@ -105,7 +112,9 @@ object ToOption:
             def toOption(x: H *: T): R =
                 h.toOption(x.head) *: tt.toTuple(t.toOption(x.tail))
 
-    given tuple1[H](using h: ToOption[H]): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
+    given tuple1[H](using
+        h: ToOption[H]
+    ): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
         new ToOption[H *: EmptyTuple]:
             type R = h.R *: EmptyTuple
 

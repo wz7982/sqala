@@ -6,10 +6,15 @@ import sqala.static.metadata.*
 
 import java.time.*
 
-def count()(using QueryContext): Expr[Long, Agg] =
+def count[CL <: Int]()(using QueryContext[CL]): Expr[Long, Agg[EmptyTuple]] =
     Expr(SqlExpr.CountAsteriskFunc(None, None))
 
-def count[T: AsExpr as a](x: T)(using QueryContext, CanInAgg[a.K]): Expr[Long, Agg] =
+def count[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Long, Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -21,7 +26,12 @@ def count[T: AsExpr as a](x: T)(using QueryContext, CanInAgg[a.K]): Expr[Long, A
         )
     )
 
-def countDistinct[T: AsExpr as a](x: T)(using QueryContext, CanInAgg[a.K]): Expr[Long, Agg] =
+def countDistinct[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Long, Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             Some(SqlQuantifier.Distinct),
@@ -33,11 +43,13 @@ def countDistinct[T: AsExpr as a](x: T)(using QueryContext, CanInAgg[a.K]): Expr
         )
     )
 
-def sum[T: AsExpr as a](x: T)(using
+def sum[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
     n: SqlNumber[a.R],
-    i: CanInAgg[a.K],
-    to: ToOption[Expr[a.R, Agg]],
-    c: QueryContext
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -52,11 +64,13 @@ def sum[T: AsExpr as a](x: T)(using
         )
     )
 
-def avg[T: AsExpr as a](x: T)(using
-    SqlNumber[a.R],
-    CanInAgg[a.K],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def avg[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[BigDecimal], Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -68,10 +82,12 @@ def avg[T: AsExpr as a](x: T)(using
         )
     )
 
-def max[T: AsExpr as a](x: T)(using
-    i: CanInAgg[a.K],
-    to: ToOption[Expr[a.R, Agg]],
-    c: QueryContext
+def max[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -86,10 +102,12 @@ def max[T: AsExpr as a](x: T)(using
         )
     )
 
-def min[T: AsExpr as a](x: T)(using
-    i: CanInAgg[a.K],
-    to: ToOption[Expr[a.R, Agg]],
-    c: QueryContext
+def min[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -104,10 +122,12 @@ def min[T: AsExpr as a](x: T)(using
         )
     )
 
-def anyValue[T: AsExpr as a](x: T)(using
-    i: CanInAgg[a.K],
-    to: ToOption[Expr[a.R, Agg]],
-    c: QueryContext
+def anyValue[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -122,11 +142,13 @@ def anyValue[T: AsExpr as a](x: T)(using
         )
     )
 
-def stddevPop[T: AsExpr as a](x: T)(using
-    CanInAgg[a.K],
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def stddevPop[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[BigDecimal], Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -138,11 +160,13 @@ def stddevPop[T: AsExpr as a](x: T)(using
         )
     )
 
-def stddevSamp[T: AsExpr as a](x: T)(using
-    CanInAgg[a.K],
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def stddevSamp[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[BigDecimal], Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -154,11 +178,13 @@ def stddevSamp[T: AsExpr as a](x: T)(using
         )
     )
 
-def varPop[T: AsExpr as a](x: T)(using
-    CanInAgg[a.K],
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def varPop[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[BigDecimal], Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -170,11 +196,13 @@ def varPop[T: AsExpr as a](x: T)(using
         )
     )
 
-def varSamp[T: AsExpr as a](x: T)(using
-    CanInAgg[a.K],
-    SqlNumber[a.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def varSamp[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[BigDecimal], Agg[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -186,13 +214,18 @@ def varSamp[T: AsExpr as a](x: T)(using
         )
     )
 
-def covarPop[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def covarPop[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -204,13 +237,18 @@ def covarPop[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def covarSamp[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def covarSamp[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -222,13 +260,18 @@ def covarSamp[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def corr[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def corr[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -240,13 +283,18 @@ def corr[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrSlope[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrSlope[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -258,13 +306,18 @@ def regrSlope[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrIntercept[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrIntercept[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -276,17 +329,22 @@ def regrIntercept[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrCount[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Long, Agg] =
+def regrCount[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Long, Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
-            "REGR_INTERCEPT",
+            "REGR_COUNT",
             aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil,
             Nil,
             Nil,
@@ -294,13 +352,18 @@ def regrCount[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrR2[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrR2[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -312,13 +375,18 @@ def regrR2[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrAvgx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrAvgx[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -330,13 +398,18 @@ def regrAvgx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrAvgy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrAvgy[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -348,13 +421,18 @@ def regrAvgy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrSxx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrSxx[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -366,13 +444,18 @@ def regrSxx[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrSyy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrSyy[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -384,13 +467,18 @@ def regrSyy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def regrSxy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    CanInAgg[aa.K],
-    SqlNumber[aa.R],
-    CanInAgg[ab.K],
-    SqlNumber[ab.R],
-    QueryContext
-): Expr[Option[BigDecimal], Agg] =
+def regrSxy[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[aa.R],
+    nb: SqlNumber[ab.R],
+    kta: KindToTuple[aa.K],
+    ktb: KindToTuple[ab.K],
+    ia: CanInAgg[kta.R],
+    ib: CanInAgg[ktb.R],
+    c: CombineKindTuple[kta.R, ktb.R]
+): Expr[Option[BigDecimal], Agg[c.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -402,13 +490,17 @@ def regrSxy[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def percentileCont[T: AsExpr as at, S, SK <: ExprKind](x: T, withinGroup: Sort[S, SK])(using
-    cx: CanInAgg[at.K],
-    n: SqlNumber[at.R],
-    ns: SqlNumber[S],
-    cs: CanInAgg[SK],
-    to: ToOption[Expr[S, Agg]],
-    c: QueryContext
+def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST, SK])(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    nt: SqlNumber[at.R],
+    ns: SqlNumber[ST],
+    kt: KindToTuple[at.K],
+    kts: KindToTuple[SK],
+    it: CanInAgg[kt.R],
+    is: CanInAgg[kts.R],
+    c: CombineKindTuple[kt.R, kts.R],
+    to: ToOption[Expr[ST, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -423,13 +515,17 @@ def percentileCont[T: AsExpr as at, S, SK <: ExprKind](x: T, withinGroup: Sort[S
         )
     )
 
-def percentileDisc[T: AsExpr as at, S, SK <: ExprKind](x: T, withinGroup: Sort[S, SK])(using
-    cx: CanInAgg[at.K],
-    n: SqlNumber[at.R],
-    ns: SqlNumber[S],
-    cs: CanInAgg[SK],
-    to: ToOption[Expr[S, Agg]],
-    c: QueryContext
+def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST, SK])(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    nt: SqlNumber[at.R],
+    ns: SqlNumber[ST],
+    kt: KindToTuple[at.K],
+    kts: KindToTuple[SK],
+    it: CanInAgg[kt.R],
+    is: CanInAgg[kts.R],
+    c: CombineKindTuple[kt.R, kts.R],
+    to: ToOption[Expr[ST, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -444,14 +540,21 @@ def percentileDisc[T: AsExpr as at, S, SK <: ExprKind](x: T, withinGroup: Sort[S
         )
     )
 
-def listAgg[T: AsExpr as at, S: AsExpr as as, ST, SK <: ExprKind](x: T, separator: S, withinGroup: Sort[ST, SK])(using
-    CanInAgg[at.K],
-    SqlString[at.R],
-    CanInAgg[as.K],
-    SqlString[as.R],
-    CanInAgg[SK],
-    QueryContext
-): Expr[Option[String], Agg] =
+def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    as: AsExpr[S, CL],
+    st: SqlString[at.R],
+    ss: SqlString[as.R],
+    kt: KindToTuple[at.K],
+    kts: KindToTuple[as.K],
+    ktw: KindToTuple[SK],
+    it: CanInAgg[kt.R],
+    is: CanInAgg[kts.R],
+    iw: CanInAgg[ktw.R],
+    cs: CombineKindTuple[kt.R, kts.R],
+    c: CombineKindTuple[cs.R, ktw.R]
+): Expr[Option[String], Agg[c.R]] =
     Expr(
         SqlExpr.ListAggFunc(
             None,
@@ -463,31 +566,50 @@ def listAgg[T: AsExpr as at, S: AsExpr as as, ST, SK <: ExprKind](x: T, separato
         )
     )
 
-def stringAgg[T: AsExpr as at, S: AsExpr as as, ST, SK <: ExprKind](x: T, separator: S, withinGroup: Sort[ST, SK])(using
-    CanInAgg[at.K],
-    SqlString[at.R],
-    CanInAgg[as.K],
-    SqlString[as.R],
-    CanInAgg[SK],
-    QueryContext
-): Expr[Option[String], Agg] =
+def stringAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    as: AsExpr[S, CL],
+    st: SqlString[at.R],
+    ss: SqlString[as.R],
+    kt: KindToTuple[at.K],
+    kts: KindToTuple[as.K],
+    ktw: KindToTuple[SK],
+    it: CanInAgg[kt.R],
+    is: CanInAgg[kts.R],
+    iw: CanInAgg[ktw.R],
+    cs: CombineKindTuple[kt.R, kts.R],
+    c: CombineKindTuple[cs.R, ktw.R]
+): Expr[Option[String], Agg[c.R]] =
     listAgg(x, separator, withinGroup)
 
-def groupConcat[T: AsExpr as at, S: AsExpr as as, ST, SK <: ExprKind](x: T, separator: S, withinGroup: Sort[ST, SK])(using
-    CanInAgg[at.K],
-    SqlString[at.R],
-    CanInAgg[as.K],
-    SqlString[as.R],
-    CanInAgg[SK],
-    QueryContext
-): Expr[Option[String], Agg] =
+def groupConcat[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    as: AsExpr[S, CL],
+    st: SqlString[at.R],
+    ss: SqlString[as.R],
+    kt: KindToTuple[at.K],
+    kts: KindToTuple[as.K],
+    ktw: KindToTuple[SK],
+    it: CanInAgg[kt.R],
+    is: CanInAgg[kts.R],
+    iw: CanInAgg[ktw.R],
+    cs: CombineKindTuple[kt.R, kts.R],
+    c: CombineKindTuple[cs.R, ktw.R]
+): Expr[Option[String], Agg[c.R]] =
     listAgg(x, separator, withinGroup)
 
-def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](key: K, value: V)(using
-    CanInAgg[ak.K],
-    CanInAgg[av.K],
-    QueryContext
-): Expr[Option[Json], Agg] =
+def jsonObjectAgg[K, V, CL <: Int](key: K, value: V)(using
+    qc: QueryContext[CL],
+    ak: AsExpr[K, CL],
+    av: AsExpr[V, CL],
+    ktk: KindToTuple[ak.K],
+    ktv: KindToTuple[av.K],
+    ik: CanInAgg[ktk.R],
+    iv: CanInAgg[ktv.R],
+    c: CombineKindTuple[ktk.R, ktv.R]
+): Expr[Option[Json], Agg[c.R]] =
     Expr(
         SqlExpr.JsonObjectAggFunc(
             SqlJsonObjectItem(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr),
@@ -498,13 +620,15 @@ def jsonObjectAgg[K: AsExpr as ak, V: AsExpr as av](key: K, value: V)(using
         )
     )
 
-def jsonArrayAgg[A: AsExpr as aa](x: A)(using
-    CanInAgg[aa.K],
-    QueryContext
-): Expr[Option[Json], Agg] =
+def jsonArrayAgg[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R]
+): Expr[Option[Json], Agg[kt.R]] =
     Expr(
         SqlExpr.JsonArrayAggFunc(
-            SqlJsonArrayItem(aa.asExpr(x).asSqlExpr, None),
+            SqlJsonArrayItem(a.asExpr(x).asSqlExpr, None),
             Nil,
             None,
             None,
@@ -512,7 +636,7 @@ def jsonArrayAgg[A: AsExpr as aa](x: A)(using
         )
     )
 
-def classifier()(using QueryContext, MatchRecognizeContext): Expr[String, Agg] =
+def classifier[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[String, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -524,11 +648,11 @@ def classifier()(using QueryContext, MatchRecognizeContext): Expr[String, Agg] =
         )
     )
 
-def matchNumber()(using QueryContext, MatchRecognizeContext): Expr[Int, Agg] =
+def matchNumber[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[Int, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
-            "MATCH_NUMBER",
+            "MATCL_NUMBER",
             Nil,
             Nil,
             Nil,
@@ -536,18 +660,20 @@ def matchNumber()(using QueryContext, MatchRecognizeContext): Expr[Int, Agg] =
         )
     )
 
-def first[A: AsExpr as aa](x: A)(using
-    cx: CanInAgg[aa.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def first[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
             SqlExpr.GeneralFunc(
                 None,
                 "FIRST",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -555,13 +681,18 @@ def first[A: AsExpr as aa](x: A)(using
         )
     )
 
-def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    cx: CanInAgg[aa.K],
-    sn: SqlNumber[an.R],
-    cn: CanInAgg[an.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def first[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
+    na: SqlNumber[an.R],
+    kta: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInAgg[kta.R],
+    in: CanInAgg[ktn.R],
+    c: CombineKindTuple[kta.R, ktn.R],
+    to: ToOption[Expr[aa.R, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -576,18 +707,20 @@ def first[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def last[A: AsExpr as aa](x: A)(using
-    cx: CanInAgg[aa.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def last[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
             SqlExpr.GeneralFunc(
                 None,
                 "LAST",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -595,13 +728,18 @@ def last[A: AsExpr as aa](x: A)(using
         )
     )
 
-def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    cx: CanInAgg[aa.K],
-    sn: SqlNumber[an.R],
-    cn: CanInAgg[an.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def last[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
+    na: SqlNumber[an.R],
+    kta: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInAgg[kta.R],
+    in: CanInAgg[ktn.R],
+    c: CombineKindTuple[kta.R, ktn.R],
+    to: ToOption[Expr[aa.R, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -616,18 +754,20 @@ def last[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def prev[A: AsExpr as aa](x: A)(using
-    cx: CanInAgg[aa.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def prev[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
             SqlExpr.GeneralFunc(
                 None,
                 "PREV",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -635,13 +775,18 @@ def prev[A: AsExpr as aa](x: A)(using
         )
     )
 
-def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    cx: CanInAgg[aa.K],
-    sn: SqlNumber[an.R],
-    cn: CanInAgg[an.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def prev[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
+    na: SqlNumber[an.R],
+    kta: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInAgg[kta.R],
+    in: CanInAgg[ktn.R],
+    c: CombineKindTuple[kta.R, ktn.R],
+    to: ToOption[Expr[aa.R, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -656,18 +801,20 @@ def prev[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def next[A: AsExpr as aa](x: A)(using
-    cx: CanInAgg[aa.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def next[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInAgg[kt.R],
+    to: ToOption[Expr[a.R, Agg[kt.R]]]
 ): to.R =
     to.toOption(
         Expr(
             SqlExpr.GeneralFunc(
                 None,
                 "NEXT",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -675,13 +822,18 @@ def next[A: AsExpr as aa](x: A)(using
         )
     )
 
-def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    cx: CanInAgg[aa.K],
-    sn: SqlNumber[an.R],
-    cn: CanInAgg[an.K],
-    to: ToOption[Expr[aa.R, Agg]],
-    c: QueryContext,
-    mc: MatchRecognizeContext
+def next[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
+    na: SqlNumber[an.R],
+    kta: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInAgg[kta.R],
+    in: CanInAgg[ktn.R],
+    c: CombineKindTuple[kta.R, ktn.R],
+    to: ToOption[Expr[aa.R, Agg[c.R]]]
 ): to.R =
     to.toOption(
         Expr(
@@ -696,12 +848,14 @@ def next[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def substring[T: AsExpr as at, S: AsExpr as as](x: T, start: S)(using
+def substring[T, S, CL <: Int](x: T, start: S)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    as: AsExpr[S, CL],
     s: SqlString[at.R],
     n: SqlNumber[as.R],
-    o: KindOperation[at.K, as.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    c: CombineKind[at.K, as.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.SubstringFunc(
             at.asExpr(x).asSqlExpr,
@@ -710,14 +864,17 @@ def substring[T: AsExpr as at, S: AsExpr as as](x: T, start: S)(using
         )
     )
 
-def substring[T: AsExpr as at, S: AsExpr as as, E: AsExpr as ae](x: T, start: S, end: E)(using
+def substring[T, S, E, CL <: Int](x: T, start: S, end: E)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    as: AsExpr[S, CL],
+    ae: AsExpr[E, CL],
     s: SqlString[at.R],
     ns: SqlNumber[as.R],
     ne: SqlNumber[ae.R],
-    os: KindOperation[at.K, as.K],
-    oe: KindOperation[os.R, ae.K],
-    c: QueryContext
-): Expr[Option[String], oe.R] =
+    cs: CombineKind[at.K, as.K],
+    c: CombineKind[cs.R, ae.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.SubstringFunc(
             at.asExpr(x).asSqlExpr,
@@ -726,11 +883,12 @@ def substring[T: AsExpr as at, S: AsExpr as as, E: AsExpr as ae](x: T, start: S,
         )
     )
 
-def upper[T: AsExpr as a](x: T)(using
+def upper[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
     s: SqlString[a.R],
-    o: KindOperation[a.K, Value],
-    c: QueryContext
-): Expr[a.R, o.R] =
+    kt: KindToTuple[a.K]
+): Expr[a.R, Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -742,11 +900,12 @@ def upper[T: AsExpr as a](x: T)(using
         )
     )
 
-def lower[T: AsExpr as a](x: T)(using
+def lower[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
     s: SqlString[a.R],
-    o: KindOperation[a.K, Value],
-    c: QueryContext
-): Expr[a.R, o.R] =
+    kt: KindToTuple[a.K]
+): Expr[a.R, Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -758,12 +917,14 @@ def lower[T: AsExpr as a](x: T)(using
         )
     )
 
-def lpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
+def lpad[T, N, CL <: Int](x: T, n: N)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    an: AsExpr[N, CL],
     s: SqlString[at.R],
-    sn: SqlNumber[an.R],
-    o: KindOperation[at.K, an.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    nn: SqlNumber[an.R],
+    c: CombineKind[at.K, an.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -775,14 +936,17 @@ def lpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
         )
     )
 
-def lpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(using
+def lpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    an: AsExpr[N, CL],
+    ap: AsExpr[P, CL],
     s: SqlString[at.R],
-    sn: SqlNumber[an.R],
+    nn: SqlNumber[an.R],
     sp: SqlString[ap.R],
-    on: KindOperation[at.K, an.K],
-    op: KindOperation[on.R, ap.K],
-    c: QueryContext
-): Expr[Option[String], op.R] =
+    cn: CombineKind[at.K, an.K],
+    c: CombineKind[cn.R, ap.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -794,12 +958,14 @@ def lpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(
         )
     )
 
-def rpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
+def rpad[T, N, CL <: Int](x: T, n: N)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    an: AsExpr[N, CL],
     s: SqlString[at.R],
-    sn: SqlNumber[an.R],
-    o: KindOperation[at.K, an.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    nn: SqlNumber[an.R],
+    c: CombineKind[at.K, an.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -811,14 +977,17 @@ def rpad[T: AsExpr as at, N: AsExpr as an](x: T, n: N)(using
         )
     )
 
-def rpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(using
+def rpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
+    qc: QueryContext[CL],
+    at: AsExpr[T, CL],
+    an: AsExpr[N, CL],
+    ap: AsExpr[P, CL],
     s: SqlString[at.R],
-    sn: SqlNumber[an.R],
+    nn: SqlNumber[an.R],
     sp: SqlString[ap.R],
-    on: KindOperation[at.K, an.K],
-    op: KindOperation[on.R, ap.K],
-    c: QueryContext
-): Expr[Option[String], op.R] =
+    cn: CombineKind[at.K, an.K],
+    c: CombineKind[cn.R, ap.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -830,28 +999,31 @@ def rpad[T: AsExpr as at, N: AsExpr as an, P: AsExpr as ap](x: T, n: N, pad: P)(
         )
     )
 
-def btrim[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def btrim[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "BTRIM",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def btrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def btrim[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -863,28 +1035,31 @@ def btrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def ltrim[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def ltrim[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "LTRIM",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def ltrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def ltrim[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -896,28 +1071,31 @@ def ltrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def rtrim[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def rtrim[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "RTRIM",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def rtrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def rtrim[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -929,14 +1107,17 @@ def rtrim[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def overlay[A: AsExpr as aa, B: AsExpr as ab, S: AsExpr as as](x: A, y: B, start: S)(using
+def overlay[A, B, S, CL <: Int](x: A, y: B, start: S)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    as: AsExpr[S, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
     n: SqlNumber[as.R],
-    ob: KindOperation[aa.K, ab.K],
-    os: KindOperation[ob.R, as.K],
-    c: QueryContext
-): Expr[Option[String], os.R] =
+    cb: CombineKind[aa.K, ab.K],
+    c: CombineKind[cb.R, as.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.OverlayFunc(
             aa.asExpr(x).asSqlExpr,
@@ -946,16 +1127,20 @@ def overlay[A: AsExpr as aa, B: AsExpr as ab, S: AsExpr as as](x: A, y: B, start
         )
     )
 
-def overlay[A: AsExpr as aa, B: AsExpr as ab, S: AsExpr as as, E: AsExpr as ae](x: A, y: B, start: S, end: E)(using
+def overlay[A, B, S, E, CL <: Int](x: A, y: B, start: S, end: E)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    as: AsExpr[S, CL],
+    ae: AsExpr[E, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
     ns: SqlNumber[as.R],
     ne: SqlNumber[ae.R],
-    ob: KindOperation[aa.K, ab.K],
-    os: KindOperation[ob.R, as.K],
-    oe: KindOperation[os.R, ae.K],
-    c: QueryContext
-): Expr[Option[String], oe.R] =
+    cb: CombineKind[aa.K, ab.K],
+    cs: CombineKind[cb.R, as.K],
+    c: CombineKind[cs.R, ae.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.OverlayFunc(
             aa.asExpr(x).asSqlExpr,
@@ -965,12 +1150,14 @@ def overlay[A: AsExpr as aa, B: AsExpr as ab, S: AsExpr as as, E: AsExpr as ae](
         )
     )
 
-def regexpLike[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def regexpLike[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -982,12 +1169,14 @@ def regexpLike[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def position[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     sa: SqlString[aa.R],
     sb: SqlString[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Int, o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Int, c.R] =
     Expr(
         SqlExpr.PositionFunc(
             aa.asExpr(x).asSqlExpr,
@@ -995,60 +1184,65 @@ def position[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def charLength[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Int], o.R] =
+def charLength[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[Int], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
-            "CHAR_LENGTH",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            "CLAR_LENGTH",
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def octetLength[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Int], o.R] =
+def octetLength[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[Int], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "OCTET_LENGTH",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def abs[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[aa.R, o.R] =
+def abs[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[a.R, Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ABS",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def mod[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
-    na: SqlNumber[aa.R],
-    nb: SqlNumber[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def mod[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    na: SqlNumber[A],
+    nb: SqlNumber[B],
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[BigDecimal], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1060,156 +1254,167 @@ def mod[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def sin[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def sin[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "SIN",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def cos[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def cos[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "COS",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def tan[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def tan[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "TAN",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def sinh[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def sinh[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "SINH",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def cosh[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def cosh[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "COSH",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def tanh[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def tanh[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "TANH",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def asin[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def asin[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ASIN",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def acos[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def acos[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ACOS",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def atan[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def atan[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ATAN",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def log[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def log[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     na: SqlNumber[aa.R],
     nb: SqlNumber[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[BigDecimal], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1221,60 +1426,65 @@ def log[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def log10[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def log10[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "LOG10",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def ln[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def ln[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "LN",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def exp[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def exp[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "EXP",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def power[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def power[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     na: SqlNumber[aa.R],
     nb: SqlNumber[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[BigDecimal], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1286,60 +1496,65 @@ def power[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def sqrt[A: AsExpr as aa](x: A)(using
-    n: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def sqrt[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "SQRT",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def floor[A: AsExpr as aa](x: A)(using
-    na: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Long], o.R] =
+def floor[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[Long], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "FLOOR",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def ceil[A: AsExpr as aa](x: A)(using
-    na: SqlNumber[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Long], o.R] =
+def ceil[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[Long], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "CEIL",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def round[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def round[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     na: SqlNumber[aa.R],
     nb: SqlNumber[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[BigDecimal], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1351,16 +1566,20 @@ def round[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def widthBucket[A: AsExpr as aa, B: AsExpr as ab, C: AsExpr as ac, D: AsExpr as ad](x: A, min: B, max: C, num: D)(using
+def widthBucket[A, B, C, D, CL <: Int](x: A, min: B, max: C, num: D)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    ac: AsExpr[C, CL],
+    ad: AsExpr[D, CL],
     na: SqlNumber[aa.R],
     nb: SqlNumber[ab.R],
     nc: SqlNumber[ac.R],
     nd: SqlNumber[ad.R],
-    ob: KindOperation[aa.K, ab.K],
-    oc: KindOperation[ob.R, ac.K],
-    od: KindOperation[oc.R, ad.K],
-    c: QueryContext
-): Expr[Option[Int], od.R] =
+    cb: CombineKind[aa.K, ab.K],
+    cc: CombineKind[cb.R, ac.K],
+    c: CombineKind[cc.R, ad.K]
+): Expr[Option[Int], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1375,25 +1594,28 @@ def widthBucket[A: AsExpr as aa, B: AsExpr as ab, C: AsExpr as ac, D: AsExpr as 
         )
     )
 
-def json[A: AsExpr as aa](x: A)(using
-    s: SqlString[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Json], o.R] =
+def json[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    s: SqlString[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[Json], Composite[kt.R]] =
     Expr(
         SqlExpr.JsonParseFunc(
-            aa.asExpr(x).asSqlExpr,
+            a.asExpr(x).asSqlExpr,
             None,
             Some(SqlJsonUniqueness.With)
         )
     )
 
-def jsonValue[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
+def jsonValue[A, P, CL <: Int](x: A, path: P)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ap: AsExpr[P, CL],
     j: SqlJson[aa.R],
     s: SqlString[ap.R],
-    o: KindOperation[aa.K, ap.K],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+    c: CombineKind[aa.K, ap.K]
+): Expr[Option[String], c.R] =
     Expr(
         SqlExpr.JsonValueFunc(
             aa.asExpr(x).asSqlExpr,
@@ -1405,12 +1627,14 @@ def jsonValue[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
         )
     )
 
-def jsonQuery[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
+def jsonQuery[A, P, CL <: Int](x: A, path: P)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ap: AsExpr[P, CL],
     j: SqlJson[aa.R],
     s: SqlString[ap.R],
-    o: KindOperation[aa.K, ap.K],
-    c: QueryContext
-): Expr[Option[Json], o.R] =
+    c: CombineKind[aa.K, ap.K]
+): Expr[Option[Json], c.R] =
     Expr(
         SqlExpr.JsonQueryFunc(
             aa.asExpr(x).asSqlExpr,
@@ -1424,12 +1648,14 @@ def jsonQuery[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
         )
     )
 
-def jsonExists[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
+def jsonExists[A, P, CL <: Int](x: A, path: P)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ap: AsExpr[P, CL],
     j: SqlJson[aa.R],
     s: SqlString[ap.R],
-    o: KindOperation[aa.K, ap.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ap.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.JsonExistsFunc(
             aa.asExpr(x).asSqlExpr,
@@ -1439,52 +1665,55 @@ def jsonExists[A: AsExpr as aa, P: AsExpr as ap](x: A, path: P)(using
         )
     )
 
-case class JsonObjectPair[K <: ExprKind](key: SqlExpr, value: SqlExpr)
+final case class JsonObjectPair[KS <: Tuple](key: SqlExpr, value: SqlExpr)
 
-extension [K: AsExpr as ak](key: K)
-    infix def value[V: AsExpr as av](value: V)(using
-        o: KindOperation[ak.K, av.K],
-        c: QueryContext
-    ): JsonObjectPair[o.R] =
+extension [K, CL <: Int](key: K)(using qc: QueryContext[CL], ak: AsExpr[K, CL], ktk: KindToTuple[ak.K])
+    infix def value[V](value: V)(using
+        av: AsExpr[V, CL],
+        ktv: KindToTuple[av.K],
+        c: CombineKindTuple[ktk.R, ktv.R]
+    ): JsonObjectPair[c.R] =
         JsonObjectPair(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr)
 
 trait AsJsonObject[T]:
-    type R <: ExprKind
+    type KS <: Tuple
 
     def asJsonObjects(x: T): List[JsonObjectPair[?]]
 
 object AsJsonObject:
-    type Aux[T, O <: ExprKind] = AsJsonObject[T]:
-        type R = O
+    type Aux[T, OKS <: Tuple] = AsJsonObject[T]:
+        type KS = OKS
 
-    given pair[K <: ExprKind]: Aux[JsonObjectPair[K], K] =
-        new AsJsonObject[JsonObjectPair[K]]:
-            type R = K
+    given pair[EKS <: Tuple]: Aux[JsonObjectPair[EKS], EKS] =
+        new AsJsonObject[JsonObjectPair[EKS]]:
+            type KS = EKS
 
-            def asJsonObjects(x: JsonObjectPair[K]): List[JsonObjectPair[K]] =
+            def asJsonObjects(x: JsonObjectPair[EKS]): List[JsonObjectPair[?]] =
                 x :: Nil
 
-    given tuple[K <: ExprKind, T <: Tuple](using
+    given tuple[EKS <: Tuple, T <: Tuple](using
         j: AsJsonObject[T],
-        o: KindOperation[K, j.R]
-    ): Aux[JsonObjectPair[K] *: T, o.R] =
-        new AsJsonObject[JsonObjectPair[K] *: T]:
-            type R = o.R
+        c: CombineKindTuple[EKS, j.KS]
+    ): Aux[JsonObjectPair[EKS] *: T, c.R] =
+        new AsJsonObject[JsonObjectPair[EKS] *: T]:
+            type KS = c.R
 
-            def asJsonObjects(x: JsonObjectPair[K] *: T): List[JsonObjectPair[?]] =
+            def asJsonObjects(x: JsonObjectPair[EKS] *: T): List[JsonObjectPair[?]] =
                 x.head :: j.asJsonObjects(x.tail)
 
-    given emptyTuple: Aux[EmptyTuple, Value] =
-        new AsJsonObject[EmptyTuple]:
-            type R = Value
+    given tuple1[EKS <: Tuple](using
+        c: CombineKindTuple[EKS, EmptyTuple]
+    ): Aux[JsonObjectPair[EKS] *: EmptyTuple, c.R] =
+        new AsJsonObject[JsonObjectPair[EKS] *: EmptyTuple]:
+            type KS = c.R
 
-            def asJsonObjects(x: EmptyTuple): List[JsonObjectPair[?]] =
-                Nil
+            def asJsonObjects(x: JsonObjectPair[EKS] *: EmptyTuple): List[JsonObjectPair[?]] =
+                x.head :: Nil
 
-def jsonObject[T](items: T)(using
-    j: AsJsonObject[T],
-    c: QueryContext
-): Expr[Option[Json], j.R] =
+def jsonObject[T, CL <: Int](items: T)(using
+    qc: QueryContext[CL],
+    j: AsJsonObject[T]
+): Expr[Option[Json], Composite[j.KS]] =
     Expr(
         SqlExpr.JsonObjectFunc(
             j.asJsonObjects(items).map(i => SqlJsonObjectItem(i.key, i.value)),
@@ -1494,49 +1723,52 @@ def jsonObject[T](items: T)(using
         )
     )
 
-def jsonArray[A: AsExpr as aa](items: A)(using
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[Json], o.R] =
+def jsonArray[A, CL <: Int](items: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K]
+): Expr[Option[Json], Composite[kt.R]] =
     Expr(
         SqlExpr.JsonArrayFunc(
-            aa.asExprs(items).map(i => SqlJsonArrayItem(i.asSqlExpr, None)),
+            a.asExprs(items).map(i => SqlJsonArrayItem(i.asSqlExpr, None)),
             None,
             None
         )
     )
 
-def currentDate()(using QueryContext): Expr[LocalDate, ValueOperation] =
+def currentDate[CL <: Int]()(using QueryContext[CL]): Expr[LocalDate, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_DATE")
     )
 
-def currentTime()(using QueryContext): Expr[OffsetTime, ValueOperation] =
+def currentTime[CL <: Int]()(using QueryContext[CL]): Expr[OffsetTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIME")
     )
 
-def currentTimestamp()(using QueryContext): Expr[OffsetDateTime, ValueOperation] =
+def currentTimestamp[CL <: Int]()(using QueryContext[CL]): Expr[OffsetDateTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIMESTAMP")
     )
 
-def localTime()(using QueryContext): Expr[LocalTime, ValueOperation] =
+def localTime[CL <: Int]()(using QueryContext[CL]): Expr[LocalTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIME")
     )
 
-def localTimestamp()(using QueryContext): Expr[LocalDateTime, ValueOperation] =
+def localTimestamp[CL <: Int]()(using QueryContext[CL]): Expr[LocalDateTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIMESTAMP")
     )
 
-def stGeomFromText[A: AsExpr as aa, S: AsExpr as as](x: A, srid: S)(using
+def stGeomFromText[A, S, CL <: Int](x: A, srid: S)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    as: AsExpr[S, CL],
     s: SqlString[aa.R],
     n: SqlNumber[as.R],
-    o: KindOperation[aa.K, as.K],
-    c: QueryContext
-): Expr[Option[Geometry], o.R] =
+    c: CombineKind[aa.K, as.K]
+): Expr[Option[Geometry], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1548,124 +1780,133 @@ def stGeomFromText[A: AsExpr as aa, S: AsExpr as as](x: A, srid: S)(using
         )
     )
 
-def stAsText[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def stAsText[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_AsText",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stAsGeoJson[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def stAsGeoJson[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_AsGeoJson",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stGeometryType[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[String], o.R] =
+def stGeometryType[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_GeometryType",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stX[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def stX[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_X",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stY[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def stY[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_Y",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stArea[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def stArea[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_Area",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stLength[A: AsExpr as aa](x: A)(using
-    g: SqlGeometry[aa.R],
-    o: KindOperation[aa.K, Value],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+def stLength[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    g: SqlGeometry[a.R],
+    kt: KindToTuple[a.K]
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "ST_Length",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def stContains[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stContains[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1677,12 +1918,14 @@ def stContains[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stWithin[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stWithin[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1694,12 +1937,14 @@ def stWithin[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stIntersects[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stIntersects[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1711,12 +1956,14 @@ def stIntersects[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stTouches[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stTouches[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1728,12 +1975,14 @@ def stTouches[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stOverlaps[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stOverlaps[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1745,12 +1994,14 @@ def stOverlaps[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stCrosses[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stCrosses[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1762,12 +2013,14 @@ def stCrosses[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stDisjoint[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stDisjoint[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Boolean], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1779,12 +2032,14 @@ def stDisjoint[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stIntersection[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stIntersection[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Geometry], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Boolean], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1796,12 +2051,14 @@ def stIntersection[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stUnion[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stUnion[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Geometry], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Geometry], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1813,12 +2070,14 @@ def stUnion[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stDifference[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Geometry], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Geometry], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1830,12 +2089,14 @@ def stDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stSymDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stSymDifference[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[Geometry], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[Geometry], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1847,12 +2108,14 @@ def stSymDifference[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def stDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
+def stDistance[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
     ga: SqlGeometry[aa.R],
     gb: SqlGeometry[ab.R],
-    o: KindOperation[aa.K, ab.K],
-    c: QueryContext
-): Expr[Option[BigDecimal], o.R] =
+    c: CombineKind[aa.K, ab.K]
+): Expr[Option[BigDecimal], c.R] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -1864,8 +2127,8 @@ def stDistance[A: AsExpr as aa, B: AsExpr as ab](x: A, y: B)(using
         )
     )
 
-def rank()(using QueryContext): Expr[Long, WindowWithoutOver] =
-    Expr(
+def rank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "RANK",
@@ -1876,8 +2139,8 @@ def rank()(using QueryContext): Expr[Long, WindowWithoutOver] =
         )
     )
 
-def denseRank()(using QueryContext): Expr[Long, WindowWithoutOver] =
-    Expr(
+def denseRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "DENSE_RANK",
@@ -1888,8 +2151,8 @@ def denseRank()(using QueryContext): Expr[Long, WindowWithoutOver] =
         )
     )
 
-def percentRank()(using QueryContext): Expr[Long, WindowWithoutOver] =
-    Expr(
+def percentRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "PERCENT_RANK",
@@ -1900,8 +2163,8 @@ def percentRank()(using QueryContext): Expr[Long, WindowWithoutOver] =
         )
     )
 
-def cumeDist()(using QueryContext): Expr[Long, WindowWithoutOver] =
-    Expr(
+def cumeDist[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "CUME_DIST",
@@ -1912,8 +2175,8 @@ def cumeDist()(using QueryContext): Expr[Long, WindowWithoutOver] =
         )
     )
 
-def rowNumber()(using QueryContext): Expr[Long, WindowWithoutOver] =
-    Expr(
+def rowNumber[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "ROW_NUMBER",
@@ -1924,91 +2187,106 @@ def rowNumber()(using QueryContext): Expr[Long, WindowWithoutOver] =
         )
     )
 
-def ntile[A: AsExpr as aa](x: A)(using
-    SqlNumber[aa.R],
-    CanInWindow[aa.K],
-    QueryContext
-): Expr[Long, WindowWithoutOver] =
-    Expr(
+def ntile[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    n: SqlNumber[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R]
+): WindowFunc[Long, kt.R] =
+    WindowFunc(
         SqlExpr.GeneralFunc(
             None,
             "NTILE",
-            aa.asExpr(x).asSqlExpr :: Nil,
+            a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
             None
         )
     )
 
-def firstValue[A: AsExpr as aa](x: A)(using
-    w: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def firstValue[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "FIRST_VALUE",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 None
             )
         )
     )
 
-def firstValueIgnoreNulls[A: AsExpr as aa](x: A)(using
-    w: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "FIRST_VALUE",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
 
-def lastValue[A: AsExpr as aa](x: A)(using
-    w: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def lastValue[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAST_VALUE",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 None
             )
         )
     )
 
-def lastValueIgnoreNulls[A: AsExpr as aa](x: A)(using
-    w: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def lastValueIgnoreNulls[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAST_VALUE",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
 
-def nthValue[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    wa: CanInWindow[aa.K],
+def nthValue[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
     nn: SqlNumber[an.R],
-    wn: CanInWindow[an.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInWindow[kt.R],
+    in: CanInWindow[ktn.R],
+    c: CombineKindTuple[kt.R, ktn.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NthValueFunc(
                 aa.asExpr(x).asSqlExpr,
                 an.asExpr(n).asSqlExpr,
@@ -2018,15 +2296,20 @@ def nthValue[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def nthValueIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    wa: CanInWindow[aa.K],
+def nthValueIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
     nn: SqlNumber[an.R],
-    wn: CanInWindow[an.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInWindow[kt.R],
+    in: CanInWindow[ktn.R],
+    c: CombineKindTuple[kt.R, ktn.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NthValueFunc(
                 aa.asExpr(x).asSqlExpr,
                 an.asExpr(n).asSqlExpr,
@@ -2036,15 +2319,20 @@ def nthValueIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def nthValueFromLast[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    wa: CanInWindow[aa.K],
+def nthValueFromLast[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
     nn: SqlNumber[an.R],
-    wn: CanInWindow[an.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInWindow[kt.R],
+    in: CanInWindow[ktn.R],
+    c: CombineKindTuple[kt.R, ktn.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NthValueFunc(
                 aa.asExpr(x).asSqlExpr,
                 an.asExpr(n).asSqlExpr,
@@ -2054,15 +2342,20 @@ def nthValueFromLast[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
         )
     )
 
-def nthValueFromLastIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(using
-    wa: CanInWindow[aa.K],
+def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    an: AsExpr[N, CL],
     nn: SqlNumber[an.R],
-    wn: CanInWindow[an.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    ktn: KindToTuple[an.K],
+    ia: CanInWindow[kt.R],
+    in: CanInWindow[ktn.R],
+    c: CombineKindTuple[kt.R, ktn.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NthValueFunc(
                 aa.asExpr(x).asSqlExpr,
                 an.asExpr(n).asSqlExpr,
@@ -2072,45 +2365,54 @@ def nthValueFromLastIgnoreNulls[A: AsExpr as aa, N: AsExpr as an](x: A, n: N)(us
         )
     )
 
-def lag[A: AsExpr as aa](x: A)(using
-    i: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def lag[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 None
             )
         )
     )
 
-def lagIgnoreNulls[A: AsExpr as aa](x: A)(using
-    i: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def lagIgnoreNulls[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
 
-def lag[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    ia: CanInWindow[aa.K],
+def lag[A, O, CL <: Int](x: A, offset: O)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
     no: SqlNumber[ao.R],
-    io: CanInWindow[ao.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    c: CombineKindTuple[kt.R, kto.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAG",
                 aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2119,15 +2421,20 @@ def lag[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
         )
     )
 
-def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    ia: CanInWindow[aa.K],
+def lagIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
     no: SqlNumber[ao.R],
-    io: CanInWindow[ao.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    c: CombineKindTuple[kt.R, kto.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LAG",
                 aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2136,15 +2443,23 @@ def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
         )
     )
 
-def lag[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
-    wa: CanInWindow[aa.K],
+def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
+    ad: AsExpr[D, CL],
     no: SqlNumber[ao.R],
-    wo: CanInWindow[ao.K],
-    wd: CanInWindow[ad.K],
     r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
-    c: QueryContext
-): Expr[r.R, WindowWithoutOver] =
-    Expr(
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ktd: KindToTuple[ad.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    id: CanInWindow[ktd.R],
+    co: CombineKindTuple[kt.R, kto.R],
+    c: CombineKindTuple[co.R, ktd.R]
+): WindowFunc[r.R, c.R] =
+    WindowFunc(
         SqlExpr.NullsTreatmentFunc(
             "LAG",
             aa.asExpr(x).asSqlExpr ::
@@ -2155,15 +2470,23 @@ def lag[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, defa
         )
     )
 
-def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
-    wa: CanInWindow[aa.K],
+def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
+    ad: AsExpr[D, CL],
     no: SqlNumber[ao.R],
-    wo: CanInWindow[ao.K],
-    wd: CanInWindow[ad.K],
     r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
-    c: QueryContext
-): Expr[r.R, WindowWithoutOver] =
-    Expr(
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ktd: KindToTuple[ad.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    id: CanInWindow[ktd.R],
+    co: CombineKindTuple[kt.R, kto.R],
+    c: CombineKindTuple[co.R, ktd.R]
+): WindowFunc[r.R, c.R] =
+    WindowFunc(
         SqlExpr.NullsTreatmentFunc(
             "LAG",
             aa.asExpr(x).asSqlExpr ::
@@ -2174,45 +2497,54 @@ def lagIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offs
         )
     )
 
-def lead[A: AsExpr as aa](x: A)(using
-    i: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def lead[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 None
             )
         )
     )
 
-def leadIgnoreNulls[A: AsExpr as aa](x: A)(using
-    i: CanInWindow[aa.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+def leadIgnoreNulls[A, CL <: Int](x: A)(using
+    qc: QueryContext[CL],
+    a: AsExpr[A, CL],
+    kt: KindToTuple[a.K],
+    i: CanInWindow[kt.R],
+    to: ToOption[WindowFunc[a.R, kt.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asSqlExpr :: Nil,
+                a.asExpr(x).asSqlExpr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
     )
 
-def lead[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    ia: CanInWindow[aa.K],
+def lead[A, O, CL <: Int](x: A, offset: O)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
     no: SqlNumber[ao.R],
-    io: CanInWindow[ao.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    c: CombineKindTuple[kt.R, kto.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LEAD",
                 aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2221,15 +2553,20 @@ def lead[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
         )
     )
 
-def leadIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
-    ia: CanInWindow[aa.K],
+def leadIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
     no: SqlNumber[ao.R],
-    io: CanInWindow[ao.K],
-    to: ToOption[Expr[aa.R, WindowWithoutOver]],
-    c: QueryContext
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    c: CombineKindTuple[kt.R, kto.R],
+    to: ToOption[WindowFunc[aa.R, c.R]]
 ): to.R =
     to.toOption(
-        Expr(
+        WindowFunc(
             SqlExpr.NullsTreatmentFunc(
                 "LEAD",
                 aa.asExpr(x).asSqlExpr :: ao.asExpr(offset).asSqlExpr :: Nil,
@@ -2238,15 +2575,23 @@ def leadIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao](x: A, offset: O)(using
         )
     )
 
-def lead[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
-    wa: CanInWindow[aa.K],
+def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
+    ad: AsExpr[D, CL],
     no: SqlNumber[ao.R],
-    wo: CanInWindow[ao.K],
-    wd: CanInWindow[ad.K],
     r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
-    c: QueryContext
-): Expr[r.R, WindowWithoutOver] =
-    Expr(
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ktd: KindToTuple[ad.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    id: CanInWindow[ktd.R],
+    co: CombineKindTuple[kt.R, kto.R],
+    c: CombineKindTuple[co.R, ktd.R]
+): WindowFunc[r.R, c.R] =
+    WindowFunc(
         SqlExpr.NullsTreatmentFunc(
             "LEAD",
             aa.asExpr(x).asSqlExpr ::
@@ -2257,15 +2602,23 @@ def lead[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, def
         )
     )
 
-def leadIgnoreNulls[A: AsExpr as aa, O: AsExpr as ao, D: AsExpr as ad](x: A, offset: O, default: D)(using
-    wa: CanInWindow[aa.K],
+def leadIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ao: AsExpr[O, CL],
+    ad: AsExpr[D, CL],
     no: SqlNumber[ao.R],
-    wo: CanInWindow[ao.K],
-    wd: CanInWindow[ad.K],
     r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
-    c: QueryContext
-): Expr[r.R, WindowWithoutOver] =
-    Expr(
+    kt: KindToTuple[aa.K],
+    kto: KindToTuple[ao.K],
+    ktd: KindToTuple[ad.K],
+    ia: CanInWindow[kt.R],
+    io: CanInWindow[kto.R],
+    id: CanInWindow[ktd.R],
+    co: CombineKindTuple[kt.R, kto.R],
+    c: CombineKindTuple[co.R, ktd.R]
+): WindowFunc[r.R, c.R] =
+    WindowFunc(
         SqlExpr.NullsTreatmentFunc(
             "LEAD",
             aa.asExpr(x).asSqlExpr ::

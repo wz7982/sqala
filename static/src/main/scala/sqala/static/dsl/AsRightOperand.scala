@@ -2,7 +2,9 @@ package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
 
-trait AsRightOperand[T]:
+import scala.compiletime.ops.int.>
+
+trait AsRightOperand[T,  CL <: Int]:
     type R
 
     type K <: ExprKind
@@ -10,13 +12,13 @@ trait AsRightOperand[T]:
     def asExpr(x: T): Expr[R, K]
 
 object AsRightOperand:
-    type Aux[T, O, OK <: ExprKind] = AsRightOperand[T]:
+    type Aux[T, CL <: Int, O, OK <: ExprKind] = AsRightOperand[T, CL]:
         type R = O
 
         type K = OK
 
-    given expr[T: AsExpr as a]: Aux[T, a.R, a.K] =
-        new AsRightOperand[T]:
+    given expr[T, CL <: Int](using a: AsExpr[T, CL]): Aux[T, CL, a.R, a.K] =
+        new AsRightOperand[T, CL]:
             type R = a.R
 
             type K = a.K
@@ -24,11 +26,13 @@ object AsRightOperand:
             def asExpr(x: T): Expr[R, K] =
                 a.asExpr(x)
 
-    given subLink[T]: Aux[SubLink[T], T, ValueOperation] =
-        new AsRightOperand[SubLink[T]]:
+    given quantifiedSubquery[T, OKS <: Tuple, L <: Int, CL <: Int](using
+        refl: L > CL =:= true
+    ): Aux[QuantifiedSubquery[T, OKS, L], CL, T, Composite[OKS]] =
+        new AsRightOperand[QuantifiedSubquery[T, OKS, L], CL]:
             type R = T
 
-            type K = ValueOperation
+            type K = Composite[OKS]
 
-            def asExpr(x: SubLink[T]): Expr[T, K] =
-                Expr(SqlExpr.SubLink(x.quantifier, x.tree))
+            def asExpr(x: QuantifiedSubquery[T, OKS, L]): Expr[R, K] =
+                Expr(SqlExpr.Subquery(Some(x.quantifier), x.tree))

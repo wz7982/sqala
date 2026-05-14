@@ -1,23 +1,27 @@
 package sqala.static.dsl.table
 
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
-import sqala.static.dsl.{AsExpr, CanInFilter, QueryContext}
+import sqala.static.dsl.*
 import sqala.static.metadata.SqlBoolean
 
-case class JoinTable[T](
+final case class JoinTable[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
     private[sqala] val sqlTable: SqlTable.Join
 ) extends AnyTable
 
-case class JoinPart[T](
+final case class JoinPart[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
     private[sqala] val sqlTable: SqlTable.Join
 ):
-    def on[F: AsExpr as a](f: T => F)(using
-        SqlBoolean[a.R],
-        CanInFilter[a.K],
-        QueryContext
-    ): JoinTable[T] =
+    def on[F](f: T => F)(using
+        qc: QueryContext[L],
+        a: AsExpr[F, L],
+        b: SqlBoolean[a.R],
+        kt: KindToTuple[a.K],
+        i: CanInFilter[kt.R],
+        e: ExcludeCurrentLevelColumn[kt.R, L],
+        c: CombineKindTuple[OKS, e.R]
+    ): JoinTable[T, c.R, L] =
         val cond = a.asExpr(f(params))
         JoinTable(
             params,

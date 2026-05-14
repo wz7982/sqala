@@ -19,7 +19,7 @@ class JdbcContext(
     val dialect: Dialect,
     val standardEscapeStrings: Boolean
 ) extends Dynamic:
-    private[sqala] inline def execute[T](inline handler: Connection => T): T =
+    private[sqala] def execute[T](handler: Connection => T): T =
         val conn = dataSource.getConnection()
         val result = handler(conn)
         conn.close()
@@ -94,7 +94,7 @@ class JdbcContext(
         val sql = statementToString(s.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    inline def fetchByPrimaryKeys[T](using
+    def fetchByPrimaryKeys[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -104,7 +104,7 @@ class JdbcContext(
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
-    inline def findByPrimaryKey[T](using
+    def findByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -114,7 +114,7 @@ class JdbcContext(
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
 
-    inline def fetchTo[T](inline query: Query[?, ?])(using
+    def fetchTo[T](query: Query[?, ?, ?, ?])(using
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -122,7 +122,7 @@ class JdbcContext(
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
-    inline def fetch[T, S <: QuerySize](inline query: Query[T, S])(using
+    def fetch[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -155,8 +155,11 @@ class JdbcContext(
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
-    inline def pageTo[T](
-        inline query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    def pageTo[T](
+        query: Query[?, ?, ?, ?],
+        pageSize: Int,
+        pageNo: Int,
+        returnCount: Boolean = true
     )(using
         JdbcDecoder[T],
         Logger
@@ -169,8 +172,11 @@ class JdbcContext(
             else (count / pageSize + 1).toInt
         Page(total, count, pageSize, pageNo, data)
 
-    inline def page[T, S <: QuerySize](
-        inline query: Query[T, S], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    def page[T, OKS <: Tuple, L <: Int, S <: QuerySize](
+        query: Query[T, OKS, L, S],
+        pageSize: Int,
+        pageNo: Int,
+        returnCount: Boolean = true
     )(using
         r: Result[T],
         d: JdbcDecoder[r.R],
@@ -178,28 +184,28 @@ class JdbcContext(
     ): Page[r.R] =
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-    inline def findTo[T](inline query: Query[?, ?])(using
+    def findTo[T](query: Query[?, ?, ?, ?])(using
         d: JdbcDecoder[T],
         l: Logger
     ): Option[T] =
         fetchTo[T](query.take(1)).headOption
 
-    inline def find[T, S <: QuerySize](inline query: Query[T, S])(using
+    def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
     ): Option[r.R] =
         findTo[r.R](query)
 
-    inline def fetchCount[T, S <: QuerySize](inline query: Query[T, S])(using Logger): Long =
+    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using Logger): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    inline def fetchExists(inline query: Query[?, ?])(using Logger): Boolean =
+    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using Logger): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
-    inline def applyDynamic[T](name: String)(using
+    def applyDynamic[T](name: String)(using
         r: Repository[T, name.type],
         d: JdbcDecoder[T],
         l: Logger
@@ -215,11 +221,11 @@ class JdbcContext(
             q => fetchExists(q)
         )
 
-    def showSql[T, S <: QuerySize](query: Query[T, S]): String =
+    def showSql[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S]): String =
         queryToString(query.tree, dialect, standardEscapeStrings)
 
-    inline def cursorFetch[T, R, S <: QuerySize](
-        inline query: Query[T, S],
+    def cursorFetch[T, OKS <: Tuple, L <: Int, S <: QuerySize, R](
+        query: Query[T, OKS, L, S],
         fetchSize: Int
     )(using
         r: Result[T],

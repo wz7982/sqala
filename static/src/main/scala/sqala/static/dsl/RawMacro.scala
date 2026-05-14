@@ -3,11 +3,11 @@ package sqala.static.dsl
 import scala.quoted.{Expr, Quotes, Type}
 
 private[sqala] object RawMacro:
-    inline def asSqlInstances(inline expr: Seq[Any]): List[AsExpr[?]] =
+    inline def asSqlInstances[CL <: Int](inline expr: Seq[Any]): List[AsExpr[?, ?]] =
         ${ RawMacroImpl.asSqlInstances('expr) }
 
 private[sqala] object RawMacroImpl:
-    def asSqlInstances(expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[AsExpr[?]]] =
+    def asSqlInstances[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[AsExpr[?, ?]]] =
         import q.reflect.*
 
         def removeInlined(term: Term): Term =
@@ -25,6 +25,6 @@ private[sqala] object RawMacroImpl:
                 val tpe = term.tpe.widen.asType
                 tpe match
                     case '[t] =>
-                        Expr.summon[AsExpr[t]].get
+                        Expr.summon[AsExpr[t, CL]].get
 
         Expr.ofList(instances)

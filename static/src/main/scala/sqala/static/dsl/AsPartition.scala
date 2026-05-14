@@ -4,82 +4,105 @@ import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.statement.query.Query
 import sqala.static.metadata.AsSqlExpr
 
-trait AsPartition[T]:
-    type K <: ExprKind
+import scala.compiletime.ops.int.>
+
+trait AsPartitionItem[T, CL <: Int]:
+    type KS <: Tuple
+
+    def asExpr(x: T): Expr[?, ?]
+
+object AsPartitionItem:
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartitionItem[T, CL]:
+        type KS = OKS
+
+    given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, Value *: EmptyTuple] =
+        new AsPartitionItem[T, CL]:
+            type KS = Value *: EmptyTuple
+
+            def asExpr(x: T): Expr[?, ?] =
+                Expr(a.asSqlExpr(x))
+
+    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+        kt: KindToTuple[EK],
+        i: CanInWindow[kt.R]
+    ): Aux[Expr[T, EK], CL, kt.R] =
+        new AsPartitionItem[Expr[T, EK], CL]:
+            type KS = kt.R
+
+            def asExpr(x: Expr[T, EK]): Expr[?, ?] =
+                x
+
+    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
+        a: AsExpr[T, CL],
+        i: CanInWindow[OKS],
+        refl: L > CL =:= true
+    ): Aux[Q, CL, OKS] =
+        new AsPartitionItem[Q, CL]:
+            type KS = OKS
+
+            def asExpr(x: Q): Expr[?, ?] =
+                Expr(SqlExpr.Subquery(None, x.tree))
+
+trait AsPartition[T, CL <: Int]:
+    type KS <: Tuple
 
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsPartition:
-    type Aux[T, OK] = AsPartition[T]:
-        type K = OK
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartition[T, CL]:
+        type KS = OKS
 
-    given value[T: AsSqlExpr as a]: Aux[T, Value] =
-        new AsPartition[T]:
-            type K = Value
+    given item[T, CL <: Int](using a: AsPartitionItem[T, CL]): Aux[T, CL, a.KS] =
+        new AsPartition[T, CL]:
+            type KS = a.KS
 
             def asExprs(x: T): List[Expr[?, ?]] =
-                Expr(a.asSqlExpr(x)) :: Nil
+                a.asExpr(x) :: Nil
 
-    given expr[T: AsSqlExpr, EK <: ExprKind](using CanInOver[EK]): Aux[Expr[T, EK], EK] =
-        new AsPartition[Expr[T, EK]]:
-            type K = EK
-
-            def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
-                x :: Nil
-
-    given query[T, Q <: Query[T, OneRow]](using a: AsPartition[T]): Aux[Q, ValueOperation] =
-        new AsPartition[Q]:
-            type K = ValueOperation
-
-            def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.SubQuery(x.tree)) :: Nil
-
-    given tuple[H, T <: Tuple](using
-        h: AsPartition[H],
-        t: AsPartition[T],
-        e: AsExpr[H],
-        a: AsSqlExpr[e.R],
-        o: KindOperation[h.K, t.K]
-    ): Aux[H *: T, o.R] =
-        new AsPartition[H *: T]:
-            type K = o.R
+    given tuple[H, T <: Tuple, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        t: AsPartition[T, CL],
+        c: CombineKindTuple[h.KS, t.KS]
+    ): Aux[H *: T, CL, c.R] =
+        new AsPartition[H *: T, CL]:
+            type KS = c.R
 
             def asExprs(x: H *: T): List[Expr[?, ?]] =
-                h.asExprs(x.head) ++ t.asExprs(x.tail)
+                h.asExpr(x.head) :: t.asExprs(x.tail)
 
-    given tuple1[H](using
-        h: AsPartition[H],
-        e: AsExpr[H],
-        a: AsSqlExpr[e.R],
-        o: KindOperation[h.K, Value]
-    ): Aux[H *: EmptyTuple, o.R] =
-        new AsPartition[H *: EmptyTuple]:
-            type K = o.R
+    given tuple1[H, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        c: CombineKindTuple[h.KS, EmptyTuple]
+    ): Aux[H *: EmptyTuple, CL, c.R] =
+        new AsPartition[H *: EmptyTuple, CL]:
+            type KS = c.R
 
             def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
-                h.asExprs(x.head)
+                h.asExpr(x.head) :: Nil
 
-trait AsRecognizePartition[T]:
+trait AsRecognizePartition[T, CL <: Int]:
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsRecognizePartition:
-    given expr[T]: AsRecognizePartition[Expr[T, Column]] with
-        def asExprs(x: Expr[T, Column]): List[Expr[?, ?]] =
+    given expr[T: AsSqlExpr, EL <: Int, CL <: Int](using
+        EL =:= CL
+    ): AsRecognizePartition[Expr[T, Column[EL]], CL] with
+        def asExprs(x: Expr[T, Column[EL]]): List[Expr[?, ?]] =
             x :: Nil
 
-    given tuple[H, T <: Tuple](using
-        h: AsRecognizePartition[H],
-        e: AsExpr[H],
+    given tuple[H, T <: Tuple, CL <: Int](using
+        h: AsRecognizePartition[H, CL],
+        e: AsExpr[H, CL],
         a: AsSqlExpr[e.R],
-        t: AsRecognizePartition[T]
-    ): AsRecognizePartition[H *: T] with
+        t: AsRecognizePartition[T, CL]
+    ): AsRecognizePartition[H *: T, CL] with
         def asExprs(x: H *: T): List[Expr[?, ?]] =
             h.asExprs(x.head) ++ t.asExprs(x.tail)
 
-    given tuple1[H](using
-        h: AsRecognizePartition[H],
-        e: AsExpr[H],
+    given tuple1[H, CL <: Int](using
+        h: AsRecognizePartition[H, CL],
+        e: AsExpr[H, CL],
         a: AsSqlExpr[e.R]
-    ): AsRecognizePartition[H *: EmptyTuple] with
+    ): AsRecognizePartition[H *: EmptyTuple, CL] with
         def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
             h.asExprs(x.head)

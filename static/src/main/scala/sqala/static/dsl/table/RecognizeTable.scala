@@ -9,52 +9,45 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.{constValue, constValueTuple}
 import scala.language.dynamics
 
-case class RecognizePredefine[T](
+final case class RecognizePredefine[T, L <: Int](
     private[sqala] val __table__ : T
-)(using r: AsRecognizeTable[T]):
-    def sortBy[S: AsColumnSort as a](sortValue: S)(using
-        qc: QueryContext,
-        mc: MatchRecognizeContext
-    ): RecognizePredefine[T] =
+)(using
+    private[sqala] val qc: QueryContext[L],
+    private[sqala] val mc: MatchRecognizeContext,
+    private[sqala] val r: AsRecognize[T]
+):
+    def sortBy[S](sortValue: S)(using a: AsColumnSort[S, L]): RecognizePredefine[T, L] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
         RecognizePredefine(r.setOrderBy(__table__, sort))
 
-    def orderBy[S: AsColumnSort as a](sortValue: S)(using
-        qc: QueryContext,
-        mc: MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def orderBy[S](sortValue: S)(using a: AsColumnSort[S, L]): RecognizePredefine[T, L] =
         sortBy(sortValue)
 
-    def oneRowPerMatch(using
-        qc: QueryContext,
-        mc: MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def oneRowPerMatch: RecognizePredefine[T, L] =
         RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.OneRow))
 
-    def allRowsPerMatch(using
-        qc: QueryContext,
-        mc: MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def allRowsPerMatch: RecognizePredefine[T, L] =
         RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
 
     def predefine[N <: Tuple](using
-        t: TransformTableKind[T, Grouped],
-        rr: AsRecognizeTable[t.R],
-        qc: QueryContext,
-        mc: MatchRecognizeContext
-    ): Recognize[N, t.R] =
+        t: TransformTableKind[T, [l <: Int] =>> Grouped[Column[l] *: EmptyTuple]],
+        rr: AsRecognize[t.R],
+    ): Recognize[N, t.R, L] =
         Recognize(t.transform(__table__))
 
-case class Recognize[N <: Tuple, T](
+final case class Recognize[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
-)(using r: AsRecognizeTable[T]) extends Dynamic:
-    inline def define[V <: Tuple](f: RecognizeDefine[N, T] => NamedTuple[N, V])(using
-        a: AsExpr[V],
-        i: CanIn[Expr[Boolean, Agg], V],
-        c: QueryContext,
-        mc: MatchRecognizeContext
-    ): Recognize[N, T] =
-        val items = f(RecognizeDefine[N, T](__table__))
+)(using
+    private[sqala] val qc: QueryContext[L],
+    private[sqala] val mc: MatchRecognizeContext,
+    private[sqala] val r: AsRecognize[T]
+):
+    inline def define[V <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[N, V])(using
+        a: AsExpr[V, L],
+        kt: KindToTuple[a.K],
+        i: CanInRecognizeDefine[kt.R, L]
+    ): Recognize[N, T, L] =
+        val items = f(RecognizeDefine[N, T, L](__table__))
         val names = constValueTuple[N].toList.map(_.toString)
         val exprs = a.asExprs(items.toTuple)
         val defines = names.zip(exprs).map: (n, e) =>
@@ -65,18 +58,15 @@ case class Recognize[N <: Tuple, T](
             .copy(rowPattern = recognize.rowPattern.copy(define = defines))
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def pattern(f: RecognizePattern[N, T] => RecognizePatternTerm)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): Recognize[N, T] =
-        val p = f(RecognizePattern[N, T](__table__))
+    def pattern(f: RecognizePattern[N, T, L] => RecognizePatternTerm[L]): Recognize[N, T, L] =
+        val p = f(RecognizePattern[N, T, L](__table__))
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
             .copy(rowPattern = recognize.rowPattern.copy(pattern = p.pattern))
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def afterMatchSkipToNextRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
+    def afterMatchSkipToNextRow: Recognize[N, T, L] =
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
@@ -87,7 +77,7 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def afterMatchSkipPastLastRow(using QueryContext, MatchRecognizeContext): Recognize[N, T] =
+    def afterMatchSkipPastLastRow: Recognize[N, T, L] =
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
@@ -98,65 +88,55 @@ case class Recognize[N <: Tuple, T](
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def afterMatchSkipToFirst(f: RecognizePatternName[N, T] => String)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): Recognize[N, T] =
+    def afterMatchSkipToFirst(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def afterMatchSkipToLast(f: RecognizePatternName[N, T] => String)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): Recognize[N, T] =
+    def afterMatchSkipToLast(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def afterMatchSkipTo(f: RecognizePatternName[N, T] => String)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): Recognize[N, T] =
+    def afterMatchSkipTo(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatch = Some(
-                        SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T](__table__)))
+                        SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
 
-    def measures[MN <: Tuple, MV <: Tuple](f: RecognizeDefine[N, T] => NamedTuple[MN, MV])(using
-        m: AsMap[MV],
-        p: AsTableParam[m.R],
+    def measures[MN <: Tuple, MV <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[MN, MV])(using
+        m: AsMap[MV, L],
+        p: AsTableParam[m.R, L],
         t: ToTuple[p.R],
-        a: AsExpr[MV],
-        o: KindOperation[a.K, Agg],
-        c: QueryContext,
-        mc: MatchRecognizeContext
-    ): RecognizeTable[MN, t.R, CanInFrom] =
-        val alias = c.fetchAlias
-        val items = m.asSelectItems(f(RecognizeDefine[N, T](__table__)), 1)
+        i: CanInGroupedMap[m.KS],
+        e: ExcludeCurrentLevelColumn[m.KS, L],
+        refl: e.R =:= EmptyTuple
+    ): RecognizeMeasures[MN, t.R, L] =
+        val alias = qc.fetchAlias
+        val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
         val measureItems = items.map: i =>
             SqlRecognizeMeasureItem(i.expr, i.alias.get)
         val recognize =
@@ -166,30 +146,41 @@ case class Recognize[N <: Tuple, T](
                 measures = measureItems,
                 alias = Some(SqlTableAlias(alias, Nil))
             )
-        RecognizeTable[MN, t.R, CanInFrom](
+        RecognizeMeasures[MN, t.R, L](
             Some(alias),
             t.toTuple(p.asTableParam(Some(alias), 1)),
             r.fetchSqlTable(r.setRecognize(__table__, newRecognize))
         )
 
-case class RecognizeDefine[N <: Tuple, T](
+final case class RecognizeDefine[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
-)(using r: AsRecognizeTable[T]) extends Dynamic:
+)(using
+    private[sqala] val r: AsRecognize[T]
+) extends Dynamic:
     def selectDynamic(name: String): T =
         r.alias(__table__, name)
 
-case class RecognizePattern[N <: Tuple, T](
+final class RecognizePattern[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
-)(using AsRecognizeTable[T]) extends Dynamic:
-    def selectDynamic(name: String): RecognizePatternTerm =
-        new RecognizePatternTerm(SqlRowPatternTerm.Pattern(name, None))
+)(using
+    private[sqala] val qc: QueryContext[L],
+    private[sqala] val mc: MatchRecognizeContext,
+    private[sqala] val r: AsRecognize[T]
+) extends Dynamic:
+    def selectDynamic(name: String): RecognizePatternTerm[L] =
+        RecognizePatternTerm(SqlRowPatternTerm.Pattern(name, None))
 
-case class RecognizePatternName[N <: Tuple, T](
+final case class RecognizePatternName[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
-)(using AsRecognizeTable[T]) extends Dynamic:
+)(using
+    private[sqala] val r: AsRecognize[T]
+) extends Dynamic:
     def selectDynamic(name: String): String = name
 
-class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
+final case class RecognizePatternTerm[L <: Int](private[sqala] val pattern: SqlRowPatternTerm)(using
+    private[sqala] val qc: QueryContext[L],
+    private[sqala] val mc: MatchRecognizeContext
+):
     private def setQuantifier(quantifier: SqlRowPatternQuantifier): SqlRowPatternTerm =
         pattern match
             case p: SqlRowPatternTerm.Pattern =>
@@ -207,37 +198,47 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             case o: SqlRowPatternTerm.Or =>
                 o.copy(quantifier = Some(quantifier))
 
-    def +(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Plus(false)))
+    def + : RecognizePatternTerm[L] =
+        RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Plus(false)))
 
-    def *(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Asterisk(false)))
+    def * : RecognizePatternTerm[L] =
+        RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Asterisk(false)))
 
-    def ?(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-        new RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Question(false)))
+    def ? : RecognizePatternTerm[L] =
+        RecognizePatternTerm(setQuantifier(SqlRowPatternQuantifier.Question(false)))
 
-    def between[S: AsExpr as s, E: AsExpr as e](start: S, end: E)(using
-        SqlNumber[s.R],
-        SqlNumber[e.R],
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def between[S, E](start: S, end: E)(using
+        as: AsExpr[S, L],
+        ae: AsExpr[E, L],
+        ns: SqlNumber[as.R],
+        ne: SqlNumber[ae.R],
+        kts: KindToTuple[as.K],
+        kte: KindToTuple[ae.K],
+        is: CanInSimpleClause[kts.R],
+        ie: CanInSimpleClause[kte.R],
+        es: ExcludeCurrentLevelColumn[kts.R, L],
+        ee: ExcludeCurrentLevelColumn[kte.R, L],
+        rs: es.R =:= EmptyTuple,
+        re: ee.R =:= EmptyTuple
+    ): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
-                    Some(s.asExpr(start).asSqlExpr),
-                    Some(e.asExpr(end).asSqlExpr),
+                    Some(as.asExpr(start).asSqlExpr),
+                    Some(ae.asExpr(end).asSqlExpr),
                     false
                 )
             )
         )
 
-    def least[T: AsExpr as a](x: T)(using
-        SqlNumber[a.R],
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def least[T](x: T)(using
+        a: AsExpr[T, L],
+        n: SqlNumber[a.R],
+        kt: KindToTuple[a.K],
+        e: ExcludeCurrentLevelColumn[kt.R, L],
+        refl: e.R =:= EmptyTuple
+    ): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
                     Some(a.asExpr(x).asSqlExpr),
@@ -247,12 +248,14 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def most[T: AsExpr as a](x: T)(using
-        SqlNumber[a.R],
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def most[T](x: T)(using
+        a: AsExpr[T, L],
+        n: SqlNumber[a.R],
+        kt: KindToTuple[a.K],
+        e: ExcludeCurrentLevelColumn[kt.R, L],
+        refl: e.R =:= EmptyTuple
+    ): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Between(
                     None,
@@ -262,12 +265,14 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def at[T: AsExpr as a](x: T)(using
-        SqlNumber[a.R],
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def at[T](x: T)(using
+        a: AsExpr[T, L],
+        n: SqlNumber[a.R],
+        kt: KindToTuple[a.K],
+        e: ExcludeCurrentLevelColumn[kt.R, L],
+        refl: e.R =:= EmptyTuple
+    ): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             setQuantifier(
                 SqlRowPatternQuantifier.Quantity(
                     a.asExpr(x).asSqlExpr
@@ -275,8 +280,8 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def ~(that: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def ~(that: RecognizePatternTerm[L]): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             SqlRowPatternTerm.Then(
                 this.pattern,
                 that.pattern,
@@ -284,8 +289,8 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             )
         )
 
-    def |(that: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-        new RecognizePatternTerm(
+    def |(that: RecognizePatternTerm[L]): RecognizePatternTerm[L] =
+        RecognizePatternTerm(
             SqlRowPatternTerm.Or(
                 this.pattern,
                 that.pattern,
@@ -293,7 +298,19 @@ class RecognizePatternTerm(val pattern: SqlRowPatternTerm):
             )
         )
 
-case class RecognizeTable[N <: Tuple, V <: Tuple, F <: InFrom](
+final case class RecognizeMeasures[N <: Tuple, V <: Tuple, CL <: Int](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable
+) extends AnyTable
+
+final case class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable
+) extends AnyTable
+
+final case class RecognizeTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable

@@ -93,20 +93,20 @@ opaque type Json = String
 object Json:
     def apply(value: String): Json = value
 
-case class Interval(value: String, unit: SqlTimeUnit)
+final case class Interval(value: String, unit: SqlTimeUnit)
 
-case class Geometry(value: String, srid: Int)
+final case class Geometry(value: String, srid: Int)
 
-case class Point(value: String, srid: Int)
+final case class Point(value: String, srid: Int)
 
-case class LineString(value: String, srid: Int)
+final case class LineString(value: String, srid: Int)
 
-case class Polygon(value: String, srid: Int)
+final case class Polygon(value: String, srid: Int)
 
-case class MultiPoint(value: String, srid: Int)
+final case class MultiPoint(value: String, srid: Int)
 
-case class MultiLineString(value: String, srid: Int)
+final case class MultiLineString(value: String, srid: Int)
 
-case class MultiPolygon(value: String, srid: Int)
+final case class MultiPolygon(value: String, srid: Int)
 
-case class GeometryCollection(value: String, srid: Int)
+final case class GeometryCollection(value: String, srid: Int)

@@ -103,7 +103,7 @@ object Transaction extends Dynamic:
         val sql = statementToString(s.tree, t.dialect, t.standardEscapeStrings)
         jdbcExec(t.connection, sql, Array.empty[Any])
 
-    inline def fetchByPrimaryKeys[T](using
+    def fetchByPrimaryKeys[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         t: JdbcTransactionContext,
@@ -114,7 +114,7 @@ object Transaction extends Dynamic:
         l(sql, Array.empty[Any])
         jdbcQuery(t.connection, sql, Array.empty[Any])
 
-    inline def findByPrimaryKey[T](using
+    def findByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         t: JdbcTransactionContext,
@@ -125,7 +125,7 @@ object Transaction extends Dynamic:
         l(sql, Array.empty[Any])
         jdbcQuery(t.connection, sql, Array.empty[Any]).headOption
 
-    inline def fetchTo[T](inline query: Query[?, ?])(using
+    def fetchTo[T](query: Query[?, ?, ?, ?])(using
         d: JdbcDecoder[T],
         t: JdbcTransactionContext,
         l: Logger
@@ -134,7 +134,7 @@ object Transaction extends Dynamic:
         l(sql, Array.empty[Any])
         jdbcQuery(t.connection, sql, Array.empty[Any])
 
-    inline def fetch[T, S <: QuerySize](inline query: Query[T, S])(using
+    def fetch[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         r: Result[T],
         d: JdbcDecoder[r.R],
         c: JdbcTransactionContext,
@@ -176,14 +176,14 @@ object Transaction extends Dynamic:
         l(sql, args)
         jdbcQueryToMap(t.connection, sql, args)
 
-    inline def findTo[T](inline query: Query[?, ?])(using
+    def findTo[T](query: Query[?, ?, ?, ?])(using
         JdbcDecoder[T],
         JdbcTransactionContext,
         Logger
     ): Option[T] =
         fetchTo[T](query.take(1)).headOption
 
-    inline def find[T, S <: QuerySize](inline query: Query[T, S])(using
+    def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         r: Result[T],
         d: JdbcDecoder[r.R],
         c: JdbcTransactionContext,
@@ -191,8 +191,11 @@ object Transaction extends Dynamic:
     ): Option[r.R] =
         findTo[r.R](query)
 
-    inline def pageTo[T](
-        inline query: Query[?, ?], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    def pageTo[T](
+        query: Query[?, ?, ?, ?],
+        pageSize: Int,
+        pageNo: Int,
+        returnCount: Boolean = true
     )(using
         JdbcDecoder[T],
         JdbcTransactionContext,
@@ -206,8 +209,11 @@ object Transaction extends Dynamic:
             else (count / pageSize + 1).toInt
         Page(total, count, pageSize, pageNo, data)
 
-    inline def page[T, S <: QuerySize](
-        inline query: Query[T, S], pageSize: Int, pageNo: Int, returnCount: Boolean = true
+    def page[T, OKS <: Tuple, L <: Int, S <: QuerySize](
+        query: Query[T, OKS, L, S],
+        pageSize: Int,
+        pageNo: Int,
+        returnCount: Boolean = true
     )(using
         r: Result[T],
         d: JdbcDecoder[r.R],
@@ -216,21 +222,21 @@ object Transaction extends Dynamic:
     ): Page[r.R] =
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
-    inline def fetchCount[T, S <: QuerySize](inline query: Query[T, S])(using
+    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         JdbcTransactionContext,
         Logger
     ): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    inline def fetchExists[T, S <: QuerySize](inline query: Query[T, S])(using
+    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         JdbcTransactionContext,
         Logger
     ): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
-    inline def applyDynamic[T](name: String)(using
+    def applyDynamic[T](name: String)(using
         r: Repository[T, name.type],
         d: JdbcDecoder[T],
         c: JdbcTransactionContext,

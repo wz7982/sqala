@@ -12,22 +12,34 @@ import sqala.static.metadata.*
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
+import scala.compiletime.ops.int.{+, >}
 
 extension [T](data: List[T])
     def toView[V](using m: ViewMapping[T, V]): List[V] =
         m.mapToList(data)
 
-def query[T](q: QueryContext ?=> T): T =
-    given QueryContext = QueryContext(0)
+def query[T](q: QueryContext[0] ?=> T): T =
+    given QueryContext[0] = QueryContext(0)
     q
 
-def from[T](tables: T)(using
-    f: AsTable[T],
-    s: AsSelect[f.R],
-    c: QueryContext
-): SelectQuery[f.R] =
-    val (params, fromTable) = f.table(tables)
-    val selectItems = s.asSelectItems(params, 1)
+inline def insert[T <: Product]: Insert[T, InsertTable] =
+    Insert.apply[T]
+
+inline def update[T <: Product]: Update[T, UpdateTable] =
+    Update.apply[T]
+
+inline def delete[T <: Product]: Delete[T] =
+    Delete.apply[T]
+
+def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
+    tables: QueryContext[CL + 1] ?=> T
+)(using
+    at: AsTable[T, CL + 1],
+    as: AsSelect[at.R]
+): SelectQuery[at.R, at.OKS, CL + 1] =
+    given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+    val (params, fromTable) = at.asTable(tables)
+    val selectItems = as.asSelectItems(params, 1)
     val tree: SqlQuery.Select = SqlQuery.Select(
         None,
         selectItems,
@@ -41,28 +53,28 @@ def from[T](tables: T)(using
     )
     SelectQuery(params, tree)
 
-def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tuple, US <: QuerySize, R, RS <: QuerySize](
-    baseQuery: Query[NamedTuple[N, V], S]
+def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tuple, US <: QuerySize, R, RS <: QuerySize, CL <: Int](
+    baseQuery: Query[NamedTuple[N, V], EmptyTuple, CL, S]
 )(using
-    p: AsTableParam[V],
+    qc: QueryContext[CL],
+    p: AsTableParam[V, CL],
     tp: ToTuple[p.R]
 )(
-    f: RecursiveTable[N, tp.R] => Query[NamedTuple[UN, UV], US]
+    f: RecursiveTable[N, tp.R, CL] => Query[NamedTuple[UN, UV], EmptyTuple, CL, US]
 )(using
-    u: Union[V, UV],
+    u: Union[V, UV, CL],
     tu: ToTuple[u.R],
-    up: AsTableParam[tu.R],
+    up: AsTableParam[tu.R, CL],
     t: ToTuple[up.R]
 )(
-    g: RecursiveTable[N, t.R] => Query[R, RS]
+    g: RecursiveTable[N, t.R, CL] => Query[R, EmptyTuple, CL, RS]
 )(using
-    m: AsMap[V],
-    c: QueryContext
-): Query[R, ManyRows] =
-    val alias = c.fetchAlias
-    val withTable = RecursiveTable[N, V](Some(alias))
+    m: AsMap[V, CL]
+): Query[R, EmptyTuple, CL, ManyRows] =
+    val alias = qc.fetchAlias
+    val withTable = RecursiveTable[N, V, CL](Some(alias))
     val unionQuery = f(withTable)
-    val finalTable = RecursiveTable[N, tu.R](Some(tableCte))
+    val finalTable = RecursiveTable[N, tu.R, CL](Some(tableCte))
     val finalQuery = g(finalTable)
     val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
     val withTree = SqlQuery.Set(
@@ -81,26 +93,8 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     )
     Query(finalQuery.params, tree)
 
-inline def insert[T <: Product]: Insert[T, InsertTable] =
-    Insert.apply[T]
-
-inline def update[T <: Product](using c: QueryContext = QueryContext(0)): Update[T, UpdateTable] =
-    Update.apply[T]
-
-inline def delete[T <: Product](using c: QueryContext): Delete[T] =
-    Delete.apply[T]
-
-extension [T, AT](x: T)(using t: AsTable[T], refl: t.R <:< Table[AT, Column, CanNotInFrom], c: QueryContext)
-    def withName(tableName: String): Table[AT, Column, CanInFrom] =
-        val (table, _) = t.table(x)
-        val baseTable = table.asInstanceOf[Table[AT, Column, CanInFrom]]
-        baseTable
-            .copy(
-                __metaData__ = baseTable.__metaData__.copy(tableName = tableName),
-                __sqlTable__ = baseTable.__sqlTable__.copy(name = tableName)
-            )
-
-    inline def exclude[N <: Tuple]: ExcludedTable[
+extension [T, AT, CL <: Int](x: T)(using qc: QueryContext[CL], t: AsTable[T, CL], refl: t.R <:< Table[AT, Column, CL])
+    inline def exclude[N <: Tuple]: FromExcluded[
         ExcludeName[
             N,
             Names[From[Unwrap[AT, Option]]]
@@ -108,78 +102,108 @@ extension [T, AT](x: T)(using t: AsTable[T], refl: t.R <:< Table[AT, Column, Can
         ExcludeValue[
             N,
             Names[From[Unwrap[AT, Option]]],
-            Tuple.Map[DropNames[From[Unwrap[AT, Option]]], [x] =>> MapField[x, AT, Column]]
+            Tuple.Map[DropNames[From[Unwrap[AT, Option]]], [x] =>> MapField[x, AT, Column, CL]]
         ],
-        CanInFrom
+        CL
     ] =
-        val (table, _) = t.table(x)
-        ExcludedTable[AT, N](table.asInstanceOf[Table[AT, Column, CanNotInFrom]])
+        val (table, _) = t.asTable(x)
+        FromExcluded[AT, N, CL](table.asInstanceOf[Table[AT, Column, CL]])
 
-extension [A](a: => A)(using c: QueryContext)
-    def join[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(b)
+extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
+    def join[B](b: B)(using
+        tb: AsTable[B, CL],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
-    def joinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using
-        tb: AsLateralTable[B],
-        j: TableJoin[ta.R, tb.R]
-    ): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
+    def joinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Inner, rightSqlTable, None))
 
-    def crossJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableJoin[ta.R, tb.R]): JoinTable[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(b)
+    def crossJoin[B](b: B)(using
+        tb: AsTable[B, CL],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinTable[j.R, c.R, CL] =
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
-    def crossJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using
-        tb: AsLateralTable[B],
-        j: TableJoin[ta.R, tb.R]
-    ): JoinTable[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
+    def crossJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinTable[j.R, c.R, CL + 1] =
+        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
         JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
-    def leftJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableLeftJoin[ta.R, tb.R]): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(b)
+    def leftJoin[B](b: B)(using
+        tb: AsTable[B, CL],
+        j: LeftJoin[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
-    def leftJoinLateral[B](using ta: AsTable[A])(f: ta.R => B)(using
-        tb: AsLateralTable[B],
-        j: TableLeftJoin[ta.R, tb.R]
-    ): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(f(leftTable))
+    def leftJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL + 1] =
+        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Left, rightSqlTable, None))
 
-    def rightJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableRightJoin[ta.R, tb.R]): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(b)
+    def rightJoin[B](b: B)(using
+        tb: AsTable[B, CL],
+        j: RightJoin[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Right, rightSqlTable, None))
 
-    def fullJoin[B](b: => B)(using ta: AsTable[A], tb: AsTable[B], j: TableFullJoin[ta.R, tb.R]): JoinPart[j.R] =
-        val (leftTable, leftSqlTable) = ta.table(a)
-        val (rightTable, rightSqlTable) = tb.table(b)
+    def fullJoin[B](b: B)(using
+        tb: AsTable[B, CL],
+        j: FullJoin[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        val (leftTable, leftSqlTable) = ta.asTable(a)
+        val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
         JoinPart(params, SqlTable.Join(leftSqlTable, SqlJoinType.Full, rightSqlTable, None))
 
-case class Unnest[T](x: Option[T])
+final case class Unnest[T](x: Option[T])
 
-def unnest[T: AsExpr as a](x: T)(using
-    f: UnnestFlatten[a.R],
-    c: QueryContext
-): FuncTable[Unnest[f.R], Column, CanInFrom] =
-    val alias = c.fetchAlias
+def unnest[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    r: UnnestReturn[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInSimpleClause[kt.R],
+    e: ExcludeCurrentLevelColumn[kt.R, CL]
+): FromFunc[Unnest[r.R], Column, e.R, CL] =
+    val alias = qc.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
         false,
         "UNNEST",
@@ -188,15 +212,19 @@ def unnest[T: AsExpr as a](x: T)(using
         Some(SqlTableAlias(alias, "x" :: Nil)),
         None
     )
-    FuncTable(Some(alias), "x" :: Nil, "x" :: Nil, sqlTable)
+    FromFunc(Some(alias), "x" :: Nil, "x" :: Nil, sqlTable)
 
-case class UnnestWithOrdinal[T](x: Option[T], ordinal: Int)
+final case class UnnestWithOrdinal[T](x: Option[T], ordinal: Int)
 
-def unnestWithOrdinal[T: AsExpr as a](x: T)(using
-    f: UnnestFlatten[a.R],
-    c: QueryContext
-): FuncTable[UnnestWithOrdinal[f.R], Column, CanInFrom] =
-    val alias = c.fetchAlias
+def unnestWithOrdinal[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    r: UnnestReturn[a.R],
+    kt: KindToTuple[a.K],
+    i: CanInSimpleClause[kt.R],
+    e: ExcludeCurrentLevelColumn[kt.R, CL]
+): FromFunc[UnnestWithOrdinal[r.R], Column, e.R, CL] =
+    val alias = qc.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
         false,
         "UNNEST",
@@ -205,49 +233,66 @@ def unnestWithOrdinal[T: AsExpr as a](x: T)(using
         Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
         None
     )
-    FuncTable(Some(alias), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    FromFunc(Some(alias), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
 
-def jsonTable[E: AsExpr as ae, P: AsExpr as ap, N <: Tuple, V <: Tuple](
+def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     expr: E,
-    path: P,
-    columns: JsonTableColumns[N, V]
+    path: String,
+    columns: JsonContext ?=> JsonTableColumns[N, V]
 )(using
-    s: SqlString[ap.R],
-    p: AsTableParam[JsonTableColumnFlatten[V]],
+    qc: QueryContext[CL],
+    a: AsExpr[E, CL],
+    p: AsTableParam[JsonTableColumnFlatten[V, CL], CL],
     t: ToTuple[p.R],
-    c: QueryContext
-): JsonTable[JsonTableColumnNameFlatten[N, V], t.R, CanInFrom] =
-    val alias = c.fetchAlias
-    JsonTable(ae.asExpr(expr).asSqlExpr, ap.asExpr(path).asSqlExpr, Some(alias), columns)
+    kt: KindToTuple[a.K],
+    i: CanInSimpleClause[kt.R],
+    e: ExcludeCurrentLevelColumn[kt.R, CL],
+    c: CombineKindTuple[EmptyTuple, e.R]
+): FromJson[JsonTableColumnNameFlatten[N, V], t.R, c.R, CL] =
+    given JsonContext = JsonContext()
+    val alias = qc.fetchAlias
+    FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, Some(alias), columns)
 
-def ordinalColumn(using QueryContext, JsonContext): JsonTableOrdinalColumn =
-    new JsonTableOrdinalColumn
+def ordinalColumn[CL <: Int](using QueryContext[CL], JsonContext): JsonTableOrdinalColumn =
+    JsonTableOrdinalColumn()
 
-class JsonTablePathColumnPart[T]:
-    def apply[P: AsExpr as ap](path: P)(using
-        sp: AsSqlExpr[T],
-        s: SqlString[ap.R],
-        o: KindOperation[ap.K, Column],
-        qc: QueryContext,
-        jc: JsonContext
+final class JsonTablePathColumnPart[T]:
+    def apply[CL <: Int](path: String)(using
+        qc: QueryContext[CL],
+        jc: JsonContext,
+        a: AsSqlExpr[T]
     ): JsonTablePathColumn[T] =
-        JsonTablePathColumn(ap.asExpr(path).asSqlExpr, sp.sqlType)
+        JsonTablePathColumn(path.asExpr.asSqlExpr, a.sqlType)
 
-def pathColumn[T: AsSqlExpr](using QueryContext, JsonContext): JsonTablePathColumnPart[T] =
-    new JsonTablePathColumnPart
+def pathColumn[T: AsSqlExpr]: JsonTablePathColumnPart[T] =
+    JsonTablePathColumnPart()
 
-def existsColumn[P: AsExpr as ap](path: P)(using
-    SqlString[ap.R],
-    KindOperation[ap.K, Column],
-    QueryContext,
-    JsonContext
+def existsColumn[CL <: Int](path: String)(using
+    qc: QueryContext[CL],
+    jc: JsonContext,
 ): JsonTableExistsColumn =
-    JsonTableExistsColumn(ap.asExpr(path).asSqlExpr)
+    JsonTableExistsColumn(path.asExpr.asSqlExpr)
 
-def columns[N <: Tuple, V <: Tuple](c: JsonContext ?=> NamedTuple[N, V])(using
-    QueryContext
+def nestedColumns[N <: Tuple, V <: Tuple, CL <: Int](
+    path: String
+)(using
+    qc: QueryContext[CL],
+    jc: JsonContext
+)(
+    c: JsonContext ?=> NamedTuple[N, V]
+): JsonTableNestedColumns[N, V] =
+    val columnList: List[Any] = c.toList
+    val jsonColumns = columnList.map:
+        case p: JsonTablePathColumn[?] => p
+        case o: JsonTableOrdinalColumn => o
+        case e: JsonTableExistsColumn => e
+        case n: JsonTableNestedColumns[?, ?] => n
+    JsonTableNestedColumns(path.asExpr.asSqlExpr, jsonColumns)
+
+def columns[N <: Tuple, V <: Tuple, CL <: Int](c: JsonContext ?=> NamedTuple[N, V])(using
+    qc: QueryContext[CL],
+    jc: JsonContext
 ): JsonTableColumns[N, V] =
-    given JsonContext = new JsonContext
     val columnList: List[Any] = c.toList
     val jsonColumns = columnList.map:
         case p: JsonTablePathColumn[?] => p
@@ -256,188 +301,145 @@ def columns[N <: Tuple, V <: Tuple](c: JsonContext ?=> NamedTuple[N, V])(using
         case n: JsonTableNestedColumns[?, ?] => n
     JsonTableColumns(jsonColumns)
 
-def nestedColumns[P: AsExpr as ap, N <: Tuple, V <: Tuple](
-    path: P
+inline def vertex[T]: GraphVertexSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertexSchema(None, metaData)
+
+inline def vertex[T](label: String): GraphVertexSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertexSchema(None, metaData.copy(tableName = label))
+
+inline def edge[T]: GraphEdgeSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdgeSchema(None, metaData, None, None)
+
+inline def edge[T](label: String): GraphEdgeSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdgeSchema(None, metaData.copy(tableName = label), None, None)
+
+def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): GraphSchema[N, V] =
+    GraphSchema(name, labels.toTuple)
+
+extension [CL <: Int](s: String)(using qc: QueryContext[CL])
+    infix def is[V, OKS <: Tuple, T <: GraphPatternTerm[V, OKS, CL]](v: T)(using
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[T], OKS, CL] =
+        GraphPattern(Tuple1(v), v.asTerm :: Nil)
+
+def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, CL <: Int](using
+    qc: QueryContext[CL]
 )(
-    c: JsonContext ?=> NamedTuple[N, V]
-)(using QueryContext, JsonContext): JsonTableNestedColumns[N, V] =
-    given JsonContext = new JsonContext
-    val columnList: List[Any] = c.toList
-    val jsonColumns = columnList.map:
-        case p: JsonTablePathColumn[?] => p
-        case o: JsonTableOrdinalColumn => o
-        case e: JsonTableExistsColumn => e
-        case n: JsonTableNestedColumns[?, ?] => n
-    JsonTableNestedColumns(ap.asExpr(path).asSqlExpr, jsonColumns)
-
-inline def vertex[T]: GraphVertex[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphVertex(None, metaData)
-
-inline def vertex[T](label: String): GraphVertex[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphVertex(None, metaData.copy(tableName = label))
-
-inline def edge[T]: GraphEdge[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphEdge(None, metaData, None, None)
-
-inline def edge[T](label: String): GraphEdge[T] =
-    val metaData = TableMacro.tableMetaData[T]
-    GraphEdge(None, metaData.copy(tableName = label), None, None)
-
-def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): Graph[N, V] =
-    Graph(name, labels.toTuple)
-
-extension (s: String)
-    infix def is[V](v: GraphVertex[V])(using
-        QueryContext,
-        GraphContext
-    ): GraphPattern[Tuple1[s.type], Tuple1[GraphVertex[V]]] =
-        GraphPattern(
-            Tuple1(v),
-            SqlGraphPatternTerm.Vertex(
-                v.__alias__,
-                Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                None
-            ) :: Nil
-        )
-
-    infix def is[V](v: GraphEdge[V])(using
-        QueryContext,
-        GraphContext
-    ): GraphPattern[Tuple1[s.type], Tuple1[GraphEdge[V]]] =
-        val pattern =
-            v.__quantifier__.map: q =>
-                SqlGraphPatternTerm.Quantified(
-                    SqlGraphPatternTerm.Edge(
-                        SqlGraphSymbol.Dash,
-                        v.__alias__,
-                        Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                        v.__where__,
-                        SqlGraphSymbol.Dash
-                    ),
-                    q
-                )
-            .getOrElse:
-                SqlGraphPatternTerm.Edge(
-                    SqlGraphSymbol.Dash,
-                    v.__alias__,
-                    Some(SqlGraphLabel.Label(v.__metaData__.tableName)),
-                    v.__where__,
-                    SqlGraphSymbol.Dash
-                )
-        GraphPattern(Tuple1(v), pattern :: Nil)
-
-def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple](
-    graph: Graph[N, V]
-)(f: GraphContext ?=> Graph[N, V] => GraphTable[TN, TV, CanInFrom])(using
-    QueryContext
-): GraphTable[TN, TV, CanInFrom] =
-    given GraphContext = new GraphContext
+    schema: GraphSchema[N, V]
+)(using
+    t: TransformGraphSchema[V, CL],
+    tt: ToTuple[t.R]
+)(
+    f: GraphContext ?=> Graph[N, tt.R, CL] => FromGraph[TN, TV, TOKS, CL]
+): FromGraph[TN, TV, TOKS, CL] =
+    given GraphContext = GraphContext()
+    val graph =
+        Graph[N, tt.R, CL](schema.__name__, tt.toTuple(t.transform(schema.__items__)))
     f(graph)
 
-def ^(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+def ^[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+    RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
 
-def $(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
+def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+    RecognizePatternTerm(SqlRowPatternTerm.Dollar(None))
 
-def permute(terms: RecognizePatternTerm*)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
+def permute[CL <: Int](terms: RecognizePatternTerm[CL]*)(using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+    RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
 
-def exclusion(term: RecognizePatternTerm)(using QueryContext, MatchRecognizeContext): RecognizePatternTerm =
-    new RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
+def exclusion[CL <: Int](term: RecognizePatternTerm[CL])(using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+    RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
-def `final`[T: AsExpr as a](x: T)(using
-    KindOperation[a.K, Agg],
-    QueryContext,
-    MatchRecognizeContext
-): Expr[a.R, a.K] =
+def `final`[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInGroupedMap[kt.R]
+): Expr[a.R, Agg[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
 
-def running[T: AsExpr as a](x: T)(using
-    KindOperation[a.K, Agg],
-    QueryContext,
-    MatchRecognizeContext
-): Expr[a.R, a.K] =
+def running[T, CL <: Int](x: T)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    i: CanInGroupedMap[kt.R]
+): Expr[a.R, Agg[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
 
-extension [T](table: T)(using t: AsTable[T], r: AsRecognizeTable[t.R])
+extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL], r: AsRecognize[t.R])
     def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> t.R => RecognizeTable[N, V, CanInFrom]
-    )(using
-        QueryContext
-    ): RecognizeTable[N, V, CanInFrom] =
-        given MatchRecognizeContext = new MatchRecognizeContext
-        val initialTable = r.asRecognizeTable(t.table(table)._1)
-        f(initialTable)
+        f: MatchRecognizeContext ?=> t.R => RecognizeMeasures[N, V, CL]
+    ): FromRecognize[N, V, t.OKS, CL] =
+        given MatchRecognizeContext = MatchRecognizeContext()
+        val initialTable = r.asRecognizeTable(t.asTable(table)._1)
+        val measures = f(initialTable)
+        FromRecognize(measures.__aliasName__, measures.__items__, measures.__sqlTable__)
 
-extension [T](table: T)(using r: AsRecognizeTable[T])
-    def partitionBy[P: AsRecognizePartition as a](partitionValue: P)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
+extension [T, CL <: Int](table: T)(using
+    qc: QueryContext[CL],
+    mc: MatchRecognizeContext,
+    r: AsRecognize[T]
+)
+    def partitionBy[P](partitionValue: P)(using
+        a: AsRecognizePartition[P, CL]
+    ): RecognizePredefine[T, CL] =
         RecognizePredefine(r.setPartitionBy(table, a.asExprs(partitionValue).map(_.asSqlExpr)))
 
-    def sortBy[S: AsColumnSort as a](sortValue: S)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def sortBy[S](sortValue: S)(using
+        a: AsColumnSort[S, CL]
+    ): RecognizePredefine[T, CL] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
         RecognizePredefine(r.setOrderBy(table, sort))
 
-    def orderBy[S: AsColumnSort as a](sortValue: S)(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def orderBy[S](sortValue: S)(using
+        a: AsColumnSort[S, CL]
+    ): RecognizePredefine[T, CL] =
         sortBy(sortValue)
 
-    def oneRowPerMatch(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def oneRowPerMatch: RecognizePredefine[T, CL] =
         RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.OneRow))
 
-    def allRowsPerMatch(using
-        QueryContext,
-        MatchRecognizeContext
-    ): RecognizePredefine[T] =
+    def allRowsPerMatch: RecognizePredefine[T, CL] =
         RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
 
-extension [T](x: T)(using at: AsTable[T])
-    def pivot[N <: Tuple, V <: Tuple](using
-        ap: AsPivotTable[at.R],
-        qc: QueryContext
-    )(f: PivotContext ?=> ap.R => SubQueryTable[N, V, CanInFrom]): SubQueryTable[N, V, CanInFrom] =
-        given PivotContext = new PivotContext
-        f(ap.table(at.table(x)._1))
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
+    def pivot[N <: Tuple, V <: Tuple](f: PivotContext ?=> p.R => FromPivot[N, V, p.OKS, CL]): FromPivot[N, V, p.OKS, CL] =
+        given PivotContext = PivotContext()
+        f(p.asPivot(x))
 
-extension [T: AsExpr as a](x: T)
-    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
-        av: AsExpr[V],
-        i: CanIn[T, V],
-        c: CanInAgg[i.K],
-        qc: QueryContext,
-        pc: PivotContext
-    ): PivotWithin[N] =
-        PivotWithin[N](a.asExpr(x).asSqlExpr, av.asExprs(items.toTuple).map(_.asSqlExpr))
-
-def grouping[T: AsSqlExpr](x: Expr[T, Grouped])(using QueryContext, GroupingContext): Expr[Int, Agg] =
+def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using QueryContext[CL], GroupingContext): Expr[Int, Agg[K *: EmptyTuple]] =
     Expr(
         SqlExpr.Grouping(
             x.asSqlExpr :: Nil
         )
     )
 
-extension [T: AsExpr as a](x: T)
-    def asExpr(using QueryContext): Expr[a.R, a.K] =
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
+    def asExpr: Expr[a.R, a.K] =
         a.asExpr(x)
 
-def level()(using QueryContext, ConnectByContext): Expr[Int, Column] =
+    def as[R](using c: Cast[a.R, R], kt: KindToTuple[a.K]): Expr[Option[R], Composite[kt.R]] =
+        Expr(SqlExpr.Cast(a.asExpr(x).asSqlExpr, c.castType))
+
+    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
+        pc: PivotContext,
+        av: AsExpr[V, CL],
+        i: CanIn[T, V, CL],
+        ia: CanInAgg[i.KS],
+        e: ExcludeCurrentLevelColumn[i.KS, CL],
+        refl: e.R =:= EmptyTuple
+    ): PivotWithin[N] =
+        PivotWithin[N](a.asExpr(x).asSqlExpr, av.asExprs(items.toTuple).map(_.asSqlExpr))
+
+def level[CL <: Int]()(using QueryContext[CL], ConnectByContext): Expr[Int, Column[CL]] =
     Expr(SqlExpr.Column(Some(tableCte), columnPseudoLevel))
 
-extension (n: Int)(using QueryContext)
+extension [CL <: Int](n: Int)(using QueryContext[CL])
     def year: Interval =
         Interval(n.toString, SqlTimeUnit.Year)
 
@@ -461,10 +463,12 @@ trait ExtractArg[T]
 object ExtractArg:
     given dateTime[T: SqlDateTime]: ExtractArg[T]()
 
+    given time[T: SqlTime]: ExtractArg[T]()
+
     given interval[T: SqlInterval]: ExtractArg[T]()
 
-extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
-    def year: Expr[Option[BigDecimal], a.K] =
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt: KindToTuple[a.K], e: ExtractArg[a.R])
+    def year: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Year,
@@ -472,7 +476,7 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-    def month: Expr[Option[BigDecimal], a.K] =
+    def month: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Month,
@@ -480,7 +484,7 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-    def day: Expr[Option[BigDecimal], a.K] =
+    def day: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Day,
@@ -488,7 +492,7 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-    def hour: Expr[Option[BigDecimal], a.K] =
+    def hour: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Hour,
@@ -496,7 +500,7 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-    def minute: Expr[Option[BigDecimal], a.K] =
+    def minute: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Minute,
@@ -504,7 +508,7 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-    def second: Expr[Option[BigDecimal], a.K] =
+    def second: Expr[Option[BigDecimal], Composite[kt.R]] =
         Expr(
             SqlExpr.ExtractFunc(
                 SqlTimeUnit.Second,
@@ -512,27 +516,33 @@ extension [T: AsExpr as a](x: T)(using ExtractArg[a.R], QueryContext)
             )
         )
 
-class EmptyIf[K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[E: AsExpr as a](expr: E)(using
-        o: KindOperation[K, a.K],
-        c: QueryContext
-    ): IfThen[a.R, o.R] =
+final case class EmptyIf[KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
+    infix def `then`[E, CL <: Int](expr: E)(using
+        qc: QueryContext[CL],
+        a: AsExpr[E, CL],
+        kt: KindToTuple[a.K],
+        c: CombineKindTuple[KS, kt.R]
+    ): IfThen[a.R, c.R] =
         IfThen(exprs :+ a.asExpr(expr))
 
-class If[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[R: AsExpr as a](expr: R)(using
+final case class If[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
+    infix def `then`[R, CL <: Int](expr: R)(using
+        qc: QueryContext[CL],
+        a: AsExpr[R, CL],
         r: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]],
-        o: KindOperation[K, a.K],
-        c: QueryContext
-    ): IfThen[r.R, o.R] =
+        kt: KindToTuple[a.K],
+        c: CombineKindTuple[KS, kt.R]
+    ): IfThen[r.R, c.R] =
         IfThen(exprs :+ a.asExpr(expr))
 
-class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `else`[R: AsExpr as a](expr: R)(using
+final case class IfThen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
+    infix def `else`[R, CL <: Int](expr: R)(using
+        qc: QueryContext[CL],
+        a: AsExpr[R, CL],
         r: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]],
-        o: KindOperation[K, a.K],
-        c: QueryContext
-    ): Expr[r.R, o.R] =
+        kt: KindToTuple[a.K],
+        c: CombineKindTuple[KS, kt.R]
+    ): Expr[r.R, Composite[c.R]] =
         val caseBranches =
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr(
@@ -542,61 +552,66 @@ class IfThen[T, K <: ExprKind](private[sqala] val exprs: List[Expr[?, ?]]):
             )
         )
 
-    infix def `else if`[E: AsExpr as a](expr: E)(using
+    infix def `else if`[E, CL <: Int](expr: E)(using
+        qc: QueryContext[CL],
+        a: AsExpr[E, CL],
         b: SqlBoolean[a.R],
-        o: KindOperation[K, a.K],
-        c: QueryContext
-    ): If[T, o.R] =
+        kt: KindToTuple[a.K],
+        c: CombineKindTuple[KS, kt.R]
+    ): If[T, c.R] =
         If(exprs :+ a.asExpr(expr))
 
-def `if`[E: AsExpr as a](expr: E)(using
+def `if`[E, CL <: Int](expr: E)(using
+    qc: QueryContext[CL],
+    a: AsExpr[E, CL],
     b: SqlBoolean[a.R],
-    o: KindOperation[a.K, Value],
-    c: QueryContext
-): EmptyIf[o.R] =
+    kt: KindToTuple[a.K]
+): EmptyIf[kt.R] =
     EmptyIf(a.asExpr(expr) :: Nil)
 
-def coalesce[A: AsExpr as a, B: AsExpr as b](x: A, y: B)(using
-    r: Return[Unwrap[a.R, Option], Unwrap[b.R, Option], IsOption[b.R]],
-    o: KindOperation[a.K, b.K],
-    c: QueryContext
-): Expr[r.R, o.R] =
+def coalesce[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[ab.R]],
+    c: CombineKind[aa.K, ab.K]
+): Expr[r.R, c.R] =
     Expr(
         SqlExpr.Coalesce(
-            a.asExpr(x).asSqlExpr :: b.asExpr(y).asSqlExpr :: Nil
+            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil
         )
     )
 
-def ifNull[A: AsExpr as a, B: AsExpr as b](x: A, y: B)(using
-    r: Return[Unwrap[a.R, Option], Unwrap[b.R, Option], IsOption[b.R]],
-    o: KindOperation[a.K, b.K],
-    c: QueryContext
-): Expr[r.R, o.R] =
+def ifNull[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[ab.R]],
+    c: CombineKind[aa.K, ab.K]
+): Expr[r.R, c.R] =
     coalesce(x, y)
 
-def nullIf[A: AsExpr as a, B: AsExpr as b](x: A, y: B)(using
-    r: Return[Unwrap[a.R, Option], Unwrap[b.R, Option], false],
-    o: KindOperation[a.K, b.K],
-    to: ToOption[Expr[a.R, o.R]],
-    c: QueryContext
+def nullIf[A, B, CL <: Int](x: A, y: B)(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL],
+    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], false],
+    c: CombineKind[aa.K, ab.K],
+    to: ToOption[Expr[r.R, c.R]]
 ): to.R =
     to.toOption(
         Expr(
             SqlExpr.NullIf(
-                a.asExpr(x).asSqlExpr, b.asExpr(y).asSqlExpr
+                aa.asExpr(x).asSqlExpr, ab.asExpr(y).asSqlExpr
             )
         )
     )
 
-extension [T: AsExpr as a](expr: T)
-    def as[R](using cast: Cast[a.R, R], o: KindOperation[a.K, Value], c: QueryContext): Expr[Option[R], o.R] =
-        Expr(SqlExpr.Cast(a.asExpr(expr).asSqlExpr, cast.castType))
-
-extension [T, K <: ExprKind](expr: Expr[T, K])
-    def over()(using CanInvokeOver[K], QueryContext): Expr[T, WindowEmpty] =
+extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[CL], kt: KindToTuple[EK], co: CanCallOver[EK])
+    def over(): Expr[T, Window[kt.R]] =
         Expr(
             SqlExpr.Window(
-                expr.asSqlExpr,
+                x.asSqlExpr,
                 SqlWindow(
                     Nil,
                     Nil,
@@ -605,16 +620,15 @@ extension [T, K <: ExprKind](expr: Expr[T, K])
             )
         )
 
-    def over[OK <: ExprKind](over: OverContext ?=> Over[OK])(using
-        w: WindowKind[OK],
-        c: CanInvokeOver[K],
-        q: QueryContext
-    ): Expr[T, w.R] =
-        given OverContext = new OverContext
+    def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
+        i: CanInWindow[OKS],
+        c: CombineKindTuple[kt.R, OKS]
+    ): Expr[T, Window[c.R]] =
+        given OverContext = OverContext()
         val o = over
         Expr(
             SqlExpr.Window(
-                expr.asSqlExpr,
+                x.asSqlExpr,
                 SqlWindow(
                     o.partitionBy.map(_.asSqlExpr),
                     o.sortBy.map(_.asSqlOrderBy),
@@ -623,58 +637,68 @@ extension [T, K <: ExprKind](expr: Expr[T, K])
             )
         )
 
-def currentRow(using QueryContext): FrameBound[Nothing] =
+def currentRow[CL <: Int](using QueryContext[CL]): FrameBound[Nothing] =
     FrameBound(SqlWindowFrameBound.CurrentRow)
 
-def unboundedPreceding(using QueryContext): FrameBound[Nothing] =
+def unboundedPreceding[CL <: Int](using QueryContext[CL]): FrameBound[Nothing] =
     FrameBound(SqlWindowFrameBound.UnboundedPreceding)
 
-def unboundedFollowing(using QueryContext): FrameBound[Nothing] =
+def unboundedFollowing[CL <: Int](using QueryContext[CL]): FrameBound[Nothing] =
     FrameBound(SqlWindowFrameBound.UnboundedFollowing)
 
-extension [T: AsExpr as a](n: T)(using IsValue[a.K])
-    def preceding(using QueryContext): FrameBound[a.R] =
+extension [T, CL <: Int](n: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt: KindToTuple[a.K], nv: IsNotVariable[kt.R])
+    def preceding: FrameBound[a.R] =
         FrameBound(SqlWindowFrameBound.Preceding(n.asExpr.asSqlExpr))
 
-    def following(using QueryContext): FrameBound[a.R] =
+    def following: FrameBound[a.R] =
         FrameBound(SqlWindowFrameBound.Following(n.asExpr.asSqlExpr))
 
-def partitionBy[T](partitionValue: T)(using
-    a: AsPartition[T],
-    c: QueryContext,
-    oc: OverContext
-): PartitionedOver[a.K] =
+def partitionBy[T, CL <: Int](partitionValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsPartition[T, CL]
+): PartitionedOver[a.KS] =
     PartitionedOver(partitionBy = a.asExprs(partitionValue))
 
-def sortBy[T](sortValue: T)(using
-    a: AsOverSort[T],
-    c: QueryContext,
-    oc: OverContext
-): SortedOver[a.R, a.K] =
+def sortBy[T, CL <: Int](sortValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsOverSort[T, CL]
+): SortedOver[a.R, a.KS] =
     SortedOver(sortBy = a.asSorts(sortValue))
 
-def orderBy[T](sortValue: T)(using
-    a: AsOverSort[T],
-    c: QueryContext,
-    oc: OverContext
-): SortedOver[a.R, a.K] =
+def orderBy[T, CL <: Int](sortValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsOverSort[T, CL]
+): SortedOver[a.R, a.KS] =
     SortedOver(sortBy = a.asSorts(sortValue))
 
-def any[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
-    SubLink(SqlSubLinkQuantifier.Any, query.tree)
+def any[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T, OKS, L, S])(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL]
+): QuantifiedSubquery[a.R, OKS, L] =
+    QuantifiedSubquery(SqlSubqueryQuantifier.Any, query.tree)
 
-def all[T: AsExpr as a, S <: QuerySize](query: Query[T, S])(using QueryContext): SubLink[a.R] =
-    SubLink(SqlSubLinkQuantifier.All, query.tree)
+def all[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T, OKS, L, S])(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL]
+): QuantifiedSubquery[a.R, OKS, L] =
+    QuantifiedSubquery(SqlSubqueryQuantifier.All, query.tree)
 
-def exists[T, S <: QuerySize](query: Query[T, S])(using QueryContext): Expr[Boolean, Value] =
+def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T, OKS, L, S])(using
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    refl: L > CL =:= true
+): Expr[Boolean, Composite[OKS]] =
     Expr(
-        SqlExpr.SubLink(
-            SqlSubLinkQuantifier.Exists,
+        SqlExpr.Subquery(
+            Some(SqlSubqueryQuantifier.Exists),
             query.tree
         )
     )
 
-def createFunction[T](name: String, args: List[Expr[?, ?]])(using QueryContext): Expr[T, Value] =
+def createFunction[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -686,7 +710,7 @@ def createFunction[T](name: String, args: List[Expr[?, ?]])(using QueryContext):
         )
     )
 
-def createBinaryExpr[T](left: Expr[?, ?], operator: String, right: Expr[?, ?])(using QueryContext): Expr[T, Value] =
+def createBinaryExpr[T, CL <: Int](left: Expr[?, ?], operator: String, right: Expr[?, ?])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.Binary(
             left.asSqlExpr,
@@ -695,15 +719,15 @@ def createBinaryExpr[T](left: Expr[?, ?], operator: String, right: Expr[?, ?])(u
         )
     )
 
-inline def createTableFunction[T](
+inline def createTableFunction[T, CL <: Int](
     name: String,
     args: List[Expr[?, ?]],
     withOrdinal: Boolean
 )(using
-    c: QueryContext
-): FuncTable[T, Column, CanInFrom] =
+    qc: QueryContext[CL]
+): FromFunc[T, Column, EmptyTuple, CL] =
     val metaData = TableMacro.tableMetaData[T]
-    val alias = c.fetchAlias
+    val alias = qc.fetchAlias
     val sqlTable: SqlTable.Func = SqlTable.Func(
         false,
         name,
@@ -712,22 +736,19 @@ inline def createTableFunction[T](
         Some(SqlTableAlias(alias, metaData.columnNames)),
         None
     )
-    FuncTable(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
+    FromFunc(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
 
 extension (s: StringContext)
-    inline def rawExpr(inline args: Any*)(using QueryContext): RawExpr =
-        val instances = RawMacro.asSqlInstances(args)
+    inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
+        val instances = RawMacro.asSqlInstances[CL](args)
         RawExpr(s.parts.toList, instances, args.toList)
 
-    inline def rawQuantifier(inline args: Any*)(using QueryContext): RawQuantifier =
-        val instances = RawMacro.asSqlInstances(args)
-        RawQuantifier(s.parts.toList, instances, args.toList)
-
-extension [T](expr: Expr[T, Column])
+extension [T](expr: Expr[T, Column[1]])
     @targetName("to")
-    def :=[R: AsExpr as a](updateExpr: R)(using
-        Compare[T, a.R],
-        UpdateSetContext
+    def :=[R](updateExpr: R)(using
+        a: AsExpr[R, 1],
+        c: Compare[T, a.R],
+        uc: UpdateSetContext
     ): UpdatePair = expr match
         case Expr(SqlExpr.Column(_, columnName)) =>
             UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)

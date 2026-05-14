@@ -21,11 +21,11 @@ trait Repository[T, N <: String]:
         dialect: Dialect,
         standardEscapeStrings: Boolean,
         args: Args,
-        fetch: Query[?, ?] => List[T],
-        find: Query[?, ?] => Option[T],
-        page: (Query[?, ?], Int, Int, Boolean) => Page[T],
-        count: Query[?, ?] => Long,
-        exists: Query[?, ?] => Boolean
+        fetch: Query[?, ?, ?, ?] => List[T],
+        find: Query[?, ?, ?, ?] => Option[T],
+        page: (Query[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
+        count: Query[?, ?, ?, ?] => Long,
+        exists: Query[?, ?, ?, ?] => Boolean
     )(using
         JdbcDecoder[T],
         Logger
@@ -253,11 +253,11 @@ object Repository:
                                     dialect: Dialect,
                                     standardEscapeStrings: Boolean,
                                     args: Args,
-                                    fetch: Query[?, ?] => List[T],
-                                    find: Query[?, ?] => Option[T],
-                                    page: (Query[?, ?], Int, Int, Boolean) => Page[T],
-                                    count: Query[?, ?] => Long,
-                                    exists: Query[?, ?] => Boolean
+                                    fetch: Query[?, ?, ?, ?] => List[T],
+                                    find: Query[?, ?, ?, ?] => Option[T],
+                                    page: (Query[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
+                                    count: Query[?, ?, ?, ?] => Long,
+                                    exists: Query[?, ?, ?, ?] => Boolean
                                 )(using
                                     d: JdbcDecoder[T],
                                     l: Logger
