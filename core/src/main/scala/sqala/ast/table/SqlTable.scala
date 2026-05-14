@@ -13,15 +13,15 @@ enum SqlTable:
     )
     case Func(
         lateral: Boolean,
-        name: String, 
+        name: String,
         args: List[SqlExpr],
         withOrd: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
-    case SubQuery(
+    case Subquery(
         lateral: Boolean,
-        query: SqlQuery, 
+        query: SqlQuery,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
@@ -49,9 +49,9 @@ enum SqlTable:
         matchRecognize: Option[SqlMatchRecognize]
     )
     case Join(
-        left: SqlTable, 
-        joinType: SqlJoinType, 
-        right: SqlTable, 
+        left: SqlTable,
+        joinType: SqlJoinType,
+        right: SqlTable,
         condition: Option[SqlJoinCondition]
     )
 
@@ -60,7 +60,7 @@ case class SqlTableAlias(alias: String, columnAliases: List[String])
 enum SqlTablePeriodForMode:
     case SystemTimeAsOf(expr: SqlExpr)
     case SystemTimeBetween(
-        mode: Option[SqlTablePeriodBetweenMode], 
+        mode: Option[SqlTablePeriodBetweenMode],
         start: SqlExpr,
         end: SqlExpr
     )
