@@ -5,8 +5,7 @@ import sqala.static.metadata.*
 
 import java.time.{OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.ops.boolean.{&&, ||}
-import scala.util.NotGiven
+import scala.compiletime.ops.boolean.||
 
 trait Compare[A, B]
 
