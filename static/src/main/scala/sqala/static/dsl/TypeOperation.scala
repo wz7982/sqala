@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.static.dsl.table.{JsonTableExistsColumn, JsonTableNestedColumns, JsonTableOrdinalColumn, JsonTablePathColumn}
+import sqala.static.dsl.table.*
 
 import java.time.*
 import scala.compiletime.ops.any.ToString
@@ -12,7 +12,7 @@ type Wrap[T, F[_]] = T match
     case F[t] => T
     case _ => F[T]
 
-type WrapIf[T, B <: Boolean, F[_]] = B match
+type WrapIf[T, C <: Boolean, F[_]] = C match
     case true => Wrap[T, F]
     case _ => T
 
@@ -25,25 +25,14 @@ type TupleMap[T <: Tuple, F[_]] <: Tuple =
         case x *: xs => F[x] *: TupleMap[xs, F]
         case EmptyTuple => EmptyTuple
 
-type UnnestFlattenImpl[T] = T match
-    case Option[t] => UnnestFlattenImpl[t]
-    case Array[t] => UnnestFlattenImpl[t]
+type FlattenUnnest[T] = T match
+    case Option[t] => FlattenUnnest[t]
+    case Array[t] => FlattenUnnest[t]
     case _ => T
 
-trait UnnestFlatten[T]:
-    type R
-
-object UnnestFlatten:
-    type Aux[T, O] = UnnestFlatten[T]:
-        type R = O
-
-    given flatten[T]: Aux[T, UnnestFlattenImpl[T]] =
-        new UnnestFlatten[T]:
-            type R = UnnestFlattenImpl[T]
-
-type MapField[X, T, K <: ExprKind] = T match
-    case Option[_] => Expr[Wrap[X, Option], K]
-    case _ => Expr[X, K]
+type MapField[X, T, K[_ <: Int] <: ExprKind, L <: Int] = T match
+    case Option[_] => Expr[Wrap[X, Option], K[L]]
+    case _ => Expr[X, K[L]]
 
 type Index[T <: Tuple, X, N <: Int] <: Int = T match
     case X *: xs => N
@@ -53,7 +42,16 @@ type IsOption[T] <: Boolean = T match
     case Option[t] => true
     case _ => false
 
-type NumericResult[L, R, N <: Boolean] = (L, R, N) match
+type TupleDistinct[T <: Tuple] <: Tuple = T match
+    case x *: xs => x *: TupleDistinct[TupleFilterNot[x, xs]]
+    case EmptyTuple => EmptyTuple
+
+type TupleFilterNot[H, T <: Tuple] <: Tuple = T match
+    case H *: xs => TupleFilterNot[H, xs]
+    case x *: xs => x *: TupleFilterNot[H, xs]
+    case EmptyTuple => EmptyTuple
+
+type NumericResult[A, B, N <: Boolean] = (A, B, N) match
     case (BigDecimal, _, true) => Option[BigDecimal]
     case (BigDecimal, _, false) => BigDecimal
     case (_, BigDecimal, true) => Option[BigDecimal]
@@ -75,7 +73,7 @@ type NumericResult[L, R, N <: Boolean] = (L, R, N) match
     case (_, Int, true) => Option[Int]
     case (_, Int, false) => Int
 
-type DateTimeResult[L, R, N <: Boolean] = (L, R, N) match
+type DateTimeResult[A, B, N <: Boolean] = (A, B, N) match
     case (OffsetDateTime, _, true) => Option[OffsetDateTime]
     case (OffsetDateTime, _, false) => OffsetDateTime
     case (_, OffsetDateTime, true) => Option[OffsetDateTime]
@@ -89,7 +87,7 @@ type DateTimeResult[L, R, N <: Boolean] = (L, R, N) match
     case (_, LocalDate, true) => Option[LocalDate]
     case (_, LocalDate, false) => LocalDate
 
-type TimeResult[L, R, N <: Boolean] = (L, R, N) match
+type TimeResult[A, B, N <: Boolean] = (A, B, N) match
     case (OffsetTime, _, true) => Option[OffsetTime]
     case (OffsetTime, _, false) => OffsetTime
     case (_, OffsetTime, true) => Option[OffsetTime]
@@ -106,22 +104,20 @@ type JsonTableColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = (N, V) match
                 Tuple.Concat[JsonTableColumnNameFlatten[n, v], JsonTableColumnNameFlatten[tn, tv]]
             case _ =>
                 hn *: JsonTableColumnNameFlatten[tn, tv]
-    case (EmptyTuple, EmptyTuple) =>
-        EmptyTuple
+    case (EmptyTuple, EmptyTuple) => EmptyTuple
 
-type JsonTableColumnFlatten[V <: Tuple] <: Tuple = V match
+type JsonTableColumnFlatten[V <: Tuple, L <: Int] <: Tuple = V match
     case h *: t =>
         h match
             case JsonTableNestedColumns[_, v] =>
-                Tuple.Concat[JsonTableColumnFlatten[v], JsonTableColumnFlatten[t]]
+                Tuple.Concat[JsonTableColumnFlatten[v, L], JsonTableColumnFlatten[t, L]]
             case JsonTableOrdinalColumn =>
-                Expr[Int, Column] *: JsonTableColumnFlatten[t]
+                Expr[Int, Column[L]] *: JsonTableColumnFlatten[t, L]
             case JsonTablePathColumn[pt] =>
-                Expr[Wrap[pt, Option], Column] *: JsonTableColumnFlatten[t]
+                Expr[Wrap[pt, Option], Column[L]] *: JsonTableColumnFlatten[t, L]
             case JsonTableExistsColumn =>
-                Expr[Option[Boolean], Column] *: JsonTableColumnFlatten[t]
-    case EmptyTuple =>
-        EmptyTuple
+                Expr[Option[Boolean], Column[L]] *: JsonTableColumnFlatten[t, L]
+    case EmptyTuple => EmptyTuple
 
 type UpperCase[S <: String] =
     S match

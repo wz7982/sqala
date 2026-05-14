@@ -8,10 +8,10 @@ import sqala.static.dsl.statement.query.Query
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
-case class SubQueryTable[N <: Tuple, V <: Tuple, F <: InFrom](
+final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.SubQuery
+    private[sqala] val __sqlTable__ : SqlTable.Subquery
 ) extends Selectable with AnyTable:
     type Fields = NamedTuple[N, V]
 
@@ -19,15 +19,15 @@ case class SubQueryTable[N <: Tuple, V <: Tuple, F <: InFrom](
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)
 
-object SubQueryTable:
-    def apply[N <: Tuple, V <: Tuple](query: SqlQuery, lateral: Boolean, alias: Option[String])(using
-        p: AsTableParam[V],
+object SubqueryTable:
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, lateral: Boolean, alias: Option[String])(using
+        p: AsTableParam[V, L],
         t: ToTuple[p.R]
-    ): SubQueryTable[N, t.R, CanInFrom] =
-        new SubQueryTable(
+    ): SubqueryTable[N, t.R, L] =
+        new SubqueryTable(
             alias,
             t.toTuple(p.asTableParam(alias, 1)),
-            SqlTable.SubQuery(
+            SqlTable.Subquery(
                 lateral,
                 query,
                 alias.map(SqlTableAlias(_, Nil)),
@@ -35,8 +35,8 @@ object SubQueryTable:
             )
         )
 
-    def apply[N <: Tuple, V <: Tuple](query: Query[?, ?], lateral: Boolean, alias: Option[String])(using
-        p: AsTableParam[V],
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: Option[String])(using
+        p: AsTableParam[V, L],
         t: ToTuple[p.R]
-    ): SubQueryTable[N, t.R, CanInFrom] =
+    ): SubqueryTable[N, t.R, L] =
         apply(query.tree, lateral, alias)

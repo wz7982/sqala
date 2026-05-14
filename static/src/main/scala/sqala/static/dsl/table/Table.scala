@@ -7,7 +7,7 @@ import sqala.static.metadata.TableMetaData
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 
-case class Table[T, K <: ExprKind, F <: InFrom](
+final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __sqlTable__ : SqlTable.Ident
@@ -15,7 +15,7 @@ case class Table[T, K <: ExprKind, F <: InFrom](
     type Fields =
         NamedTuple[
             Names[From[Unwrap[T, Option]]],
-            Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, K]]
+            Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, K, L]]
         ]
 
     def selectDynamic(name: String): Any =

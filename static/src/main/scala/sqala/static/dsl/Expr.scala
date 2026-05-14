@@ -5,24 +5,36 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 
-case class Expr[T, K <: ExprKind](private val expr: SqlExpr):
-    @targetName("eq")
-    def ==[R](that: R)(using
-        a: AsRightOperand[R],
-        r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
-        o: KindOperation[K, a.K],
-        qc: QueryContext
-    ): Expr[r.R, o.R] =
-        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Equal, a.asExpr(that).asSqlExpr))
+final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
+    @targetName("equal")
+    def ==[R, CL <: Int](that: R)(using
+        qc: QueryContext[CL],
+        ar: AsRightOperand[R, CL],
+        r: Relation[T, ar.R, IsOption[T] || IsOption[ar.R]],
+        ck: CombineKind[K, ar.K]
+    ): Expr[r.R, ck.R] =
+        Expr(
+            SqlExpr.Binary(
+                asSqlExpr,
+                SqlBinaryOperator.Equal,
+                ar.asExpr(that).asSqlExpr
+            )
+        )
 
-    @targetName("ne")
-    def !=[R](that: R)(using
-        a: AsRightOperand[R],
-        r: Relation[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[a.R]],
-        o: KindOperation[K, a.K],
-        qc: QueryContext
-    ): Expr[r.R, o.R] =
-        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, a.asExpr(that).asSqlExpr))
+    @targetName("notEqual")
+    def !=[R, CL <: Int](that: R)(using
+        qc: QueryContext[CL],
+        ar: AsRightOperand[R, CL],
+        r: Relation[T, ar.R, IsOption[T] || IsOption[ar.R]],
+        ck: CombineKind[K, ar.K]
+    ): Expr[r.R, ck.R] =
+        Expr(
+            SqlExpr.Binary(
+                asSqlExpr,
+                SqlBinaryOperator.NotEqual,
+                ar.asExpr(that).asSqlExpr
+            )
+        )
 
     private[sqala] def asSqlExpr: SqlExpr =
         import SqlExpr.*

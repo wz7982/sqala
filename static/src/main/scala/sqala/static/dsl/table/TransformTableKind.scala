@@ -1,81 +1,81 @@
 package sqala.static.dsl.table
 
-import sqala.static.dsl.{ExprKind, ToTuple, TransformKind, Ungrouped}
+import sqala.static.dsl.{ExprKind, ToTuple, TransformExprKind}
 
-trait TransformTableKind[T, K <: ExprKind]:
+trait TransformTableKind[T, K[_ <: Int] <: ExprKind]:
     type R
 
     def transform(x: T): R
 
 object TransformTableKind:
-    type Aux[T, K <: ExprKind, O] = TransformTableKind[T, K]:
+    type Aux[T, K[_ <: Int] <: ExprKind, O] = TransformTableKind[T, K]:
         type R = O
 
-    given table[T, TK <: ExprKind, F <: InFrom, K <: ExprKind]: Aux[Table[T, TK, F], K, Table[T, K, CanNotInFrom]] =
-        new TransformTableKind[Table[T, TK, F], K]:
-            type R = Table[T, K, CanNotInFrom]
+    given table[T, TK[_ <: Int] <: ExprKind, L <: Int, K[_ <: Int] <: ExprKind]: Aux[Table[T, TK, L], K, Table[T, K, L]] =
+        new TransformTableKind[Table[T, TK, L], K]:
+            type R = Table[T, K, L]
 
-            def transform(x: Table[T, TK, F]): R =
+            def transform(x: Table[T, TK, L]): R =
                 Table(x.__aliasName__, x.__metaData__, x.__sqlTable__)
 
-    given funcTable[T, TK <: ExprKind, F <: InFrom, K <: ExprKind]: Aux[FuncTable[T, TK, F], K, FuncTable[T, K, CanNotInFrom]] =
-        new TransformTableKind[FuncTable[T, TK, F], K]:
-            type R = FuncTable[T, K, CanNotInFrom]
+    given funcTable[T, TK[_ <: Int] <: ExprKind, L <: Int, K[_ <: Int] <: ExprKind]: Aux[FuncTable[T, TK, L], K, FuncTable[T, K, L]] =
+        new TransformTableKind[FuncTable[T, TK, L], K]:
+            type R = FuncTable[T, K, L]
 
-            def transform(x: FuncTable[T, TK, F]): R =
+            def transform(x: FuncTable[T, TK, L]): R =
                 FuncTable(x.__aliasName__, x.__fieldNames__, x.__columnNames__, x.__sqlTable__)
 
-    given excludedTable[N <: Tuple, V <: Tuple, F <: InFrom, K <: ExprKind](using
-        tv: TransformKind[V, K],
+    given excludedTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+        tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[ExcludedTable[N, V, F], K, ExcludedTable[N, tt.R, CanNotInFrom]] =
-        new TransformTableKind[ExcludedTable[N, V, F], K]:
-            type R = ExcludedTable[N, tt.R, CanNotInFrom]
+    ): Aux[ExcludedTable[N, V, L], K, ExcludedTable[N, tt.R, L]] =
+        new TransformTableKind[ExcludedTable[N, V, L], K]:
+            type R = ExcludedTable[N, tt.R, L]
 
-            def transform(x: ExcludedTable[N, V, F]): R =
+            def transform(x: ExcludedTable[N, V, L]): R =
                 ExcludedTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__.asInstanceOf[V])), x.__sqlTable__)
 
-    given jsonTable[N <: Tuple, V <: Tuple, F <: InFrom, K <: ExprKind](using
-        tv: TransformKind[V, K],
+    given jsonTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+        tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[JsonTable[N, V, F], K, JsonTable[N, tt.R, CanNotInFrom]] =
-        new TransformTableKind[JsonTable[N, V, F], K]:
-            type R = JsonTable[N, tt.R, CanNotInFrom]
+    ): Aux[JsonTable[N, V, L], K, JsonTable[N, tt.R, L]] =
+        new TransformTableKind[JsonTable[N, V, L], K]:
+            type R = JsonTable[N, tt.R, L]
 
-            def transform(x: JsonTable[N, V, F]): R =
+            def transform(x: JsonTable[N, V, L]): R =
                 JsonTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
 
-    given subQueryTable[N <: Tuple, V <: Tuple, F <: InFrom, K <: ExprKind](using
-        tv: TransformKind[V, K],
+    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+        tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[SubQueryTable[N, V, F], K, SubQueryTable[N, tt.R, CanNotInFrom]] =
-        new TransformTableKind[SubQueryTable[N, V, F], K]:
-            type R = SubQueryTable[N, tt.R, CanNotInFrom]
+    ): Aux[SubqueryTable[N, V, L], K, SubqueryTable[N, tt.R, L]] =
+        new TransformTableKind[SubqueryTable[N, V, L], K]:
+            type R = SubqueryTable[N, tt.R, L]
 
-            def transform(x: SubQueryTable[N, V, F]): R =
-                SubQueryTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+            def transform(x: SubqueryTable[N, V, L]): R =
+                SubqueryTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
 
-    given recognizeTable[N <: Tuple, V <: Tuple, F <: InFrom, K <: ExprKind](using
-        tv: TransformKind[V, Ungrouped],
+    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+        tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[RecognizeTable[N, V, F], K, RecognizeTable[N, tt.R, CanNotInFrom]] =
-        new TransformTableKind[RecognizeTable[N, V, F], K]:
-            type R = RecognizeTable[N, tt.R, CanNotInFrom]
+    ): Aux[RecognizeTable[N, V, L], K, RecognizeTable[N, tt.R, L]] =
+        new TransformTableKind[RecognizeTable[N, V, L], K]:
+            type R = RecognizeTable[N, tt.R, L]
 
-            def transform(x: RecognizeTable[N, V, F]): R =
+            def transform(x: RecognizeTable[N, V, L]): R =
                 RecognizeTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
 
-    given graphTable[N <: Tuple, V <: Tuple, F <: InFrom, K <: ExprKind](using
-        tv: TransformKind[V, Ungrouped],
+    given graphTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+        tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[GraphTable[N, V, F], K, GraphTable[N, tt.R, CanNotInFrom]] =
-        new TransformTableKind[GraphTable[N, V, F], K]:
-            type R = GraphTable[N, tt.R, CanNotInFrom]
+    ): Aux[GraphTable[N, V, L], K, GraphTable[N, tt.R, L]] =
+        new TransformTableKind[GraphTable[N, V, L], K]:
+            type R = GraphTable[N, tt.R, L]
 
-            def transform(x: GraphTable[N, V, F]): R =
+            def transform(x: GraphTable[N, V, L]): R =
                 GraphTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
 
-    given tuple[H, T <: Tuple, K <: ExprKind](using
+    given tuple[H, T <: Tuple, K[_ <: Int] <: ExprKind](using
         ah: TransformTableKind[H, K],
         at: TransformTableKind[T, K],
         t: ToTuple[at.R]
@@ -86,11 +86,11 @@ object TransformTableKind:
             def transform(x: H *: T): R =
                 ah.transform(x.head) *: t.toTuple(at.transform(x.tail))
 
-    given tuple1[H, K <: ExprKind](using
-        ah: TransformTableKind[H, K]
-    ): Aux[H *: EmptyTuple, K, ah.R] =
+    given tuple1[H, K[_ <: Int] <: ExprKind](using
+        h: TransformTableKind[H, K]
+    ): Aux[H *: EmptyTuple, K, h.R] =
         new TransformTableKind[H *: EmptyTuple, K]:
-            type R = ah.R
+            type R = h.R
 
             def transform(x: H *: EmptyTuple): R =
-                ah.transform(x.head)
+                h.transform(x.head)

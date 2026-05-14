@@ -14,46 +14,46 @@ object Result:
     given expr[T, K <: ExprKind]: Aux[Expr[T, K], T] = new Result[Expr[T, K]]:
         type R = T
 
-    given table[T, K <: ExprKind, F <: InFrom]: Aux[Table[T, K, F], T] = new Result[Table[T, K, F]]:
+    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], T] = new Result[Table[T, K, L]]:
         type R = T
 
-    given excludedTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given excludedTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[ExcludedTable[N, V, F], r.R] =
-        new Result[ExcludedTable[N, V, F]]:
+    ): Aux[ExcludedTable[N, V, L], r.R] =
+        new Result[ExcludedTable[N, V, L]]:
             type R = r.R
 
-    given funcTable[T, K <: ExprKind, F <: InFrom]: Aux[FuncTable[T, K, F], T] = new Result[FuncTable[T, K, F]]:
+    given funcTable[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[FuncTable[T, K, L], T] = new Result[FuncTable[T, K, L]]:
         type R = T
 
-    given subQueryTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[SubQueryTable[N, V, F], r.R] =
-        new Result[SubQueryTable[N, V, F]]:
+    ): Aux[SubqueryTable[N, V, L], r.R] =
+        new Result[SubqueryTable[N, V, L]]:
             type R = r.R
 
-    given jsonTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given jsonTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[JsonTable[N, V, F], r.R] =
-        new Result[JsonTable[N, V, F]]:
+    ): Aux[JsonTable[N, V, L], r.R] =
+        new Result[JsonTable[N, V, L]]:
             type R = r.R
 
-    given graphTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given graphTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[GraphTable[N, V, F], r.R] =
-        new Result[GraphTable[N, V, F]]:
+    ): Aux[GraphTable[N, V, L], r.R] =
+        new Result[GraphTable[N, V, L]]:
             type R = r.R
 
-    given recursiveTable[N <: Tuple, V <: Tuple](using
+    given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[RecursiveTable[N, V], r.R] =
-        new Result[RecursiveTable[N, V]]:
+    ): Aux[RecursiveTable[N, V, L], r.R] =
+        new Result[RecursiveTable[N, V, L]]:
             type R = r.R
 
-    given recognizeTable[N <: Tuple, V <: Tuple, F <: InFrom](using
+    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
-    ): Aux[RecognizeTable[N, V, F], r.R] =
-        new Result[RecognizeTable[N, V, F]]:
+    ): Aux[RecognizeTable[N, V, L], r.R] =
+        new Result[RecognizeTable[N, V, L]]:
             type R = r.R
 
     given tuple[H, T <: Tuple](using

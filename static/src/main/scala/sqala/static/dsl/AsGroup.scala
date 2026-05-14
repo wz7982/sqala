@@ -5,47 +5,96 @@ import sqala.static.dsl.statement.query.Query
 import sqala.static.metadata.AsSqlExpr
 
 import scala.NamedTuple.NamedTuple
+import scala.compiletime.ops.int.>
 
-trait AsGroup[T]:
+trait AsGroupItem[T, CL <: Int]:
     type R
+
+    type KS <: Tuple
+
+    def asGroup(x: T): R
+
+    def asExprs(x: T): List[Expr[?, ?]]
+
+object AsGroupItem:
+    type Aux[T, CL <: Int, O, OKS <: Tuple] = AsGroupItem[T, CL]:
+        type R = O
+
+        type KS = OKS
+
+    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+        kt: KindToTuple[EK],
+        i: CanInGroup[kt.R],
+        iv: IsKind[EK, Value],
+        nv: iv.R =:= false
+    ): Aux[Expr[T, EK], CL, Expr[T, Grouped[kt.R]], kt.R] =
+        new AsGroupItem[Expr[T, EK], CL]:
+            type R = Expr[T, Grouped[kt.R]]
+
+            type KS = kt.R
+
+            def asGroup(x: Expr[T, EK]): R =
+                Expr(x.asSqlExpr)
+
+            def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
+                x :: Nil
+
+    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], S <: QuerySize, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: AsSqlExpr[a.R],
+        i: CanInSort[OKS, S],
+        refl: L > CL =:= true
+    ): Aux[Q, CL, Expr[a.R, Grouped[OKS]], OKS] =
+        new AsGroupItem[Q, CL]:
+            type R = Expr[a.R, Grouped[OKS]]
+
+            type KS = OKS
+
+            def asGroup(x: Q): R =
+                Expr(SqlExpr.Subquery(None, x.tree))
+
+            def asExprs(x: Q): List[Expr[?, ?]] =
+                Expr(SqlExpr.Subquery(None, x.tree)) :: Nil
+
+trait AsGroup[T, CL <: Int]:
+    type R
+
+    type KS <: Tuple
 
     def asGroup(x: T): R
 
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsGroup:
-    type Aux[T, O] = AsGroup[T]:
+    type Aux[T, CL <: Int, O, OKS <: Tuple] = AsGroup[T, CL]:
         type R = O
 
-    given expr[T: AsSqlExpr, K <: ExprKind : CanInGroup]: Aux[Expr[T, K], Expr[T, Grouped]] =
-        new AsGroup[Expr[T, K]]:
-            type R = Expr[T, Grouped]
+        type KS = OKS
 
-            def asGroup(x: Expr[T, K]): R =
-                Expr(x.asSqlExpr)
+    given item[T, CL <: Int](using
+        a: AsGroupItem[T, CL]
+    ): Aux[T, CL, a.R, a.KS] =
+        new AsGroup[T, CL]:
+            type R = a.R
 
-            def asExprs(x: Expr[T, K]): List[Expr[?, ?]] =
-                x :: Nil
+            type KS = a.KS
 
-    given query[T: AsSqlExpr, K <: ExprKind, Q <: Query[Expr[T, K], OneRow]]: Aux[Q, Expr[K, Grouped]] =
-        new AsGroup[Q]:
-            type R = Expr[K, Grouped]
+            def asGroup(x: T): R =
+                a.asGroup(x)
 
-            def asGroup(x: Q): R =
-                Expr(SqlExpr.SubQuery(x.tree))
+            def asExprs(x: T): List[Expr[?, ?]] =
+                a.asExprs(x)
 
-            def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.SubQuery(x.tree)) :: Nil
-
-    given tuple[H, T <: Tuple](using
-        h: AsGroup[H],
-        t: AsGroup[T],
-        e: AsExpr[H],
-        a: AsSqlExpr[e.R],
-        tt: ToTuple[t.R]
-    ): Aux[H *: T, h.R *: tt.R] =
-        new AsGroup[H *: T]:
+    given tuple[H, T <: Tuple, CL <: Int](using
+        h: AsGroup[H, CL],
+        t: AsGroup[T, CL],
+        tt: ToTuple[t.R],
+        c: CombineKindTuple[h.KS, t.KS]
+    ): Aux[H *: T, CL, h.R *: tt.R, c.R] =
+        new AsGroup[H *: T, CL]:
             type R = h.R *: tt.R
+
+            type KS = c.R
 
             def asGroup(x: H *: T): R =
                 h.asGroup(x.head) *: tt.toTuple(t.asGroup(x.tail))
@@ -53,13 +102,14 @@ object AsGroup:
             def asExprs(x: H *: T): List[Expr[?, ?]] =
                 h.asExprs(x.head) ++ t.asExprs(x.tail)
 
-    given tuple1[H](using
-        h: AsGroup[H],
-        e: AsExpr[H],
-        a: AsSqlExpr[e.R]
-    ): Aux[H *: EmptyTuple, h.R *: EmptyTuple] =
-        new AsGroup[H *: EmptyTuple]:
+    given tuple1[H, CL <: Int](using
+        h: AsGroup[H, CL],
+        c: CombineKindTuple[h.KS, EmptyTuple]
+    ): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple, c.R] =
+        new AsGroup[H *: EmptyTuple, CL]:
             type R = h.R *: EmptyTuple
+
+            type KS = c.R
 
             def asGroup(x: H *: EmptyTuple): R =
                 h.asGroup(x.head) *: EmptyTuple
@@ -67,11 +117,14 @@ object AsGroup:
             def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
                 h.asExprs(x.head)
 
-    given namedTuple[N <: Tuple, V <: Tuple : AsGroup as a](using
+    given namedTuple[N <: Tuple, V <: Tuple, CL <: Int](using
+        a: AsGroup[V, CL],
         tt: ToTuple[a.R]
-    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
-        new AsGroup[NamedTuple[N, V]]:
+    ): Aux[NamedTuple[N, V], CL, NamedTuple[N, tt.R], a.KS] =
+        new AsGroup[NamedTuple[N, V], CL]:
             type R = NamedTuple[N, tt.R]
+
+            type KS = a.KS
 
             def asGroup(x: NamedTuple[N, V]): R =
                 NamedTuple(tt.toTuple(a.asGroup(x.toTuple)))

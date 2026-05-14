@@ -7,27 +7,22 @@ import sqala.static.dsl.*
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
-case class JsonTable[N <: Tuple, V <: Tuple, F <: InFrom](
+final case class FromJson[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
-) extends Selectable with AnyTable:
-    type Fields = NamedTuple[N, V]
+) extends AnyTable
 
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
-        __items__.toList(index)
-
-object JsonTable:
-    def apply[N <: Tuple, V <: Tuple](
+object FromJson:
+    def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
         expr: SqlExpr,
         path: SqlExpr,
         alias: Option[String],
         columns: JsonTableColumns[N, V]
     )(using
-        p: AsTableParam[JsonTableColumnFlatten[V]],
+        p: AsTableParam[JsonTableColumnFlatten[V, CL], CL],
         t: ToTuple[p.R]
-    ): JsonTable[JsonTableColumnNameFlatten[N, V], t.R, CanInFrom] =
+    ): FromJson[JsonTableColumnNameFlatten[N, V], t.R, OKS, CL] =
         var index = 0
 
         def toSqlColumns(columns: List[JsonTableColumn]): List[SqlJsonTableColumn] =
@@ -45,7 +40,7 @@ object JsonTable:
                     SqlJsonTableColumn.Nested(n.path, None, toSqlColumns(n.columns))
 
         val sqlColumns = toSqlColumns(columns.columns)
-        new JsonTable(
+        FromJson(
             alias,
             t.toTuple(p.asTableParam(alias, 1)),
             SqlTable.Json(
@@ -61,16 +56,27 @@ object JsonTable:
             )
         )
 
-case class JsonTableColumns[N <: Tuple, V <: Tuple](private[sqala] columns: List[JsonTableColumn])
+final case class JsonTable[N <: Tuple, V <: Tuple, L <: Int](
+    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __items__ : V,
+    private[sqala] val __sqlTable__ : SqlTable.Json
+) extends Selectable with AnyTable:
+    type Fields = NamedTuple[N, V]
+
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[N, name.type, 0]]
+        __items__.toList(index)
+
+final case class JsonTableColumns[N <: Tuple, V <: Tuple](private[sqala] val columns: List[JsonTableColumn])
 
 sealed trait JsonTableColumn
-case class JsonTableNestedColumns[N <: Tuple, V <: Tuple](
-    private[sqala] path: SqlExpr,
-    private[sqala] columns: List[JsonTableColumn]
+final case class JsonTableNestedColumns[N <: Tuple, V <: Tuple](
+    private[sqala] val path: SqlExpr,
+    private[sqala] val columns: List[JsonTableColumn]
 ) extends JsonTableColumn
-class JsonTableOrdinalColumn extends JsonTableColumn
-case class JsonTablePathColumn[T](
-    private[sqala] path: SqlExpr,
-    private[sqala] `type`: SqlType
+final class JsonTableOrdinalColumn extends JsonTableColumn
+final case class JsonTablePathColumn[T](
+    private[sqala] val path: SqlExpr,
+    private[sqala] val `type`: SqlType
 ) extends JsonTableColumn
-case class JsonTableExistsColumn(private[sqala] path: SqlExpr) extends JsonTableColumn
+final case class JsonTableExistsColumn(private[sqala] val path: SqlExpr) extends JsonTableColumn

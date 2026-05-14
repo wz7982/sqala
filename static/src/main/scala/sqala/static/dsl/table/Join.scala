@@ -2,81 +2,81 @@ package sqala.static.dsl.table
 
 import sqala.static.dsl.{ToOption, ToTuple}
 
-trait TableJoin[A, B]:
+trait Join[A, B]:
     type R
 
     def join(a: A, b: B): R
 
-object TableJoin:
-    type Aux[A, B, O] = TableJoin[A, B]:
+object Join:
+    type Aux[A, B, O] = Join[A, B]:
         type R = O
 
-    given join[A, B](using 
-        ta: ToTuple[A], 
+    given join[A, B](using
+        ta: ToTuple[A],
         tb: ToTuple[B]
     ): Aux[A, B, Tuple.Concat[ta.R, tb.R]] =
-        new TableJoin[A, B]:
+        new Join[A, B]:
             type R = Tuple.Concat[ta.R, tb.R]
 
             def join(a: A, b: B): R =
                 ta.toTuple(a) ++ tb.toTuple(b)
 
-trait TableLeftJoin[A, B]:
+trait LeftJoin[A, B]:
     type R
 
     def join(a: A, b: B): R
 
-object TableLeftJoin:
-    type Aux[A, B, O] = TableLeftJoin[A, B]:
+object LeftJoin:
+    type Aux[A, B, O] = LeftJoin[A, B]:
         type R = O
 
-    given join[A, B](using 
-        ta: ToTuple[A], 
-        to: ToOption[B], 
+    given join[A, B](using
+        ta: ToTuple[A],
+        to: ToOption[B],
         tb: ToTuple[to.R]
     ): Aux[A, B, Tuple.Concat[ta.R, tb.R]] =
-        new TableLeftJoin[A, B]:
+        new LeftJoin[A, B]:
             type R = Tuple.Concat[ta.R, tb.R]
 
             def join(a: A, b: B): R =
                 ta.toTuple(a) ++ tb.toTuple(to.toOption(b))
 
-trait TableRightJoin[A, B]:
+trait RightJoin[A, B]:
     type R
 
     def join(a: A, b: B): R
 
-object TableRightJoin:
-    type Aux[A, B, O] = TableRightJoin[A, B]:
+object RightJoin:
+    type Aux[A, B, O] = RightJoin[A, B]:
         type R = O
 
-    given join[A, B](using 
-        to: ToOption[A], 
-        ta: ToTuple[to.R], 
+    given join[A, B](using
+        to: ToOption[A],
+        ta: ToTuple[to.R],
         tb: ToTuple[B]
     ): Aux[A, B, Tuple.Concat[ta.R, tb.R]] =
-        new TableRightJoin[A, B]:
+        new RightJoin[A, B]:
             type R = Tuple.Concat[ta.R, tb.R]
 
             def join(a: A, b: B): R =
                 ta.toTuple(to.toOption(a)) ++ tb.toTuple(b)
 
-trait TableFullJoin[A, B]:
+trait FullJoin[A, B]:
     type R
 
     def join(a: A, b: B): R
 
-object TableFullJoin:
-    type Aux[A, B, O] = TableFullJoin[A, B]:
+object FullJoin:
+    type Aux[A, B, O] = FullJoin[A, B]:
         type R = O
 
-    given join[A, B](using 
-        toa: ToOption[A], 
-        ta: ToTuple[toa.R], 
-        tob: ToOption[B], 
+    given join[A, B](using
+        toa: ToOption[A],
+        ta: ToTuple[toa.R],
+        tob: ToOption[B],
         tb: ToTuple[tob.R]
     ): Aux[A, B, Tuple.Concat[ta.R, tb.R]] =
-        new TableFullJoin[A, B]:
+        new FullJoin[A, B]:
             type R = Tuple.Concat[ta.R, tb.R]
 
             def join(a: A, b: B): R =

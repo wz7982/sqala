@@ -6,44 +6,46 @@ import sqala.static.dsl.{Expr, Grouped}
 trait AsGroupingSetsItem[T]:
     def asSqlExpr(x: T): SqlExpr
 
-object GroupingSetsItem:
-    given expr[T]: AsGroupingSetsItem[Expr[T, Grouped]] with
-        override def asSqlExpr(x: Expr[T, Grouped]): SqlExpr =
+object AsGroupingSetsItem:
+    given expr[T, K <: Grouped[?]]: AsGroupingSetsItem[Expr[T, K]] with
+        def asSqlExpr(x: Expr[T, K]): SqlExpr =
             x.asSqlExpr
 
-    given tuple[T, Tail <: Tuple](using
-        hi: AsGroupingSetsItem[Expr[T, Grouped]],
-        ti: AsGroupingSetsItem[Tail]
-    ): AsGroupingSetsItem[Expr[T, Grouped] *: Tail] with
-        override def asSqlExpr(x: Expr[T, Grouped] *: Tail): SqlExpr =
-            val tailExpr = ti.asSqlExpr(x.tail) match
+    given tuple[H, K <: Grouped[?], T <: Tuple](using
+        h: AsGroupingSetsItem[Expr[H, K]],
+        t: AsGroupingSetsItem[T]
+    ): AsGroupingSetsItem[Expr[H, K] *: T] with
+        def asSqlExpr(x: Expr[H, K] *: T): SqlExpr =
+            val tailExpr = t.asSqlExpr(x.tail) match
                 case SqlExpr.Tuple(list) => list
                 case i => i :: Nil
-            SqlExpr.Tuple(hi.asSqlExpr(x.head) :: tailExpr)
+            SqlExpr.Tuple(h.asSqlExpr(x.head) :: tailExpr)
 
     given emptyTuple: AsGroupingSetsItem[EmptyTuple] with
-        override def asSqlExpr(x: EmptyTuple): SqlExpr =
+        def asSqlExpr(x: EmptyTuple): SqlExpr =
             SqlExpr.Tuple(Nil)
 
     given unit: AsGroupingSetsItem[Unit] with
-        override def asSqlExpr(x: Unit): SqlExpr =
+        def asSqlExpr(x: Unit): SqlExpr =
             SqlExpr.Tuple(Nil)
 
 trait AsGroupingSets[T]:
     def asSqlExprs(x: T): List[SqlExpr]
 
 object AsGroupingSets:
-    given expr[T]: AsGroupingSets[Expr[T, Grouped]] with
-        override def asSqlExprs(x: Expr[T, Grouped]): List[SqlExpr] =
+    given expr[T, K <: Grouped[?]]: AsGroupingSets[Expr[T, K]] with
+        def asSqlExprs(x: Expr[T, K]): List[SqlExpr] =
             x.asSqlExpr :: Nil
 
     given tuple[H, T <: Tuple](using
-        hi: AsGroupingSetsItem[H],
-        ti: AsGroupingSets[T]
+        h: AsGroupingSetsItem[H],
+        t: AsGroupingSets[T]
     ): AsGroupingSets[H *: T] with
-        override def asSqlExprs(x: H *: T): List[SqlExpr] =
-            hi.asSqlExpr(x.head) :: ti.asSqlExprs(x.tail)
+        def asSqlExprs(x: H *: T): List[SqlExpr] =
+            h.asSqlExpr(x.head) :: t.asSqlExprs(x.tail)
 
-    given tuple1[H](using hi: AsGroupingSetsItem[H]): AsGroupingSets[H *: EmptyTuple] with
-        override def asSqlExprs(x: H *: EmptyTuple): List[SqlExpr] =
-            hi.asSqlExpr(x.head) :: Nil
+    given tuple1[H](using
+        h: AsGroupingSetsItem[H]
+    ): AsGroupingSets[H *: EmptyTuple] with
+        def asSqlExprs(x: H *: EmptyTuple): List[SqlExpr] =
+            h.asSqlExpr(x.head) :: Nil
