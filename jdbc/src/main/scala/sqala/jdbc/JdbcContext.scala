@@ -1,7 +1,7 @@
 package sqala.jdbc
 
-import sqala.dynamic.native.NativeSql
 import sqala.metadata.{Dialect, FetchPrimaryKey, InsertMacro}
+import sqala.dynamic.native.NativeSql
 import sqala.static.dsl.{QuerySize, Result}
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.Query
