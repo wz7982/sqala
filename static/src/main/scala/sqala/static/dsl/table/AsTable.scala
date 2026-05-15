@@ -2,9 +2,9 @@ package sqala.static.dsl.table
 
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlJoinType, SqlTable, SqlTableAlias}
+import sqala.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
-import sqala.static.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
 
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror

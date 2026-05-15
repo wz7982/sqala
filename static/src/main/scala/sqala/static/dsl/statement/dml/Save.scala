@@ -2,11 +2,11 @@ package sqala.static.dsl.statement.dml
 
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.static.metadata.{AsSqlExpr, TableMacro}
+import sqala.metadata.{AsSqlExpr, TableMacro}
 
 import scala.deriving.Mirror
 
-class Save(val tree: SqlStatement.Upsert)
+class Save(private[sqala] val tree: SqlStatement.Upsert)
 
 object Save:
     inline def saveByEntity[T <: Product](entity: T)(using m: Mirror.ProductOf[T]): Save =

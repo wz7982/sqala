@@ -1930,11 +1930,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(items)(printExpr)
             sqlBuilder.append(")")
 
-    def printWindowItem(item: SqlWindowItem): Unit =
-        printIdent(item.name)
-        sqlBuilder.append(" AS ")
-        printWindow(item.window)
-
     def printOrderingItem(item: SqlOrderingItem): Unit =
         printExpr(item.expr)
         val order = item.ordering match

@@ -1,4 +1,4 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import sqala.util.camelToSnake
 
@@ -21,7 +21,7 @@ private[sqala] object TableMacroImpl:
 
         val sym = TypeTree.of[T].symbol
         val tableName = sym.annotations.map {
-            case Apply(Select(New(TypeIdent(annoNameTable)), _), Literal(v) :: Nil) => 
+            case Apply(Select(New(TypeIdent(annoNameTable)), _), Literal(v) :: Nil) =>
                 v.value.toString
             case _ => ""
         }.find(_ != "") match
@@ -43,7 +43,7 @@ private[sqala] object TableMacroImpl:
         val columnFields = ListBuffer[String]()
         val primaryKeyFields = ListBuffer[String]()
         val incrementKeyFields = ListBuffer[String]()
-        
+
         eles.foreach: e =>
             val annotations = e.annotations
 
@@ -70,12 +70,12 @@ private[sqala] object TableMacroImpl:
                 case Some(Apply(Select(New(TypeIdent(_)), _), Literal(name) :: Nil)) =>
                     columnNames.addOne(name.value.toString)
                 case _ => columnNames.addOne(camelToSnake(e.name))
-        
+
         TableMetaData(
             tableName,
-            primaryKeyFields.toList, 
-            incrementKeyFields.headOption, 
-            columnNames.toList, 
+            primaryKeyFields.toList,
+            incrementKeyFields.headOption,
+            columnNames.toList,
             columnFields.toList
         )
 

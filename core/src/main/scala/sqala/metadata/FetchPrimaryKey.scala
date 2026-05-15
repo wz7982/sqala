@@ -1,4 +1,4 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
@@ -6,12 +6,12 @@ import sqala.ast.table.SqlTable
 
 import scala.quoted.{Expr, Quotes, Type}
 
-trait FetchPrimaryKey[T]:
+private[sqala] trait FetchPrimaryKey[T]:
     type Args
 
     def createTree(x: Seq[Args]): SqlQuery
 
-object FetchPrimaryKey:
+private[sqala] object FetchPrimaryKey:
     type Aux[T, A] = FetchPrimaryKey[T]:
         type Args = A
 

@@ -2,8 +2,8 @@ package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.table.SqlTable
+import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
-import sqala.static.metadata.TableMetaData
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 

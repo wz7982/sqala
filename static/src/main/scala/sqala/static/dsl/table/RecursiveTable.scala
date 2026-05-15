@@ -1,8 +1,7 @@
 package sqala.static.dsl.table
 
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.static.dsl.{Index, ToTuple}
-import sqala.static.metadata.tableCte
+import sqala.static.dsl.{tableCte, Index, ToTuple}
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue

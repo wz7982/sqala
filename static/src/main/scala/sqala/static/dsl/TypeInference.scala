@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.static.metadata.*
+import sqala.metadata.*
 
 import java.time.{OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple

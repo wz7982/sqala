@@ -1,15 +1,19 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import scala.quoted.{Expr, Quotes, Type}
 
-trait ViewMapping[T, R]:
+extension [T](data: List[T])
+    def toView[V](using m: ViewMapping[T, V]): List[V] =
+        m.mapToList(data)
+
+private[sqala] trait ViewMapping[T, R]:
     def mapToList(data: List[T]): List[R]
 
     def mapToOption(data: List[T]): Option[R]
 
     def mapToObject(data: List[T]): R
 
-object ViewMapping:
+private[sqala] object ViewMapping:
     inline given derived[T, R]: ViewMapping[T,R] =
         ${ derivedImpl[T, R] }
 

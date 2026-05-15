@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.static.metadata.*
+import sqala.metadata.*
 
 import java.sql.ResultSet
 import java.time.*
@@ -159,7 +159,7 @@ object JdbcDecoder:
                     val resultExpr = '{ $decoderExpr.decode($data, $tmpCursor) }
                     tmpCursor = '{ $tmpCursor + $decoderExpr.offset }
                     resultExpr
-            
+
         '{
             new JdbcDecoder[T]:
                 def decode(data: ResultSet, cursor: Int): T =

@@ -3,9 +3,9 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
+import sqala.metadata.{AsSqlExpr, TableMacro}
 import sqala.static.dsl.table.Table
 import sqala.static.dsl.{AsExpr, Column, Expr}
-import sqala.static.metadata.{AsSqlExpr, TableMacro}
 
 import scala.deriving.Mirror
 
@@ -25,7 +25,7 @@ type InsertValues = InsertState.Values.type
 type InsertQuery = InsertState.Query.type
 
 class Insert[T, S <: InsertState](
-    val tree: SqlStatement.Insert
+    private[sqala] val tree: SqlStatement.Insert
 ):
     inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsExpr[I, 1]): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]

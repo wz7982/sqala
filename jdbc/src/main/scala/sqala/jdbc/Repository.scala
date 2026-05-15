@@ -5,11 +5,10 @@ import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.SqlTable
-import sqala.printer.Dialect
+import sqala.metadata.{AsSqlExpr, Dialect, TableMacroImpl}
 import sqala.static.dsl.QueryContext
-
 import sqala.static.dsl.statement.query.Query
-import sqala.static.metadata.{AsSqlExpr, TableMacroImpl}
+
 import scala.quoted.{Expr, Quotes, Type}
 
 trait Repository[T, N <: String]:

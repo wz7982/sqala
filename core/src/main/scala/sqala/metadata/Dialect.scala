@@ -1,4 +1,6 @@
-package sqala.printer
+package sqala.metadata
+
+import sqala.printer.*
 
 trait Dialect:
     def printer(standardEscapeStrings: Boolean): SqlPrinter

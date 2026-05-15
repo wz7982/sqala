@@ -2,7 +2,7 @@ package sqala.static.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
-import sqala.static.metadata.*
+import sqala.metadata.*
 
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
