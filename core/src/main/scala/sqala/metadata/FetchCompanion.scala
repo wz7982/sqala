@@ -1,13 +1,13 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import scala.quoted.{Expr, Quotes, Type}
 
-trait FetchCompanion[T]:
+private[sqala] trait FetchCompanion[T]:
     type R
 
     def metaData: TableMetaData
 
-object FetchCompanion:
+private[sqala] object FetchCompanion:
     type Aux[T, O] = FetchCompanion[T]:
         type R = O
 

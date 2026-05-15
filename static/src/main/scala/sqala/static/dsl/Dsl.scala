@@ -4,19 +4,15 @@ import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.*
+import sqala.metadata.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
-import sqala.static.metadata.*
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 import scala.compiletime.ops.int.{+, >}
-
-extension [T](data: List[T])
-    def toView[V](using m: ViewMapping[T, V]): List[V] =
-        m.mapToList(data)
 
 def query[T](q: QueryContext[0] ?=> T): T =
     given QueryContext[0] = QueryContext(0)
@@ -30,6 +26,10 @@ inline def update[T <: Product]: Update[T, UpdateTable] =
 
 inline def delete[T <: Product]: Delete[T] =
     Delete.apply[T]
+
+private[sqala] val tableCte = "__cte__"
+
+private[sqala] val columnPseudoLevel = "__pseudo__level__"
 
 def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
     tables: QueryContext[CL + 1] ?=> T

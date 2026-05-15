@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
-import sqala.static.metadata.*
+import sqala.metadata.*
 
 import java.time.{LocalDateTime, OffsetDateTime}
 

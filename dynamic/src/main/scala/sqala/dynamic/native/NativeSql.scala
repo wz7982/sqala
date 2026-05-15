@@ -1,4 +1,4 @@
-package sqala.dynamic.dsl
+package sqala.dynamic.native
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -18,10 +18,10 @@ extension (s: StringContext)
         while strings.hasNext do
             val arg = argIterator.next()
             arg match
-                case l: List[_] => 
+                case l: List[_] =>
                     builder.append(l.map(_ => "?").mkString("(", ", ", ")"))
                     argArray.appendAll(l)
-                case _ => 
+                case _ =>
                     builder.append("?")
                     argArray.append(arg)
             builder.append(strings.next())

@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.static.metadata.AsSqlExpr
+import sqala.metadata.AsSqlExpr
 
 import scala.compiletime.ops.boolean.||
 

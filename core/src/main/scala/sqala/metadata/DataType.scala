@@ -1,4 +1,4 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import sqala.ast.expr.SqlTimeUnit
 

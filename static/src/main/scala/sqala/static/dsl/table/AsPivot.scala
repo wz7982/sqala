@@ -3,9 +3,9 @@ package sqala.static.dsl.table
 import sqala.ast.statement.SqlQuery
 import sqala.ast.expr.SqlExpr
 import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.metadata.FetchCompanion
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.{AsMap, AsSelect, Query}
-import sqala.static.metadata.FetchCompanion
 
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror

@@ -1,9 +1,9 @@
 package sqala.static.dsl.table
 
 import sqala.ast.table.*
+import sqala.metadata.SqlNumber
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
-import sqala.static.metadata.SqlNumber
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{constValue, constValueTuple}

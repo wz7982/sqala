@@ -1,7 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlExpr
-import sqala.static.metadata.AsSqlExpr
+import sqala.metadata.AsSqlExpr
 
 final case class RawExpr[L <: Int](private val words: List[String], private val exprs: List[SqlExpr]):
     def as[T: AsSqlExpr as a](using QueryContext[L]): Expr[Wrap[T, Option], Value] =

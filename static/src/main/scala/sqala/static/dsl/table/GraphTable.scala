@@ -3,9 +3,9 @@ package sqala.static.dsl.table
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.SqlSelectItem
 import sqala.ast.table.*
+import sqala.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
-import sqala.static.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.compiletime.constValue

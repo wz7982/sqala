@@ -2,13 +2,13 @@ package sqala.static.dsl.statement.dml
 
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.metadata.{SqlBoolean, TableMacro}
 import sqala.static.dsl.table.Table
 import sqala.static.dsl.*
-import sqala.static.metadata.{SqlBoolean, TableMacro}
 
 class Delete[T](
     private[sqala] val table: Table[T, Column, 1],
-    val tree: SqlStatement.Delete
+    private[sqala] val tree: SqlStatement.Delete
 )(using private[sqala] val qc: QueryContext[1]):
     def where[F](f: QueryContext[1] ?=> Table[T, Column, 1] => F)(using
         a: AsExpr[F, 1],

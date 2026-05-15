@@ -2,7 +2,7 @@ package sqala.static.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
-import sqala.static.metadata.*
+import sqala.metadata.*
 
 import java.time.*
 

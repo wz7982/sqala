@@ -1,4 +1,4 @@
-package sqala.static.metadata
+package sqala.metadata
 
 import scala.quoted.{Expr, Quotes, Type}
 
@@ -16,9 +16,9 @@ private[sqala] object InsertMacroImpl:
         val tpr = TypeRepr.of[A]
         val fields = tpr.typeSymbol.declaredFields
         val ctor = tpr.typeSymbol.primaryConstructor
-        
+
         val terms = fields.map: f =>
-            val autoInc = f.annotations.find: 
+            val autoInc = f.annotations.find:
                 case Apply(Select(New(TypeIdent("autoInc")), _), _) => true
                 case _ => false
             if autoInc.isDefined then

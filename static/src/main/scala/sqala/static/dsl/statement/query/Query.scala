@@ -6,10 +6,9 @@ import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
-import sqala.printer.Dialect
+import sqala.metadata.{Dialect, SqlBoolean}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.{Table, TransformTableKind}
-import sqala.static.metadata.{SqlBoolean, columnPseudoLevel, tableCte}
 import sqala.util.queryToString
 
 import scala.compiletime.ops.int.-

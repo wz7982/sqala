@@ -2,9 +2,9 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
+import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.*
 import sqala.static.dsl.table.*
-import sqala.static.metadata.AsSqlExpr
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>

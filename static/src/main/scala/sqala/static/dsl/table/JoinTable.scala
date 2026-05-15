@@ -1,8 +1,8 @@
 package sqala.static.dsl.table
 
 import sqala.ast.table.{SqlJoinCondition, SqlTable}
+import sqala.metadata.SqlBoolean
 import sqala.static.dsl.*
-import sqala.static.metadata.SqlBoolean
 
 final case class JoinTable[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
