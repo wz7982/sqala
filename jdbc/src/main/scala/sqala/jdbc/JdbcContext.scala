@@ -11,39 +11,42 @@ import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
 import scala.language.dynamics
+import scala.util.NotGiven
 
-class JdbcContext(
-    val dataSource: DataSource,
-    val dialect: Dialect,
-    val standardEscapeStrings: Boolean
+final class JdbcContext(
+    private[sqala] val dataSource: DataSource,
+    private[sqala] val dialect: Dialect,
+    private[sqala] val standardEscapeStrings: Boolean
 ) extends Dynamic:
-    private[sqala] def execute[T](handler: Connection => T): T =
-        val conn = dataSource.getConnection()
+    private[sqala] def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
+        val conn = ec.connection(this)
         val result = handler(conn)
-        conn.close()
+        if !ec.inTransaction then
+            conn.close()
         result
 
-    private[sqala] def executeDml(sql: String, args: Array[Any])(using l: Logger): Int =
+    private[sqala] def executeDml(sql: String, args: Array[Any])(using ec: ExecuteContext, l: Logger): Int =
         l(sql, args)
         execute(c => jdbcExec(c, sql, args))
 
-    def execute(insert: Insert[?, ?])(using Logger): Int =
+    def execute(insert: Insert[?, ?])(using ExecuteContext, Logger): Int =
         val sql = statementToString(insert.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    def execute(update: Update[?, ?])(using Logger): Int =
+    def execute(update: Update[?, ?])(using ExecuteContext, Logger): Int =
         val sql = statementToString(update.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    def execute(delete: Delete[?])(using Logger): Int =
+    def execute(delete: Delete[?])(using ExecuteContext, Logger): Int =
         val sql = statementToString(delete.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    def execute(nativeSql: NativeSql)(using Logger): Int =
+    def execute(nativeSql: NativeSql)(using ExecuteContext, Logger): Int =
         val NativeSql(sql, args) = nativeSql
         executeDml(sql, args)
 
     inline def insert[A <: Product](entity: A)(using
+        ExecuteContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -52,6 +55,7 @@ class JdbcContext(
         executeDml(sql, Array.empty[Any])
 
     inline def insertBatch[A <: Product](entities: Seq[A])(using
+        ExecuteContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -60,11 +64,13 @@ class JdbcContext(
         executeDml(sql, Array.empty[Any])
 
     inline def insertAndReturn[A <: Product](entity: A)(using
-        Mirror.ProductOf[A],
-        Logger
+        ec: ExecuteContext,
+        m: Mirror.ProductOf[A],
+        l: Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
         val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
         val id = execute(c => jdbcExecReturnKey(c, sql, Array.empty[Any])).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
 
@@ -72,6 +78,7 @@ class JdbcContext(
         entity: A,
         skipNone: Boolean = false
     )(using
+        ExecuteContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -85,6 +92,7 @@ class JdbcContext(
     inline def save[A <: Product](
         entity: A
     )(using
+        ExecuteContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -93,6 +101,7 @@ class JdbcContext(
         executeDml(sql, Array.empty[Any])
 
     def deleteByPrimaryKey[T](using
+        ec: ExecuteContext,
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKey: fp.Args): Int =
@@ -101,6 +110,7 @@ class JdbcContext(
         executeDml(sql, Array.empty[Any])
 
     def deleteByPrimaryKeys[T](using
+        ec: ExecuteContext,
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKeys: Seq[fp.Args]): Int =
@@ -109,6 +119,7 @@ class JdbcContext(
         executeDml(sql, Array.empty[Any])
 
     def findByPrimaryKey[T](using
+        ec: ExecuteContext,
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -119,6 +130,7 @@ class JdbcContext(
         execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
 
     def fetchByPrimaryKeys[T](using
+        ec: ExecuteContext,
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -129,6 +141,7 @@ class JdbcContext(
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     def fetchTo[T](query: Query[?, ?, ?, ?])(using
+        ec: ExecuteContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -137,6 +150,7 @@ class JdbcContext(
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     def fetch[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
+        ec: ExecuteContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -144,6 +158,7 @@ class JdbcContext(
         fetchTo[r.R](query)
 
     def fetchTo[T](nativeSql: NativeSql)(using
+        ec: ExecuteContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -151,12 +166,13 @@ class JdbcContext(
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap(nativeSql: NativeSql)(using l: Logger): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: NativeSql)(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
         val NativeSql(sql, args) = nativeSql
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
     def fetchTo[T](nativeSql: (String, Array[Any]))(using
+        ec: ExecuteContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -164,7 +180,7 @@ class JdbcContext(
         l(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
-    def fetchToMap(nativeSql: (String, Array[Any]))(using l: Logger): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: (String, Array[Any]))(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
         val (sql, args) = nativeSql
         l(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
@@ -175,6 +191,7 @@ class JdbcContext(
         pageNo: Int,
         returnCount: Boolean = true
     )(using
+        ExecuteContext,
         JdbcDecoder[T],
         Logger
     ): Page[T] =
@@ -192,6 +209,7 @@ class JdbcContext(
         pageNo: Int,
         returnCount: Boolean = true
     )(using
+        ec: ExecuteContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -199,27 +217,30 @@ class JdbcContext(
         pageTo[r.R](query, pageSize, pageNo, returnCount)
 
     def findTo[T](query: Query[?, ?, ?, ?])(using
+        ec: ExecuteContext,
         d: JdbcDecoder[T],
         l: Logger
     ): Option[T] =
         fetchTo[T](query.take(1)).headOption
 
     def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
+        ec: ExecuteContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
     ): Option[r.R] =
         findTo[r.R](query)
 
-    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using Logger): Long =
+    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using ExecuteContext, Logger): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
-    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using Logger): Boolean =
+    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using ExecuteContext, Logger): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
     def applyDynamic[T](name: String)(using
+        ec: ExecuteContext,
         r: Repository[T, name.type],
         d: JdbcDecoder[T],
         l: Logger
@@ -242,6 +263,7 @@ class JdbcContext(
         query: Query[T, OKS, L, S],
         fetchSize: Int
     )(using
+        ec: ExecuteContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -259,7 +281,7 @@ class JdbcContext(
         conn.setAutoCommit(false)
         try
             given JdbcTransactionContext =
-                new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
+                JdbcTransactionContext(conn)
             val result = block
             conn.commit()
             result
@@ -278,7 +300,7 @@ class JdbcContext(
         conn.setTransactionIsolation(isolation.jdbcIsolation)
         try
             given JdbcTransactionContext =
-                new JdbcTransactionContext(conn, dialect, standardEscapeStrings)
+                JdbcTransactionContext(conn)
             val result = block
             conn.commit()
             result
@@ -288,3 +310,34 @@ class JdbcContext(
         finally
             conn.setAutoCommit(true)
             conn.close()
+
+final class JdbcTransactionContext(
+    private[sqala] val connection: Connection
+)
+
+enum TransactionIsolation(private[sqala] val jdbcIsolation: Int):
+    case None extends TransactionIsolation(Connection.TRANSACTION_NONE)
+    case ReadUncommitted extends TransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED)
+    case ReadCommitted extends TransactionIsolation(Connection.TRANSACTION_READ_COMMITTED)
+    case RepeatableRead extends TransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ)
+    case Serializable extends TransactionIsolation(Connection.TRANSACTION_SERIALIZABLE)
+
+trait ExecuteContext:
+    def inTransaction: Boolean
+
+    def connection(context: JdbcContext): Connection
+
+object ExecuteContext:
+    given withTransaction(using c: JdbcTransactionContext): ExecuteContext with
+        def inTransaction: Boolean =
+            true
+
+        def connection(context: JdbcContext): Connection =
+            c.connection
+
+    given withoutTransaction(using NotGiven[JdbcTransactionContext]): ExecuteContext with
+        def inTransaction: Boolean =
+            false
+
+        def connection(context: JdbcContext): Connection =
+            context.dataSource.getConnection()
