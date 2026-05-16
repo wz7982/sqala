@@ -13,6 +13,7 @@ import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
 import scala.compiletime.ops.boolean.||
 import scala.compiletime.ops.int.{+, >}
+import sqala.static.{dsl => a}
 
 def query[T](q: QueryContext[0] ?=> T): T =
     given QueryContext[0] = QueryContext(0)
@@ -353,7 +354,7 @@ def permute[CL <: Int](terms: RecognizePatternTerm[CL]*)(using QueryContext[CL],
 def exclusion[CL <: Int](term: RecognizePatternTerm[CL])(using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
-def `final`[T, CL <: Int](x: T)(using
+def finalized[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[T, CL],
@@ -516,27 +517,21 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
             )
         )
 
-final case class EmptyIf[KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[E, CL <: Int](expr: E)(using
+final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
+    def when[C, R, CL <: Int](cond: C)(result: R)(using
         qc: QueryContext[CL],
-        a: AsExpr[E, CL],
-        kt: KindToTuple[a.K],
-        c: CombineKindTuple[KS, kt.R]
-    ): IfThen[a.R, c.R] =
-        IfThen(exprs :+ a.asExpr(expr))
+        ac: AsExpr[C, CL],
+        ar: AsExpr[R, CL],
+        b: SqlBoolean[ac.R],
+        r: Return[Unwrap[T, Option], Unwrap[ar.R, Option], IsOption[T] || IsOption[ar.R]],
+        ktc: KindToTuple[ac.K],
+        ktr: KindToTuple[ar.K],
+        cc: CombineKindTuple[KS, ktc.R],
+        c: CombineKindTuple[cc.R, ktr.R]
+    ): CaseWhen[r.R, c.R] =
+        CaseWhen(exprs :+ ac.asExpr(cond) :+ ar.asExpr(result))
 
-final case class If[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `then`[R, CL <: Int](expr: R)(using
-        qc: QueryContext[CL],
-        a: AsExpr[R, CL],
-        r: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]],
-        kt: KindToTuple[a.K],
-        c: CombineKindTuple[KS, kt.R]
-    ): IfThen[r.R, c.R] =
-        IfThen(exprs :+ a.asExpr(expr))
-
-final case class IfThen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
-    infix def `else`[R, CL <: Int](expr: R)(using
+    def otherwise[R, CL <: Int](result: R)(using
         qc: QueryContext[CL],
         a: AsExpr[R, CL],
         r: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]],
@@ -548,26 +543,20 @@ final case class IfThen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?
         Expr(
             SqlExpr.Case(
                 caseBranches.map((i, t) => SqlWhen(i.asSqlExpr, t.asSqlExpr)),
-                Some(a.asExpr(expr).asSqlExpr)
+                Some(a.asExpr(result).asSqlExpr)
             )
         )
 
-    infix def `else if`[E, CL <: Int](expr: E)(using
-        qc: QueryContext[CL],
-        a: AsExpr[E, CL],
-        b: SqlBoolean[a.R],
-        kt: KindToTuple[a.K],
-        c: CombineKindTuple[KS, kt.R]
-    ): If[T, c.R] =
-        If(exprs :+ a.asExpr(expr))
-
-def `if`[E, CL <: Int](expr: E)(using
+def caseWhen[C, R, CL <: Int](cond: C)(result: R)(using
     qc: QueryContext[CL],
-    a: AsExpr[E, CL],
-    b: SqlBoolean[a.R],
-    kt: KindToTuple[a.K]
-): EmptyIf[kt.R] =
-    EmptyIf(a.asExpr(expr) :: Nil)
+    ac: AsExpr[C, CL],
+    ar: AsExpr[R, CL],
+    b: SqlBoolean[ac.R],
+    ktc: KindToTuple[ac.K],
+    ktr: KindToTuple[ar.K],
+    c: CombineKindTuple[ktc.R, ktr.R]
+): CaseWhen[ar.R, c.R] =
+    CaseWhen(ac.asExpr(cond) :: ar.asExpr(result) :: Nil)
 
 def coalesce[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],

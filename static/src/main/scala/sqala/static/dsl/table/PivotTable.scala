@@ -89,7 +89,7 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
             case f: SqlExpr.JsonArrayAggFunc => f.copy(filter = Some(filter))
             case _ => throw MatchError(expr)
 
-    def `for`[WS <: Tuple](items: WS)(using
+    def by[WS <: Tuple](items: WS)(using
         pc: PivotContext,
         f: PivotFor[WS, GN, GV, AN, AV],
         m: AsMap[f.V, L],
@@ -126,7 +126,7 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
         val alias = qc.fetchAlias
         FromPivot(newQuery, false, Some(alias))
 
-    def `for`[WN <: Tuple](item: PivotWithin[WN])(using
+    def by[WN <: Tuple](item: PivotWithin[WN])(using
         pc: PivotContext,
         f: PivotFor[PivotWithin[WN], GN, GV, AN, AV],
         m: AsMap[f.V, L],

@@ -84,7 +84,7 @@ final case class Graph[N <: Tuple, V <: Tuple, L <: Int](
             case GraphEdge(_, metaData, where, quantifier) =>
                 GraphEdge(Some(alias), metaData, where, quantifier)
 
-    def `match`[PN <: Tuple, PV <: Tuple, POKS <: Tuple](pattern: GraphPattern[PN, PV, POKS, L])(using
+    def matching[PN <: Tuple, PV <: Tuple, POKS <: Tuple](pattern: GraphPattern[PN, PV, POKS, L])(using
         GraphContext
     ): GraphMatch[GraphPattern[PN, PV, POKS, L], POKS, L] =
         GraphMatch(__name__, pattern, pattern.__patterns__, None, None)
