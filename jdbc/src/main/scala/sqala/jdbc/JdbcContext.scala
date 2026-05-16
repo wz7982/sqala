@@ -92,25 +92,41 @@ class JdbcContext(
         val sql = statementToString(s.tree, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
-    def fetchByPrimaryKeys[T](using
+    def deleteByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
-        d: JdbcDecoder[T],
         l: Logger
-    )(pks: Seq[fp.Args]): List[T] =
-        val tree = fp.createTree(pks)
-        val sql = queryToString(tree, dialect, standardEscapeStrings)
-        l(sql, Array.empty[Any])
-        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
+    )(primaryKey: fp.Args): Int =
+        val tree = fp.createDeleteTree(primaryKey :: Nil)
+        val sql = statementToString(tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
+
+    def deleteByPrimaryKeys[T](using
+        fp: FetchPrimaryKey[T],
+        l: Logger
+    )(primaryKeys: Seq[fp.Args]): Int =
+        val tree = fp.createDeleteTree(primaryKeys)
+        val sql = statementToString(tree, dialect, standardEscapeStrings)
+        executeDml(sql, Array.empty[Any])
 
     def findByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
-    )(pk: fp.Args): Option[T] =
-        val tree = fp.createTree(pk :: Nil)
+    )(primaryKey: fp.Args): Option[T] =
+        val tree = fp.createQueryTree(primaryKey :: Nil)
         val sql = queryToString(tree, dialect, standardEscapeStrings)
         l(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
+
+    def fetchByPrimaryKeys[T](using
+        fp: FetchPrimaryKey[T],
+        d: JdbcDecoder[T],
+        l: Logger
+    )(primaryKeys: Seq[fp.Args]): List[T] =
+        val tree = fp.createQueryTree(primaryKeys)
+        val sql = queryToString(tree, dialect, standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
     def fetchTo[T](query: Query[?, ?, ?, ?])(using
         d: JdbcDecoder[T],

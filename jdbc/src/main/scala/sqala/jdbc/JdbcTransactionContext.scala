@@ -101,27 +101,47 @@ object Transaction extends Dynamic:
         val sql = statementToString(s.tree, t.dialect, t.standardEscapeStrings)
         jdbcExec(t.connection, sql, Array.empty[Any])
 
-    def fetchByPrimaryKeys[T](using
+    def deleteByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
-        d: JdbcDecoder[T],
         t: JdbcTransactionContext,
         l: Logger
-    )(pks: Seq[fp.Args]): List[T] =
-        val tree = fp.createTree(pks)
-        val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
+    )(primaryKey: fp.Args): Int =
+        val tree = fp.createDeleteTree(primaryKey :: Nil)
+        val sql = statementToString(tree, t.dialect, t.standardEscapeStrings)
         l(sql, Array.empty[Any])
-        jdbcQuery(t.connection, sql, Array.empty[Any])
+        jdbcExec(t.connection, sql, Array.empty[Any])
+
+    def deleteByPrimaryKeys[T](using
+        fp: FetchPrimaryKey[T],
+        t: JdbcTransactionContext,
+        l: Logger
+    )(primaryKeys: Seq[fp.Args]): Int =
+        val tree = fp.createDeleteTree(primaryKeys)
+        val sql = statementToString(tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcExec(t.connection, sql, Array.empty[Any])
 
     def findByPrimaryKey[T](using
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         t: JdbcTransactionContext,
         l: Logger
-    )(pk: fp.Args): Option[T] =
-        val tree = fp.createTree(pk :: Nil)
+    )(primaryKey: fp.Args): Option[T] =
+        val tree = fp.createQueryTree(primaryKey :: Nil)
         val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
         l(sql, Array.empty[Any])
         jdbcQuery(t.connection, sql, Array.empty[Any]).headOption
+
+    def fetchByPrimaryKeys[T](using
+        fp: FetchPrimaryKey[T],
+        d: JdbcDecoder[T],
+        t: JdbcTransactionContext,
+        l: Logger
+    )(primaryKeys: Seq[fp.Args]): List[T] =
+        val tree = fp.createQueryTree(primaryKeys)
+        val sql = queryToString(tree, t.dialect, t.standardEscapeStrings)
+        l(sql, Array.empty[Any])
+        jdbcQuery(t.connection, sql, Array.empty[Any])
 
     def fetchTo[T](query: Query[?, ?, ?, ?])(using
         d: JdbcDecoder[T],

@@ -1,15 +1,18 @@
 package sqala.metadata
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.statement.{SqlQuery, SqlSelectItem}
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement}
 import sqala.ast.table.SqlTable
 
 import scala.quoted.{Expr, Quotes, Type}
 
+import sqala.{metadata => SqlStatementDelete}
 private[sqala] trait FetchPrimaryKey[T]:
     type Args
 
-    def createTree(x: Seq[Args]): SqlQuery
+    def createQueryTree(x: Seq[Args]): SqlQuery
+
+    def createDeleteTree(x: Seq[Args]): SqlStatement.Delete
 
 private[sqala] object FetchPrimaryKey:
     type Aux[T, A] = FetchPrimaryKey[T]:
@@ -69,7 +72,7 @@ private[sqala] object FetchPrimaryKey:
                     val pk = new FetchPrimaryKey[T]:
                         type Args = t
 
-                        def createTree(x: Seq[Args]): SqlQuery =
+                        def createInfo(x: Seq[Args]): (SqlExpr, SqlTable.Ident) =
                             val sqlConditions = x.map: p =>
                                 val values = p match
                                     case t: Tuple => t.toArray.toList
@@ -85,7 +88,11 @@ private[sqala] object FetchPrimaryKey:
                             val sqlCondition =
                                 if sqlConditions.isEmpty then SqlExpr.BooleanLiteral(false)
                                 else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y))
-                            val table = SqlTable.Ident($tableNameExpr, None, None, None, None)
+                            val table: SqlTable.Ident = SqlTable.Ident($tableNameExpr, None, None, None, None)
+                            (sqlCondition, table)
+
+                        def createQueryTree(x: Seq[Args]): SqlQuery =
+                            val (sqlCondition, table) = createInfo(x)
                             SqlQuery.Select(
                                 None,
                                 $columnNamesExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
@@ -96,6 +103,13 @@ private[sqala] object FetchPrimaryKey:
                                 Nil,
                                 None,
                                 None
+                            )
+
+                        def createDeleteTree(x: Seq[t]): SqlStatement.Delete =
+                            val (sqlCondition, table) = createInfo(x)
+                            SqlStatement.Delete(
+                                table,
+                                Some(sqlCondition)
                             )
 
                     pk.asInstanceOf[Aux[T, t]]
