@@ -4,6 +4,9 @@ import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlJoinCondition, SqlJoinType, SqlTable, SqlTableAlias}
 
 sealed trait AnyTable:
+    def ast: SqlTable =
+        asSqlTable
+
     def join(table: AnyTable): JoinTable =
         JoinTable(this, SqlJoinType.Inner, table, None)
 
