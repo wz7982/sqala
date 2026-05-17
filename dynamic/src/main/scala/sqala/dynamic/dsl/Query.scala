@@ -1,14 +1,16 @@
 package sqala.dynamic.dsl
 
 import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
-import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit}
+import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator}
 import sqala.metadata.Dialect
 import sqala.util.queryToString
-import sqala.ast.limit.SqlLimit
 
 sealed class Query(private[sqala] val tree: SqlQuery):
+    def ast: SqlQuery =
+        tree
+
     def sql(dialect: Dialect, standardEscapeStrings: Boolean): String =
         queryToString(tree, dialect, standardEscapeStrings)
 
