@@ -7,6 +7,9 @@ import sqala.ast.statement.SqlSelectItem
 import scala.annotation.targetName
 
 final case class Expr(private[sqala] val expr: SqlExpr):
+    def ast: SqlExpr =
+        asSqlExpr
+
     @targetName("eq")
     def ==(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Equal, expr.asSqlExpr))
