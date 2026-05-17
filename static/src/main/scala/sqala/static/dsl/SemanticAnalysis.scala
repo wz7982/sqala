@@ -375,8 +375,7 @@ object HasKind:
 
     given tuple[H <: ExprKind, T <: Tuple, TK <: ExprKind](using
         h: IsKind[H, TK],
-        t: HasKind[T, TK],
-        n: NotGiven[H <:< Window[?]]
+        t: HasKind[T, TK]
     ): Aux[H *: T, TK, h.R || t.R] =
         new HasKind[H *: T, TK]:
             type R = h.R || t.R
