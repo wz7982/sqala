@@ -85,6 +85,7 @@ def avg[T, CL <: Int](x: T)(using
 def max[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -105,6 +106,7 @@ def max[T, CL <: Int](x: T)(using
 def min[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -125,6 +127,7 @@ def min[T, CL <: Int](x: T)(using
 def anyValue[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -604,6 +607,8 @@ def jsonObjectAgg[K, V, CL <: Int](key: K, value: V)(using
     qc: QueryContext[CL],
     ak: AsExpr[K, CL],
     av: AsExpr[V, CL],
+    ask: AsSqlExpr[ak.R],
+    asv: AsSqlExpr[av.R],
     ktk: KindToTuple[ak.K],
     ktv: KindToTuple[av.K],
     ik: CanInAgg[ktk.R],
@@ -623,6 +628,7 @@ def jsonObjectAgg[K, V, CL <: Int](key: K, value: V)(using
 def jsonArrayAgg[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R]
 ): Expr[Option[Json], Agg[kt.R]] =
@@ -664,6 +670,7 @@ def first[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -686,7 +693,8 @@ def first[A, N, CL <: Int](x: A, n: N)(using
     mc: MatchRecognizeContext,
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
-    na: SqlNumber[an.R],
+    asa: AsSqlExpr[aa.R],
+    nn: SqlNumber[an.R],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
     ia: CanInAgg[kta.R],
@@ -711,6 +719,7 @@ def last[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -733,7 +742,8 @@ def last[A, N, CL <: Int](x: A, n: N)(using
     mc: MatchRecognizeContext,
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
-    na: SqlNumber[an.R],
+    asa: AsSqlExpr[aa.R],
+    nn: SqlNumber[an.R],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
     ia: CanInAgg[kta.R],
@@ -758,6 +768,7 @@ def prev[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -780,7 +791,8 @@ def prev[A, N, CL <: Int](x: A, n: N)(using
     mc: MatchRecognizeContext,
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
-    na: SqlNumber[an.R],
+    asa: AsSqlExpr[aa.R],
+    nn: SqlNumber[an.R],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
     ia: CanInAgg[kta.R],
@@ -805,6 +817,7 @@ def next[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInAgg[kt.R],
     to: ToOption[Expr[a.R, Agg[kt.R]]]
@@ -827,7 +840,8 @@ def next[A, N, CL <: Int](x: A, n: N)(using
     mc: MatchRecognizeContext,
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
-    na: SqlNumber[an.R],
+    asa: AsSqlExpr[aa.R],
+    nn: SqlNumber[an.R],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
     ia: CanInAgg[kta.R],
@@ -1667,9 +1681,10 @@ def jsonExists[A, P, CL <: Int](x: A, path: P)(using
 
 final case class JsonObjectPair[KS <: Tuple](key: SqlExpr, value: SqlExpr)
 
-extension [K, CL <: Int](key: K)(using qc: QueryContext[CL], ak: AsExpr[K, CL], ktk: KindToTuple[ak.K])
+extension [K, CL <: Int](key: K)(using qc: QueryContext[CL], ak: AsExpr[K, CL], ask: AsSqlExpr[ak.R], ktk: KindToTuple[ak.K])
     infix def value[V](value: V)(using
         av: AsExpr[V, CL],
+        asv: AsSqlExpr[av.R],
         ktv: KindToTuple[av.K],
         c: CombineKindTuple[ktk.R, ktv.R]
     ): JsonObjectPair[c.R] =
@@ -1726,6 +1741,7 @@ def jsonObject[T, CL <: Int](items: T)(using
 def jsonArray[A, CL <: Int](items: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K]
 ): Expr[Option[Json], Composite[kt.R]] =
     Expr(
@@ -2208,6 +2224,7 @@ def ntile[A, CL <: Int](x: A)(using
 def firstValue[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2225,6 +2242,7 @@ def firstValue[A, CL <: Int](x: A)(using
 def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2242,6 +2260,7 @@ def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
 def lastValue[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2259,6 +2278,7 @@ def lastValue[A, CL <: Int](x: A)(using
 def lastValueIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2277,6 +2297,7 @@ def nthValue[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
+    asa: AsSqlExpr[aa.R],
     nn: SqlNumber[an.R],
     kt: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
@@ -2300,6 +2321,7 @@ def nthValueIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
+    asa: AsSqlExpr[aa.R],
     nn: SqlNumber[an.R],
     kt: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
@@ -2323,6 +2345,7 @@ def nthValueFromLast[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
+    asa: AsSqlExpr[aa.R],
     nn: SqlNumber[an.R],
     kt: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
@@ -2346,6 +2369,7 @@ def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
+    asa: AsSqlExpr[aa.R],
     nn: SqlNumber[an.R],
     kt: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
@@ -2368,6 +2392,7 @@ def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
 def lag[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2385,6 +2410,7 @@ def lag[A, CL <: Int](x: A)(using
 def lagIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2403,6 +2429,7 @@ def lag[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
@@ -2425,6 +2452,7 @@ def lagIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
@@ -2448,8 +2476,10 @@ def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
     ad: AsExpr[D, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    asd: AsSqlExpr[ad.R],
+    r: Return[aa.R, ad.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
     ktd: KindToTuple[ad.K],
@@ -2457,16 +2487,19 @@ def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     io: CanInWindow[kto.R],
     id: CanInWindow[ktd.R],
     co: CombineKindTuple[kt.R, kto.R],
-    c: CombineKindTuple[co.R, ktd.R]
-): WindowFunc[r.R, c.R] =
-    WindowFunc(
-        SqlExpr.NullsTreatmentFunc(
-            "LAG",
-            aa.asExpr(x).asSqlExpr ::
-                ao.asExpr(offset).asSqlExpr ::
-                ad.asExpr(default).asSqlExpr :: Nil
-            ,
-            None
+    c: CombineKindTuple[co.R, ktd.R],
+    to: ToOption[WindowFunc[r.R, c.R]]
+): to.R =
+    to.toOption(
+        WindowFunc(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr ::
+                    ao.asExpr(offset).asSqlExpr ::
+                    ad.asExpr(default).asSqlExpr :: Nil
+                ,
+                None
+            )
         )
     )
 
@@ -2475,8 +2508,10 @@ def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
     ad: AsExpr[D, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    asd: AsSqlExpr[ad.R],
+    r: Return[aa.R, ad.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
     ktd: KindToTuple[ad.K],
@@ -2484,22 +2519,26 @@ def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     io: CanInWindow[kto.R],
     id: CanInWindow[ktd.R],
     co: CombineKindTuple[kt.R, kto.R],
-    c: CombineKindTuple[co.R, ktd.R]
-): WindowFunc[r.R, c.R] =
-    WindowFunc(
-        SqlExpr.NullsTreatmentFunc(
-            "LAG",
-            aa.asExpr(x).asSqlExpr ::
-                ao.asExpr(offset).asSqlExpr ::
-                ad.asExpr(default).asSqlExpr :: Nil
-            ,
-            Some(SqlWindowNullsMode.Ignore)
+    c: CombineKindTuple[co.R, ktd.R],
+    to: ToOption[WindowFunc[r.R, c.R]]
+): to.R =
+    to.toOption(
+        WindowFunc(
+            SqlExpr.NullsTreatmentFunc(
+                "LAG",
+                aa.asExpr(x).asSqlExpr ::
+                    ao.asExpr(offset).asSqlExpr ::
+                    ad.asExpr(default).asSqlExpr :: Nil
+                ,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )
 
 def lead[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2517,6 +2556,7 @@ def lead[A, CL <: Int](x: A)(using
 def leadIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInWindow[kt.R],
     to: ToOption[WindowFunc[a.R, kt.R]]
@@ -2535,6 +2575,7 @@ def lead[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
@@ -2557,6 +2598,7 @@ def leadIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
@@ -2580,8 +2622,10 @@ def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
     ad: AsExpr[D, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    asd: AsSqlExpr[ad.R],
+    r: Return[aa.R, ad.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
     ktd: KindToTuple[ad.K],
@@ -2589,16 +2633,19 @@ def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     io: CanInWindow[kto.R],
     id: CanInWindow[ktd.R],
     co: CombineKindTuple[kt.R, kto.R],
-    c: CombineKindTuple[co.R, ktd.R]
-): WindowFunc[r.R, c.R] =
-    WindowFunc(
-        SqlExpr.NullsTreatmentFunc(
-            "LEAD",
-            aa.asExpr(x).asSqlExpr ::
-                ao.asExpr(offset).asSqlExpr ::
-                ad.asExpr(default).asSqlExpr :: Nil
-            ,
-            None
+    c: CombineKindTuple[co.R, ktd.R],
+    to: ToOption[WindowFunc[r.R, c.R]]
+): to.R =
+    to.toOption(
+        WindowFunc(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr ::
+                    ao.asExpr(offset).asSqlExpr ::
+                    ad.asExpr(default).asSqlExpr :: Nil
+                ,
+                None
+            )
         )
     )
 
@@ -2607,8 +2654,10 @@ def leadIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     aa: AsExpr[A, CL],
     ao: AsExpr[O, CL],
     ad: AsExpr[D, CL],
+    asa: AsSqlExpr[aa.R],
     no: SqlNumber[ao.R],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ad.R, Option], true],
+    asd: AsSqlExpr[ad.R],
+    r: Return[aa.R, ad.R],
     kt: KindToTuple[aa.K],
     kto: KindToTuple[ao.K],
     ktd: KindToTuple[ad.K],
@@ -2616,15 +2665,18 @@ def leadIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     io: CanInWindow[kto.R],
     id: CanInWindow[ktd.R],
     co: CombineKindTuple[kt.R, kto.R],
-    c: CombineKindTuple[co.R, ktd.R]
-): WindowFunc[r.R, c.R] =
-    WindowFunc(
-        SqlExpr.NullsTreatmentFunc(
-            "LEAD",
-            aa.asExpr(x).asSqlExpr ::
-                ao.asExpr(offset).asSqlExpr ::
-                ad.asExpr(default).asSqlExpr :: Nil
-            ,
-            Some(SqlWindowNullsMode.Ignore)
+    c: CombineKindTuple[co.R, ktd.R],
+    to: ToOption[WindowFunc[r.R, c.R]]
+): to.R =
+    to.toOption(
+        WindowFunc(
+            SqlExpr.NullsTreatmentFunc(
+                "LEAD",
+                aa.asExpr(x).asSqlExpr ::
+                    ao.asExpr(offset).asSqlExpr ::
+                    ad.asExpr(default).asSqlExpr :: Nil
+                ,
+                Some(SqlWindowNullsMode.Ignore)
+            )
         )
     )

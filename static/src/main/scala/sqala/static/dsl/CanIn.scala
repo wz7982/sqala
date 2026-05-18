@@ -3,8 +3,6 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
 
-import scala.compiletime.ops.boolean.||
-
 trait CanIn[A, B, CL <: Int]:
     type R
 
@@ -29,7 +27,7 @@ object CanIn:
     given expr[A, B, CL <: Int](using
         aa: AsExpr[A, CL],
         ab: AsExpr[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         kt: KindToTuple[ab.K]
     ): Aux[A, B, CL, r.R, kt.R] =
         new CanIn[A, B, CL]:
@@ -44,8 +42,8 @@ object CanIn:
         aa: AsExpr[A, CL],
         ah: AsExpr[H, CL],
         t: CanIn[A, T, CL],
-        rh: Relation[aa.R, ah.R, IsOption[aa.R] || IsOption[ah.R]],
-        r: Relation[rh.R, t.R, IsOption[rh.R] || IsOption[t.R]],
+        rh: Relation[aa.R, ah.R],
+        r: Relation[rh.R, t.R],
         kth: KindToTuple[ah.K],
         c: CombineKindTuple[kth.R, t.KS]
     ): Aux[A, H *: T, CL, r.R, c.R] =
@@ -60,7 +58,7 @@ object CanIn:
     given tuple1[A, H, CL <: Int](using
         aa: AsExpr[A, CL],
         ah: AsExpr[H, CL],
-        r: Relation[Unwrap[aa.R, Option], Unwrap[ah.R, Option], IsOption[aa.R] || IsOption[ah.R]],
+        r: Relation[aa.R, ah.R],
         kth: KindToTuple[ah.K]
     ): Aux[A, H *: EmptyTuple, CL, r.R, kth.R] =
         new CanIn[A, H *: EmptyTuple, CL]:
@@ -74,7 +72,7 @@ object CanIn:
     given seq[A, B, S <: Seq[B], CL <: Int](using
         aa: AsExpr[A, CL],
         ab: AsSqlExpr[B],
-        r: Relation[Unwrap[aa.R, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]],
+        r: Relation[aa.R, B]
     ): Aux[A, S, CL, r.R, Value *: EmptyTuple] =
         new CanIn[A, S, CL]:
             type R = r.R
@@ -87,7 +85,7 @@ object CanIn:
     given array[A, B, CL <: Int](using
         aa: AsExpr[A, CL],
         ab: AsSqlExpr[B],
-        r: Relation[Unwrap[aa.R, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]],
+        r: Relation[aa.R, B],
     ): Aux[A, Array[B], CL, r.R, Value *: EmptyTuple] =
         new CanIn[A, Array[B], CL]:
             type R = r.R

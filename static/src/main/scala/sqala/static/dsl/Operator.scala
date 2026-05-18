@@ -5,13 +5,12 @@ import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.*
 
 import scala.annotation.targetName
-import scala.compiletime.ops.boolean.||
 
 extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("equal")
     def ===[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -25,7 +24,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("notEqual")
     def <>[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -48,7 +47,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("eqIgnoreNulls")
     def <=>[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Boolean, c.R] =
         Expr(
@@ -62,7 +61,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("gt")
     def >[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -76,7 +75,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("ge")
     def >=[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -90,7 +89,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("lt")
     def <[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -104,7 +103,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("le")
     def <=[B](that: B)(using
         ab: AsRightOperand[B, CL],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -131,8 +130,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def between[S, E](start: S, end: E)(using
         as: AsExpr[S, CL],
         ae: AsExpr[E, CL],
-        rs: Relation[aa.R, as.R, IsOption[aa.R] || IsOption[as.R]],
-        r: Relation[rs.R, ae.R, IsOption[rs.R] || IsOption[ae.R]],
+        rs: Relation[aa.R, as.R],
+        r: Relation[rs.R, ae.R],
         cs: CombineKind[aa.K, as.K],
         c: CombineKind[cs.R, ae.K]
     ): Expr[r.R, c.R] =
@@ -148,7 +147,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("plus")
     def +[B](that: B)(using
         ab: AsExpr[B, CL],
-        r: Plus[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Plus[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(r.plus(aa.asExpr(self).asSqlExpr, ab.asExpr(that).asSqlExpr))
@@ -156,7 +155,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("minus")
     def -[B](that: B)(using
         ab: AsExpr[B, CL],
-        r: Minus[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Minus[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -172,7 +171,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         ab: AsExpr[B, CL],
         na: SqlNumber[aa.R],
         nb: SqlNumber[ab.R],
-        r: Return[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Return[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -235,7 +234,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         ab: AsExpr[B, CL],
         ba: SqlBoolean[aa.R],
         bb: SqlBoolean[ab.R],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -251,7 +250,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         ab: AsExpr[B, CL],
         ba: SqlBoolean[aa.R],
         bb: SqlBoolean[ab.R],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -273,7 +272,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         ab: AsExpr[B, CL],
         sa: SqlString[aa.R],
         sb: SqlString[ab.R],
-        r: Relation[aa.R, ab.R, IsOption[aa.R] || IsOption[ab.R]],
+        r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
@@ -287,7 +286,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def contains(value: String)(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
         Expr(
@@ -301,7 +300,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def startsWith(value: String)(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
         Expr(
@@ -315,7 +314,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def endsWith(value: String)(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
         Expr(
@@ -329,7 +328,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def isJson(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         kt: KindToTuple[aa.K]
     ): Expr[r.R, Composite[kt.R]] =
         Expr(
@@ -338,7 +337,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def isJsonObject(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         kt: KindToTuple[aa.K]
     ): Expr[r.R, Composite[kt.R]] =
         Expr(
@@ -347,7 +346,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def isJsonArray(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         kt: KindToTuple[aa.K]
     ): Expr[r.R, Composite[kt.R]] =
         Expr(
@@ -356,7 +355,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     def isJsonScalar(using
         s: SqlString[aa.R],
-        r: Relation[Unwrap[aa.R, Option], String, IsOption[aa.R]],
+        r: Relation[aa.R, String],
         kt: KindToTuple[aa.K]
     ): Expr[r.R, Composite[kt.R]] =
         Expr(
@@ -393,9 +392,9 @@ extension [A, B, CL <: Int](self: (A, B))(using
         db: SqlDateTime[ab.R],
         dc: SqlDateTime[ac.R],
         dd: SqlDateTime[ad.R],
-        r1: Relation[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[aa.R] || IsOption[ab.R]],
-        r2: Relation[Unwrap[ac.R, Option], Unwrap[ad.R, Option], IsOption[ac.R] || IsOption[ad.R]],
-        r: Relation[Unwrap[r1.R, Option], Unwrap[r2.R, Option], IsOption[r1.R] || IsOption[r2.R]],
+        r1: Relation[aa.R, ab.R],
+        r2: Relation[ac.R, ad.R],
+        r: Relation[r1.R, r2.R],
         c1: CombineKind[aa.K, ab.K],
         c2: CombineKind[ac.K, ad.K],
         c: CombineKind[c1.R, c2.R]

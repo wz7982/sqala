@@ -4,7 +4,7 @@ import sqala.static.dsl.table.*
 
 import java.time.*
 import scala.compiletime.ops.any.ToString
-import scala.compiletime.ops.boolean.!
+import scala.compiletime.ops.boolean.{!, ||}
 import scala.compiletime.ops.int.S
 import scala.compiletime.ops.string.{+, Length, Substring}
 
@@ -51,7 +51,7 @@ type TupleFilterNot[H, T <: Tuple] <: Tuple = T match
     case x *: xs => x *: TupleFilterNot[H, xs]
     case EmptyTuple => EmptyTuple
 
-type NumericResult[A, B, N <: Boolean] = (A, B, N) match
+type NumericResult[A, B] = (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
     case (BigDecimal, _, true) => Option[BigDecimal]
     case (BigDecimal, _, false) => BigDecimal
     case (_, BigDecimal, true) => Option[BigDecimal]
@@ -73,7 +73,7 @@ type NumericResult[A, B, N <: Boolean] = (A, B, N) match
     case (_, Int, true) => Option[Int]
     case (_, Int, false) => Int
 
-type DateTimeResult[A, B, N <: Boolean] = (A, B, N) match
+type DateTimeResult[A, B] = (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
     case (OffsetDateTime, _, true) => Option[OffsetDateTime]
     case (OffsetDateTime, _, false) => OffsetDateTime
     case (_, OffsetDateTime, true) => Option[OffsetDateTime]
@@ -87,7 +87,7 @@ type DateTimeResult[A, B, N <: Boolean] = (A, B, N) match
     case (_, LocalDate, true) => Option[LocalDate]
     case (_, LocalDate, false) => LocalDate
 
-type TimeResult[A, B, N <: Boolean] = (A, B, N) match
+type TimeResult[A, B] = (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
     case (OffsetTime, _, true) => Option[OffsetTime]
     case (OffsetTime, _, false) => OffsetTime
     case (_, OffsetTime, true) => Option[OffsetTime]

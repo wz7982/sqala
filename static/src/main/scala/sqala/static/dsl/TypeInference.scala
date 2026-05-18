@@ -38,89 +38,128 @@ object Compare:
         Compare[A, B]
     ): Compare[Array[A], Array[B]]()
 
+    given arrayAndOptionArray[A, B](using
+        Compare[A, B]
+    ): Compare[Array[A], Option[Array[B]]]()
+
+    given optionArrayAndArray[A, B](using
+        Compare[A, B]
+    ): Compare[Option[Array[A]], Array[B]]()
+
+    given optionArray[A, B](using
+        Compare[A, B]
+    ): Compare[Option[Array[A]], Option[Array[B]]]()
+
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple](using
         Compare[AH, BH],
         Compare[AT, BT]
     ): Compare[AH *: AT, BH *: BT]()
 
+    given tupleAndOptionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
+        Compare[AH, BH],
+        Compare[AT, BT]
+    ): Compare[AH *: AT, Option[BH *: BT]]()
+
+    given optionTupleAndTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
+        Compare[AH, BH],
+        Compare[AT, BT]
+    ): Compare[Option[AH *: AT], BH *: BT]()
+
+    given optionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
+        Compare[AH, BH],
+        Compare[AT, BT]
+    ): Compare[Option[AH *: AT], Option[BH *: BT]]()
+
     given tuple1[AH, BH](using
         Compare[AH, BH]
     ): Compare[AH *: EmptyTuple, BH *: EmptyTuple]()
 
-trait Plus[A, B, N <: Boolean]:
+    given tuple1AndOptionTuple1[AH, BH](using
+        Compare[AH, BH]
+    ): Compare[AH *: EmptyTuple, Option[BH *: EmptyTuple]]()
+
+    given optionTuple1AndTuple1[AH, BH](using
+        Compare[AH, BH]
+    ): Compare[Option[AH *: EmptyTuple], BH *: EmptyTuple]()
+
+    given optionTuple1AndOptionTuple1[AH, BH](using
+        Compare[AH, BH]
+    ): Compare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
+
+trait Plus[A, B]:
     type R
 
     def plus(x: SqlExpr, y: SqlExpr): SqlExpr
 
 object Plus:
-    type Aux[A, B, N <: Boolean, O] = Plus[A, B, N]:
+    type Aux[A, B, O] = Plus[A, B]:
         type R = O
 
-    given number[A: SqlNumber, B: SqlNumber, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
-        new Plus[A, B, N]:
-            type R = NumericResult[A, B, N]
+    given number[A: SqlNumber, B: SqlNumber]: Aux[A, B, NumericResult[A, B]] =
+        new Plus[A, B]:
+            type R = NumericResult[A, B]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
-    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetDateTime, N, Option]] =
-        new Plus[A, B, N]:
-            type R = WrapIf[OffsetDateTime, N, Option]
+    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
+        new Plus[A, B]:
+            type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
-    given timeAndInterval[A: SqlTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetTime, N, Option]] =
-        new Plus[A, B, N]:
-            type R = WrapIf[OffsetTime, N, Option]
+    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
+        new Plus[A, B]:
+            type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
-    given string[A: SqlString, B: SqlString, N <: Boolean]: Aux[A, B, N, WrapIf[String, N, Option]] =
-        new Plus[A, B, N]:
-            type R = WrapIf[String, N, Option]
+    given string[A: SqlString, B: SqlString]: Aux[A, B, WrapIf[String, IsOption[A] || IsOption[B], Option]] =
+        new Plus[A, B]:
+            type R = WrapIf[String, IsOption[A] || IsOption[B], Option]
 
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
 
-trait Minus[A, B, N <: Boolean]:
+trait Minus[A, B]:
     type R
 
 object Minus:
-    type Aux[A, B, N <: Boolean, O] = Minus[A, B, N]:
+    type Aux[A, B, O] = Minus[A, B]:
         type R = O
 
-    given number[A: SqlNumber, B: SqlNumber, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
-        new Minus[A, B, N]:
-            type R = NumericResult[A, B, N]
+    given number[A: SqlNumber, B: SqlNumber]: Aux[A, B, NumericResult[A, B]] =
+        new Minus[A, B]:
+            type R = NumericResult[A, B]
 
-    given dateTime[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, WrapIf[Interval, N, Option]] =
-        new Minus[A, B, N]:
-            type R = WrapIf[Interval, N, Option]
+    given dateTime[A: SqlDateTime, B: SqlDateTime]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
-    given time[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, WrapIf[Interval, N, Option]] =
-        new Minus[A, B, N]:
-            type R = WrapIf[Interval, N, Option]
+    given time[A: SqlTime, B: SqlTime]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
-    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetDateTime, N, Option]] =
-        new Minus[A, B, N]:
-            type R = WrapIf[OffsetDateTime, N, Option]
+    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
 
-    given timeAndInterval[A: SqlTime, B: SqlInterval, N <: Boolean]: Aux[A, B, N, WrapIf[OffsetTime, N, Option]] =
-        new Minus[A, B, N]:
-            type R = WrapIf[OffsetTime, N, Option]
+    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
-trait Relation[A, B, N <: Boolean]:
+trait Relation[A, B]:
     type R
 
 object Relation:
-    type Aux[A, B, N <: Boolean, O] = Relation[A, B, N]:
+    type Aux[A, B, O] = Relation[A, B]:
         type R = O
 
-    given relation[A, B, N <: Boolean](using Compare[A, B]): Aux[A, B, N, WrapIf[Boolean, N, Option]] =
-        new Relation[A, B, N]:
-            type R = WrapIf[Boolean, N, Option]
+    given relation[A, B](using Compare[A, B]): Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
+        new Relation[A, B]:
+            type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 
 trait CanInRowsOrGroupsFrame[T]
 
@@ -153,91 +192,83 @@ object UnnestReturn:
         new UnnestReturn[T]:
             type R = FlattenUnnest[T]
 
-trait Return[A, B, N <: Boolean]:
+trait Return[A, B]:
     type R
 
 object Return:
-    type Aux[A, B, N <: Boolean, O] = Return[A, B, N]:
+    type Aux[A, B, O] = Return[A, B]:
         type R = O
 
-    given number[A: SqlNumber, B: SqlNumber, N <: Boolean]: Aux[A, B, N, NumericResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = NumericResult[A, B, N]
+    given number[A: SqlNumber, B: SqlNumber]: Aux[A, B, NumericResult[A, B]] =
+        new Return[A, B]:
+            type R = NumericResult[A, B]
 
-    given dateTime[A: SqlDateTime, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, DateTimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = DateTimeResult[A, B, N]
+    given string[A: SqlString, B: SqlString]: Aux[A, B, WrapIf[String, IsOption[A] || IsOption[B], Option]] =
+        new Return[A, B]:
+            type R = WrapIf[String, IsOption[A] || IsOption[B], Option]
 
-    given string[A: SqlString, B: SqlString]: Aux[A, B, false, String] =
-        new Return[A, B, false]:
-            type R = String
+    given boolean[A: SqlBoolean, B: SqlBoolean]: Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
+        new Return[A, B]:
+            type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 
-    given optionString[A: SqlString, B: SqlString]: Aux[A, B, true, Option[String]] =
-        new Return[A, B, true]:
-            type R = Option[String]
+    given json[A: SqlJson, B: SqlJson]: Aux[A, B, WrapIf[Json, IsOption[A] || IsOption[B], Option]] =
+        new Return[A, B]:
+            type R = WrapIf[Json, IsOption[A] || IsOption[B], Option]
 
-    given boolean[A: SqlBoolean, B: SqlBoolean]: Aux[A, B, false, Boolean] =
-        new Return[A, B, false]:
-            type R = Boolean
+    given geometry[A: SqlGeometry, B: SqlGeometry]: Aux[A, B, WrapIf[Geometry, IsOption[A] || IsOption[B], Option]] =
+        new Return[A, B]:
+            type R = WrapIf[Geometry, IsOption[A] || IsOption[B], Option]
 
-    given optionBoolean[A: SqlBoolean, B: SqlBoolean]: Aux[A, B, true, Option[Boolean]] =
-        new Return[A, B, true]:
-            type R = Option[Boolean]
+    given interval[A: SqlInterval, B: SqlInterval]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Return[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
-    given json[A: SqlJson, B: SqlJson]: Aux[A, B, false, Json] =
-        new Return[A, B, false]:
-            type R = Json
+    given dateTime[A: SqlDateTime, B: SqlDateTime]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
 
-    given optionJson[A: SqlJson, B: SqlJson]: Aux[A, B, true, Option[Json]] =
-        new Return[A, B, true]:
-            type R = Option[Json]
+    given time[A: SqlTime, B: SqlTime]: Aux[A, B, TimeResult[A, B]] =
+        new Return[A, B]:
+            type R = TimeResult[A, B]
 
-    given geometry[A: SqlGeometry, B: SqlGeometry]: Aux[A, B, false, Geometry] =
-        new Return[A, B, false]:
-            type R = Geometry
+    given dateTimeAndString[A: SqlDateTime, B: SqlString]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
 
-    given optionGeometry[A: SqlGeometry, B: SqlGeometry]: Aux[A, B, true, Option[Geometry]] =
-        new Return[A, B, true]:
-            type R = Option[Geometry]
+    given stringAndDateTime[A: SqlString, B: SqlDateTime]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
 
-    given interval[A: SqlInterval, B: SqlInterval]: Aux[A, B, false, Interval] =
-        new Return[A, B, false]:
-            type R = Interval
+    given timeAndString[A: SqlTime, B: SqlString]: Aux[A, B, TimeResult[A, B]] =
+        new Return[A, B]:
+            type R = TimeResult[A, B]
 
-    given optionInterval[A: SqlInterval, B: SqlInterval]: Aux[A, B, true, Option[Interval]] =
-        new Return[A, B, true]:
-            type R = Option[Interval]
-
-    given time[A: SqlTime, B: SqlTime, N <: Boolean]: Aux[A, B, N, TimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = TimeResult[A, B, N]
-
-    given dateTimeAndString[A: SqlDateTime, B: SqlString, N <: Boolean]: Aux[A, B, N, DateTimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = DateTimeResult[A, B, N]
-
-    given stringAndDateTime[A: SqlString, B: SqlDateTime, N <: Boolean]: Aux[A, B, N, DateTimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = DateTimeResult[A, B, N]
-
-    given timeAndString[A: SqlTime, B: SqlString, N <: Boolean]: Aux[A, B, N, TimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = TimeResult[A, B, N]
-
-    given stringAndTime[A: SqlString, B: SqlTime, N <: Boolean]: Aux[A, B, N, TimeResult[A, B, N]] =
-        new Return[A, B, N]:
-            type R = TimeResult[A, B, N]
+    given stringAndTime[A: SqlString, B: SqlTime]: Aux[A, B, TimeResult[A, B]] =
+        new Return[A, B]:
+            type R = TimeResult[A, B]
 
     given array[A, B](using
-        r: Return[A, B, IsOption[A] || IsOption[B]]
-    ): Aux[Array[A], Array[B], false, Array[r.R]] =
-        new Return[Array[A], Array[B], false]:
+        r: Return[A, B]
+    ): Aux[Array[A], Array[B], Array[r.R]] =
+        new Return[Array[A], Array[B]]:
             type R = Array[r.R]
 
+    given arrayAndOptionArray[A, B](using
+        r: Return[A, B]
+    ): Aux[Array[A], Option[Array[B]], Option[Array[r.R]]] =
+        new Return[Array[A], Option[Array[B]]]:
+            type R = Option[Array[r.R]]
+
+    given optionArrayAndArray[A, B](using
+        r: Return[A, B]
+    ): Aux[Option[Array[A]], Array[B], Option[Array[r.R]]] =
+        new Return[Option[Array[A]], Array[B]]:
+            type R = Option[Array[r.R]]
+
     given optionArray[A, B](using
-        r: Return[A, B, IsOption[A] || IsOption[B]]
-    ): Aux[Array[A], Array[B], true, Option[Array[r.R]]] =
-        new Return[Array[A], Array[B], true]:
+        r: Return[A, B]
+    ): Aux[Option[Array[A]], Option[Array[B]], Option[Array[r.R]]] =
+        new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
 trait Union[A, B, CL <: Int]:
@@ -252,7 +283,7 @@ object Union:
         type R = O
 
     given union[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
-        r: Return[A, B, IsOption[A] || IsOption[B]]
+        r: Return[A, B]
     ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
         new Union[Expr[A, AK], Expr[B, BK], CL]:
             type R = Expr[r.R, Column[CL]]

@@ -3,14 +3,13 @@ package sqala.static.dsl
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
 
 import scala.annotation.targetName
-import scala.compiletime.ops.boolean.||
 
 final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     @targetName("equal")
     def ==[R, CL <: Int](that: R)(using
         qc: QueryContext[CL],
         ar: AsRightOperand[R, CL],
-        r: Relation[T, ar.R, IsOption[T] || IsOption[ar.R]],
+        r: Relation[T, ar.R],
         ck: CombineKind[K, ar.K]
     ): Expr[r.R, ck.R] =
         Expr(
@@ -25,7 +24,7 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     def !=[R, CL <: Int](that: R)(using
         qc: QueryContext[CL],
         ar: AsRightOperand[R, CL],
-        r: Relation[T, ar.R, IsOption[T] || IsOption[ar.R]],
+        r: Relation[T, ar.R],
         ck: CombineKind[K, ar.K]
     ): Expr[r.R, ck.R] =
         Expr(
