@@ -11,7 +11,6 @@ import sqala.static.dsl.table.*
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
-import scala.compiletime.ops.boolean.||
 import scala.compiletime.ops.int.{+, >}
 import sqala.static.{dsl => a}
 
@@ -358,6 +357,7 @@ def finalized[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[T, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
 ): Expr[a.R, Agg[kt.R]] =
@@ -367,6 +367,7 @@ def running[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
     a: AsExpr[T, CL],
+    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
 ): Expr[a.R, Agg[kt.R]] =
@@ -430,6 +431,8 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
     def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
         pc: PivotContext,
         av: AsExpr[V, CL],
+        as: AsSqlExpr[a.R],
+        asv: AsSqlExpr[av.R],
         i: CanIn[T, V, CL],
         ia: CanInAgg[i.KS],
         e: ExcludeCurrentLevelColumn[i.KS, CL],
@@ -523,7 +526,7 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?,
         ac: AsExpr[C, CL],
         ar: AsExpr[R, CL],
         b: SqlBoolean[ac.R],
-        r: Return[Unwrap[T, Option], Unwrap[ar.R, Option], IsOption[T] || IsOption[ar.R]],
+        r: Return[T, ar.R],
         ktc: KindToTuple[ac.K],
         ktr: KindToTuple[ar.K],
         cc: CombineKindTuple[KS, ktc.R],
@@ -534,7 +537,7 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?,
     def otherwise[R, CL <: Int](result: R)(using
         qc: QueryContext[CL],
         a: AsExpr[R, CL],
-        r: Return[Unwrap[T, Option], Unwrap[a.R, Option], IsOption[T] || IsOption[R]],
+        r: Return[T, a.R],
         kt: KindToTuple[a.K],
         c: CombineKindTuple[KS, kt.R]
     ): Expr[r.R, Composite[c.R]] =
@@ -552,6 +555,7 @@ def caseWhen[C, R, CL <: Int](cond: C)(result: R)(using
     ac: AsExpr[C, CL],
     ar: AsExpr[R, CL],
     b: SqlBoolean[ac.R],
+    as: AsSqlExpr[ar.R],
     ktc: KindToTuple[ac.K],
     ktr: KindToTuple[ar.K],
     c: CombineKindTuple[ktc.R, ktr.R]
@@ -562,7 +566,9 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[ab.R]],
+    asa: AsSqlExpr[aa.R],
+    asb: AsSqlExpr[ab.R],
+    r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
     Expr(
@@ -575,7 +581,9 @@ def ifNull[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], IsOption[ab.R]],
+    asa: AsSqlExpr[aa.R],
+    asb: AsSqlExpr[ab.R],
+    r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
     coalesce(x, y)
@@ -584,7 +592,9 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    r: Return[Unwrap[aa.R, Option], Unwrap[ab.R, Option], false],
+    asa: AsSqlExpr[aa.R],
+    asb: AsSqlExpr[ab.R],
+    r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K],
     to: ToOption[Expr[r.R, c.R]]
 ): to.R =
