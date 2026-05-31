@@ -12,7 +12,6 @@ import sqala.static.dsl.table.*
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
 import scala.compiletime.ops.int.{+, >}
-import sqala.static.{dsl => a}
 
 def query[T](q: QueryContext[0] ?=> T): T =
     given QueryContext[0] = QueryContext(0)
@@ -545,7 +544,7 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?,
             exprs.grouped(2).toList.map(i => (i(0), i(1)))
         Expr(
             SqlExpr.Case(
-                caseBranches.map((i, t) => SqlWhen(i.asSqlExpr, t.asSqlExpr)),
+                caseBranches.map((i, t) => SqlCaseBranch(i.asSqlExpr, t.asSqlExpr)),
                 Some(a.asExpr(result).asSqlExpr)
             )
         )

@@ -41,9 +41,9 @@ def caseWhen(exprs: Expr*): Expr =
     val caseBranches =
         exprs.grouped(2).toList.map(i => (i(0), i(1)))
     if caseBranches.length * 2 == exprs.length then
-        Expr(SqlExpr.Case(caseBranches.map((w, t) => SqlWhen(w.asSqlExpr, t.asSqlExpr)), None))
+        Expr(SqlExpr.Case(caseBranches.map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)), None))
     else
-        Expr(SqlExpr.Case(caseBranches.map((w, t) => SqlWhen(w.asSqlExpr, t.asSqlExpr)), Some(exprs.last.asSqlExpr)))
+        Expr(SqlExpr.Case(caseBranches.map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)), Some(exprs.last.asSqlExpr)))
 
 def caseWhen(exprs: List[Expr]): Expr =
     caseWhen(exprs*)
