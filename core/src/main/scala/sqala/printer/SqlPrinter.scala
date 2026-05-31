@@ -537,7 +537,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printType(t)
         for u <- expr.uniqueness do
             sqlBuilder.append(" ")
-            printJsonUniqueness(u)
+            printJsonUniquenessMode(u)
 
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         def hasBrackets(expr: SqlExpr): Boolean =
@@ -938,7 +938,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonInput(i)
         for u <- expr.uniqueness do
             sqlBuilder.append(" ")
-            printJsonUniqueness(u)
+            printJsonUniquenessMode(u)
         sqlBuilder.append(")")
 
     def printJsonQueryFuncExpr(expr: SqlExpr.JsonQueryFunc): Unit =
@@ -997,7 +997,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonNullConstructor(n)
         for u <- expr.uniqueness do
             sqlBuilder.append(" ")
-            printJsonUniqueness(u)
+            printJsonUniquenessMode(u)
         for o <- expr.output do
             sqlBuilder.append(" ")
             printJsonOutput(o)
@@ -1057,11 +1057,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             for e <- f do
                 printJsonEncoding(e)
 
-    def printJsonUniqueness(uniqueness: SqlJsonUniqueness): Unit =
+    def printJsonUniquenessMode(uniqueness: SqlJsonUniquenessMode): Unit =
         uniqueness match
-            case SqlJsonUniqueness.With =>
+            case SqlJsonUniquenessMode.With =>
                 sqlBuilder.append("WITH UNIQUE KEYS")
-            case SqlJsonUniqueness.Without =>
+            case SqlJsonUniquenessMode.Without =>
                 sqlBuilder.append("WITHOUT UNIQUE KEYS")
 
     def printJsonPassing(passing: SqlJsonPassing): Unit =
@@ -1246,7 +1246,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonNullConstructor(n)
         for u <- expr.uniqueness do
             sqlBuilder.append(" ")
-            printJsonUniqueness(u)
+            printJsonUniquenessMode(u)
         for o <- expr.output do
             sqlBuilder.append(" ")
             printJsonOutput(o)

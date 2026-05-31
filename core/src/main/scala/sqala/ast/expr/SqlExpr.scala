@@ -19,7 +19,7 @@ enum SqlExpr:
     case JsonTest(
         expr: SqlExpr,
         nodeType: Option[SqlJsonNodeType],
-        uniqueness: Option[SqlJsonUniqueness],
+        uniqueness: Option[SqlJsonUniquenessMode],
         not: Boolean
     )
     case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
@@ -43,7 +43,7 @@ enum SqlExpr:
     case JsonParseFunc(
         expr: SqlExpr,
         input: Option[SqlJsonInput],
-        uniqueness: Option[SqlJsonUniqueness]
+        uniqueness: Option[SqlJsonUniquenessMode]
     )
     case JsonQueryFunc(
         expr: SqlExpr,
@@ -66,7 +66,7 @@ enum SqlExpr:
     case JsonObjectFunc(
         items: List[SqlJsonObjectItem],
         nullConstructor: Option[SqlJsonNullConstructor],
-        uniqueness: Option[SqlJsonUniqueness],
+        uniqueness: Option[SqlJsonUniquenessMode],
         output: Option[SqlJsonOutput]
     )
     case JsonArrayFunc(
@@ -92,7 +92,7 @@ enum SqlExpr:
     case JsonObjectAggFunc(
         item: SqlJsonObjectItem,
         nullConstructor: Option[SqlJsonNullConstructor],
-        uniqueness: Option[SqlJsonUniqueness],
+        uniqueness: Option[SqlJsonUniquenessMode],
         output: Option[SqlJsonOutput],
         filter: Option[SqlExpr]
     )

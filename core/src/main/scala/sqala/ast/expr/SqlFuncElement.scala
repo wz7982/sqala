@@ -7,7 +7,7 @@ enum SqlTrimMode:
     case Leading
     case Trailing
 
-enum SqlJsonUniqueness:
+enum SqlJsonUniquenessMode:
     case With
     case Without
 
