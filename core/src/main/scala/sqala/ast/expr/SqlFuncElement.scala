@@ -73,9 +73,11 @@ enum SqlJsonExistsErrorBehavior:
     case False
     case Unknown
 
-case class SqlJsonInput(format: Option[SqlJsonEncoding])
+case class SqlJsonInput(encoding: Option[SqlJsonEncoding])
 
-case class SqlJsonOutput(`type`: SqlType, format: Option[Option[SqlJsonEncoding]])
+case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
+
+case class SqlJsonOutput(`type`: SqlType, format: Option[SqlJsonOutputFormat])
 
 enum SqlJsonTableErrorBehavior:
     case Error
@@ -87,7 +89,7 @@ enum SqlJsonTableColumn:
     case Column(
         name: String,
         `type`: SqlType,
-        format: Option[Option[SqlJsonEncoding]],
+        format: Option[SqlJsonOutputFormat],
         path: Option[SqlExpr],
         wrapper: Option[SqlJsonQueryWrapperBehavior],
         quotes: Option[SqlJsonQueryQuotesBehavior],

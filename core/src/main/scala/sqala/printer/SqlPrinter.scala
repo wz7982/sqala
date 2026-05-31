@@ -1055,7 +1055,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
     def printJsonInput(input: SqlJsonInput): Unit =
         sqlBuilder.append("FORMAT JSON")
-        for e <- input.format do
+        for e <- input.encoding do
+            sqlBuilder.append(" ")
+            printJsonEncoding(e)
+
+    def printJsonOutputFormat(format: SqlJsonOutputFormat): Unit =
+        sqlBuilder.append("FORMAT JSON")
+        for e <- format.encoding do
             sqlBuilder.append(" ")
             printJsonEncoding(e)
 
@@ -1063,10 +1069,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("RETURNING ")
         printType(output.`type`)
         for f <- output.format do
-            sqlBuilder.append(" FORMAT JSON")
-            for e <- f do
-                sqlBuilder.append(" ")
-                printJsonEncoding(e)
+            sqlBuilder.append(" ")
+            printJsonOutputFormat(f)
 
     def printJsonUniquenessMode(uniqueness: SqlJsonUniquenessMode): Unit =
         uniqueness match
@@ -1454,10 +1458,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" ")
                     printType(c.`type`)
                     for f <- c.format do
-                        sqlBuilder.append(" FORMAT JSON")
-                        for e <- f do
-                            sqlBuilder.append(" ")
-                            printJsonEncoding(e)
+                        sqlBuilder.append(" ")
+                        printJsonOutputFormat(f)
                     for p <- c.path do
                         sqlBuilder.append(" PATH ")
                         printExpr(p)
