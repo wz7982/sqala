@@ -7,11 +7,15 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.SqlTable
 
+enum SqlInsertMode:
+    case Values(values: List[List[SqlExpr]])
+    case Subquery(query: SqlQuery)
+
 case class SqlUpdateSetPair(column: String, value: SqlExpr)
 
 enum SqlStatement:
     case Delete(table: SqlTable.Ident, where: Option[SqlExpr])
-    case Insert(table: SqlTable.Ident, columns: List[String], values: List[List[SqlExpr]], query: Option[SqlQuery])
+    case Insert(table: SqlTable.Ident, columns: List[String], mode: SqlInsertMode)
     case Update(table: SqlTable.Ident, setList: List[SqlUpdateSetPair], where: Option[SqlExpr])
     case Truncate(table: SqlTable.Ident)
     case Upsert(table: SqlTable.Ident, columns: List[String], values: List[SqlExpr], pkList: List[String], updateList: List[String])

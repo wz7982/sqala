@@ -79,7 +79,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
             case _ => Desc
         val orderExpr =
             SqlExpr.Case(
-                SqlWhen(
+                SqlCaseBranch(
                     SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is, SqlExpr.NullLiteral),
                     SqlExpr.NumberLiteral(1)
                 ) :: Nil,
