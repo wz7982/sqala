@@ -1618,7 +1618,7 @@ def json[A, CL <: Int](x: A)(using
         SqlExpr.JsonParseFunc(
             a.asExpr(x).asSqlExpr,
             None,
-            Some(SqlJsonUniqueness.With)
+            Some(SqlJsonUniquenessMode.With)
         )
     )
 
