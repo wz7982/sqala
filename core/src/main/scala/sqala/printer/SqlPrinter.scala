@@ -1047,6 +1047,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     def printJsonInput(input: SqlJsonInput): Unit =
         sqlBuilder.append("FORMAT JSON")
         for e <- input.format do
+            sqlBuilder.append(" ")
             printJsonEncoding(e)
 
     def printJsonOutput(output: SqlJsonOutput): Unit =
@@ -1055,6 +1056,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- output.format do
             sqlBuilder.append(" FORMAT JSON")
             for e <- f do
+                sqlBuilder.append(" ")
                 printJsonEncoding(e)
 
     def printJsonUniquenessMode(uniqueness: SqlJsonUniquenessMode): Unit =
@@ -1445,6 +1447,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     for f <- c.format do
                         sqlBuilder.append(" FORMAT JSON")
                         for e <- f do
+                            sqlBuilder.append(" ")
                             printJsonEncoding(e)
                     for p <- c.path do
                         sqlBuilder.append(" PATH ")
