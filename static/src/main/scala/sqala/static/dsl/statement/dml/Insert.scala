@@ -1,11 +1,11 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.SqlStatement
+import sqala.ast.statement.{SqlInsertMode, SqlStatement}
 import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, TableMacro}
-import sqala.static.dsl.table.Table
 import sqala.static.dsl.{AsExpr, Column, Expr}
+import sqala.static.dsl.table.Table
 
 import scala.deriving.Mirror
 
@@ -38,7 +38,7 @@ class Insert[T, S <: InsertState](
                 case Expr(SqlExpr.Column(_, c)) => c
                 case _ => throw MatchError(i)
         val tree: SqlStatement.Insert =
-            SqlStatement.Insert(sqlTable, columns, Nil, None)
+            SqlStatement.Insert(sqlTable, columns, SqlInsertMode.Values(Nil))
         new Insert(tree)
 
     inline def values(rows: List[T])(using
@@ -51,7 +51,7 @@ class Insert[T, S <: InsertState](
                 case x => x :: Nil
             data.zip(instances).map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
-        new Insert(tree.copy(values = insertValues))
+        new Insert(tree.copy(mode = SqlInsertMode.Values(insertValues)))
 
     inline def values(row: T)(using
         S =:= InsertTable
@@ -62,7 +62,7 @@ object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree: SqlStatement.Insert =
-            SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, Nil, None)
+            SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, SqlInsertMode.Values(Nil))
         new Insert(tree)
 
     inline def insertByEntities[T <: Product](entities: Seq[T])(using
@@ -85,6 +85,6 @@ object Insert:
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(
             SqlStatement.Insert(
-                SqlTable.Ident(tableName, None, None, None, None), columns, values.toList, None
+                SqlTable.Ident(tableName, None, None, None, None), columns, SqlInsertMode.Values(values.toList)
             )
         )

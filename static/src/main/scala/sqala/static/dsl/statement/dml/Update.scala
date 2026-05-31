@@ -4,8 +4,8 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.{SqlStatement, SqlUpdateSetPair}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
-import sqala.static.dsl.table.Table
 import sqala.static.dsl.*
+import sqala.static.dsl.table.Table
 
 import scala.deriving.Mirror
 

@@ -53,12 +53,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(insert.columns)(printIdent)
             sqlBuilder.append(")")
 
-        if insert.query.isDefined then
-            sqlBuilder.append(" ")
-            printQuery(insert.query.get)
-        else
-            sqlBuilder.append(" VALUES ")
-            printList(insert.values.map(SqlExpr.Tuple(_)))(printExpr)
+        sqlBuilder.append(" ")
+        insert.mode match
+            case SqlInsertMode.Values(values) =>
+                sqlBuilder.append("VALUES ")
+                printList(values.map(SqlExpr.Tuple(_)))(printExpr)
+            case SqlInsertMode.Subquery(query) =>
+                printQuery(query)
 
     def printDelete(delete: SqlStatement.Delete): Unit =
         sqlBuilder.append("DELETE FROM ")
@@ -648,29 +649,37 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ESCAPE ")
             printExpr(e)
 
+    def printCaseBranch(branch: SqlCaseBranch): Unit =
+        sqlBuilder.append("WHEN ")
+        printExpr(branch.when)
+        sqlBuilder.append(" THEN ")
+        printExpr(branch.`then`)
+
     def printCaseExpr(expr: SqlExpr.Case): Unit =
         sqlBuilder.append("CASE")
-        for branch <- expr.branches do
-            sqlBuilder.append(" WHEN ")
-            printExpr(branch.when)
-            sqlBuilder.append(" THEN ")
-            printExpr(branch.`then`)
+
+        for b <- expr.branches do
+            sqlBuilder.append(" ")
+            printCaseBranch(b)
+
         for d <- expr.default do
             sqlBuilder.append(" ELSE ")
             printExpr(d)
+
         sqlBuilder.append(" END")
 
     def printSimpleCaseExpr(expr: SqlExpr.SimpleCase): Unit =
         sqlBuilder.append("CASE ")
         printExpr(expr.expr)
-        for branch <- expr.branches do
-            sqlBuilder.append(" WHEN ")
-            printExpr(branch.when)
-            sqlBuilder.append(" THEN ")
-            printExpr(branch.`then`)
+
+        for b <- expr.branches do
+            sqlBuilder.append(" ")
+            printCaseBranch(b)
+
         for d <- expr.default do
             sqlBuilder.append(" ELSE ")
             printExpr(d)
+
         sqlBuilder.append(" END")
 
     def printCoalesceExpr(expr: SqlExpr.Coalesce): Unit =
