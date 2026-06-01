@@ -1,5 +1,7 @@
 package sqala.ast.expr
 
+case class SqlCaseBranch(when: SqlExpr, `then`: SqlExpr)
+
 case class SqlTrim(mode: Option[SqlTrimMode], value: Option[SqlExpr])
 
 enum SqlTrimMode:
@@ -78,35 +80,6 @@ case class SqlJsonInput(encoding: Option[SqlJsonEncoding])
 case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
 
 case class SqlJsonOutput(`type`: SqlType, format: Option[SqlJsonOutputFormat])
-
-enum SqlJsonTableErrorBehavior:
-    case Error
-    case Empty
-    case EmptyArray
-
-enum SqlJsonTableColumn:
-    case Ordinality(name: String)
-    case Column(
-        name: String,
-        `type`: SqlType,
-        format: Option[SqlJsonOutputFormat],
-        path: Option[SqlExpr],
-        wrapper: Option[SqlJsonQueryWrapperBehavior],
-        quotes: Option[SqlJsonQueryQuotesBehavior],
-        onEmpty: Option[SqlJsonQueryEmptyBehavior],
-        onError: Option[SqlJsonQueryErrorBehavior]
-    )
-    case Exists(
-        name: String,
-        `type`: SqlType,
-        path: Option[SqlExpr],
-        onError: Option[SqlJsonExistsErrorBehavior]
-    )
-    case Nested(
-        path: SqlExpr,
-        pathAlias: Option[String],
-        columns: List[SqlJsonTableColumn]
-    )
 
 case class SqlJsonObjectItem(key: SqlExpr, value: SqlExpr)
 
