@@ -921,7 +921,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
             None
         )
         val withItem = SqlWithItem(
-            tableCte, unionQuery, metaData.columnNames :+ columnPseudoLevel
+            tableCte, metaData.columnNames :+ columnPseudoLevel, unionQuery
         )
         val cteTree: SqlQuery.Cte = SqlQuery.Cte(
             true,
