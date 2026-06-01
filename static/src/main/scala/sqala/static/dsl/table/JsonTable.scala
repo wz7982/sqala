@@ -1,7 +1,7 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.{SqlExpr, SqlType}
-import sqala.ast.table.{SqlTable, SqlTableAlias, SqlJsonTableColumn}
+import sqala.ast.table.{SqlTable, SqlTableAlias, SqlJsonColumn}
 import sqala.static.dsl.*
 
 import scala.NamedTuple.NamedTuple
@@ -18,26 +18,26 @@ object FromJson:
         expr: SqlExpr,
         path: SqlExpr,
         alias: Option[String],
-        columns: JsonTableColumns[N, V]
+        columns: JsonColumns[N, V]
     )(using
-        p: AsTableParam[JsonTableColumnFlatten[V, CL], CL],
+        p: AsTableParam[JsonColumnFlatten[V, CL], CL],
         t: ToTuple[p.R]
-    ): FromJson[JsonTableColumnNameFlatten[N, V], t.R, OKS, CL] =
+    ): FromJson[JsonColumnNameFlatten[N, V], t.R, OKS, CL] =
         var index = 0
 
-        def toSqlColumns(columns: List[JsonTableColumn]): List[SqlJsonTableColumn] =
+        def toSqlColumns(columns: List[JsonColumn]): List[SqlJsonColumn] =
             columns.map:
-                case p: JsonTablePathColumn[?] =>
+                case p: JsonPathColumn[?] =>
                     index += 1
-                    SqlJsonTableColumn.Column(s"c$index", p.`type`, None, Some(p.path), None, None, None, None)
-                case o: JsonTableOrdinalColumn =>
+                    SqlJsonColumn.Column(s"c$index", p.`type`, None, Some(p.path), None, None, None, None)
+                case o: JsonOrdinalColumn =>
                     index += 1
-                    SqlJsonTableColumn.Ordinality(s"c$index")
-                case e: JsonTableExistsColumn =>
+                    SqlJsonColumn.Ordinality(s"c$index")
+                case e: JsonExistsColumn =>
                     index += 1
-                    SqlJsonTableColumn.Exists(s"c$index", SqlType.Boolean, Some(e.path), None)
-                case n: JsonTableNestedColumns[?, ?] =>
-                    SqlJsonTableColumn.Nested(n.path, None, toSqlColumns(n.columns))
+                    SqlJsonColumn.Exists(s"c$index", SqlType.Boolean, Some(e.path), None)
+                case n: JsonNestedColumns[?, ?] =>
+                    SqlJsonColumn.Nested(n.path, None, toSqlColumns(n.columns))
 
         val sqlColumns = toSqlColumns(columns.columns)
         FromJson(
@@ -67,16 +67,16 @@ final case class JsonTable[N <: Tuple, V <: Tuple, L <: Int](
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)
 
-final case class JsonTableColumns[N <: Tuple, V <: Tuple](private[sqala] val columns: List[JsonTableColumn])
+final case class JsonColumns[N <: Tuple, V <: Tuple](private[sqala] val columns: List[JsonColumn])
 
-sealed trait JsonTableColumn
-final case class JsonTableNestedColumns[N <: Tuple, V <: Tuple](
+sealed trait JsonColumn
+final case class JsonNestedColumns[N <: Tuple, V <: Tuple](
     private[sqala] val path: SqlExpr,
-    private[sqala] val columns: List[JsonTableColumn]
-) extends JsonTableColumn
-final class JsonTableOrdinalColumn extends JsonTableColumn
-final case class JsonTablePathColumn[T](
+    private[sqala] val columns: List[JsonColumn]
+) extends JsonColumn
+final class JsonOrdinalColumn extends JsonColumn
+final case class JsonPathColumn[T](
     private[sqala] val path: SqlExpr,
     private[sqala] val `type`: SqlType
-) extends JsonTableColumn
-final case class JsonTableExistsColumn(private[sqala] val path: SqlExpr) extends JsonTableColumn
+) extends JsonColumn
+final case class JsonExistsColumn(private[sqala] val path: SqlExpr) extends JsonColumn

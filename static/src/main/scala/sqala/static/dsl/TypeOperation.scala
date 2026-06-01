@@ -97,26 +97,26 @@ type TimeResult[A, B] = (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || Is
     case (_, LocalTime, true) => Option[LocalTime]
     case (_, LocalTime, false) => LocalTime
 
-type JsonTableColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = (N, V) match
+type JsonColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = (N, V) match
     case (hn *: tn, hv *: tv) =>
         hv match
-            case JsonTableNestedColumns[n, v] =>
-                Tuple.Concat[JsonTableColumnNameFlatten[n, v], JsonTableColumnNameFlatten[tn, tv]]
+            case JsonNestedColumns[n, v] =>
+                Tuple.Concat[JsonColumnNameFlatten[n, v], JsonColumnNameFlatten[tn, tv]]
             case _ =>
-                hn *: JsonTableColumnNameFlatten[tn, tv]
+                hn *: JsonColumnNameFlatten[tn, tv]
     case (EmptyTuple, EmptyTuple) => EmptyTuple
 
-type JsonTableColumnFlatten[V <: Tuple, L <: Int] <: Tuple = V match
+type JsonColumnFlatten[V <: Tuple, L <: Int] <: Tuple = V match
     case h *: t =>
         h match
-            case JsonTableNestedColumns[_, v] =>
-                Tuple.Concat[JsonTableColumnFlatten[v, L], JsonTableColumnFlatten[t, L]]
-            case JsonTableOrdinalColumn =>
-                Expr[Int, Column[L]] *: JsonTableColumnFlatten[t, L]
-            case JsonTablePathColumn[pt] =>
-                Expr[Wrap[pt, Option], Column[L]] *: JsonTableColumnFlatten[t, L]
-            case JsonTableExistsColumn =>
-                Expr[Option[Boolean], Column[L]] *: JsonTableColumnFlatten[t, L]
+            case JsonNestedColumns[_, v] =>
+                Tuple.Concat[JsonColumnFlatten[v, L], JsonColumnFlatten[t, L]]
+            case JsonOrdinalColumn =>
+                Expr[Int, Column[L]] *: JsonColumnFlatten[t, L]
+            case JsonPathColumn[pt] =>
+                Expr[Wrap[pt, Option], Column[L]] *: JsonColumnFlatten[t, L]
+            case JsonExistsColumn =>
+                Expr[Option[Boolean], Column[L]] *: JsonColumnFlatten[t, L]
     case EmptyTuple => EmptyTuple
 
 type UpperCase[S <: String] =

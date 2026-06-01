@@ -31,8 +31,8 @@ enum SqlTable:
         path: SqlExpr,
         pathAlias: Option[String],
         passingItems: List[SqlJsonPassing],
-        columns: List[SqlJsonTableColumn],
-        onError: Option[SqlJsonTableErrorBehavior],
+        columns: List[SqlJsonColumn],
+        onError: Option[SqlJsonErrorBehavior],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )

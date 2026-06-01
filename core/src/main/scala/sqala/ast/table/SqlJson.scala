@@ -2,12 +2,12 @@ package sqala.ast.table
 
 import sqala.ast.expr.*
 
-enum SqlJsonTableErrorBehavior:
+enum SqlJsonErrorBehavior:
     case Error
     case Empty
     case EmptyArray
 
-enum SqlJsonTableColumn:
+enum SqlJsonColumn:
     case Ordinality(name: String)
     case Column(
         name: String,
@@ -28,5 +28,5 @@ enum SqlJsonTableColumn:
     case Nested(
         path: SqlExpr,
         pathAlias: Option[String],
-        columns: List[SqlJsonTableColumn]
+        columns: List[SqlJsonColumn]
     )

@@ -237,40 +237,40 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
 def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     expr: E,
     path: String,
-    columns: JsonContext ?=> JsonTableColumns[N, V]
+    columns: JsonContext ?=> JsonColumns[N, V]
 )(using
     qc: QueryContext[CL],
     a: AsExpr[E, CL],
-    p: AsTableParam[JsonTableColumnFlatten[V, CL], CL],
+    p: AsTableParam[JsonColumnFlatten[V, CL], CL],
     t: ToTuple[p.R],
     kt: KindToTuple[a.K],
     i: CanInSimpleClause[kt.R],
     e: ExcludeCurrentLevelColumn[kt.R, CL],
     c: CombineKindTuple[EmptyTuple, e.R]
-): FromJson[JsonTableColumnNameFlatten[N, V], t.R, c.R, CL] =
+): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
     given JsonContext = JsonContext()
     val alias = qc.fetchAlias
     FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, Some(alias), columns)
 
-def ordinalColumn[CL <: Int](using QueryContext[CL], JsonContext): JsonTableOrdinalColumn =
-    JsonTableOrdinalColumn()
+def ordinalColumn[CL <: Int](using QueryContext[CL], JsonContext): JsonOrdinalColumn =
+    JsonOrdinalColumn()
 
-final class JsonTablePathColumnPart[T]:
+final class JsonPathColumnPart[T]:
     def apply[CL <: Int](path: String)(using
         qc: QueryContext[CL],
         jc: JsonContext,
         a: AsSqlExpr[T]
-    ): JsonTablePathColumn[T] =
-        JsonTablePathColumn(path.asExpr.asSqlExpr, a.sqlType)
+    ): JsonPathColumn[T] =
+        JsonPathColumn(path.asExpr.asSqlExpr, a.sqlType)
 
-def pathColumn[T: AsSqlExpr]: JsonTablePathColumnPart[T] =
-    JsonTablePathColumnPart()
+def pathColumn[T: AsSqlExpr]: JsonPathColumnPart[T] =
+    JsonPathColumnPart()
 
 def existsColumn[CL <: Int](path: String)(using
     qc: QueryContext[CL],
     jc: JsonContext,
-): JsonTableExistsColumn =
-    JsonTableExistsColumn(path.asExpr.asSqlExpr)
+): JsonExistsColumn =
+    JsonExistsColumn(path.asExpr.asSqlExpr)
 
 def nestedColumns[N <: Tuple, V <: Tuple, CL <: Int](
     path: String
@@ -279,26 +279,26 @@ def nestedColumns[N <: Tuple, V <: Tuple, CL <: Int](
     jc: JsonContext
 )(
     c: JsonContext ?=> NamedTuple[N, V]
-): JsonTableNestedColumns[N, V] =
+): JsonNestedColumns[N, V] =
     val columnList: List[Any] = c.toList
     val jsonColumns = columnList.map:
-        case p: JsonTablePathColumn[?] => p
-        case o: JsonTableOrdinalColumn => o
-        case e: JsonTableExistsColumn => e
-        case n: JsonTableNestedColumns[?, ?] => n
-    JsonTableNestedColumns(path.asExpr.asSqlExpr, jsonColumns)
+        case p: JsonPathColumn[?] => p
+        case o: JsonOrdinalColumn => o
+        case e: JsonExistsColumn => e
+        case n: JsonNestedColumns[?, ?] => n
+    JsonNestedColumns(path.asExpr.asSqlExpr, jsonColumns)
 
 def columns[N <: Tuple, V <: Tuple, CL <: Int](c: JsonContext ?=> NamedTuple[N, V])(using
     qc: QueryContext[CL],
     jc: JsonContext
-): JsonTableColumns[N, V] =
+): JsonColumns[N, V] =
     val columnList: List[Any] = c.toList
     val jsonColumns = columnList.map:
-        case p: JsonTablePathColumn[?] => p
-        case o: JsonTableOrdinalColumn => o
-        case e: JsonTableExistsColumn => e
-        case n: JsonTableNestedColumns[?, ?] => n
-    JsonTableColumns(jsonColumns)
+        case p: JsonPathColumn[?] => p
+        case o: JsonOrdinalColumn => o
+        case e: JsonExistsColumn => e
+        case n: JsonNestedColumns[?, ?] => n
+    JsonColumns(jsonColumns)
 
 inline def vertex[T]: GraphVertexSchema[T] =
     val metaData = TableMacro.tableMetaData[T]

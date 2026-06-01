@@ -1191,16 +1191,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("UNKNOWN")
         sqlBuilder.append(" ON ERROR")
 
-    def printJsonTableErrorBehavior(behavior: SqlJsonTableErrorBehavior): Unit =
-        behavior match
-            case SqlJsonTableErrorBehavior.Error =>
-                sqlBuilder.append("ERROR")
-            case SqlJsonTableErrorBehavior.Empty =>
-                sqlBuilder.append("EMPTY")
-            case SqlJsonTableErrorBehavior.EmptyArray =>
-                sqlBuilder.append("EMPTY ARRAY")
-        sqlBuilder.append(" ON ERROR")
-
     def printFuncWithinGroup(withinGroup: List[SqlOrderingItem]): Unit =
         sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
         printList(withinGroup)(printOrderingItem)
@@ -1448,12 +1438,12 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printMatchRecognize(m)
 
     def printJsonTable(table: SqlTable.Json): Unit =
-        def printJsonTableColumn(column: SqlJsonTableColumn): Unit =
+        def printJsonColumn(column: SqlJsonColumn): Unit =
             column match
-                case SqlJsonTableColumn.Ordinality(name) =>
+                case SqlJsonColumn.Ordinality(name) =>
                     printIdent(name)
                     sqlBuilder.append(" FOR ORDINALITY")
-                case c: SqlJsonTableColumn.Column =>
+                case c: SqlJsonColumn.Column =>
                     printIdent(c.name)
                     sqlBuilder.append(" ")
                     printType(c.`type`)
@@ -1475,7 +1465,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     for b <- c.onError do
                         sqlBuilder.append(" ")
                         printJsonQueryErrorBehavior(b)
-                case e: SqlJsonTableColumn.Exists =>
+                case e: SqlJsonColumn.Exists =>
                     printIdent(e.name)
                     sqlBuilder.append(" ")
                     printType(e.`type`)
@@ -1486,7 +1476,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     for b <- e.onError do
                         sqlBuilder.append(" ")
                         printJsonExistsErrorBehavior(b)
-                case n: SqlJsonTableColumn.Nested =>
+                case n: SqlJsonColumn.Nested =>
                     sqlBuilder.append("NESTED PATH ")
                     printExpr(n.path)
                     for a <- n.pathAlias do
@@ -1495,11 +1485,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     push()
                     printList(n.columns, ",\n"): i =>
                         printSpace()
-                        printJsonTableColumn(i)
+                        printJsonColumn(i)
                     pull()
                     sqlBuilder.append("\n")
                     printSpace()
                     sqlBuilder.append(")")
+
+        def printJsonErrorBehavior(behavior: SqlJsonErrorBehavior): Unit =
+            behavior match
+                case SqlJsonErrorBehavior.Error =>
+                    sqlBuilder.append("ERROR")
+                case SqlJsonErrorBehavior.Empty =>
+                    sqlBuilder.append("EMPTY")
+                case SqlJsonErrorBehavior.EmptyArray =>
+                    sqlBuilder.append("EMPTY ARRAY")
+            sqlBuilder.append(" ON ERROR")
 
         if table.lateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("JSON_TABLE(\n")
@@ -1508,31 +1508,37 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(table.expr)
         sqlBuilder.append(", ")
         printExpr(table.path)
+
         for a <- table.pathAlias do
             sqlBuilder.append(" AS ")
             printIdent(a)
         if table.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
             printList(table.passingItems)(printJsonPassing)
+
         sqlBuilder.append(" COLUMNS(\n")
         push()
         printList(table.columns, ",\n"): i =>
             printSpace()
-            printJsonTableColumn(i)
+            printJsonColumn(i)
         pull()
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
+
         for b <- table.onError do
             sqlBuilder.append("\n")
             printSpace()
-            printJsonTableErrorBehavior(b)
+            printJsonErrorBehavior(b)
+
         pull()
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
+
         for a <- table.alias do
             printTableAlias(a)
+
         for m <- table.matchRecognize do
             sqlBuilder.append(" ")
             printMatchRecognize(m)
@@ -1882,21 +1888,25 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printSpace()
         sqlBuilder.append("MATCH_RECOGNIZE(")
         push()
+
         if matchRecognize.partitionBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("PARTITION BY\n")
             printList(matchRecognize.partitionBy, ",\n")(printExpr |> printWithSpace)
+
         if matchRecognize.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
             printList(matchRecognize.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+
         if matchRecognize.measures.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("MEASURES\n")
             printList(matchRecognize.measures, ",\n")(printMeasure |> printWithSpace)
+
         for m <- matchRecognize.rowsPerMatch do
             sqlBuilder.append("\n")
             printSpace()
@@ -1908,12 +1918,14 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     for em <- mode do
                         sqlBuilder.append(" ")
                         printEmptyMatchMode(em)
+
         pull()
         sqlBuilder.append("\n")
         printRowPattern(matchRecognize.rowPattern)
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
+        
         for a <- matchRecognize.alias do
             printTableAlias(a)
 
