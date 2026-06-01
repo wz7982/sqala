@@ -158,8 +158,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 val exprs = e.iterator
                 sqlBuilder.append(words.next())
                 while words.hasNext do
+                    sqlBuilder.append(" ")
                     val currentExpr = exprs.next()
                     printExpr(currentExpr)
+                    sqlBuilder.append(" ")
                     sqlBuilder.append(words.next())
 
     def printSelect(select: SqlQuery.Select): Unit =
@@ -1343,8 +1345,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         val exprs = expr.exprs.iterator
         sqlBuilder.append(words.next())
         while words.hasNext do
+            sqlBuilder.append(" ")
             val currentExpr = exprs.next()
             printExpr(currentExpr)
+            sqlBuilder.append(" ")
             sqlBuilder.append(words.next())
         sqlBuilder.append(")")
 
@@ -1925,7 +1929,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
-        
+
         for a <- matchRecognize.alias do
             printTableAlias(a)
 

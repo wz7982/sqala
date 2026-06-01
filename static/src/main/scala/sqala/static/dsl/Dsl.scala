@@ -86,7 +86,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     )
     val tree = SqlQuery.Cte(
         true,
-        SqlWithItem(tableCte, withTree, columns) :: Nil,
+        SqlWithItem(tableCte, columns, withTree) :: Nil,
         finalQuery.tree,
         None
     )
@@ -739,7 +739,7 @@ inline def createTableFunc[T, CL <: Int](
 extension (s: StringContext)
     inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
         val instances = RawMacro.asSqlInstances[CL](args)
-        RawExpr(s.parts.toList, instances, args.toList)
+        RawExpr(s.parts.toList.map(_.trim), instances, args.toList)
 
 extension [T](expr: Expr[T, Column[1]])
     @targetName("to")
