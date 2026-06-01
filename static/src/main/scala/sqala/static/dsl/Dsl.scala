@@ -696,7 +696,7 @@ def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T,
         )
     )
 
-def createFunction[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
+def createFunc[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -717,7 +717,7 @@ def createBinaryExpr[T, CL <: Int](left: Expr[?, ?], operator: String, right: Ex
         )
     )
 
-inline def createTableFunction[T, CL <: Int](
+inline def createTableFunc[T, CL <: Int](
     name: String,
     args: List[Expr[?, ?]],
     withOrdinal: Boolean
