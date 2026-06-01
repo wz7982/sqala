@@ -1,11 +1,12 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.{SqlExpr, SqlType}
-import sqala.ast.table.{SqlTable, SqlTableAlias, SqlJsonColumn}
+import sqala.ast.table.{SqlJsonColumn, SqlTable, SqlTableAlias}
 import sqala.static.dsl.*
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
+import sqala.static.dsl.{table => SqlJsonColumnSqlTable}
 
 final case class FromJson[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
     private[sqala] val __aliasName__ : Option[String],
