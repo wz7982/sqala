@@ -1,6 +1,6 @@
 package sqala.ast.table
 
-import sqala.ast.expr.{SqlExpr, SqlJsonPassing, SqlJsonTableColumn, SqlJsonTableErrorBehavior}
+import sqala.ast.expr.{SqlExpr, SqlJsonPassing}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 
 enum SqlTable:
@@ -76,3 +76,4 @@ enum SqlTableSampleMode:
     case Bernoulli
     case System
     case Custom(mode: String)
+

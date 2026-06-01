@@ -1,7 +1,7 @@
 package sqala.static.dsl.table
 
-import sqala.ast.expr.{SqlExpr, SqlJsonTableColumn, SqlType}
-import sqala.ast.table.{SqlTable, SqlTableAlias}
+import sqala.ast.expr.{SqlExpr, SqlType}
+import sqala.ast.table.{SqlTable, SqlTableAlias, SqlJsonTableColumn}
 import sqala.static.dsl.*
 
 import scala.NamedTuple.NamedTuple
