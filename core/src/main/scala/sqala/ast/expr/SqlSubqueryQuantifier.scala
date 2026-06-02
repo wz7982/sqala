@@ -7,7 +7,7 @@ package sqala.ast.expr
  */
 enum SqlSubqueryQuantifier:
     /**
-     * `ANY` / `SOME` quantifier.
+     * `ANY` or `SOME` quantifier.
      *
      * Renders as `ANY`.
      */

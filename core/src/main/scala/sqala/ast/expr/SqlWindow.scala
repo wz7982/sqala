@@ -6,10 +6,6 @@ import sqala.ast.order.SqlOrderingItem
  * A window specification for window function `OVER` clauses.
  *
  * Renders as `[PARTITION BY expr [, ...]] [ORDER BY ordering_item [, ...]] [ROWS|RANGE|GROUPS frame]`.
- *
- * @param partitionBy the `PARTITION BY` expressions.
- * @param orderBy the `ORDER BY` items.
- * @param frame optional window frame clause.
  */
 case class SqlWindow(
     partitionBy: List[SqlExpr],
@@ -26,14 +22,10 @@ enum SqlWindowFrame:
     /**
      * A frame starting at `start` and extending to the current row.
      *
-     * Renders as 
-     * `[ROWS|RANGE|GROUPS] 
+     * Renders as
+     * `[ROWS|RANGE|GROUPS]
      *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
      *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
-     *
-     * @param unit the frame unit.
-     * @param start the lower bound.
-     * @param exclude optional exclusion mode.
      */
     case Start(
         unit: SqlWindowFrameUnit,
@@ -44,16 +36,11 @@ enum SqlWindowFrame:
     /**
      * A frame between `start` and `end` bounds.
      *
-     * Renders as 
-     * `[ROWS|RANGE|GROUPS] BETWEEN 
-     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND 
-     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING 
+     * Renders as
+     * `[ROWS|RANGE|GROUPS] BETWEEN
+     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND
+     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
      *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
-     *
-     * @param unit the frame unit.
-     * @param start the lower bound.
-     * @param end the upper bound.
-     * @param exclude optional exclusion mode.
      */
     case Between(
         unit: SqlWindowFrameUnit,
@@ -84,8 +71,6 @@ enum SqlWindowFrameBound:
      * A number of rows preceding the current row.
      *
      * Renders as `n PRECEDING`.
-     *
-     * @param n the offset expression.
      */
     case Preceding(n: SqlExpr)
 
@@ -100,8 +85,6 @@ enum SqlWindowFrameBound:
      * A number of rows following the current row.
      *
      * Renders as `n FOLLOWING`.
-     *
-     * @param n the offset expression.
      */
     case Following(n: SqlExpr)
 
@@ -157,7 +140,7 @@ enum SqlWindowFrameExcludeMode:
     case Ties
 
     /**
-     * No rows are excluded from the window frame (default behavior).
+     * No rows are excluded from the window frame.
      *
      * Renders as `EXCLUDE NO OTHERS`.
      */

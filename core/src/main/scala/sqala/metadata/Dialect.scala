@@ -9,9 +9,9 @@ trait Dialect:
     /**
      * Creates a printer instance for this dialect.
      *
-     * @param standardEscapeStrings `true` treats backslashes literally (standard
-     *                              behavior, e.g. PostgreSQL, Oracle); `false` uses backslashes as escape
-     *                              characters (e.g. MySQL).
+     * `standardEscapeStrings` controls string literal escaping: `true` treats
+     * backslashes literally (standard behavior, e.g. PostgreSQL, Oracle);
+     * `false` uses backslashes as escape characters (e.g. MySQL).
      */
     def printer(standardEscapeStrings: Boolean): SqlPrinter
 

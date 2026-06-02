@@ -4,8 +4,6 @@ package sqala.ast.expr
  * Binary operators used in expressions.
  *
  * Each operator carries an integer precedence, where higher values bind tighter.
- *
- * @param precedence the operator precedence, higher values bind tighter.
  */
 enum SqlBinaryOperator(val precedence: Int):
     /**
@@ -72,14 +70,14 @@ enum SqlBinaryOperator(val precedence: Int):
     case IsNotDistinctFrom extends SqlBinaryOperator(30)
 
     /**
-     * `IS` type / value check.
+     * `IS` value check.
      *
      * Renders as `IS`.
      */
     case Is extends SqlBinaryOperator(30)
 
     /**
-     * `IS NOT` type / value check.
+     * `IS NOT` value check.
      *
      * Renders as `IS NOT`.
      */
@@ -152,8 +150,6 @@ enum SqlBinaryOperator(val precedence: Int):
      * A custom binary operator with a free-form name.
      *
      * Renders as the given `operator` string directly.
-     *
-     * @param operator the operator text.
      */
     case Custom(operator: String) extends SqlBinaryOperator(0)
 
@@ -186,7 +182,5 @@ enum SqlUnaryOperator:
      * A custom unary operator with a free-form name.
      *
      * Renders as the given `operator` string directly.
-     *
-     * @param operator the operator text.
      */
     case Custom(operator: String)

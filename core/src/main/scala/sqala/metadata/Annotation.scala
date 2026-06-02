@@ -10,8 +10,6 @@ import scala.annotation.StaticAnnotation
  * @table("USER")
  * case class User(@column("ID") id: Int, name: String)
  * }}}
- *
- * @param tableName the database table name.
  */
 @scala.annotation.meta.field
 final class table(tableName: String) extends StaticAnnotation
@@ -24,8 +22,6 @@ final class table(tableName: String) extends StaticAnnotation
  * @column("ID")
  * id: Int
  * }}}
- *
- * @param columnName the database column name.
  */
 @scala.annotation.meta.field
 final class column(columnName: String) extends StaticAnnotation
@@ -71,10 +67,6 @@ final class autoInc extends StaticAnnotation
  *     comments: List[CommentVO]
  * )
  * }}}
- *
- * @param prefix the field name prefix used to identify columns belonging
- *               to this view in the flat result set.
- * @param key the primary key field name used to group child rows.
  */
 @scala.annotation.meta.field
 final class view(prefix: String, key: String) extends StaticAnnotation
@@ -87,12 +79,6 @@ final class view(prefix: String, key: String) extends StaticAnnotation
  * @derivedField[Int, Boolean](source = "likeCount", mapper = _ > 10)
  * hot: Boolean
  * }}}
- *
- * @tparam T the source field type.
- * @tparam R the derived field type.
- *
- * @param source the source field name in the flat result set.
- * @param mapper a function transforming the source value to the derived value.
  */
 @scala.annotation.meta.field
 final class derivedField[T, R](source: String, mapper: T => R) extends StaticAnnotation

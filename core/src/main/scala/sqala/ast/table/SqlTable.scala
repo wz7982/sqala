@@ -8,16 +8,9 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem}
  */
 enum SqlTable:
     /**
-     * A table identified by name, optionally with temporal, alias,
-     * match-recognize, and sample clauses.
+     * A table identified by name.
      *
      * Renders as `"name" [[AS] "alias" [("column_alias" [, ...])]] [period] [match_recognize] [sample]`.
-     *
-     * @param name the table name.
-     * @param alias optional table alias.
-     * @param period optional temporal period specification.
-     * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
-     * @param sample optional `TABLESAMPLE` clause.
      */
     case Ident(
         name: String,
@@ -31,13 +24,6 @@ enum SqlTable:
      * A table-valued function.
      *
      * Renders as `[LATERAL] name(expr [, ...]) [WITH ORDINALITY] [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
-     *
-     * @param lateral when `true`, adds `LATERAL` keyword.
-     * @param name the function name.
-     * @param args the function arguments.
-     * @param withOrd when `true`, adds `WITH ORDINALITY`.
-     * @param alias optional table alias.
-     * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
      */
     case Func(
         lateral: Boolean,
@@ -52,11 +38,6 @@ enum SqlTable:
      * A subquery used as a table source.
      *
      * Renders as `[LATERAL] (query) [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
-     *
-     * @param lateral when `true`, adds `LATERAL` keyword.
-     * @param query the nested `SELECT` query.
-     * @param alias optional table alias.
-     * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
      */
     case Subquery(
         lateral: Boolean,
@@ -69,23 +50,12 @@ enum SqlTable:
      * A `JSON_TABLE` expression.
      *
      * Renders as
-     * `[LATERAL] JSON_TABLE(expr, expr
-     *   [AS alias]
-     *   [PASSING expr AS alias [, ...]]
+     * `[LATERAL] JSON_TABLE(expr, expr [AS "alias"]
+     *   [PASSING expr AS "alias" [, ...]]
      *   COLUMNS(column [, ...])
      *   [ERROR|EMPTY|EMPTY ARRAY ON ERROR])
      *   [[AS] "alias" [("column_alias" [, ...])]]
      *   [match_recognize]`.
-     *
-     * @param lateral when `true`, adds `LATERAL` keyword.
-     * @param expr the JSON source expression.
-     * @param path the JSON path expression.
-     * @param pathAlias optional alias for the path.
-     * @param passingItems variables passed to the path expression.
-     * @param columns the column definitions.
-     * @param onError error behavior mode.
-     * @param alias optional table alias.
-     * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
      */
     case Json(
         lateral: Boolean,
@@ -108,19 +78,9 @@ enum SqlTable:
      *   [WHERE expr]
      *   [rows_mode]
      *   [COLUMNS(column [, ...])]
+     *   [EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])|EXPORT SINGLETONS (pattern [, ...])|EXPORT NO SINGLETONS]
      *   [[AS] "alias" [("column_alias" [, ...])]]
      *   [match_recognize]`.
-     *
-     * @param lateral when `true`, adds `LATERAL` keyword.
-     * @param name the graph name.
-     * @param `match` optional match mode.
-     * @param patterns the graph patterns.
-     * @param where optional filter condition.
-     * @param rows optional rows mode.
-     * @param columns the column definitions.
-     * @param `export` optional export mode.
-     * @param alias optional table alias.
-     * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
      */
     case Graph(
         lateral: Boolean,
@@ -139,11 +99,6 @@ enum SqlTable:
      * A join between two tables.
      *
      * Renders as `table [INNER|LEFT|RIGHT|FULL|CROSS] JOIN table [ON condition|USING("column" [, ...])]`.
-     *
-     * @param left the left table.
-     * @param joinType the join type.
-     * @param right the right table.
-     * @param condition optional join condition.
      */
     case Join(
         left: SqlTable,
@@ -156,9 +111,6 @@ enum SqlTable:
  * A table alias with optional column aliases.
  *
  * Renders as `[AS] "alias" [("column_alias" [, ...])]`.
- *
- * @param alias the table alias.
- * @param columnAliases optional column aliases.
  */
 case class SqlTableAlias(alias: String, columnAliases: List[String])
 
@@ -170,8 +122,6 @@ enum SqlTablePeriodForMode:
      * `FOR SYSTEM_TIME AS OF` point-in-time query.
      *
      * Renders as `FOR SYSTEM_TIME AS OF expr`.
-     *
-     * @param expr the time expression.
      */
     case SystemTimeAsOf(expr: SqlExpr)
 
@@ -179,10 +129,6 @@ enum SqlTablePeriodForMode:
      * `FOR SYSTEM_TIME BETWEEN ... AND ...` range query.
      *
      * Renders as `FOR SYSTEM_TIME BETWEEN [ASYMMETRIC|SYMMETRIC] start AND end`.
-     *
-     * @param mode optional BETWEEN mode (ASYMMETRIC or SYMMETRIC).
-     * @param start the start expression.
-     * @param end the end expression.
      */
     case SystemTimeBetween(
         mode: Option[SqlTablePeriodBetweenMode],
@@ -194,9 +140,6 @@ enum SqlTablePeriodForMode:
      * `FOR SYSTEM_TIME FROM ... TO ...` range query.
      *
      * Renders as `FOR SYSTEM_TIME FROM expr TO expr`.
-     *
-     * @param from the start time expression.
-     * @param to the end time expression.
      */
     case SystemTimeFrom(from: SqlExpr, to: SqlExpr)
 
@@ -222,10 +165,6 @@ enum SqlTablePeriodBetweenMode:
  * A `TABLESAMPLE` clause for sampling rows.
  *
  * Renders as `TABLESAMPLE [BERNOULLI|SYSTEM](expr) [REPEATABLE(expr)]`.
- *
- * @param mode the sampling mode.
- * @param percentage the sampling percentage expression.
- * @param repeatable optional seed for repeatable sampling.
  */
 case class SqlTableSample(mode: SqlTableSampleMode, percentage: SqlExpr, repeatable: Option[SqlExpr])
 
@@ -251,7 +190,5 @@ enum SqlTableSampleMode:
      * A custom sampling mode with a free-form name.
      *
      * Renders as the given `mode` string directly.
-     *
-     * @param mode the sampling mode text.
      */
     case Custom(mode: String)

@@ -8,47 +8,19 @@ import sqala.ast.order.SqlOrderingItem
 
 /**
  * SQL Server dialect printer.
- *
- * Uses bracket quoting (`[` `]`), suppresses `RECURSIVE` in CTEs, adds `N` prefix
- * to string literals, rewrites time literals via `CAST`, maps type names,
- * uses `STRING_AGG`, and emulates `NULLS FIRST|LAST` via `CASE WHEN`.
- *
- * @param standardEscapeStrings `true` treats backslashes literally;
- *                              `false` uses backslashes as escape characters.
  */
 class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
-    /** 
-     * Use bracket quoting for identifiers. *
-     */
     override val leftQuote: Char = '['
 
-    /** 
-     * Use bracket quoting for identifiers. *
-     */
     override val rightQuote: Char = ']'
 
-    /**
-     * Suppresses the `RECURSIVE` keyword (not needed in SQL Server).
-     */
     override def printCteRecursive(): Unit =
         ()
 
-    /**
-     * Prints a string literal with an `N` prefix for Unicode support.
-     *
-     * @param expr the string literal expression node.
-     */
     override def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         sqlBuilder.append("N")
         printChars(expr.string)
 
-    /**
-     * Prints a time literal, rewriting to `CAST(string AS type)`:
-     * `TIMESTAMP WITH TIME ZONE` → `CAST(... AS DATETIMEOFFSET)`,
-     * `TIMESTAMP` → `CAST(... AS DATETIME2)`, `DATE` → `CAST(... AS DATE)`.
-     *
-     * @param expr the time literal expression node.
-     */
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         expr.unit match
             case SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)) =>
@@ -72,14 +44,6 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
             case _ =>
                 super.printTimeLiteralExpr(expr)
 
-    /**
-     * Prints a type name with SQL Server-specific mappings:
-     * unbounded `VARCHAR` → `NVARCHAR(MAX)`, bounded `VARCHAR(n)` → `NVARCHAR(n)`,
-     * `TIMESTAMP WITH TIME ZONE` → `DATETIMEOFFSET`,
-     * `TIMESTAMP` → `DATETIME2`.
-     *
-     * @param type the data type node.
-     */
     override def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(None) =>
@@ -96,12 +60,6 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
             case _ =>
                 super.printType(`type`)
 
-    /**
-     * Prints a `STRING_AGG` function, rewriting `LISTAGG(expr, sep)` to
-     * `STRING_AGG(expr, sep) WITHIN GROUP (ORDER BY ...)`.
-     *
-     * @param expr the LISTAGG expression node.
-     */
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         val func = SqlExpr.GeneralFunc(
             expr.quantifier,
@@ -113,12 +71,6 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
         )
         printExpr(func)
 
-    /**
-     * Prints an ordering item, emulating `NULLS FIRST|LAST` with a
-     * `CASE WHEN` expression since SQL Server does not support it natively.
-     *
-     * @param orderBy the ordering item node.
-     */
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
             ordering match

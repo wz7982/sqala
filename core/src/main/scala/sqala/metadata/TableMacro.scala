@@ -13,8 +13,6 @@ private[sqala] object TableMacro:
     /**
      * Returns the database table name for the entity type, derived from
      * the `@table` annotation or the CamelCase-to-snake_case conversion.
-     *
-     * @tparam T the entity type.
      */
     inline def tableName[T]: String =
         ${ TableMacroImpl.tableName[T] }
@@ -22,8 +20,6 @@ private[sqala] object TableMacro:
     /**
      * Returns full `TableMetaData` for the entity type, including table
      * name, column mappings, primary key fields, and auto-increment field.
-     *
-     * @tparam T the entity type.
      */
     inline def tableMetaData[T]: TableMetaData =
         ${ TableMacroImpl.tableMetaData[T] }

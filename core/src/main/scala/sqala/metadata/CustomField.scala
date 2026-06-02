@@ -18,22 +18,15 @@ import sqala.ast.expr.{SqlExpr, SqlType}
  * 
  *         def fromValue(x: String): Status = Status.valueOf(x)
  * }}}
- *
- * @tparam T the custom Scala type.
- * @tparam R the underlying type with an `AsSqlExpr` instance.
  */
 trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
     /**
      * Extracts the underlying value from the custom type.
-     *
-     * @param x the custom type value.
      */
     def toValue(x: T): R
 
     /**
      * Wraps the underlying value into the custom type.
-     *
-     * @param x the underlying type value.
      */
     def fromValue(x: R): T
 
