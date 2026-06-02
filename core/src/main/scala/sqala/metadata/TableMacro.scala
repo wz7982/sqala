@@ -39,7 +39,7 @@ private[sqala] object TableMacroImpl:
 
         val sym = TypeTree.of[T].symbol
         val tableName = sym.annotations.map {
-            case Apply(Select(New(TypeIdent(annoNameTable)), _), Literal(v) :: Nil) =>
+            case Apply(Select(New(TypeIdent(name)), _), Literal(v) :: Nil) if name == annoNameTable =>
                 v.value.toString
             case _ => ""
         }.find(_ != "") match
