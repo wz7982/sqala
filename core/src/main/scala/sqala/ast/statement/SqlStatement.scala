@@ -14,7 +14,7 @@ enum SqlInsertMode:
     /**
      * Insert literal values.
      *
-     * Renders as `VALUES (expr, ...), ...`.
+     * Renders as `VALUES (expr [, ...]) [, ...]`.
      *
      * @param values the list of row value lists.
      */
@@ -23,7 +23,7 @@ enum SqlInsertMode:
     /**
      * Insert from a subquery.
      *
-     * Renders as `(SELECT ...)`.
+     * Renders as `(query)`.
      *
      * @param query the source query.
      */
@@ -32,7 +32,7 @@ enum SqlInsertMode:
 /**
  * A `SET` assignment pair in an `UPDATE` statement.
  *
- * Renders as `column = value`.
+ * Renders as `"column" = expr`.
  *
  * @param column the column name.
  * @param value the value expression.
@@ -46,7 +46,7 @@ enum SqlStatement:
     /**
      * A `DELETE` statement.
      *
-     * Renders as `DELETE FROM table [WHERE where]`.
+     * Renders as `DELETE FROM table [WHERE expr]`.
      *
      * @param table the target table.
      * @param where optional filter condition.
@@ -56,7 +56,7 @@ enum SqlStatement:
     /**
      * An `INSERT` statement.
      *
-     * Renders as `INSERT INTO table [(column, ...)] VALUES (...)|(SELECT ...)`.
+     * Renders as `INSERT INTO table [("column" [, ...])] VALUES (expr [, ...])|(query)`.
      *
      * @param table the target table.
      * @param columns optional column list.
@@ -67,7 +67,7 @@ enum SqlStatement:
     /**
      * An `UPDATE` statement.
      *
-     * Renders as `UPDATE table SET column = value, ... [WHERE where]`.
+     * Renders as `UPDATE table SET "column" = expr [, ...] [WHERE expr]`.
      *
      * @param table the target table.
      * @param setList the SET assignments.
@@ -110,20 +110,20 @@ object SqlStatement:
 /**
  * Query statement, optionally with a row-level lock.
  *
- * @param lock optional `FOR UPDATE|SHARE` lock clause.
+ * @param lock optional `FOR UPDATE or FOR SHARE` lock clause.
  */
 enum SqlQuery(val lock: Option[SqlLock]):
     /**
      * A `SELECT` query.
      *
      * Renders as
-     * `SELECT [DISTINCT|ALL] select, ...
-     *   FROM table, ...
-     *   [WHERE where]
-     *   [GROUP BY group, ...]
-     *   [HAVING having]
-     *   [ORDER BY order, ...]
-     *   [OFFSET n [ROW|ROWS]] [FETCH FIRST|NEXT n [PERCENT] ROW|ROWS ONLY|WITH TIES]
+     * `SELECT [DISTINCT|ALL] select_item [, ...]
+     *   FROM table [, ...]
+     *   [WHERE expr]
+     *   [GROUP BY [DISTINCT|ALL] grouping_item [, ...]]
+     *   [HAVING expr]
+     *   [ORDER BY ordering_item [, ...]]
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]
      *   [FOR UPDATE|SHARE]`.
      *
      * @param quantifier optional `DISTINCT` or `ALL`.
@@ -152,7 +152,10 @@ enum SqlQuery(val lock: Option[SqlLock]):
      * A set operation combining two queries.
      *
      * Renders as
-     * `left UNION|EXCEPT|INTERSECT [DISTINCT|ALL] right [ORDER BY order, ...] [LIMIT ...] [FOR UPDATE|SHARE]`.
+     * `query UNION|EXCEPT|INTERSECT [DISTINCT|ALL] query 
+     *   [ORDER BY ordering [, ...]] 
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES] 
+     *   [FOR UPDATE|SHARE]`.
      *
      * @param left the left query.
      * @param operator the set operator.
@@ -173,7 +176,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
     /**
      * A `VALUES` clause used as a query.
      *
-     * Renders as `VALUES (expr, ...) [, (expr, ...)] [FOR UPDATE|SHARE]`.
+     * Renders as `VALUES (expr [, ...]) [, ...] [FOR UPDATE|SHARE]`.
      *
      * @param values the list of row value lists.
      * @param lock optional row-level lock clause.
@@ -186,7 +189,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
     /**
      * A common table expression (CTE) query.
      *
-     * Renders as `WITH [RECURSIVE] cte, ... query [FOR UPDATE|SHARE]`.
+     * Renders as `WITH [RECURSIVE] with_item [, ...] query [FOR UPDATE|SHARE]`.
      *
      * @param recursive when `true`, adds `RECURSIVE` keyword.
      * @param queryItems the CTE definitions.

@@ -62,7 +62,7 @@ enum SqlIntervalField:
     /**
      * A range interval field from `start` to `end`.
      *
-     * Renders as `start TO end` (e.g. `YEAR TO MONTH`).
+     * Renders as `unit TO unit` (e.g. `YEAR TO MONTH`).
      *
      * @param start the start unit.
      * @param end the end unit.

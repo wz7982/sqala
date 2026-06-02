@@ -9,19 +9,50 @@ import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.util.|>
 
+/**
+ * Converts an AST into a dialect-specific SQL string.
+ *
+ * Subclasses customize quoting, escaping, and database-specific syntax
+ * by overriding the relevant members and methods.
+ *
+ * @param standardEscapeStrings `true` treats backslashes literally (standard
+ * behavior, e.g. PostgreSQL, Oracle); `false` uses backslashes as escape
+ * characters (e.g. MySQL).
+ */
 abstract class SqlPrinter(val standardEscapeStrings: Boolean):
+    /**
+     * The internal buffer that accumulates the generated output.
+     */
     val sqlBuilder: StringBuilder = StringBuilder()
 
+    /**
+     * The character used as the left-hand quote for identifiers (default `"`).
+     */
     val leftQuote: Char = '"'
 
+    /**
+     * The character used as the right-hand quote for identifiers (default `"`).
+     */
     val rightQuote: Char = '"'
 
+    /**
+     * The number of spaces per indentation level.
+     */
     val indent: Int = 4
 
+    /**
+     * The current indentation depth (mutable).
+     */
     var spaceNum: Int = 0
 
+    /**
+     * Returns the complete generated string.
+     */
     def sql: String = sqlBuilder.toString
 
+    /**
+     * Dispatches a statement to its specific printer method.
+     */
     def printStatement(statement: SqlStatement): Unit =
         statement match
             case update: SqlStatement.Update => printUpdate(update)
@@ -30,6 +61,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case upsert: SqlStatement.Upsert => printUpsert(upsert)
             case truncate: SqlStatement.Truncate => printTruncate(truncate)
 
+    /**
+     * Prints an `UPDATE` statement.
+     *
+     * @param update the UPDATE AST node.
+     */
     def printUpdate(update: SqlStatement.Update): Unit =
         sqlBuilder.append("UPDATE ")
         printTable(update.table)
@@ -44,6 +80,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" WHERE ")
             printExpr(i)
 
+    /**
+     * Prints an `INSERT` statement.
+     *
+     * @param insert the INSERT AST node.
+     */
     def printInsert(insert: SqlStatement.Insert): Unit =
         sqlBuilder.append("INSERT INTO ")
         printTable(insert.table)
@@ -61,6 +102,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlInsertMode.Subquery(query) =>
                 printQuery(query)
 
+    /**
+     * Prints a `DELETE` statement.
+     *
+     * @param delete the DELETE AST node.
+     */
     def printDelete(delete: SqlStatement.Delete): Unit =
         sqlBuilder.append("DELETE FROM ")
         printTable(delete.table)
@@ -69,6 +115,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" WHERE ")
             printExpr(i)
 
+    /**
+     * Prints a `MERGE` (upsert) statement.
+     *
+     * @param upsert the UPSERT AST node.
+     */
     def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
         val table = upsert.table.copy(alias = Some(SqlTableAlias("t1", Nil)))
@@ -131,10 +182,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printList(upsert.values)(printExpr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a `TRUNCATE` statement.
+     *
+     * @param truncate the TRUNCATE AST node.
+     */
     def printTruncate(truncate: SqlStatement.Truncate): Unit =
-        sqlBuilder.append("TRUNCATE ")
+        sqlBuilder.append("TRUNCATE TABLE ")
         printTable(truncate.table)
 
+    /**
+     * Dispatches a query to its specific printer method and appends any row-level locks.
+     *
+     * @param query the query AST node.
+     */
     def printQuery(query: SqlQuery): Unit =
         query match
             case select: SqlQuery.Select => printSelect(select)
@@ -147,6 +208,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             printLock(l)
 
+    /**
+     * Prints a quantifier (`DISTINCT|ALL|custom`).
+     *
+     * @param quantifier the quantifier AST node.
+     */
     def printQuantifier(quantifier: SqlQuantifier): Unit =
         quantifier match
             case SqlQuantifier.All =>
@@ -164,6 +230,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" ")
                     sqlBuilder.append(words.next())
 
+    /**
+     * Prints a `SELECT` query with all its clauses.
+     *
+     * @param select the SELECT AST node.
+     */
     def printSelect(select: SqlQuery.Select): Unit =
         printSpace()
         sqlBuilder.append("SELECT")
@@ -215,6 +286,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             printLimit(l)
 
+    /**
+     * Prints a set operation (`UNION|EXCEPT|INTERSECT`) between two queries.
+     *
+     * @param set the SET AST node.
+     */
     def printSet(set: SqlQuery.Set): Unit =
         printSpace()
         sqlBuilder.append("(\n")
@@ -259,11 +335,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             printLimit(l)
 
+    /**
+     * Prints a `VALUES` clause.
+     *
+     * @param values the VALUES AST node.
+     */
     def printValues(values: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
         printList(values.values.map(SqlExpr.Tuple(_)))(printExpr)
 
+    /**
+     * Prints a `WITH` (common table expression) query.
+     *
+     * @param cte the CTE AST node.
+     */
     def printCte(cte: SqlQuery.Cte): Unit =
         printSpace()
         sqlBuilder.append("WITH")
@@ -291,6 +377,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
         printQuery(cte.query)
 
+    /**
+     * Dispatches an expression to its specific printer method.
+     *
+     * @param expr the expression AST node.
+     */
     def printExpr(expr: SqlExpr): Unit =
         expr match
             case c: SqlExpr.Column => printColumnExpr(c)
@@ -339,27 +430,55 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case m: SqlExpr.MatchPhase => printMatchPhaseExpr(m)
             case c: SqlExpr.Custom => printCustomExpr(c)
 
+    /**
+     * Prints a column reference expression.
+     *
+     * @param expr the column expression node.
+     */
     def printColumnExpr(expr: SqlExpr.Column): Unit =
         for n <- expr.tableName do
             printIdent(n)
             sqlBuilder.append(".")
         printIdent(expr.columnName)
 
+    /**
+     * Prints a null literal.
+     */
     def printNullLiteralExpr(): Unit =
         sqlBuilder.append("NULL")
 
+    /**
+     * Prints a string literal expression.
+     *
+     * @param expr the string literal expression node.
+     */
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         printChars(expr.string)
 
+    /**
+     * Prints a numeric literal expression.
+     *
+     * @param expr the numeric literal expression node.
+     */
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         sqlBuilder.append(expr.number)
 
+    /**
+     * Prints a boolean literal expression.
+     *
+     * @param expr the boolean literal expression node.
+     */
     def printBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
         if expr.boolean then
             sqlBuilder.append("TRUE")
         else
             sqlBuilder.append("FALSE")
 
+    /**
+     * Prints a time literal expression.
+     *
+     * @param expr the time literal expression node.
+     */
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         def printUnit(unit: SqlTimeLiteralUnit): Unit =
             unit match
@@ -380,6 +499,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" ")
         printChars(expr.time)
 
+    /**
+     * Prints a time unit keyword.
+     *
+     * @param unit the time unit node.
+     */
     def printTimeUnit(unit: SqlTimeUnit): Unit =
         unit match
             case SqlTimeUnit.Year =>
@@ -397,6 +521,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlTimeUnit.Custom(unit) =>
                 sqlBuilder.append(unit)
 
+    /**
+     * Prints an interval literal expression.
+     *
+     * @param expr the interval literal expression node.
+     */
     def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
         sqlBuilder.append("INTERVAL ")
         printChars(expr.value)
@@ -409,16 +538,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlIntervalField.Single(u) =>
                 printTimeUnit(u)
 
+    /**
+     * Prints a tuple expression.
+     *
+     * @param expr the tuple expression node.
+     */
     def printTupleExpr(expr: SqlExpr.Tuple): Unit =
         sqlBuilder.append("(")
         printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints an array expression.
+     *
+     * @param expr the array expression node.
+     */
     def printArrayExpr(expr: SqlExpr.Array): Unit =
         sqlBuilder.append("ARRAY[")
         printList(expr.items)(printExpr)
         sqlBuilder.append("]")
 
+    /**
+     * Prints a unary operator symbol.
+     *
+     * @param operator the unary operator node.
+     */
     def printUnaryOperator(operator: SqlUnaryOperator): Unit =
         operator match
             case SqlUnaryOperator.Positive =>
@@ -430,12 +574,22 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlUnaryOperator.Custom(op) =>
                 sqlBuilder.append(op)
 
+    /**
+     * Prints a unary expression.
+     *
+     * @param expr the unary expression node.
+     */
     def printUnaryExpr(expr: SqlExpr.Unary): Unit =
         printUnaryOperator(expr.operator)
         sqlBuilder.append("(")
         printExpr(expr.expr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a binary operator symbol.
+     *
+     * @param operator the binary operator node.
+     */
     def printBinaryOperator(operator: SqlBinaryOperator): Unit =
         operator match
             case SqlBinaryOperator.Times =>
@@ -481,6 +635,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlBinaryOperator.Custom(op) =>
                 sqlBuilder.append(op)
 
+    /**
+     * Prints a binary expression.
+     *
+     * @param expr the binary expression node.
+     */
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
@@ -520,7 +679,17 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         else
             printExpr(expr.right)
 
+    /**
+     * Prints a JSON test expression.
+     *
+     * @param expr the JSON test expression node.
+     */
     def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
+    /**
+     * Prints a data type name.
+     *
+     * @param type the data type node.
+     */
         def printType(`type`: SqlJsonNodeType): Unit =
             `type` match
                 case SqlJsonNodeType.Value =>
@@ -542,6 +711,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printJsonUniquenessMode(u)
 
+    /**
+     * Prints a between expression.
+     *
+     * @param expr the between expression node.
+     */
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         def hasBrackets(expr: SqlExpr): Boolean =
             expr match
@@ -569,6 +743,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         else
             printExpr(expr.end)
 
+    /**
+     * Prints a like expression.
+     *
+     * @param expr the like expression node.
+     */
     def printLikeExpr(expr: SqlExpr.Like): Unit =
         val precedence = SqlBinaryOperator.Equal.precedence
 
@@ -610,6 +789,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ESCAPE ")
             printExpr(e)
 
+    /**
+     * Prints a similar-to expression.
+     *
+     * @param expr the similar-to expression node.
+     */
     def printSimilarToExpr(expr: SqlExpr.SimilarTo): Unit =
         val precedence = SqlBinaryOperator.Equal.precedence
 
@@ -651,12 +835,22 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ESCAPE ")
             printExpr(e)
 
+    /**
+     * Prints a case-when-then branch.
+     *
+     * @param branch the case branch node.
+     */
     def printCaseBranch(branch: SqlCaseBranch): Unit =
         sqlBuilder.append("WHEN ")
         printExpr(branch.when)
         sqlBuilder.append(" THEN ")
         printExpr(branch.`then`)
 
+    /**
+     * Prints a case expression.
+     *
+     * @param expr the case expression node.
+     */
     def printCaseExpr(expr: SqlExpr.Case): Unit =
         sqlBuilder.append("CASE")
 
@@ -670,6 +864,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
         sqlBuilder.append(" END")
 
+    /**
+     * Prints a simple case expression.
+     *
+     * @param expr the simple case expression node.
+     */
     def printSimpleCaseExpr(expr: SqlExpr.SimpleCase): Unit =
         sqlBuilder.append("CASE ")
         printExpr(expr.expr)
@@ -684,11 +883,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
         sqlBuilder.append(" END")
 
+    /**
+     * Prints a coalesce expression.
+     *
+     * @param expr the coalesce expression node.
+     */
     def printCoalesceExpr(expr: SqlExpr.Coalesce): Unit =
         sqlBuilder.append("COALESCE(")
         printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a null-if expression.
+     *
+     * @param expr the null-if expression node.
+     */
     def printNullIfExpr(expr: SqlExpr.NullIf): Unit =
         sqlBuilder.append("NULLIF(")
         printExpr(expr.expr)
@@ -696,6 +905,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(expr.test)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a cast expression.
+     *
+     * @param expr the cast expression node.
+     */
     def printCastExpr(expr: SqlExpr.Cast): Unit =
         sqlBuilder.append("CAST(")
         printExpr(expr.expr)
@@ -703,6 +917,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printType(expr.`type`)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a timezone mode keyword.
+     *
+     * @param mode the timezone mode node.
+     */
     def printTimeZoneMode(mode: SqlTimeZoneMode): Unit =
         mode match
             case SqlTimeZoneMode.With =>
@@ -710,6 +929,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlTimeZoneMode.Without =>
                 sqlBuilder.append("WITHOUT TIME ZONE")
 
+    /**
+     * Prints a data type name.
+     *
+     * @param type the data type node.
+     */
     def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(maxLength) =>
@@ -774,11 +998,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlType.Custom(t) =>
                 sqlBuilder.append(t)
 
+    /**
+     * Prints a window function expression.
+     *
+     * @param expr the window function expression node.
+     */
     def printWindowExpr(expr: SqlExpr.Window): Unit =
         printExpr(expr.expr)
         sqlBuilder.append(" OVER ")
         printWindow(expr.window)
 
+    /**
+     * Prints a window specification.
+     *
+     * @param window the window specification node.
+     */
     def printWindow(window: SqlWindow): Unit =
         def printBound(bound: SqlWindowFrameBound): Unit =
             bound match
@@ -847,6 +1081,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         printExcludeMode(e)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a subquery expression.
+     *
+     * @param expr the subquery expression node.
+     */
     def printSubqueryExpr(expr: SqlExpr.Subquery): Unit =
         def printQuantifier(quantifier: SqlSubqueryQuantifier): Unit =
             quantifier match
@@ -867,14 +1106,29 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printSpace()
         sqlBuilder.append(")")
 
+    /**
+     * Prints a grouping expression.
+     *
+     * @param expr the grouping expression node.
+     */
     def printGroupingExpr(expr: SqlExpr.Grouping): Unit =
         sqlBuilder.append("GROUPING(")
         printList(expr.items)(printExpr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints an identity function expression.
+     *
+     * @param expr the identity function expression node.
+     */
     def printIdentFuncExpr(expr: SqlExpr.IdentFunc): Unit =
         sqlBuilder.append(expr.name)
 
+    /**
+     * Prints a substring function expression.
+     *
+     * @param expr the substring function expression node.
+     */
     def printSubstringFuncExpr(expr: SqlExpr.SubstringFunc): Unit =
         sqlBuilder.append("SUBSTRING(")
         printExpr(expr.expr)
@@ -885,6 +1139,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printExpr(f)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a trim function expression.
+     *
+     * @param expr the trim function expression node.
+     */
     def printTrimFuncExpr(expr: SqlExpr.TrimFunc): Unit =
         def printMode(mode: SqlTrimMode): Unit =
             mode match
@@ -907,6 +1166,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(expr.expr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints an overlay function expression.
+     *
+     * @param expr the overlay function expression node.
+     */
     def printOverlayFuncExpr(expr: SqlExpr.OverlayFunc): Unit =
         sqlBuilder.append("OVERLAY(")
         printExpr(expr.expr)
@@ -919,6 +1183,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printExpr(f)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a position function expression.
+     *
+     * @param expr the position function expression node.
+     */
     def printPositionFuncExpr(expr: SqlExpr.PositionFunc): Unit =
         sqlBuilder.append("POSITION(")
         printExpr(expr.expr)
@@ -926,6 +1195,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(expr.in)
         sqlBuilder.append(")")
 
+    /**
+     * Prints an extract function expression.
+     *
+     * @param expr the extract function expression node.
+     */
     def printExtractFuncExpr(expr: SqlExpr.ExtractFunc): Unit =
         sqlBuilder.append("EXTRACT(")
         printTimeUnit(expr.unit)
@@ -933,6 +1207,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printExpr(expr.expr)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON serialize function expression.
+     *
+     * @param expr the JSON serialize function expression node.
+     */
     def printJsonSerializeFuncExpr(expr: SqlExpr.JsonSerializeFunc): Unit =
         sqlBuilder.append("JSON_SERIALIZE(")
         printExpr(expr)
@@ -941,6 +1220,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON parse function expression.
+     *
+     * @param expr the JSON parse function expression node.
+     */
     def printJsonParseFuncExpr(expr: SqlExpr.JsonParseFunc): Unit =
         sqlBuilder.append("JSON(")
         printExpr(expr)
@@ -952,6 +1236,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonUniquenessMode(u)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON query function expression.
+     *
+     * @param expr the JSON query function expression node.
+     */
     def printJsonQueryFuncExpr(expr: SqlExpr.JsonQueryFunc): Unit =
         sqlBuilder.append("JSON_QUERY(")
         printExpr(expr.expr)
@@ -977,6 +1266,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonQueryErrorBehavior(e)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON value function expression.
+     *
+     * @param expr the JSON value function expression node.
+     */
     def printJsonValueFuncExpr(expr: SqlExpr.JsonValueFunc): Unit =
         sqlBuilder.append("JSON_VALUE(")
         printExpr(expr.expr)
@@ -996,6 +1290,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonValueErrorBehavior(e)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON object function expression.
+     *
+     * @param expr the JSON object function expression node.
+     */
     def printJsonObjectFuncExpr(expr: SqlExpr.JsonObjectFunc): Unit =
         def printItem(item: SqlJsonObjectItem): Unit =
             printExpr(item.key)
@@ -1014,6 +1313,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON array function expression.
+     *
+     * @param expr the JSON array function expression node.
+     */
     def printJsonArrayFuncExpr(expr: SqlExpr.JsonArrayFunc): Unit =
         def printItem(item: SqlJsonArrayItem): Unit =
             printExpr(item.value)
@@ -1030,6 +1334,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonOutput(o)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON exists function expression.
+     *
+     * @param expr the JSON exists function expression node.
+     */
     def printJsonExistsFuncExpr(expr: SqlExpr.JsonExistsFunc): Unit =
         sqlBuilder.append("JSON_EXISTS(")
         printExpr(expr.expr)
@@ -1043,6 +1352,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printJsonExistsErrorBehavior(e)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a JSON encoding keyword.
+     *
+     * @param encoding the JSON encoding node.
+     */
     def printJsonEncoding(encoding: SqlJsonEncoding): Unit =
         sqlBuilder.append("ENCODING ")
         encoding match
@@ -1055,18 +1369,33 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlJsonEncoding.Custom(e) =>
                 sqlBuilder.append(e)
 
+    /**
+     * Prints a JSON input format clause.
+     *
+     * @param input the JSON input node.
+     */
     def printJsonInput(input: SqlJsonInput): Unit =
         sqlBuilder.append("FORMAT JSON")
         for e <- input.encoding do
             sqlBuilder.append(" ")
             printJsonEncoding(e)
 
+    /**
+     * Prints a JSON output format clause.
+     *
+     * @param format the JSON output format node.
+     */
     def printJsonOutputFormat(format: SqlJsonOutputFormat): Unit =
         sqlBuilder.append("FORMAT JSON")
         for e <- format.encoding do
             sqlBuilder.append(" ")
             printJsonEncoding(e)
 
+    /**
+     * Prints a JSON output returning clause.
+     *
+     * @param output the JSON output node.
+     */
     def printJsonOutput(output: SqlJsonOutput): Unit =
         sqlBuilder.append("RETURNING ")
         printType(output.`type`)
@@ -1074,6 +1403,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printJsonOutputFormat(f)
 
+    /**
+     * Prints a JSON uniqueness mode keyword.
+     *
+     * @param uniqueness the JSON uniqueness mode node.
+     */
     def printJsonUniquenessMode(uniqueness: SqlJsonUniquenessMode): Unit =
         uniqueness match
             case SqlJsonUniquenessMode.With =>
@@ -1081,11 +1415,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlJsonUniquenessMode.Without =>
                 sqlBuilder.append("WITHOUT UNIQUE KEYS")
 
+    /**
+     * Prints a JSON passing argument.
+     *
+     * @param passing the JSON passing node.
+     */
     def printJsonPassing(passing: SqlJsonPassing): Unit =
         printExpr(passing.expr)
         sqlBuilder.append(" AS ")
         printIdent(passing.alias)
 
+    /**
+     * Prints a JSON null construction behavior.
+     *
+     * @param cons the JSON null constructor node.
+     */
     def printJsonNullConstructor(cons: SqlJsonNullConstructor): Unit =
         cons match
             case SqlJsonNullConstructor.Null =>
@@ -1093,6 +1437,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlJsonNullConstructor.Absent =>
                 sqlBuilder.append("ABSENT ON NULL")
 
+    /**
+     * Prints a JSON query wrapper behavior.
+     *
+     * @param behavior the JSON query wrapper behavior node.
+     */
     def printJsonQueryWrapperBehavior(behavior: SqlJsonQueryWrapperBehavior): Unit =
         def printMode(mode: SqlJsonQueryWrapperBehaviorMode): Unit =
             mode match
@@ -1116,6 +1465,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" ARRAY")
                 sqlBuilder.append(" WRAPPER")
 
+    /**
+     * Prints a JSON query quotes behavior.
+     *
+     * @param behavior the JSON query quotes behavior node.
+     */
     def printJsonQueryQuotesBehavior(behavior: SqlJsonQueryQuotesBehavior): Unit =
         def printMode(mode: SqlJsonQueryQuotesBehaviorMode): Unit =
             mode match
@@ -1129,6 +1483,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         if behavior.onScalarString then
             sqlBuilder.append(" ON SCALAR STRING")
 
+    /**
+     * Prints a JSON query empty behavior.
+     *
+     * @param behavior the JSON query empty behavior node.
+     */
     def printJsonQueryEmptyBehavior(behavior: SqlJsonQueryEmptyBehavior): Unit =
         behavior match
             case SqlJsonQueryEmptyBehavior.Error =>
@@ -1144,6 +1503,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printExpr(expr)
         sqlBuilder.append(" ON EMPTY")
 
+    /**
+     * Prints a JSON query error behavior.
+     *
+     * @param behavior the JSON query error behavior node.
+     */
     def printJsonQueryErrorBehavior(behavior: SqlJsonQueryErrorBehavior): Unit =
         behavior match
             case SqlJsonQueryErrorBehavior.Error =>
@@ -1159,6 +1523,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printExpr(expr)
         sqlBuilder.append(" ON ERROR")
 
+    /**
+     * Prints a JSON value empty behavior.
+     *
+     * @param behavior the JSON value empty behavior node.
+     */
     def printJsonValueEmptyBehavior(behavior: SqlJsonValueEmptyBehavior): Unit =
         behavior match
             case SqlJsonValueEmptyBehavior.Error =>
@@ -1170,6 +1539,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printExpr(expr)
         sqlBuilder.append(" ON EMPTY")
 
+    /**
+     * Prints a JSON value error behavior.
+     *
+     * @param behavior the JSON value error behavior node.
+     */
     def printJsonValueErrorBehavior(behavior: SqlJsonValueErrorBehavior): Unit =
         behavior match
             case SqlJsonValueErrorBehavior.Error =>
@@ -1181,6 +1555,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printExpr(expr)
         sqlBuilder.append(" ON ERROR")
 
+    /**
+     * Prints a JSON exists error behavior.
+     *
+     * @param behavior the JSON exists error behavior node.
+     */
     def printJsonExistsErrorBehavior(behavior: SqlJsonExistsErrorBehavior): Unit =
         behavior match
             case SqlJsonExistsErrorBehavior.Error =>
@@ -1193,16 +1572,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("UNKNOWN")
         sqlBuilder.append(" ON ERROR")
 
+    /**
+     * Prints a within-group ordering clause.
+     *
+     * @param withinGroup the list of ordering items.
+     */
     def printFuncWithinGroup(withinGroup: List[SqlOrderingItem]): Unit =
         sqlBuilder.append(" WITHIN GROUP (ORDER BY ")
         printList(withinGroup)(printOrderingItem)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a filter clause for aggregate functions.
+     *
+     * @param filter the filter expression.
+     */
     def printFuncFilter(filter: SqlExpr): Unit =
         sqlBuilder.append(" FILTER (WHERE ")
         printExpr(filter)
         sqlBuilder.append(")")
 
+    /**
+     * Prints a count-asterisk function expression.
+     *
+     * @param expr the count-asterisk function expression node.
+     */
     def printCountAsteriskFuncExpr(expr: SqlExpr.CountAsteriskFunc): Unit =
         sqlBuilder.append("COUNT(")
         for n <- expr.tableName do
@@ -1212,6 +1606,13 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- expr.filter do
             printFuncFilter(f)
 
+    /**
+     * Prints a list of items separated by a delimiter.
+     *
+     * @param list      the list of items.
+     * @param separator the separator between items.
+     * @param printer   the function that prints each item.
+     */
     def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         def printCountMode(mode: SqlListAggCountMode): Unit =
             mode match
@@ -1243,6 +1644,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- expr.filter do
             printFuncFilter(f)
 
+    /**
+     * Prints a JSON object aggregate function expression.
+     *
+     * @param expr the JSON object aggregate function expression node.
+     */
     def printJsonObjectAggFuncExpr(expr: SqlExpr.JsonObjectAggFunc): Unit =
         sqlBuilder.append("JSON_OBJECTAGG(")
         printExpr(expr.item.key)
@@ -1261,6 +1667,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- expr.filter do
             printFuncFilter(f)
 
+    /**
+     * Prints a JSON array aggregate function expression.
+     *
+     * @param expr the JSON array aggregate function expression node.
+     */
     def printJsonArrayAggFuncExpr(expr: SqlExpr.JsonArrayAggFunc): Unit =
         sqlBuilder.append("JSON_ARRAYAGG(")
         printExpr(expr.item.value)
@@ -1280,6 +1691,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- expr.filter do
             printFuncFilter(f)
 
+    /**
+     * Prints a window nulls treatment mode.
+     *
+     * @param mode the window nulls mode node.
+     */
     def printWindowNullsMode(mode: SqlWindowNullsMode): Unit =
         mode match
             case SqlWindowNullsMode.Respect =>
@@ -1287,6 +1703,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlWindowNullsMode.Ignore =>
                 sqlBuilder.append("IGNORE NULLS")
 
+    /**
+     * Prints a nulls treatment function expression.
+     *
+     * @param expr the nulls treatment function expression node.
+     */
     def printNullsTreatmentFuncExpr(expr: SqlExpr.NullsTreatmentFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
@@ -1296,6 +1717,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printWindowNullsMode(m)
 
+    /**
+     * Prints an nth-value function expression.
+     *
+     * @param expr the nth-value function expression node.
+     */
     def printNthValueFuncExpr(expr: SqlExpr.NthValueFunc): Unit =
         def printFromMode(mode: SqlNthValueFromMode): Unit =
             mode match
@@ -1314,6 +1740,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printWindowNullsMode(m)
 
+    /**
+     * Prints a general function expression.
+     *
+     * @param expr the general function expression node.
+     */
     def printGeneralFuncExpr(expr: SqlExpr.GeneralFunc): Unit =
         sqlBuilder.append(expr.name)
         sqlBuilder.append("(")
@@ -1330,6 +1761,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for f <- expr.filter do
             printFuncFilter(f)
 
+    /**
+     * Prints a match phase expression.
+     *
+     * @param expr the match phase expression node.
+     */
     def printMatchPhaseExpr(expr: SqlExpr.MatchPhase): Unit =
         expr.phase match
             case SqlMatchPhase.Final =>
@@ -1339,6 +1775,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(" ")
         printExpr(expr.expr)
 
+    /**
+     * Prints a custom expression.
+     *
+     * @param expr the custom expression node.
+     */
     def printCustomExpr(expr: SqlExpr.Custom): Unit =
         sqlBuilder.append("(")
         val words = expr.words.iterator
@@ -1352,6 +1793,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(words.next())
         sqlBuilder.append(")")
 
+    /**
+     * Prints a table alias.
+     *
+     * @param alias the table alias node.
+     */
     def printTableAlias(alias: SqlTableAlias): Unit =
         sqlBuilder.append(" AS ")
         printIdent(alias.alias)
@@ -1360,6 +1806,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(alias.columnAliases)(i => printIdent(i))
             sqlBuilder.append(")")
 
+    /**
+     * Prints an identifier table reference.
+     *
+     * @param table the identifier table node.
+     */
     def printIdentTable(table: SqlTable.Ident): Unit =
         def printPeriodBetweenMode(mode: SqlTablePeriodBetweenMode): Unit =
             mode match
@@ -1412,6 +1863,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printExpr(r)
                 sqlBuilder.append(")")
 
+    /**
+     * Prints a function table reference.
+     *
+     * @param table the function table node.
+     */
     def printFuncTable(table: SqlTable.Func): Unit =
         if table.lateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append(table.name)
@@ -1426,6 +1882,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
+    /**
+     * Prints a subquery table reference.
+     *
+     * @param table the subquery table node.
+     */
     def printSubqueryTable(table: SqlTable.Subquery): Unit =
         if table.lateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("(\n")
@@ -1441,6 +1902,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
+    /**
+     * Prints a JSON table reference.
+     *
+     * @param table the JSON table node.
+     */
     def printJsonTable(table: SqlTable.Json): Unit =
         def printJsonColumn(column: SqlJsonColumn): Unit =
             column match
@@ -1547,6 +2013,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
+    /**
+     * Prints a graph table reference.
+     *
+     * @param table the graph table node.
+     */
     def printGraphTable(table: SqlTable.Graph): Unit =
         def printPattern(pattern: SqlGraphPattern): Unit =
             for n <- pattern.name do
@@ -1818,6 +2289,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printMatchRecognize(m)
 
+    /**
+     * Prints a join table reference.
+     *
+     * @param table the join table node.
+     */
     def printJoinTable(table: SqlTable.Join): Unit =
         def printJoinType(`type`: SqlJoinType): Unit =
             `type` match
@@ -1864,6 +2340,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         printIdent(n)
                     sqlBuilder.append(")")
 
+    /**
+     * Dispatches a table node to its specific printer method.
+     *
+     * @param table the table AST node.
+     */
     def printTable(table: SqlTable): Unit =
         table match
             case i: SqlTable.Ident => printIdentTable(i)
@@ -1873,6 +2354,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case g: SqlTable.Graph => printGraphTable(g)
             case j: SqlTable.Join => printJoinTable(j)
 
+    /**
+     * Prints a match-recognize clause.
+     *
+     * @param matchRecognize the match-recognize node.
+     */
     def printMatchRecognize(matchRecognize: SqlMatchRecognize): Unit =
         def printMeasure(measure: SqlRecognizeMeasureItem): Unit =
             printExpr(measure.expr)
@@ -1933,6 +2419,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for a <- matchRecognize.alias do
             printTableAlias(a)
 
+    /**
+     * Prints a select item.
+     *
+     * @param item the select item node.
+     */
     def printSelectItem(item: SqlSelectItem): Unit = item match
         case SqlSelectItem.Asterisk(table) =>
             for n <- table do
@@ -1945,6 +2436,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append(" AS ")
                 printIdent(a)
 
+    /**
+     * Prints a grouping item.
+     *
+     * @param item the grouping item node.
+     */
     def printGroupingItem(item: SqlGroupingItem): Unit = item match
         case SqlGroupingItem.Expr(item) => printExpr(item)
         case SqlGroupingItem.Cube(items) =>
@@ -1960,6 +2456,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(items)(printExpr)
             sqlBuilder.append(")")
 
+    /**
+     * Prints an ordering item.
+     *
+     * @param item the ordering item node.
+     */
     def printOrderingItem(item: SqlOrderingItem): Unit =
         printExpr(item.expr)
         val order = item.ordering match
@@ -1979,6 +2480,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlNullsOrdering.Last =>
                     sqlBuilder.append("Last")
 
+    /**
+     * Prints a limit/offset clause.
+     *
+     * @param limit the limit node.
+     */
     def printLimit(limit: SqlLimit): Unit =
         for o <- limit.offset do
             sqlBuilder.append("OFFSET ")
@@ -2002,6 +2508,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlFetchMode.WithTies =>
                     sqlBuilder.append("WITH TIES")
 
+    /**
+     * Prints a row-level lock clause.
+     *
+     * @param lock the lock node.
+     */
     def printLock(lock: SqlLock): Unit =
         lock match
             case SqlLock.Update(_) =>
@@ -2016,9 +2527,17 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 case SqlLockWaitMode.SkipLocked =>
                     sqlBuilder.append("SKIP LOCKED")
 
+    /**
+     * Prints the recursive keyword for a common table expression.
+     */
     def printCteRecursive(): Unit =
         sqlBuilder.append(" RECURSIVE")
 
+    /**
+     * Prints a row pattern.
+     *
+     * @param pattern the row pattern node.
+     */
     def printRowPattern(pattern: SqlRowPattern): Unit =
         def printQuantifier(quantifier: SqlRowPatternQuantifier): Unit =
             quantifier match
@@ -2153,6 +2672,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printList(pattern.define, ",\n")(printDefineItem |> printWithSpace)
         pull()
 
+    /**
+     * Prints a quoted identifier with proper escaping.
+     *
+     * @param name the identifier name.
+     */
     def printIdent(name: String): Unit =
         val nameBuilder = new StringBuilder
         for c <- name do
@@ -2163,6 +2687,11 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(nameBuilder.toString)
         sqlBuilder.append(rightQuote)
 
+    /**
+     * Prints a quoted string literal with single-quote and backslash escaping.
+     *
+     * @param chars the string value.
+     */
     def printChars(chars: String): Unit =
         val stringBuilder = new StringBuilder
         for c <- chars do
@@ -2175,22 +2704,44 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(stringBuilder.toString)
         sqlBuilder.append("'")
 
+    /**
+     * Prints a list of items separated by a delimiter.
+     *
+     * @param list      the list of items.
+     * @param separator the separator between items.
+     * @param printer   the function that prints each item.
+     */
     def printList[T](list: List[T], separator: String = ", ")(printer: T => Unit): Unit =
         for i <- list.indices do
             printer(list(i))
             if i < list.size - 1 then
                 sqlBuilder.append(separator)
 
+    /**
+     * Prints the current indentation whitespace.
+     */
     def printSpace(): Unit =
         val spaceString = (0 until spaceNum).map(_ => " ").mkString
         sqlBuilder.append(spaceString)
 
+    /**
+     * Increases the indentation depth by one level.
+     */
     def push(): Unit =
         spaceNum += indent
 
+    /**
+     * Decreases the indentation depth by one level.
+     */
     def pull(): Unit =
         spaceNum -= indent
 
+    /**
+     * Invokes the given printer function at the next indentation level.
+     *
+     * @param f the printer function.
+     * @param x the value to print.
+     */
     def printWithSpace[T](f: T => Unit)(x: T): Unit =
         push()
         printSpace()

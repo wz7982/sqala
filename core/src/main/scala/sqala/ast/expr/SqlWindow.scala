@@ -5,7 +5,7 @@ import sqala.ast.order.SqlOrderingItem
 /**
  * A window specification for window function `OVER` clauses.
  *
- * Renders as `[PARTITION BY expr, ...] [ORDER BY order, ...] [ROWS|RANGE|GROUPS frame]`.
+ * Renders as `[PARTITION BY expr [, ...]] [ORDER BY ordering_item [, ...]] [ROWS|RANGE|GROUPS frame]`.
  *
  * @param partitionBy the `PARTITION BY` expressions.
  * @param orderBy the `ORDER BY` items.
@@ -26,9 +26,12 @@ enum SqlWindowFrame:
     /**
      * A frame starting at `start` and extending to the current row.
      *
-     * Renders as `unit BETWEEN start AND CURRENT ROW [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
+     * Renders as 
+     * `[ROWS|RANGE|GROUPS] 
+     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
+     *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
      *
-     * @param unit the frame unit (`ROWS`, `RANGE`, or `GROUPS`).
+     * @param unit the frame unit.
      * @param start the lower bound.
      * @param exclude optional exclusion mode.
      */
@@ -41,9 +44,13 @@ enum SqlWindowFrame:
     /**
      * A frame between `start` and `end` bounds.
      *
-     * Renders as `unit BETWEEN start AND end [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
+     * Renders as 
+     * `[ROWS|RANGE|GROUPS] BETWEEN 
+     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND 
+     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING 
+     *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
      *
-     * @param unit the frame unit (`ROWS`, `RANGE`, or `GROUPS`).
+     * @param unit the frame unit.
      * @param start the lower bound.
      * @param end the upper bound.
      * @param exclude optional exclusion mode.

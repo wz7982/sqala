@@ -40,7 +40,7 @@ sealed trait AnyTable:
     private[sqala] def asSqlTable: SqlTable =
         this match
             case Table(name, alias) =>
-                SqlTable.Ident(name, None, alias.map(a => SqlTableAlias(a, Nil)), None, None)
+                SqlTable.Ident(name, alias.map(a => SqlTableAlias(a, Nil)), None, None, None)
             case SubqueryTable(query, alias, lateral) =>
                 SqlTable.Subquery(lateral, query, alias.map(a => SqlTableAlias(a, Nil)), None)
             case JoinTable(left, joinType, right, condition) =>

@@ -50,8 +50,8 @@ object AsPivot:
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
-                        None,
                         Some(SqlTableAlias(alias, Nil)),
+                        None,
                         None,
                         None
                     )

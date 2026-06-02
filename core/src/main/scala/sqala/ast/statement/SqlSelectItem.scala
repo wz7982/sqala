@@ -9,7 +9,7 @@ enum SqlSelectItem:
     /**
      * A `*` wildcard, optionally qualified with a table name.
      *
-     * Renders as `*|table.*`.
+     * Renders as `*|"table".*`.
      *
      * @param tableName optional table qualifier.
      */
@@ -18,7 +18,7 @@ enum SqlSelectItem:
     /**
      * An expression with an optional alias.
      *
-     * Renders as `expr [AS alias]`.
+     * Renders as `expr [AS "alias"]`.
      *
      * @param expr the select expression.
      * @param alias optional column alias.

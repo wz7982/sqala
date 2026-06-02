@@ -27,8 +27,8 @@ object RecursiveTable:
             t.toTuple(p.asTableParam(alias, 1)),
             SqlTable.Ident(
                 tableCte,
-                None,
                 alias.map(SqlTableAlias(_, Nil)),
+                None,
                 None,
                 None
             )

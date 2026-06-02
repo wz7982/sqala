@@ -11,18 +11,18 @@ enum SqlTable:
      * A table identified by name, optionally with temporal, alias,
      * match-recognize, and sample clauses.
      *
-     * Renders as `name [alias] [FOR SYSTEM_TIME ...] [MATCH_RECOGNIZE ...] [TABLESAMPLE ...]`.
+     * Renders as `"name" [[AS] "alias" [("column_alias" [, ...])]] [period] [match_recognize] [sample]`.
      *
      * @param name the table name.
-     * @param period optional temporal period specification.
      * @param alias optional table alias.
+     * @param period optional temporal period specification.
      * @param matchRecognize optional `MATCH_RECOGNIZE` clause.
      * @param sample optional `TABLESAMPLE` clause.
      */
     case Ident(
         name: String,
-        period: Option[SqlTablePeriodForMode],
         alias: Option[SqlTableAlias],
+        period: Option[SqlTablePeriodForMode],
         matchRecognize: Option[SqlMatchRecognize],
         sample: Option[SqlTableSample]
     )
@@ -30,7 +30,7 @@ enum SqlTable:
     /**
      * A table-valued function.
      *
-     * Renders as `[LATERAL] name(arg, ...) [WITH ORDINALITY] [alias] [MATCH_RECOGNIZE ...]`.
+     * Renders as `[LATERAL] name(expr [, ...]) [WITH ORDINALITY] [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
      *
      * @param lateral when `true`, adds `LATERAL` keyword.
      * @param name the function name.
@@ -51,7 +51,7 @@ enum SqlTable:
     /**
      * A subquery used as a table source.
      *
-     * Renders as `[LATERAL] (SELECT ...) [alias] [MATCH_RECOGNIZE ...]`.
+     * Renders as `[LATERAL] (query) [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
      *
      * @param lateral when `true`, adds `LATERAL` keyword.
      * @param query the nested `SELECT` query.
@@ -69,13 +69,13 @@ enum SqlTable:
      * A `JSON_TABLE` expression.
      *
      * Renders as
-     * `[LATERAL] JSON_TABLE(expr, path
+     * `[LATERAL] JSON_TABLE(expr, expr
      *   [AS alias]
-     *   [PASSING expr AS alias, ...]
-     *   COLUMNS(columns)
+     *   [PASSING expr AS alias [, ...]]
+     *   COLUMNS(column [, ...])
      *   [ERROR|EMPTY|EMPTY ARRAY ON ERROR])
-     *   [alias]
-     *   [MATCH_RECOGNIZE ...]`.
+     *   [[AS] "alias" [("column_alias" [, ...])]]
+     *   [match_recognize]`.
      *
      * @param lateral when `true`, adds `LATERAL` keyword.
      * @param expr the JSON source expression.
@@ -103,14 +103,13 @@ enum SqlTable:
      * A `GRAPH_TABLE` expression for graph queries.
      *
      * Renders as
-     * `[LATERAL] GRAPH_TABLE(name
-     *   MATCH pattern, ...
-     *   [WHERE condition]
-     *   [COLUMNS(columns)]
-     *   [ROWS ...]
-     *   [ALIAS ...])
-     *   [alias]
-     *   [MATCH_RECOGNIZE ...]`.
+     * `[LATERAL] GRAPH_TABLE("name"
+     *   MATCH pattern [, ...]
+     *   [WHERE expr]
+     *   [rows_mode]
+     *   [COLUMNS(column [, ...])]
+     *   [[AS] "alias" [("column_alias" [, ...])]]
+     *   [match_recognize]`.
      *
      * @param lateral when `true`, adds `LATERAL` keyword.
      * @param name the graph name.
@@ -139,7 +138,7 @@ enum SqlTable:
     /**
      * A join between two tables.
      *
-     * Renders as `left [INNER|LEFT|RIGHT|FULL|CROSS] JOIN right [ON condition|USING(column, ...)]`.
+     * Renders as `table [INNER|LEFT|RIGHT|FULL|CROSS] JOIN table [ON condition|USING("column" [, ...])]`.
      *
      * @param left the left table.
      * @param joinType the join type.
@@ -156,7 +155,7 @@ enum SqlTable:
 /**
  * A table alias with optional column aliases.
  *
- * Renders as `[AS] alias [(columnAlias, ...)]`.
+ * Renders as `[AS] "alias" [("column_alias" [, ...])]`.
  *
  * @param alias the table alias.
  * @param columnAliases optional column aliases.
@@ -194,7 +193,7 @@ enum SqlTablePeriodForMode:
     /**
      * `FOR SYSTEM_TIME FROM ... TO ...` range query.
      *
-     * Renders as `FOR SYSTEM_TIME FROM from TO to`.
+     * Renders as `FOR SYSTEM_TIME FROM expr TO expr`.
      *
      * @param from the start time expression.
      * @param to the end time expression.
@@ -222,7 +221,7 @@ enum SqlTablePeriodBetweenMode:
 /**
  * A `TABLESAMPLE` clause for sampling rows.
  *
- * Renders as `TABLESAMPLE mode(percentage) [REPEATABLE(repeatable)]`.
+ * Renders as `TABLESAMPLE [BERNOULLI|SYSTEM](expr) [REPEATABLE(expr)]`.
  *
  * @param mode the sampling mode.
  * @param percentage the sampling percentage expression.

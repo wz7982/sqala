@@ -8,16 +8,16 @@ import sqala.ast.order.SqlOrderingItem
  *
  * Renders as
  * `MATCH_RECOGNIZE(
- *   [PARTITION BY expr, ...]
- *   [ORDER BY order, ...]
- *   [MEASURES expr AS alias, ...]
- *   [ONE ROW PER MATCH|ALL ROWS PER MATCH [emptyMatchMode]]
- *   [AFTER MATCH SKIP ...]
- *   [strategy]
+ *   [PARTITION BY expr [, ...]]
+ *   [ORDER BY ordering_item [, ...]]
+ *   [MEASURES expr AS "alias" [, ...]]
+ *   [ONE ROW PER MATCH|ALL ROWS PER MATCH [SHOW EMPTY MATCHES|OMIT EMPTY MATCHES|WITH UNMATCHED ROWS]]
+ *   [AFTER MATCH SKIP TO NEXT ROW|PAST LAST ROW|TO LAST "name"|TO "name"]
+ *   [INITIAL|SEEK]
  *   PATTERN (term)
- *   [SUBSET name = (pattern, ...), ...]
- *   [DEFINE name AS expr, ...]
- * ) [alias]`.
+ *   [SUBSET "name" = (pattern [, ...]), [, ...]]
+ *   [DEFINE "name" AS expr [, ...]]
+ * ) [AS alias]`.
  *
  * @param partitionBy the `PARTITION BY` expressions.
  * @param orderBy the `ORDER BY` items.
@@ -38,7 +38,7 @@ case class SqlMatchRecognize(
 /**
  * A `MEASURES` item in `MATCH_RECOGNIZE`.
  *
- * Renders as `expr AS alias`.
+ * Renders as `expr AS "alias"`.
  *
  * @param expr the measure expression.
  * @param alias the column alias.
@@ -94,11 +94,11 @@ enum SqlRecognizePatternEmptyMatchMode:
  * A row pattern definition within `MATCH_RECOGNIZE`.
  *
  * Renders as
- * `[AFTER MATCH SKIP ...]
- * [strategy]
- * PATTERN (term)
- * [SUBSET name = (pattern, ...), ...]
- * [DEFINE name AS expr, ...]`.
+ * `[AFTER MATCH SKIP TO NEXT ROW|PAST LAST ROW|TO LAST "name"|TO "name"]
+ *   [INITIAL|SEEK]
+ *   PATTERN (term)
+ *   [SUBSET "name" = (pattern [, ...]) [, ...]]
+ *   [DEFINE "name" AS expr [, ...]]`.
  *
  * @param afterMatch optional `AFTER MATCH SKIP` clause.
  * @param strategy optional matching strategy.
@@ -121,21 +121,21 @@ enum SqlRowPatternSkipMode:
     /**
      * Skip to the next row.
      *
-     * Renders as `SKIP TO NEXT ROW`.
+     * Renders as `AFTER MATCH SKIP TO NEXT ROW`.
      */
     case ToNextRow
 
     /**
      * Skip past the last row of the match.
      *
-     * Renders as `SKIP PAST LAST ROW`.
+     * Renders as `AFTER MATCH SKIP PAST LAST ROW`.
      */
     case PastLastRow
 
     /**
      * Skip to the first occurrence of the named pattern variable.
      *
-     * Renders as `SKIP TO FIRST name`.
+     * Renders as `AFTER MATCH SKIP TO FIRST name`.
      *
      * @param name the pattern variable name.
      */
@@ -144,7 +144,7 @@ enum SqlRowPatternSkipMode:
     /**
      * Skip to the last occurrence of the named pattern variable.
      *
-     * Renders as `SKIP TO LAST name`.
+     * Renders as `AFTER MATCH SKIP TO LAST "name"`.
      *
      * @param name the pattern variable name.
      */
@@ -153,7 +153,7 @@ enum SqlRowPatternSkipMode:
     /**
      * Skip to the named pattern variable.
      *
-     * Renders as `SKIP TO name`.
+     * Renders as `AFTER MATCH SKIP TO "name"`.
      *
      * @param name the pattern variable name.
      */
@@ -211,7 +211,7 @@ enum SqlRowPatternQuantifier:
     /**
      * Between `start` and `end` repetitions (reluctant when `withQuestion` is true).
      *
-     * Renders as `{[start], [end]}|{[start], [end]}?`.
+     * Renders as `{[expr], [expr]}|{[expr], [expr]}?`.
      *
      * @param start optional minimum count.
      * @param end optional maximum count.
@@ -222,7 +222,7 @@ enum SqlRowPatternQuantifier:
     /**
      * Exact quantity of repetitions.
      *
-     * Renders as `{quantity}`.
+     * Renders as `{expr}`.
      *
      * @param quantity the exact count expression.
      */
@@ -237,7 +237,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
     /**
      * A named pattern variable.
      *
-     * Renders as `name [quantifier]`.
+     * Renders as `"name" [quantifier]`.
      *
      * @param name the pattern variable name.
      * @param quantifier optional quantifier.
@@ -285,7 +285,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
     /**
      * Permutation of pattern terms.
      *
-     * Renders as `PERMUTE(term, ...) [quantifier]`.
+     * Renders as `PERMUTE(term [, ...]) [quantifier]`.
      *
      * @param terms the permuted pattern terms.
      * @param quantifier optional quantifier.
@@ -298,7 +298,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
     /**
      * Concatenation (sequence) of two pattern terms.
      *
-     * Renders as `left right [quantifier]`.
+     * Renders as `term term [quantifier]`.
      *
      * @param left the left term.
      * @param right the right term.
@@ -313,7 +313,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
     /**
      * Alternation of two pattern terms.
      *
-     * Renders as `left | right [quantifier]`.
+     * Renders as `term | term [quantifier]`.
      *
      * @param left the left term.
      * @param right the right term.
@@ -328,7 +328,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
 /**
  * A `DEFINE` item in `MATCH_RECOGNIZE`.
  *
- * Renders as `name AS expr`.
+ * Renders as `"name" AS expr`.
  *
  * @param name the pattern variable name.
  * @param expr the defining expression.
@@ -338,7 +338,7 @@ case class SqlRowPatternDefineItem(name: String, expr: SqlExpr)
 /**
  * A `SUBSET` item in `MATCH_RECOGNIZE`.
  *
- * Renders as `name = (pattern, ...)`.
+ * Renders as `"name" = (pattern [, ...])`.
  *
  * @param name the subset name.
  * @param patternNames the pattern variable names in the subset.
