@@ -60,14 +60,15 @@ final class autoInc extends StaticAnnotation
  * into a cascade (one-to-many) structure.
  *
  * {{{
- * @view(prefix = "user", key = "id")
- * case class UserVO(
+ * @view(prefix = "post", key = "id")
+ * case class PostVO(
  *     id: Int,
- *     name: String,
- *     @derivedField[Int, Boolean](source = "level", mapper = _ > 5)
- *     vip: Boolean,
+ *     title: String,
+ *     likeCount: Int,
+ *     @derivedField[Int, Boolean](source = "likeCount", mapper = _ > 10)
+ *     hot: Boolean,
  *     @nested
- *     orders: List[OrderVO]
+ *     comments: List[CommentVO]
  * )
  * }}}
  *
@@ -83,8 +84,8 @@ final class view(prefix: String, key: String) extends StaticAnnotation
  * mapping function, rather than directly from a query column.
  *
  * {{{
- * @derivedField[Int, Boolean](source = "level", mapper = _ > 5)
- * vip: Boolean
+ * @derivedField[Int, Boolean](source = "likeCount", mapper = _ > 10)
+ * hot: Boolean
  * }}}
  *
  * @tparam T the source field type.
@@ -102,7 +103,7 @@ final class derivedField[T, R](source: String, mapper: T => R) extends StaticAnn
  *
  * {{{
  * @nested
- * orders: List[OrderVO]
+ * comments: List[CommentVO]
  * }}}
  */
 @scala.annotation.meta.field
