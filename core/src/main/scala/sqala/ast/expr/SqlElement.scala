@@ -417,7 +417,7 @@ case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
  *
  * Renders as `RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]`.
  *
-     * @param `type` the target type.
+ * @param `type` the target type.
  * @param format optional output format specification.
  */
 case class SqlJsonOutput(`type`: SqlType, format: Option[SqlJsonOutputFormat])

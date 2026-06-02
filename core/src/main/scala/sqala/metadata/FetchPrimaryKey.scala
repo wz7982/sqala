@@ -6,12 +6,28 @@ import sqala.ast.table.SqlTable
 
 import scala.quoted.{Expr, Quotes, Type}
 
-import sqala.{metadata => SqlStatementDelete}
+/**
+ * Derives primary key metadata from an entity type at compile time,
+ * providing methods to build queries and delete statements by primary key.
+ *
+ * @tparam T the entity type.
+ */
 private[sqala] trait FetchPrimaryKey[T]:
+    /** The primary key argument type (single type or tuple). */
     type Args
 
+    /**
+     * Builds a `SELECT` query filtered by primary key values.
+     *
+     * @param x the primary key values.
+     */
     def createQueryTree(x: Seq[Args]): SqlQuery
 
+    /**
+     * Builds a `DELETE` statement filtered by primary key values.
+     *
+     * @param x the primary key values.
+     */
     def createDeleteTree(x: Seq[Args]): SqlStatement.Delete
 
 private[sqala] object FetchPrimaryKey:

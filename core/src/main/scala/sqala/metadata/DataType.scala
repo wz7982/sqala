@@ -4,6 +4,11 @@ import sqala.ast.expr.SqlTimeUnit
 
 import java.time.*
 
+/**
+ * Marker trait that constrains an expression type to numeric types.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlNumber[T]
 
 object SqlNumber:
@@ -19,6 +24,11 @@ object SqlNumber:
 
     given option[T: SqlNumber]: SqlNumber[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to date-time types.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlDateTime[T]
 
 object SqlDateTime:
@@ -30,6 +40,11 @@ object SqlDateTime:
 
     given option[T: SqlDateTime]: SqlDateTime[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to time types.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlTime[T]
 
 object SqlTime:
@@ -39,6 +54,11 @@ object SqlTime:
 
     given option[T: SqlTime]: SqlTime[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to `String`.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlString[T]
 
 object SqlString:
@@ -46,6 +66,11 @@ object SqlString:
 
     given option[T: SqlString]: SqlString[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to `Boolean`.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlBoolean[T]
 
 object SqlBoolean:
@@ -53,6 +78,11 @@ object SqlBoolean:
 
     given option[T: SqlBoolean]: SqlBoolean[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to `Json`.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlJson[T]
 
 object SqlJson:
@@ -60,6 +90,11 @@ object SqlJson:
 
     given option[T: SqlJson]: SqlJson[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to spatial geometry types.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlGeometry[T]
 
 object SqlGeometry:
@@ -81,6 +116,11 @@ object SqlGeometry:
 
     given option[T: SqlGeometry]: SqlGeometry[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to `Interval`.
+ *
+ * @tparam T the expression type.
+ */
 trait SqlInterval[T]
 
 object SqlInterval:
@@ -88,25 +128,82 @@ object SqlInterval:
 
     given option[T: SqlInterval]: SqlInterval[Option[T]]()
 
+/**
+ * Opaque string type representing a JSON value.
+ */
 opaque type Json = String
 
 object Json:
     def apply(value: String): Json = value
 
-final case class Interval(value: String, unit: SqlTimeUnit)
+/**
+ * An interval quantity paired with a time unit.
+ *
+ * @param value the interval string (e.g. `"1"`).
+ * @param unit the time unit (e.g. `DAY`, `YEAR TO MONTH`).
+ */
+final case class Interval(value: String, unit: SqlTimeUnit)    
 
+/**
+ * A spatial geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class Geometry(value: String, srid: Int)
 
+/**
+ * A point geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class Point(value: String, srid: Int)
 
+/**
+ * A line string geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class LineString(value: String, srid: Int)
 
+/**
+ * A polygon geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class Polygon(value: String, srid: Int)
 
+/**
+ * A multi-point geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class MultiPoint(value: String, srid: Int)
 
+/**
+ * A multi-line string geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class MultiLineString(value: String, srid: Int)
 
+/**
+ * A multi-polygon geometry value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class MultiPolygon(value: String, srid: Int)
 
+/**
+ * A geometry collection value with an SRID.
+ *
+ * @param value the WKT string representation.
+ * @param srid the spatial reference system identifier.
+ */
 final case class GeometryCollection(value: String, srid: Int)

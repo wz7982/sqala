@@ -685,11 +685,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * @param expr the JSON test expression node.
      */
     def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
-    /**
-     * Prints a data type name.
-     *
-     * @param type the data type node.
-     */
         def printType(`type`: SqlJsonNodeType): Unit =
             `type` match
                 case SqlJsonNodeType.Value =>
@@ -1300,6 +1295,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printExpr(item.key)
             sqlBuilder.append(" VALUE ")
             printExpr(item.value)
+
         sqlBuilder.append("JSON_OBJECT(")
         printList(expr.items)(printItem)
         for n <- expr.nullConstructor do
@@ -1324,6 +1320,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             for i <- item.input do
                 sqlBuilder.append(" ")
                 printJsonInput(i)
+                
         sqlBuilder.append("JSON_ARRAY(")
         printList(expr.items)(printItem)
         for n <- expr.nullConstructor do

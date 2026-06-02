@@ -5,23 +5,41 @@ import sqala.util.camelToSnake
 import scala.collection.mutable.ListBuffer
 import scala.quoted.{Expr, Quotes, Type}
 
+/**
+ * Inline macros that extract table metadata from entity case classes
+ * at compile time.
+ */
 private[sqala] object TableMacro:
-    inline def tableName[T]: String = ${ TableMacroImpl.tableName[T] }
+    /**
+     * Returns the database table name for the entity type, derived from
+     * the `@table` annotation or the CamelCase-to-snake_case conversion.
+     *
+     * @tparam T the entity type.
+     */
+    inline def tableName[T]: String =
+        ${ TableMacroImpl.tableName[T] }
 
-    inline def tableMetaData[T]: TableMetaData = ${ TableMacroImpl.tableMetaData[T] }
+    /**
+     * Returns full `TableMetaData` for the entity type, including table
+     * name, column mappings, primary key fields, and auto-increment field.
+     *
+     * @tparam T the entity type.
+     */
+    inline def tableMetaData[T]: TableMetaData =
+        ${ TableMacroImpl.tableMetaData[T] }
 
 private[sqala] object TableMacroImpl:
-    val annoNameTable = "table"
-    val annoNameColumn = "column"
-    val annoNamePrimaryKey = "primaryKey"
-    val annoNameAutoInc = "autoInc"
+    private val annoNameTable = "table"
+    private val annoNameColumn = "column"
+    private val annoNamePrimaryKey = "primaryKey"
+    private val annoNameAutoInc = "autoInc"
 
     def tableNameMacro[T](using q: Quotes, t: Type[T]): String =
         import q.reflect.*
 
         val sym = TypeTree.of[T].symbol
         val tableName = sym.annotations.map {
-            case Apply(Select(New(TypeIdent(annoNameTable)), _), Literal(v) :: Nil) =>
+            case Apply(Select(New(TypeIdent(name)), _), Literal(v) :: Nil) if name == annoNameTable =>
                 v.value.toString
             case _ => ""
         }.find(_ != "") match

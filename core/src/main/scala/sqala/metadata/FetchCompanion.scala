@@ -2,9 +2,19 @@ package sqala.metadata
 
 import scala.quoted.{Expr, Quotes, Type}
 
+/**
+ * Resolves the companion class of an entity's companion object at compile
+ * time and provides its `TableMetaData`.
+ *
+ * @tparam T the companion object type.
+ */
 private[sqala] trait FetchCompanion[T]:
+    /** The companion class type. */
     type R
 
+    /**
+     * Returns the table metadata for the entity.
+     */
     def metaData: TableMetaData
 
 private[sqala] object FetchCompanion:

@@ -100,10 +100,22 @@ enum SqlStatement:
 
 object SqlStatement:
     extension (delete: Delete)
+        /**
+         * Returns a copy with the given condition added to the `WHERE` clause
+         * via `AND`.
+         *
+         * @param condition the filter expression.
+         */
         def addWhere(condition: SqlExpr): Delete =
             delete.copy(where = delete.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
     extension (update: Update)
+        /**
+         * Returns a copy with the given condition added to the `WHERE` clause
+         * via `AND`.
+         *
+         * @param condition the filter expression.
+         */
         def addWhere(condition: SqlExpr): Update =
             update.copy(where = update.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
@@ -205,11 +217,28 @@ enum SqlQuery(val lock: Option[SqlLock]):
 
 object SqlQuery:
     extension (select: Select)
+        /**
+         * Returns a copy with the given item appended to the select list.
+         *
+         * @param item the select item to add.
+         */
         def addSelectItem(item: SqlSelectItem): Select =
             select.copy(select = select.select.appended(item))
 
+        /**
+         * Returns a copy with the given condition added to the `WHERE` clause
+         * via `AND`.
+         *
+         * @param condition the filter expression.
+         */
         def addWhere(condition: SqlExpr): Select =
             select.copy(where = select.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
+        /**
+         * Returns a copy with the given condition added to the `HAVING` clause
+         * via `AND`.
+         *
+         * @param condition the filter expression.
+         */
         def addHaving(condition: SqlExpr): Select =
             select.copy(having = select.having.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
