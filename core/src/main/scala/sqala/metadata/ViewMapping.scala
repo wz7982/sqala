@@ -2,10 +2,6 @@ package sqala.metadata
 
 import scala.quoted.{Expr, Quotes, Type}
 
-/**
- * Provides the `toView[V]` extension method, converting a flat result set
- * to a cascade structure via a `ViewMapping` type class instance.
- */
 extension [T](data: List[T])
     /**
      * Converts a flat result set into a cascade (one-to-many) structure
