@@ -10,11 +10,6 @@ private[sqala] object InsertMacro:
     /**
      * Replaces the `@autoInc` field of `entity` with `id` and returns a
      * new instance. The original entity is not modified.
-     *
-     * @tparam A the entity type.
-     *
-     * @param id the generated primary key value.
-     * @param entity the original entity instance.
      */
     inline def bindGeneratedPrimaryKey[A](id: Long, entity: A): A =
         ${ InsertMacroImpl.bindGeneratedPrimaryKey[A]('id, 'entity) }

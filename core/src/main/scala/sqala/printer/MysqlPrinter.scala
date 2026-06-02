@@ -10,40 +10,18 @@ import sqala.ast.statement.{SqlQuery, SqlStatement}
 
 /**
  * MySQL dialect printer.
- *
- * Uses backtick quoting, `LIMIT offset, count`, `INSERT ... ON DUPLICATE KEY UPDATE`,
- * `GROUP_CONCAT`, and emulates `NULLS FIRST|LAST` via `CASE WHEN`.
- *
- * @param standardEscapeStrings `true` treats backslashes literally;
- *                              `false` uses backslashes as escape characters.
  */
 class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
-    /** 
-     * Use backtick quoting for identifiers. 
-     */
     override val leftQuote: Char = '`'
 
-    /** 
-     * Use backtick quoting for identifiers. *
-     */
     override val rightQuote: Char = '`'
 
-    /**
-     * Prints a MySQL-style `LIMIT offset, count` clause.
-     *
-     * @param limit the limit node.
-     */
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")
         printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
         sqlBuilder.append(", ")
         printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
 
-    /**
-     * Prints a MySQL-style upsert using `ON DUPLICATE KEY UPDATE`.
-     *
-     * @param upsert the UPSERT AST node.
-     */
     override def printUpsert(upsert: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
         printTable(upsert.table)
@@ -64,13 +42,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             printIdent(u)
             sqlBuilder.append(")")
 
-    /**
-     * Prints a binary expression with MySQL-specific rewrites:
-     * `||` becomes `CONCAT()`, `IS DISTINCT FROM` becomes `NOT(<=>)`,
-     * and `IS NOT DISTINCT FROM` becomes `<=>`.
-     *
-     * @param expr the binary expression node.
-     */
     override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         expr.operator match
             case SqlBinaryOperator.Concat =>
@@ -106,11 +77,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case _ =>
                 super.printBinaryExpr(expr)
 
-    /**
-     * Prints a `VALUES` clause with `ROW` keyword for each row.
-     *
-     * @param values the VALUES AST node.
-     */
     override def printValues(values: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
@@ -118,13 +84,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             sqlBuilder.append("ROW")
             printExpr(v)
 
-    /**
-     * Prints a type name with MySQL-specific mappings:
-     * `VARCHAR` → `CHAR`, `INT|LONG` → `SIGNED`,
-     * `TIMESTAMP` (without timezone) → `DATETIME`.
-     *
-     * @param type the data type node.
-     */
     override def printType(`type`: SqlType): Unit =
         `type` match
             case SqlType.Varchar(maxLength) =>
@@ -142,13 +101,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case _ =>
                 super.printType(`type`)
 
-    /**
-     * Prints a `GROUP_CONCAT` function with `SEPARATOR` syntax.
-     *
-     * Rewrites `LISTAGG(...)` to `GROUP_CONCAT(expr SEPARATOR sep [ORDER BY ...])`.
-     *
-     * @param expr the LISTAGG expression node.
-     */
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
         sqlBuilder.append("GROUP_CONCAT(")
         expr.quantifier.foreach: q =>
@@ -164,12 +116,6 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         for f <- expr.filter do
             printFuncFilter(f)
 
-    /**
-     * Prints an ordering item, emulating `NULLS FIRST|LAST` with a
-     * `CASE WHEN` expression since MySQL does not support it natively.
-     *
-     * @param orderBy the ordering item node.
-     */
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
             ordering match

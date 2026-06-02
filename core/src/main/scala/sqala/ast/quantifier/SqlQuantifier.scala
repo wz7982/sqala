@@ -7,7 +7,7 @@ import sqala.ast.expr.SqlExpr
  */
 enum SqlQuantifier:
     /**
-     * `ALL` quantifier (default behavior).
+     * `ALL` quantifier.
      *
      * Renders as `ALL`.
      */
@@ -27,8 +27,5 @@ enum SqlQuantifier:
      *
      * The `words` and `exprs` are interleaved, and the whole
      * expression is wrapped in parentheses.
-     *
-     * @param words text fragments.
-     * @param exprs sub-expressions to be interpolated between the words.
      */
     case Custom(words: List[String], exprs: List[SqlExpr])

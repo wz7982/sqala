@@ -50,8 +50,6 @@ enum SqlTimeUnit:
      * A custom time unit with a free-form name.
      *
      * Renders as the given `unit` string directly.
-     *
-     * @param unit the unit text.
      */
     case Custom(unit: String)
 
@@ -63,9 +61,6 @@ enum SqlIntervalField:
      * A range interval field from `start` to `end`.
      *
      * Renders as `unit TO unit` (e.g. `YEAR TO MONTH`).
-     *
-     * @param start the start unit.
-     * @param end the end unit.
      */
     case To(start: SqlTimeUnit, end: SqlTimeUnit)
 
@@ -73,21 +68,17 @@ enum SqlIntervalField:
      * A single interval field.
      *
      * Renders as the time unit (e.g. `DAY`).
-     *
-     * @param unit the time unit.
      */
     case Single(unit: SqlTimeUnit)
 
 /**
- * Units for time / date literal expressions.
+ * Units for time or date literal expressions.
  */
 enum SqlTimeLiteralUnit:
     /**
      * `TIMESTAMP` literal, optionally with a time zone mode.
      *
      * Renders as `TIMESTAMP [WITH|WITHOUT TIME ZONE]`.
-     *
-     * @param mode optional time zone mode (WITH or WITHOUT).
      */
     case Timestamp(mode: Option[SqlTimeZoneMode])
 
@@ -102,8 +93,6 @@ enum SqlTimeLiteralUnit:
      * `TIME` literal, optionally with a time zone mode.
      *
      * Renders as `TIME [WITH|WITHOUT TIME ZONE]`.
-     *
-     * @param mode optional time zone mode (WITH or WITHOUT).
      */
     case Time(mode: Option[SqlTimeZoneMode])
 

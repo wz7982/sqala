@@ -35,8 +35,6 @@ enum SqlJsonColumn:
      * An ordinality column that returns the row number.
      *
      * Renders as `"name" FOR ORDINALITY`.
-     *
-     * @param name the column name.
      */
     case Ordinality(name: String)
 
@@ -51,15 +49,6 @@ enum SqlJsonColumn:
      *   [KEEP|OMIT QUOTES [ON SCALAR STRING]]
      *   [ERROR|NULL|EMPTY OBJECT|EMPTY ARRAY|DEFAULT expr ON EMPTY]
      *   [ERROR|NULL|EMPTY OBJECT|EMPTY ARRAY|DEFAULT expr ON ERROR]`.
-     *
-     * @param name the column name.
-     * @param `type` the column type.
-     * @param format optional output format clause.
-     * @param path optional JSON path expression.
-     * @param wrapper optional wrapper behavior.
-     * @param quotes optional quotes behavior.
-     * @param onEmpty behavior when the path yields an empty result.
-     * @param onError behavior when a JSON structural error occurs.
      */
     case Column(
         name: String,
@@ -77,11 +66,6 @@ enum SqlJsonColumn:
      *
      * Renders as
      * `"name" type EXISTS [PATH expr] [ERROR|TRUE|FALSE|UNKNOWN ON ERROR]`.
-     *
-     * @param name the column name.
-     * @param `type` the column type.
-     * @param path optional JSON path expression.
-     * @param onError behavior on structural error.
      */
     case Exists(
         name: String,
@@ -95,10 +79,6 @@ enum SqlJsonColumn:
      *
      * Renders as
      * `NESTED PATH expr [AS "alias"] COLUMNS(column [, ...])`.
-     *
-     * @param path the JSON path to the nested structure.
-     * @param pathAlias optional alias for the nested path.
-     * @param columns the nested column definitions.
      */
     case Nested(
         path: SqlExpr,

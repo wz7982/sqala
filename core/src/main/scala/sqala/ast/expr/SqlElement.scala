@@ -4,9 +4,6 @@ package sqala.ast.expr
  * A `WHEN ... THEN ...` branch in a `CASE` expression.
  *
  * Renders as `WHEN expr THEN expr`.
- *
- * @param when the condition expression.
- * @param `then` the result expression.
  */
 case class SqlCaseBranch(when: SqlExpr, `then`: SqlExpr)
 
@@ -14,9 +11,6 @@ case class SqlCaseBranch(when: SqlExpr, `then`: SqlExpr)
  * A `TRIM` specification with optional mode and value.
  *
  * Renders as `[BOTH|LEADING|TRAILING] [expr]`.
- *
- * @param mode optional trim mode.
- * @param value optional trim character expression.
  */
 case class SqlTrim(mode: Option[SqlTrimMode], value: Option[SqlExpr])
 
@@ -67,9 +61,6 @@ enum SqlJsonUniquenessMode:
  * A `PASSING` argument for JSON path expressions.
  *
  * Renders as `expr AS "alias"`.
- *
- * @param expr the value expression.
- * @param alias the variable alias in the JSON path.
  */
 case class SqlJsonPassing(expr: SqlExpr, alias: String)
 
@@ -134,8 +125,6 @@ enum SqlJsonEncoding:
      * A custom encoding with a free-form name.
      *
      * Renders as the given `encoding` string directly.
-     *
-     * @param encoding the encoding text.
      */
     case Custom(encoding: String)
 
@@ -165,9 +154,6 @@ enum SqlJsonQueryWrapperBehavior:
      * Wrap the result, optionally with a mode and array wrapper.
      *
      * Renders as `WITH [CONDITIONAL|UNCONDITIONAL] [ARRAY] WRAPPER`.
-     *
-     * @param mode optional wrapper mode (CONDITIONAL or UNCONDITIONAL).
-     * @param array when `true`, adds `ARRAY` keyword.
      */
     case With(mode: Option[SqlJsonQueryWrapperBehaviorMode], array: Boolean)
 
@@ -175,8 +161,6 @@ enum SqlJsonQueryWrapperBehavior:
      * Do not wrap the result, optionally without an array wrapper.
      *
      * Renders as `WITHOUT [ARRAY] WRAPPER`.
-     *
-     * @param array when `true`, adds `ARRAY` keyword.
      */
     case Without(array: Boolean)
 
@@ -202,9 +186,6 @@ enum SqlJsonQueryWrapperBehaviorMode:
  * Quotes behavior for `JSON_QUERY` and JSON table columns.
  *
  * Renders as `[KEEP|OMIT] QUOTES [ON SCALAR STRING]`.
- *
- * @param mode the quotes mode (KEEP or OMIT).
- * @param onScalarString when `true`, adds `ON SCALAR STRING`.
  */
 case class SqlJsonQueryQuotesBehavior(mode: SqlJsonQueryQuotesBehaviorMode, onScalarString: Boolean)
 
@@ -262,8 +243,6 @@ enum SqlJsonQueryEmptyBehavior:
      * Return a default expression.
      *
      * Renders as `DEFAULT expr ON EMPTY`.
-     *
-     * @param expr the default expression.
      */
     case Default(expr: SqlExpr)
 
@@ -303,8 +282,6 @@ enum SqlJsonQueryErrorBehavior:
      * Return a default expression.
      *
      * Renders as `DEFAULT expr ON ERROR`.
-     *
-     * @param expr the default expression.
      */
     case Default(expr: SqlExpr)
 
@@ -330,8 +307,6 @@ enum SqlJsonValueEmptyBehavior:
      * Return a default expression.
      *
      * Renders as `DEFAULT expr ON EMPTY`.
-     *
-     * @param expr the default expression.
      */
     case Default(expr: SqlExpr)
 
@@ -357,8 +332,6 @@ enum SqlJsonValueErrorBehavior:
      * Return a default expression.
      *
      * Renders as `DEFAULT expr ON ERROR`.
-     *
-     * @param expr the default expression.
      */
     case Default(expr: SqlExpr)
 
@@ -398,8 +371,6 @@ enum SqlJsonExistsErrorBehavior:
  * Input format specification for JSON parsing functions.
  *
  * Renders as `FORMAT JSON [ENCODING UTF8|UTF16|UTF32]`.
- *
- * @param encoding optional encoding (UTF8, UTF16, UTF32, or custom).
  */
 case class SqlJsonInput(encoding: Option[SqlJsonEncoding])
 
@@ -407,8 +378,6 @@ case class SqlJsonInput(encoding: Option[SqlJsonEncoding])
  * Output format specification for JSON returning functions.
  *
  * Renders as `FORMAT JSON [ENCODING UTF8|UTF16|UTF32]`.
- *
- * @param encoding optional encoding (UTF8, UTF16, UTF32, or custom).
  */
 case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
 
@@ -416,19 +385,13 @@ case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
  * A `RETURNING` clause for JSON functions.
  *
  * Renders as `RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]`.
- *
- * @param `type` the target type.
- * @param format optional output format specification.
  */
 case class SqlJsonOutput(`type`: SqlType, format: Option[SqlJsonOutputFormat])
 
 /**
- * A key/value pair for `JSON_OBJECT` and `JSON_OBJECTAGG`.
+ * A key and value pair for `JSON_OBJECT` and `JSON_OBJECTAGG`.
  *
  * Renders as `expr VALUE expr`.
- *
- * @param key the key expression.
- * @param value the value expression.
  */
 case class SqlJsonObjectItem(key: SqlExpr, value: SqlExpr)
 
@@ -436,9 +399,6 @@ case class SqlJsonObjectItem(key: SqlExpr, value: SqlExpr)
  * An element for `JSON_ARRAY` and `JSON_ARRAYAGG`.
  *
  * Renders as `expr [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]`.
- *
- * @param value the element value expression.
- * @param input optional input format specification.
  */
 case class SqlJsonArrayItem(value: SqlExpr, input: Option[SqlJsonInput])
 
@@ -457,9 +417,6 @@ enum SqlListAggOnOverflow:
      * Truncate on overflow, with a filler expression and count mode.
      *
      * Renders as `TRUNCATE expr [WITH|WITHOUT COUNT]`.
-     *
-     * @param expr the filler expression appended after truncation.
-     * @param countMode whether to include the count of truncated rows.
      */
     case Truncate(expr: SqlExpr, countMode: SqlListAggCountMode)
 

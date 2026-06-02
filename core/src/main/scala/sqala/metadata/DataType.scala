@@ -6,8 +6,6 @@ import java.time.*
 
 /**
  * Marker trait that constrains an expression type to numeric types.
- *
- * @tparam T the expression type.
  */
 trait SqlNumber[T]
 
@@ -26,8 +24,6 @@ object SqlNumber:
 
 /**
  * Marker trait that constrains an expression type to date-time types.
- *
- * @tparam T the expression type.
  */
 trait SqlDateTime[T]
 
@@ -42,8 +38,6 @@ object SqlDateTime:
 
 /**
  * Marker trait that constrains an expression type to time types.
- *
- * @tparam T the expression type.
  */
 trait SqlTime[T]
 
@@ -56,8 +50,6 @@ object SqlTime:
 
 /**
  * Marker trait that constrains an expression type to `String`.
- *
- * @tparam T the expression type.
  */
 trait SqlString[T]
 
@@ -68,8 +60,6 @@ object SqlString:
 
 /**
  * Marker trait that constrains an expression type to `Boolean`.
- *
- * @tparam T the expression type.
  */
 trait SqlBoolean[T]
 
@@ -80,8 +70,6 @@ object SqlBoolean:
 
 /**
  * Marker trait that constrains an expression type to `Json`.
- *
- * @tparam T the expression type.
  */
 trait SqlJson[T]
 
@@ -92,8 +80,6 @@ object SqlJson:
 
 /**
  * Marker trait that constrains an expression type to spatial geometry types.
- *
- * @tparam T the expression type.
  */
 trait SqlGeometry[T]
 
@@ -118,8 +104,6 @@ object SqlGeometry:
 
 /**
  * Marker trait that constrains an expression type to `Interval`.
- *
- * @tparam T the expression type.
  */
 trait SqlInterval[T]
 
@@ -139,71 +123,55 @@ object Json:
 /**
  * An interval quantity paired with a time unit.
  *
- * @param value the interval string (e.g. `"1"`).
- * @param unit the time unit (e.g. `DAY`, `YEAR TO MONTH`).
+ * `value` is the interval string (e.g. `"1"`), `unit` is the time unit
+ * (e.g. `DAY`, `YEAR TO MONTH`).
  */
 final case class Interval(value: String, unit: SqlTimeUnit)    
 
 /**
- * A spatial geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A spatial geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class Geometry(value: String, srid: Int)
 
 /**
- * A point geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A point geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class Point(value: String, srid: Int)
 
 /**
- * A line string geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A line string geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class LineString(value: String, srid: Int)
 
 /**
- * A polygon geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A polygon geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class Polygon(value: String, srid: Int)
 
 /**
- * A multi-point geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A multi-point geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class MultiPoint(value: String, srid: Int)
 
 /**
- * A multi-line string geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A multi-line string geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class MultiLineString(value: String, srid: Int)
 
 /**
- * A multi-polygon geometry value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A multi-polygon geometry value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class MultiPolygon(value: String, srid: Int)
 
 /**
- * A geometry collection value with an SRID.
- *
- * @param value the WKT string representation.
- * @param srid the spatial reference system identifier.
+ * A geometry collection value. `value` is a WKT string, `srid` is the
+ * spatial reference system identifier.
  */
 final case class GeometryCollection(value: String, srid: Int)

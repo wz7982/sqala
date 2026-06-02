@@ -10,8 +10,6 @@ enum SqlSelectItem:
      * A `*` wildcard, optionally qualified with a table name.
      *
      * Renders as `*|"table".*`.
-     *
-     * @param tableName optional table qualifier.
      */
     case Asterisk(tableName: Option[String])
 
@@ -19,8 +17,5 @@ enum SqlSelectItem:
      * An expression with an optional alias.
      *
      * Renders as `expr [AS "alias"]`.
-     *
-     * @param expr the select expression.
-     * @param alias optional column alias.
      */
     case Expr(expr: SqlExpr, alias: Option[String])

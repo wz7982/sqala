@@ -8,8 +8,6 @@ enum SqlType:
      * Variable-length character string.
      *
      * Renders as `VARCHAR|VARCHAR(n)`.
-     *
-     * @param maxLength optional maximum length.
      */
     case Varchar(maxLength: Option[Int])
 
@@ -45,8 +43,6 @@ enum SqlType:
      * Fixed-point decimal number.
      *
      * Renders as `DECIMAL|DECIMAL(p, s)`.
-     *
-     * @param precision optional tuple of `(precision, scale)`.
      */
     case Decimal(precision: Option[(Int, Int)])
 
@@ -61,8 +57,6 @@ enum SqlType:
      * Timestamp value, optionally with time zone.
      *
      * Renders as `TIMESTAMP [WITH|WITHOUT TIME ZONE]`.
-     *
-     * @param mode optional time zone mode.
      */
     case Timestamp(mode: Option[SqlTimeZoneMode])
 
@@ -70,8 +64,6 @@ enum SqlType:
      * Time-of-day value, optionally with time zone.
      *
      * Renders as `TIME [WITH|WITHOUT TIME ZONE]`.
-     *
-     * @param mode optional time zone mode.
      */
     case Time(mode: Option[SqlTimeZoneMode])
 
@@ -156,8 +148,6 @@ enum SqlType:
      * Array type with an element type.
      *
      * Renders as `type[]`.
-     *
-     * @param `type` the element type.
      */
     case Array(`type`: SqlType)
 
@@ -165,7 +155,5 @@ enum SqlType:
      * A custom type with a free-form name.
      *
      * Renders as the given `type` string directly.
-     *
-     * @param `type` the type text.
      */
     case Custom(`type`: String)

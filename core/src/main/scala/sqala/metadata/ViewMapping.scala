@@ -5,15 +5,11 @@ import scala.quoted.{Expr, Quotes, Type}
 /**
  * Provides the `toView[V]` extension method, converting a flat result set
  * to a cascade structure via a `ViewMapping` type class instance.
- *
- * @tparam T the flat row type.
  */
 extension [T](data: List[T])
     /**
      * Converts a flat result set into a cascade (one-to-many) structure
      * defined by a `@view`-annotated case class.
-     *
-     * @tparam V the view type, annotated with `@view`.
      */
     def toView[V](using m: ViewMapping[T, V]): List[V] =
         m.mapToList(data)
@@ -22,30 +18,21 @@ extension [T](data: List[T])
  * Type class that converts a flat list of rows into a cascade structure,
  * driven by the `@view`, `@nested`, and `@derivedField` annotations on
  * the target type.
- *
- * @tparam T the flat row type.
- * @tparam R the view (cascade) type.
  */
 private[sqala] trait ViewMapping[T, R]:
     /**
      * Groups flat rows by the view key and maps each group to a cascade
      * object, returning a list of root-level objects.
-     *
-     * @param data the flat result rows.
      */
     def mapToList(data: List[T]): List[R]
 
     /**
      * Like `mapToList`, but returns at most one root object.
-     *
-     * @param data the flat result rows.
      */
     def mapToOption(data: List[T]): Option[R]
 
     /**
      * Maps a single group of flat rows to a single cascade object.
-     *
-     * @param data the flat result rows.
      */
     def mapToObject(data: List[T]): R
 

@@ -45,8 +45,6 @@ enum SqlJoinType:
      * A custom join type with a free-form name.
      *
      * Renders as the given `type` string directly.
-     *
-     * @param `type` the join type text.
      */
     case Custom(`type`: String)
 
@@ -58,8 +56,6 @@ enum SqlJoinCondition:
      * An `ON` condition.
      *
      * Renders as `ON expr`.
-     *
-     * @param condition the join condition expression.
      */
     case On(condition: SqlExpr)
 
@@ -67,7 +63,5 @@ enum SqlJoinCondition:
      * A `USING` clause.
      *
      * Renders as `USING("column" [, ...])`.
-     *
-     * @param columnNames the column names to join on.
      */
     case Using(columnNames: List[String])

@@ -2,16 +2,12 @@ package sqala.ast.statement
 
 /**
  * Row-level locking clause for `SELECT` statements.
- *
- * @param waitMode optional wait mode (NOWAIT or SKIP LOCKED).
  */
 enum SqlLock(val waitMode: Option[SqlLockWaitMode]):
     /**
      * Exclusive lock on selected rows.
      *
      * Renders as `FOR UPDATE [NOWAIT|SKIP LOCKED]`.
-     *
-     * @param waitMode optional wait mode.
      */
     case Update(override val waitMode: Option[SqlLockWaitMode]) extends SqlLock(waitMode)
 
@@ -19,8 +15,6 @@ enum SqlLock(val waitMode: Option[SqlLockWaitMode]):
      * Shared lock on selected rows.
      *
      * Renders as `FOR SHARE [NOWAIT|SKIP LOCKED]`.
-     *
-     * @param waitMode optional wait mode.
      */
     case Share(override val waitMode: Option[SqlLockWaitMode]) extends SqlLock(waitMode)
 

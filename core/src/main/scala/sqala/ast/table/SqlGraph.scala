@@ -17,9 +17,6 @@ enum SqlGraphRowsMode:
      * One row per vertex.
      *
      * Renders as `ONE ROW PER VERTEX ("name") [IN ("path" [, ...])]`.
-     *
-     * @param name the vertex pattern variable.
-     * @param inPaths the path variables leading into the vertex.
      */
     case Vertex(
         name: String,
@@ -30,11 +27,6 @@ enum SqlGraphRowsMode:
      * One row per step traversing an edge.
      *
      * Renders as `ONE ROW PER STEP (vertex1, edge, vertex2) [IN ("path" [, ...])]`.
-     *
-     * @param vertex1 the source vertex.
-     * @param edge the traversed edge.
-     * @param vertex2 the destination vertex.
-     * @param inPaths the path variables leading into the step.
      */
     case Step(
         vertex1: String,
@@ -51,8 +43,6 @@ enum SqlGraphExportMode:
      * Export all singletons except the given patterns.
      *
      * Renders as `EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])`.
-     *
-     * @param exceptPatterns the pattern names to exclude.
      */
     case AllSingletons(exceptPatterns: List[String])
 
@@ -60,8 +50,6 @@ enum SqlGraphExportMode:
      * Export only the given singletons.
      *
      * Renders as `EXPORT SINGLETONS (pattern [, ...])`.
-     *
-     * @param patterns the pattern names to export.
      */
     case Singletons(patterns: List[String])
 
@@ -80,8 +68,6 @@ enum SqlGraphMatchMode:
      * Repeatable matching.
      *
      * Renders as `REPEATABLE ELEMENT|ELEMENT BINDINGS|ELEMENTS`.
-     *
-     * @param mode the repeatable mode.
      */
     case Repeatable(mode: SqlGraphRepeatableMode)
 
@@ -89,8 +75,6 @@ enum SqlGraphMatchMode:
      * Different matching.
      *
      * Renders as `DIFFERENT EDGE|EDGE BINDINGS|EDGES`.
-     *
-     * @param mode the different mode.
      */
     case Different(mode: SqlGraphDifferentMode)
 
@@ -148,9 +132,6 @@ enum SqlGraphDifferentMode:
  * A graph pattern within a `GRAPH_TABLE` expression.
  *
  * Renders as `["name" = ] term`.
- *
- * @param name optional pattern name.
- * @param term the pattern term.
  */
 case class SqlGraphPattern(
     name: Option[String],
@@ -165,9 +146,6 @@ enum SqlGraphPatternTerm:
      * A quantified pattern term.
      *
      * Renders as `term quantifier`.
-     *
-     * @param term the inner pattern term.
-     * @param quantifier the quantifier applied to the term.
      */
     case Quantified(
         term: SqlGraphPatternTerm,
@@ -178,10 +156,6 @@ enum SqlGraphPatternTerm:
      * A vertex pattern term.
      *
      * Renders as `(["name"] [IS "label"] [WHERE expr])`.
-     *
-     * @param name optional vertex variable name.
-     * @param label optional vertex label.
-     * @param where optional filter condition.
      */
     case Vertex(
         name: Option[String],
@@ -193,12 +167,6 @@ enum SqlGraphPatternTerm:
      * An edge pattern term.
      *
      * Renders as `symbol["name" [IS "label"] [WHERE expr]]symbol`.
-     *
-     * @param leftSymbol the left edge symbol.
-     * @param name optional edge variable name.
-     * @param label optional edge label.
-     * @param where optional filter condition.
-     * @param rightSymbol the right edge symbol.
      */
     case Edge(
         leftSymbol: SqlGraphSymbol,
@@ -212,9 +180,6 @@ enum SqlGraphPatternTerm:
      * Conjunction of two pattern terms.
      *
      * Renders as `term term` separated by a space.
-     *
-     * @param left the left term.
-     * @param right the right term.
      */
     case And(
         left: SqlGraphPatternTerm,
@@ -225,9 +190,6 @@ enum SqlGraphPatternTerm:
      * Disjunction of two pattern terms.
      *
      * Renders as `term | term`.
-     *
-     * @param left the left term.
-     * @param right the right term.
      */
     case Or(
         left: SqlGraphPatternTerm,
@@ -238,9 +200,6 @@ enum SqlGraphPatternTerm:
      * Alternation of two pattern terms.
      *
      * Renders as `term |+| term`.
-     *
-     * @param left the left term.
-     * @param right the right term.
      */
     case Alternation(
         left: SqlGraphPatternTerm,
@@ -257,8 +216,6 @@ enum SqlGraphLabel:
      * A named label.
      *
      * Renders as `"name"`.
-     *
-     * @param name the label name.
      */
     case Label(name: String)
 
@@ -273,8 +230,6 @@ enum SqlGraphLabel:
      * Negated label.
      *
      * Renders as `!(label)`.
-     *
-     * @param label the label to negate.
      */
     case Not(label: SqlGraphLabel)
 
@@ -282,9 +237,6 @@ enum SqlGraphLabel:
      * Conjunction of two labels.
      *
      * Renders as `label & label`.
-     *
-     * @param left the left label.
-     * @param right the right label.
      */
     case And(left: SqlGraphLabel, right: SqlGraphLabel)
 
@@ -292,9 +244,6 @@ enum SqlGraphLabel:
      * Disjunction of two labels.
      *
      * Renders as `label | label`.
-     *
-     * @param left the left label.
-     * @param right the right label.
      */
     case Or(left: SqlGraphLabel, right: SqlGraphLabel)
 
@@ -327,9 +276,6 @@ enum SqlGraphQuantifier:
      * Between `start` and `end` repetitions.
      *
      * Renders as `{[expr], [expr]}`.
-     *
-     * @param start optional minimum count.
-     * @param end optional maximum count.
      */
     case Between(start: Option[SqlExpr], end: Option[SqlExpr])
 
@@ -337,8 +283,6 @@ enum SqlGraphQuantifier:
      * Exact quantity of repetitions.
      *
      * Renders as `{expr}`.
-     *
-     * @param quantity the exact count expression.
      */
     case Quantity(quantity: SqlExpr)
 
