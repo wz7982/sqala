@@ -6,7 +6,7 @@ import sqala.ast.quantifier.SqlQuantifier
 /**
  * A `GROUP BY` clause.
  *
- * Renders as `GROUP BY [DISTINCT|ALL] expr, ...`.
+ * Renders as `GROUP BY [DISTINCT|ALL] grouping_item [, ...]`.
  *
  * @param quantifier optional `DISTINCT` or `ALL`.
  * @param items the grouping items.
@@ -29,7 +29,7 @@ enum SqlGroupingItem:
     /**
      * A `CUBE` grouping set over the given expressions.
      *
-     * Renders as `CUBE(expr, ...)`.
+     * Renders as `CUBE(expr [, ...])`.
      *
      * @param items the expressions to cube.
      */
@@ -38,7 +38,7 @@ enum SqlGroupingItem:
     /**
      * A `ROLLUP` grouping set over the given expressions.
      *
-     * Renders as `ROLLUP(expr, ...)`.
+     * Renders as `ROLLUP(expr [, ...])`.
      *
      * @param items the expressions to roll up.
      */
@@ -47,7 +47,7 @@ enum SqlGroupingItem:
     /**
      * An explicit `GROUPING SETS` clause.
      *
-     * Renders as `GROUPING SETS((expr, ...), expr, ...)`.
+     * Renders as `GROUPING SETS(grouping_item [, ...])`.
      *
      * @param items the grouping set expressions.
      */

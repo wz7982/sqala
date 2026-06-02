@@ -5,7 +5,7 @@ import sqala.ast.expr.SqlExpr
 /**
  * A limit / offset clause.
  *
- * Renders as `[OFFSET n [ROW|ROWS]] [FETCH FIRST|NEXT n [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
+ * Renders as `[OFFSET n [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
  *
  * @param offset optional offset expression.
  * @param fetch optional `FETCH` clause.
@@ -51,7 +51,7 @@ enum SqlFetchMode:
 /**
  * A `FETCH` clause.
  *
- * Renders as `FETCH FIRST|NEXT n [PERCENT] ROW|ROWS ONLY|WITH TIES`.
+ * Renders as `FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES`.
  *
  * @param limit the row count or percentage expression.
  * @param unit the fetch unit.

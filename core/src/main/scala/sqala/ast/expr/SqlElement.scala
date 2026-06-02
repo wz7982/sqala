@@ -3,7 +3,7 @@ package sqala.ast.expr
 /**
  * A `WHEN ... THEN ...` branch in a `CASE` expression.
  *
- * Renders as `WHEN when THEN then`.
+ * Renders as `WHEN expr THEN expr`.
  *
  * @param when the condition expression.
  * @param `then` the result expression.
@@ -13,7 +13,7 @@ case class SqlCaseBranch(when: SqlExpr, `then`: SqlExpr)
 /**
  * A `TRIM` specification with optional mode and value.
  *
- * Renders as `[BOTH|LEADING|TRAILING] [value]`.
+ * Renders as `[BOTH|LEADING|TRAILING] [expr]`.
  *
  * @param mode optional trim mode.
  * @param value optional trim character expression.
@@ -66,7 +66,7 @@ enum SqlJsonUniquenessMode:
 /**
  * A `PASSING` argument for JSON path expressions.
  *
- * Renders as `expr AS alias`.
+ * Renders as `expr AS "alias"`.
  *
  * @param expr the value expression.
  * @param alias the variable alias in the JSON path.
@@ -425,7 +425,7 @@ case class SqlJsonOutput(`type`: SqlType, format: Option[SqlJsonOutputFormat])
 /**
  * A key/value pair for `JSON_OBJECT` and `JSON_OBJECTAGG`.
  *
- * Renders as `key VALUE value`.
+ * Renders as `expr VALUE expr`.
  *
  * @param key the key expression.
  * @param value the value expression.
@@ -435,7 +435,7 @@ case class SqlJsonObjectItem(key: SqlExpr, value: SqlExpr)
 /**
  * An element for `JSON_ARRAY` and `JSON_ARRAYAGG`.
  *
- * Renders as `value [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]`.
+ * Renders as `expr [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]`.
  *
  * @param value the element value expression.
  * @param input optional input format specification.

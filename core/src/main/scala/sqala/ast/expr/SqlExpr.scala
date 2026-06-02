@@ -76,7 +76,7 @@ enum SqlExpr:
     /**
      * A parenthesized tuple of expressions.
      *
-     * Renders as `(expr, ...)`.
+     * Renders as `(expr [, ...])`.
      *
      * @param items the expressions inside the tuple.
      */
@@ -85,7 +85,7 @@ enum SqlExpr:
     /**
      * An array expression.
      *
-     * Renders as `ARRAY[expr, ...]`.
+     * Renders as `ARRAY[expr [, ...]]`.
      *
      * @param items the expressions inside the array.
      */
@@ -104,7 +104,7 @@ enum SqlExpr:
     /**
      * A binary operation between two expressions.
      *
-     * Renders as `left operator right` (e.g. `a + b`, `x = y`, `p AND q`).
+     * Renders as `expr operator expr` (e.g. `a + b`, `x = y`, `p AND q`).
      *
      * Parentheses are added automatically based on operator precedence.
      *
@@ -134,7 +134,7 @@ enum SqlExpr:
     /**
      * A `BETWEEN` predicate.
      *
-     * Renders as `expr [NOT] BETWEEN start AND end`.
+     * Renders as `expr [NOT] BETWEEN expr AND expr`.
      *
      * @param expr the expression to test.
      * @param start the lower bound.
@@ -146,7 +146,7 @@ enum SqlExpr:
     /**
      * A `LIKE` pattern-matching predicate.
      *
-     * Renders as `expr [NOT] LIKE pattern [ESCAPE escape]`.
+     * Renders as `expr [NOT] LIKE pattern [ESCAPE expr]`.
      *
      * @param expr the expression to test.
      * @param pattern the LIKE pattern expression.
@@ -158,7 +158,7 @@ enum SqlExpr:
     /**
      * A `SIMILAR TO` pattern-matching predicate.
      *
-     * Renders as `expr [NOT] SIMILAR TO pattern [ESCAPE escape]`.
+     * Renders as `expr [NOT] SIMILAR TO pattern [ESCAPE expr]`.
      *
      * @param expr the expression to test.
      * @param pattern the SIMILAR TO pattern expression.
@@ -170,7 +170,7 @@ enum SqlExpr:
     /**
      * A searched `CASE` expression.
      *
-     * Renders as `CASE WHEN expr THEN expr [WHEN expr THEN expr] [ELSE expr] END`.
+     * Renders as `CASE WHEN expr THEN expr [WHEN expr THEN expr ...] [ELSE expr] END`.
      *
      * @param branches the WHEN/THEN pairs.
      * @param default optional ELSE expression.
@@ -180,7 +180,7 @@ enum SqlExpr:
     /**
      * A simple `CASE` expression.
      *
-     * Renders as `CASE expr WHEN expr THEN expr [WHEN expr THEN expr] [ELSE expr] END`.
+     * Renders as `CASE expr WHEN expr THEN expr [WHEN expr THEN expr ...] [ELSE expr] END`.
      *
      * @param expr the expression to compare against each WHEN value.
      * @param branches the WHEN/THEN pairs.
@@ -191,7 +191,7 @@ enum SqlExpr:
     /**
      * A `COALESCE` expression: returns the first non-NULL value in the list.
      *
-     * Renders as `COALESCE(expr, ...)`.
+     * Renders as `COALESCE(expr [, ...])`.
      *
      * @param items the expressions to evaluate.
      */
@@ -201,7 +201,7 @@ enum SqlExpr:
      * A `NULLIF` expression: returns NULL when `expr` equals `test`,
      * otherwise returns `expr`.
      *
-     * Renders as `NULLIF(expr, test)`.
+     * Renders as `NULLIF(expr, expr)`.
      *
      * @param expr the expression to return if not equal.
      * @param test the expression to compare against.
@@ -231,7 +231,7 @@ enum SqlExpr:
     /**
      * A subquery expression, optionally prefixed with a quantifier.
      *
-     * Renders as `[ANY|ALL|EXISTS] (SELECT ...)`.
+     * Renders as `[ANY|ALL|EXISTS] (query)`.
      *
      * @param quantifier optional `ANY`, `ALL`, or `EXISTS`.
      * @param query the nested `SELECT` query.
@@ -242,7 +242,7 @@ enum SqlExpr:
      * A `GROUPING` expression: returns 1 if a column is being aggregated
      * (i.e. not part of the current grouping set), 0 otherwise.
      *
-     * Renders as `GROUPING(expr, ...)`.
+     * Renders as `GROUPING(expr [, ...])`.
      *
      * @param items the expressions to check.
      */
@@ -260,7 +260,7 @@ enum SqlExpr:
     /**
      * A `SUBSTRING` function.
      *
-     * Renders as `SUBSTRING(expr FROM from [FOR for])`.
+     * Renders as `SUBSTRING(expr FROM expr [FOR expr])`.
      *
      * @param expr the source string expression.
      * @param from the start position (1-based).
@@ -271,7 +271,7 @@ enum SqlExpr:
     /**
      * A `TRIM` function.
      *
-     * Renders as `TRIM([[LEADING|TRAILING|BOTH] [value] FROM] expr)`.
+     * Renders as `TRIM([[LEADING|TRAILING|BOTH] [expr] FROM] expr)`.
      *
      * @param expr the string expression to trim.
      * @param trim optional trim specification (mode and/or characters to remove).
@@ -281,7 +281,7 @@ enum SqlExpr:
     /**
      * An `OVERLAY` function.
      *
-     * Renders as `OVERLAY(expr PLACING placing FROM from [FOR for])`.
+     * Renders as `OVERLAY(expr PLACING expr FROM expr [FOR expr])`.
      *
      * @param expr the source string expression.
      * @param placing the replacement string.
@@ -293,7 +293,7 @@ enum SqlExpr:
     /**
      * A `POSITION` function.
      *
-     * Renders as `POSITION(expr IN in)`.
+     * Renders as `POSITION(expr IN expr)`.
      *
      * @param expr the substring to search for.
      * @param in the string to search within.
@@ -342,8 +342,8 @@ enum SqlExpr:
      * A `JSON_QUERY` function: extracts a JSON object or array at a given path.
      *
      * Renders as
-     * `JSON_QUERY(expr, path
-     *   [PASSING expr AS alias, ...]
+     * `JSON_QUERY(expr, expr
+     *   [PASSING expr AS alias [, ...]]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]]
      *   [WITH|WITHOUT [CONDITIONAL|UNCONDITIONAL] [ARRAY] WRAPPER]
      *   [KEEP|OMIT QUOTES [ON SCALAR STRING]]
@@ -376,8 +376,8 @@ enum SqlExpr:
      * A `JSON_VALUE` function: extracts a scalar value at a given JSON path.
      *
      * Renders as
-     * `JSON_VALUE(expr, path
-     *   [PASSING expr AS alias, ...]
+     * `JSON_VALUE(expr, expr
+     *   [PASSING expr AS alias, [, ...]]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]]
      *   [ERROR|NULL|DEFAULT expr ON EMPTY]
      *   [ERROR|NULL|DEFAULT expr ON ERROR])`.
@@ -402,7 +402,7 @@ enum SqlExpr:
      * A `JSON_OBJECT` function: builds a JSON object from key/value pairs.
      *
      * Renders as
-     * `JSON_OBJECT(key VALUE value, ...
+     * `JSON_OBJECT(expr VALUE expr [, ...]
      *   [NULL ON NULL|ABSENT ON NULL]
      *   [WITH|WITHOUT UNIQUE KEYS]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]])`.
@@ -423,7 +423,7 @@ enum SqlExpr:
      * A `JSON_ARRAY` function: builds a JSON array from values.
      *
      * Renders as
-     * `JSON_ARRAY(value [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]], ...
+     * `JSON_ARRAY(expr [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]] [, ...]
      *   [NULL ON NULL|ABSENT ON NULL]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]])`.
      *
@@ -441,8 +441,8 @@ enum SqlExpr:
      * A `JSON_EXISTS` function: tests whether a JSON path exists in the document.
      *
      * Renders as
-     * `JSON_EXISTS(expr, path
-     *   [PASSING expr AS alias, ...]
+     * `JSON_EXISTS(expr, expr
+     *   [PASSING expr AS alias [, ...]]
      *   [ERROR|TRUE|FALSE|UNKNOWN ON ERROR])`.
      *
      * @param expr the JSON source expression.
@@ -460,7 +460,7 @@ enum SqlExpr:
     /**
      * A `COUNT(*)` aggregate function.
      *
-     * Renders as `COUNT([table.]*) [FILTER (WHERE filter)]`.
+     * Renders as `COUNT(["table".]*) [FILTER (WHERE expr)]`.
      *
      * @param tableName optional table qualifier (e.g. for `COUNT(t.*)`).
      * @param filter optional FILTER clause expression.
@@ -471,10 +471,10 @@ enum SqlExpr:
      * A `LISTAGG` aggregate function: concatenates values with a separator.
      *
      * Renders as
-     * `LISTAGG([DISTINCT|ALL] expr, separator
-     *   [ON OVERFLOW ERROR|TRUNCATE filler WITH|WITHOUT COUNT])
-     *   [WITHIN GROUP (ORDER BY withinGroup, ...)]
-     *   [FILTER (WHERE filter)]`.
+     * `LISTAGG([DISTINCT|ALL] expr, expr
+     *   [ON OVERFLOW ERROR|TRUNCATE expr WITH|WITHOUT COUNT])
+     *   [WITHIN GROUP (ORDER BY ordering_item [, ...])]
+     *   [FILTER (WHERE expr)]`.
      *
      * @param quantifier optional `DISTINCT` / `ALL`.
      * @param expr the expression to aggregate.
@@ -496,11 +496,11 @@ enum SqlExpr:
      * A `JSON_OBJECTAGG` aggregate function: aggregates key/value pairs into a JSON object.
      *
      * Renders as
-     * `JSON_OBJECTAGG(key VALUE value
+     * `JSON_OBJECTAGG(expr VALUE expr
      *   [NULL ON NULL|ABSENT ON NULL]
      *   [WITH|WITHOUT UNIQUE KEYS]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]])
-     *   [FILTER (WHERE filter)]`.
+     *   [FILTER (WHERE expr)]`.
      *
      * @param item the key/value pair.
      * @param nullConstructor how to handle NULL values.
@@ -520,12 +520,12 @@ enum SqlExpr:
      * A `JSON_ARRAYAGG` aggregate function: aggregates values into a JSON array.
      *
      * Renders as
-     * `JSON_ARRAYAGG(value
+     * `JSON_ARRAYAGG(expr
      *   [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]
-     *   [ORDER BY orderBy, ...]
+     *   [ORDER BY ordering_item [, ...]]
      *   [NULL ON NULL|ABSENT ON NULL]
      *   [RETURNING type [FORMAT JSON [ENCODING UTF8|UTF16|UTF32]]])
-     *   [FILTER (WHERE filter)]`.
+     *   [FILTER (WHERE expr)]`.
      *
      * @param item the array element, optionally with a format specification.
      * @param orderBy ordering clause inside the aggregate.
@@ -544,7 +544,7 @@ enum SqlExpr:
     /**
      * A window function with `NULLS` treatment, such as `LAG`, `LEAD`, `FIRST_VALUE`, or `LAST_VALUE`.
      *
-     * Renders as `name(arg, ...) [RESPECT NULLS|IGNORE NULLS]`.
+     * Renders as `name(expr [, ...]) [RESPECT NULLS|IGNORE NULLS]`.
      *
      * @param name the function name.
      * @param args the function arguments.
@@ -560,7 +560,7 @@ enum SqlExpr:
      * An `NTH_VALUE` window function: returns the n-th row value in a window.
      *
      * Renders as
-     * `NTH_VALUE(expr, row) [FROM FIRST|FROM LAST] [RESPECT NULLS|IGNORE NULLS]`.
+     * `NTH_VALUE(expr, expr) [FROM FIRST|FROM LAST] [RESPECT NULLS|IGNORE NULLS]`.
      *
      * @param expr the value expression.
      * @param row the N-th row number.
@@ -578,10 +578,10 @@ enum SqlExpr:
      * A general-purpose function call, supporting most aggregate/function.
      *
      * Renders as
-     * `name([DISTINCT|ALL] arg, ...
-     *   [ORDER BY orderBy, ...])
-     *   [WITHIN GROUP (ORDER BY withinGroup, ...)]
-     *   [FILTER (WHERE filter)]`.
+     * `name([DISTINCT|ALL] expr [, ...]
+     *   [ORDER BY ordering_item [, ...]])
+     *   [WITHIN GROUP (ORDER BY ordering_item [, ...])]
+     *   [FILTER (WHERE expr)]`.
      *
      * @param quantifier optional `DISTINCT` / `ALL`.
      * @param name the function name.

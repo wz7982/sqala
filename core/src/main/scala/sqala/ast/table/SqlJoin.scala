@@ -57,7 +57,7 @@ enum SqlJoinCondition:
     /**
      * An `ON` condition.
      *
-     * Renders as `ON condition`.
+     * Renders as `ON expr`.
      *
      * @param condition the join condition expression.
      */
@@ -66,7 +66,7 @@ enum SqlJoinCondition:
     /**
      * A `USING` clause.
      *
-     * Renders as `USING(column, ...)`.
+     * Renders as `USING("column" [, ...])`.
      *
      * @param columnNames the column names to join on.
      */

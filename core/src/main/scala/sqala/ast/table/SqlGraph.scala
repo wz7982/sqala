@@ -16,7 +16,7 @@ enum SqlGraphRowsMode:
     /**
      * One row per vertex.
      *
-     * Renders as `ONE ROW PER VERTEX (name) [IN (inPath, ...)]`.
+     * Renders as `ONE ROW PER VERTEX ("name") [IN ("path" [, ...])]`.
      *
      * @param name the vertex pattern variable.
      * @param inPaths the path variables leading into the vertex.
@@ -29,7 +29,7 @@ enum SqlGraphRowsMode:
     /**
      * One row per step traversing an edge.
      *
-     * Renders as `ONE ROW PER STEP (vertex1, edge, vertex2) [IN (inPath, ...)]`.
+     * Renders as `ONE ROW PER STEP (vertex1, edge, vertex2) [IN ("path" [, ...])]`.
      *
      * @param vertex1 the source vertex.
      * @param edge the traversed edge.
@@ -50,7 +50,7 @@ enum SqlGraphExportMode:
     /**
      * Export all singletons except the given patterns.
      *
-     * Renders as `EXPORT ALL SINGLETONS EXCEPT (pattern, ...)`.
+     * Renders as `EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])`.
      *
      * @param exceptPatterns the pattern names to exclude.
      */
@@ -59,7 +59,7 @@ enum SqlGraphExportMode:
     /**
      * Export only the given singletons.
      *
-     * Renders as `EXPORT SINGLETONS (pattern, ...)`.
+     * Renders as `EXPORT SINGLETONS (pattern [, ...])`.
      *
      * @param patterns the pattern names to export.
      */
@@ -147,7 +147,7 @@ enum SqlGraphDifferentMode:
 /**
  * A graph pattern within a `GRAPH_TABLE` expression.
  *
- * Renders as `[name = ] term`.
+ * Renders as `["name" = ] term`.
  *
  * @param name optional pattern name.
  * @param term the pattern term.
@@ -177,7 +177,7 @@ enum SqlGraphPatternTerm:
     /**
      * A vertex pattern term.
      *
-     * Renders as `([name] [IS label] [WHERE where])`.
+     * Renders as `(["name"] [IS "label"] [WHERE expr])`.
      *
      * @param name optional vertex variable name.
      * @param label optional vertex label.
@@ -192,7 +192,7 @@ enum SqlGraphPatternTerm:
     /**
      * An edge pattern term.
      *
-     * Renders as `leftSymbol[name [IS label] [WHERE where]]rightSymbol`.
+     * Renders as `symbol["name" [IS "label"] [WHERE expr]]symbol`.
      *
      * @param leftSymbol the left edge symbol.
      * @param name optional edge variable name.
@@ -211,7 +211,7 @@ enum SqlGraphPatternTerm:
     /**
      * Conjunction of two pattern terms.
      *
-     * Renders as `left right` separated by a space.
+     * Renders as `term term` separated by a space.
      *
      * @param left the left term.
      * @param right the right term.
@@ -224,7 +224,7 @@ enum SqlGraphPatternTerm:
     /**
      * Disjunction of two pattern terms.
      *
-     * Renders as `left | right`.
+     * Renders as `term | term`.
      *
      * @param left the left term.
      * @param right the right term.
@@ -237,7 +237,7 @@ enum SqlGraphPatternTerm:
     /**
      * Alternation of two pattern terms.
      *
-     * Renders as `left |+| right`.
+     * Renders as `term |+| term`.
      *
      * @param left the left term.
      * @param right the right term.
@@ -256,7 +256,7 @@ enum SqlGraphLabel:
     /**
      * A named label.
      *
-     * Renders as `name`.
+     * Renders as `"name"`.
      *
      * @param name the label name.
      */
@@ -281,7 +281,7 @@ enum SqlGraphLabel:
     /**
      * Conjunction of two labels.
      *
-     * Renders as `left & right`.
+     * Renders as `label & label`.
      *
      * @param left the left label.
      * @param right the right label.
@@ -291,7 +291,7 @@ enum SqlGraphLabel:
     /**
      * Disjunction of two labels.
      *
-     * Renders as `left | right`.
+     * Renders as `label | label`.
      *
      * @param left the left label.
      * @param right the right label.
@@ -326,7 +326,7 @@ enum SqlGraphQuantifier:
     /**
      * Between `start` and `end` repetitions.
      *
-     * Renders as `{[start], [end]}`.
+     * Renders as `{[expr], [expr]}`.
      *
      * @param start optional minimum count.
      * @param end optional maximum count.
@@ -336,7 +336,7 @@ enum SqlGraphQuantifier:
     /**
      * Exact quantity of repetitions.
      *
-     * Renders as `{quantity}`.
+     * Renders as `{expr}`.
      *
      * @param quantity the exact count expression.
      */

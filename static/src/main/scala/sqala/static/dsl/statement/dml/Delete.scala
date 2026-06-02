@@ -26,8 +26,8 @@ object Delete:
         val alias = qc.fetchAlias
         val sqlTable: SqlTable.Ident = SqlTable.Ident(
             metaData.tableName,
-            None,
             Some(SqlTableAlias(alias, Nil)),
+            None,
             None,
             None
         )

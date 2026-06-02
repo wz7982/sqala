@@ -44,8 +44,8 @@ object AsTable:
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
-                        None,
                         Some(SqlTableAlias(alias, Nil)),
+                        None,
                         None,
                         None
                     )
@@ -154,8 +154,8 @@ object AsTable:
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
-                        None,
                         Some(tableAlias),
+                        None,
                         None,
                         None
                     )
