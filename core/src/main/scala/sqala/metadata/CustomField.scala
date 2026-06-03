@@ -3,7 +3,7 @@ package sqala.metadata
 import sqala.ast.expr.{SqlExpr, SqlType}
 
 /**
- * Allows a user-defined Scala type to be used as a value in sqala expressions
+ * Allows a user-defined type to be used as a value in sqala expressions
  * by mapping it to a supported type with a built-in `AsSqlExpr` instance.
  *
  * Implement `toValue` and `fromValue` to define the bidirectional conversion.

@@ -4,9 +4,18 @@ import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
 
+/**
+ * Wraps each field of a projection type with `Option` for nullable results.
+ */
 trait ToOption[T]:
+    /**
+     * The optional counterpart of `T`.
+     */
     type R
 
+    /**
+     * Wraps the value with the optional type.
+     */
     def toOption(x: T): R
 
 object ToOption:

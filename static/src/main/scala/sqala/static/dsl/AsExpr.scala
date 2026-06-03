@@ -6,13 +6,30 @@ import sqala.static.dsl.statement.query.Query
 
 import scala.compiletime.ops.int.>
 
+/**
+ * Lifts values, expressions, subqueries, and tuples into the expression
+ * layer for use in `filter`, `map`, and other DSL methods.
+ */
 trait AsExpr[T, CL <: Int]:
+    /**
+     * The result type of the expression.
+     */
     type R
 
+    /**
+     * The expression kind.
+     */
     type K <: ExprKind
 
+    /**
+     * Converts the value to a list of expressions.
+     */
     def asExprs(x: T): List[Expr[?, ?]]
 
+    /**
+     * Converts the value to a single expression, wrapping multiple
+     * sub-expressions in a tuple.
+     */
     def asExpr(x: T): Expr[R, K] =
         val exprList = asExprs(x)
         if exprList.size == 1 then

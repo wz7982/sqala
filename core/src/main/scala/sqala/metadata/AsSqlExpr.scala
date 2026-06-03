@@ -7,13 +7,13 @@ import java.time.format.DateTimeFormatter
 import scala.compiletime.{erasedValue, summonInline}
 
 /**
- * Type class that converts a Scala value into a `SqlExpr` literal.
+ * Type class that converts a value into a `SqlExpr` literal.
  *
  * Also provides the corresponding `SqlType` for the value.
  */
 trait AsSqlExpr[T]:
     /**
-     * The SQL type corresponding to this Scala type.
+     * The SQL type corresponding to this type.
      */
     def sqlType: SqlType
 

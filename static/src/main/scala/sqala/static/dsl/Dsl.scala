@@ -134,22 +134,22 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
         tb: AsTable[B, CL],
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
-    ): JoinTable[j.R, c.R, CL] =
+    ): FromJoin[j.R, c.R, CL] =
         val (leftTable, leftSqlTable) = ta.asTable(a)
         val (rightTable, rightSqlTable) = tb.asTable(b)
         val params = j.join(leftTable, rightTable)
-        JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
+        FromJoin(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
     def crossJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
         tb: AsLateralTable[B, CL + 1],
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
-    ): JoinTable[j.R, c.R, CL + 1] =
+    ): FromJoin[j.R, c.R, CL + 1] =
         given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
         val (leftTable, leftSqlTable) = ta.asTable(a)
         val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
-        JoinTable(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
+        FromJoin(params, SqlTable.Join(leftSqlTable, SqlJoinType.Cross, rightSqlTable, None))
 
     def leftJoin[B](b: B)(using
         tb: AsTable[B, CL],
@@ -738,7 +738,7 @@ inline def createTableFunc[T, CL <: Int](
 
 extension (s: StringContext)
     inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
-        val instances = RawMacro.asSqlInstances[CL](args)
+        val instances = RawMacro.asExprInstances[CL](args)
         RawExpr(s.parts.toList.map(_.trim), instances, args.toList)
 
 extension [T](expr: Expr[T, Column[1]])

@@ -7,13 +7,28 @@ import sqala.static.dsl.statement.query.Query
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>
 
+/**
+ * Lifts a single expression or subquery into a grouping item.
+ */
 trait AsGroupItem[T, CL <: Int]:
+    /**
+     * The result type of the grouping item.
+     */
     type R
 
+    /**
+     * The expression kind tuple of the grouping item.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a grouping item.
+     */
     def asGroup(x: T): R
 
+    /**
+     * Converts the value to a list of expressions.
+     */
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsGroupItem:
@@ -56,13 +71,29 @@ object AsGroupItem:
             def asExprs(x: Q): List[Expr[?, ?]] =
                 Expr(SqlExpr.Subquery(None, x.tree)) :: Nil
 
+/**
+ * Lifts expressions, subqueries, tuples, and named tuples into grouping
+ * items for the `groupBy` clause.
+ */
 trait AsGroup[T, CL <: Int]:
+    /**
+     * The result type of the grouping clause.
+     */
     type R
 
+    /**
+     * The expression kind tuple of the grouping clause.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a grouping clause.
+     */
     def asGroup(x: T): R
 
+    /**
+     * Converts the value to a list of expressions.
+     */
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsGroup:

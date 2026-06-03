@@ -166,13 +166,13 @@ object AsTable:
                 val sqlValues = SqlQuery.Values(exprList, None)
                 (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 
-    given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[JoinTable[T, TOKS, CL], CL, T, TOKS] =
-        new AsTable[JoinTable[T, TOKS, CL], CL]:
+    given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
+        new AsTable[FromJoin[T, TOKS, CL], CL]:
             type R = T
 
             type OKS = TOKS
 
-            def asTable(x: JoinTable[T, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
+            def asTable(x: FromJoin[T, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 (x.params, x.sqlTable)
 
     given tuple[H, T <: Tuple, CL <: Int](using

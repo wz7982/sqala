@@ -5,7 +5,8 @@ import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlUnaryOperator}
 import scala.annotation.targetName
 
 /**
- * A typed expression wrapping a SQL AST node.
+ * A typed expression wrapping an AST node. All DSL operations on
+ * columns, values, and subqueries produce or consume `Expr` values.
  */
 final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     /**

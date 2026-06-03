@@ -5,7 +5,13 @@ import sqala.metadata.*
 
 import java.time.{LocalDateTime, OffsetDateTime}
 
+/**
+ * Provides the target type for a `CAST` expression.
+ */
 trait Cast[T, R]:
+    /**
+     * The target type.
+     */
     def castType: SqlType
 
 object Cast:

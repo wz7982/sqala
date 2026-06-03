@@ -4,18 +4,27 @@ import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
 
+/**
+ * Computes the row type of a query projection, used for compile-time
+ * derivation of query result deserialization code.
+ */
 trait Result[T]:
+    /**
+     * The computed result type.
+     */
     type R
 
 object Result:
     type Aux[T, O] = Result[T]:
         type R = O
 
-    given expr[T, K <: ExprKind]: Aux[Expr[T, K], T] = new Result[Expr[T, K]]:
-        type R = T
+    given expr[T, K <: ExprKind]: Aux[Expr[T, K], T] = 
+        new Result[Expr[T, K]]:
+            type R = T
 
-    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], T] = new Result[Table[T, K, L]]:
-        type R = T
+    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], T] = 
+        new Result[Table[T, K, L]]:
+            type R = T
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]
@@ -23,8 +32,9 @@ object Result:
         new Result[ExcludedTable[N, V, L]]:
             type R = r.R
 
-    given funcTable[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[FuncTable[T, K, L], T] = new Result[FuncTable[T, K, L]]:
-        type R = T
+    given funcTable[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[FuncTable[T, K, L], T] = 
+        new Result[FuncTable[T, K, L]]:
+            type R = T
 
     given subqueryTable[N <: Tuple, V <: Tuple, L <: Int](using
         r: Result[NamedTuple[N, V]]

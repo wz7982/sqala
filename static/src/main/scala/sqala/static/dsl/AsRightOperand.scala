@@ -4,11 +4,24 @@ import sqala.ast.expr.SqlExpr
 
 import scala.compiletime.ops.int.>
 
-trait AsRightOperand[T,  CL <: Int]:
+/**
+ * Lifts expressions, and quantified subqueries to the right-hand
+ * side of comparison operators.
+ */
+trait AsRightOperand[T, CL <: Int]:
+    /**
+     * The result type of the operand.
+     */
     type R
 
+    /**
+     * The expression kind of the operand.
+     */
     type K <: ExprKind
 
+    /**
+     * Converts the value to an expression.
+     */
     def asExpr(x: T): Expr[R, K]
 
 object AsRightOperand:
