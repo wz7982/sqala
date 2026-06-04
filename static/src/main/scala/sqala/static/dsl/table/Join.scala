@@ -155,6 +155,9 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
      *     .join(Post).on((c, p) => c.id == p.channelId)
      *     .join(Comment).on((_, p, ct) => p.id == ct.postId)
      * )
+     *
+     * // Unconditional join
+     * from(Channel.join(Post).on((_, _) => true))
      * }}}
      */
     def on[F](f: T => F)(using

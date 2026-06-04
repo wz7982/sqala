@@ -11,11 +11,27 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 import scala.compiletime.ops.int.>
 
+/**
+ * Used by `from` to lift various DSL types into a table reference
+ * and its AST node. `CL` is the current query context level, used for
+ * scope validation. `OKS` tracks the kind tuple of the outer query,
+ * used to validate scope-dependent constraints such as correlated
+ * subqueries.
+ */
 trait AsTable[T, CL <: Int]:
+    /**
+     * The table reference type.
+     */
     type R
 
+    /**
+     * The kind tuple of the outer query.
+     */
     type OKS <: Tuple
 
+    /**
+     * Converts the value to a table reference and its AST.
+     */
     def asTable(x: T)(using QueryContext[CL]): (R, SqlTable)
 
 object AsTable:

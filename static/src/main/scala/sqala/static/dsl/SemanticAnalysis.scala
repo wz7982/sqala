@@ -4,20 +4,80 @@ import scala.util.NotGiven
 import scala.compiletime.ops.boolean.{&&, ||}
 import scala.compiletime.ops.int.>
 
+/**
+ * The `ExprKind` system tags each expression with its SQL semantic
+ * category. This enables compile-time validation of where an
+ * expression can legally appear — for example, aggregate functions
+ * are rejected in `filter` clauses, and ungrouped columns are rejected
+ * after `groupBy`.
+ *
+ * The validation rules are encoded as type classes with boolean
+ * results, enforced through `given` resolution at compile time.
+ */
 sealed trait ExprKind
+
+/**
+ * A literal value with no table or column context.
+ */
 final class Value extends ExprKind
+
+/**
+ * A column reference, tagged with the query context level `L`.
+ */
 final class Column[L <: Int] extends ExprKind
+
+/**
+ * An aggregate function call. `KS` is the kind tuple of expressions
+ * inside the aggregation.
+ */
 final class Agg[KS <: Tuple] extends ExprKind
+
+/**
+ * A window function call. `KS` is the kind tuple of expressions
+ * inside the window specification.
+ */
 final class Window[KS <: Tuple] extends ExprKind
+
+/**
+ * An expression inside a `groupBy` clause. `KS` is the kind tuple
+ * of the grouped expressions.
+ */
 final class Grouped[KS <: Tuple] extends ExprKind
+
+/**
+ * A column that has not been grouped and cannot appear after
+ * `groupBy` without being inside an aggregate function. `L` is the
+ * query context level.
+ */
 final class UngroupedColumn[L <: Int] extends ExprKind
+
+/**
+ * A composite of multiple expression kinds. `KS` is the combined kind
+ * tuple.
+ */
 final class Composite[KS <: Tuple] extends ExprKind
 
+/**
+ * The cardinality of a subquery result.
+ */
 sealed trait QuerySize
+/**
+ * The subquery returns at most one row (scalar subquery).
+ */
 final class OneRow extends QuerySize
+/**
+ * The subquery may return more than one row.
+ */
 final class ManyRows extends QuerySize
 
+/**
+ * Transforms an expression's semantic kind to a target kind
+ * without changing the underlying value type.
+ */
 trait TransformExprKind[T, K <: ExprKind]:
+    /**
+     * The transformed type.
+     */
     type R
 
     def transform(x: T): R
@@ -53,7 +113,13 @@ object TransformExprKind:
             def transform(x: H *: EmptyTuple): R =
                 h.transform(x.head) *: EmptyTuple
 
+/**
+ * Converts an expression kind to its tuple representation.
+ */
 trait KindToTuple[K <: ExprKind]:
+    /**
+     * The tuple representation of the kind.
+     */
     type R <: Tuple
 
 object KindToTuple:
@@ -68,7 +134,13 @@ object KindToTuple:
         new KindToTuple[K]:
             type R = K *: EmptyTuple
 
+/**
+ * Combines two expression kinds into one.
+ */
 trait CombineKind[A <: ExprKind, B <: ExprKind]:
+    /**
+     * The combined kind.
+     */
     type R <: ExprKind
 
 object CombineKind:
@@ -83,7 +155,13 @@ object CombineKind:
         new CombineKind[A, B]:
             type R = Composite[TupleDistinct[Tuple.Concat[ta.R, tb.R]]]
 
+/**
+ * Combines two kind tuples into one.
+ */
 trait CombineKindTuple[A <: Tuple, B <: Tuple]:
+    /**
+     * The combined kind tuple.
+     */
     type R <: Tuple
 
 object CombineKindTuple:
@@ -96,6 +174,10 @@ object CombineKindTuple:
         new CombineKindTuple[A, B]:
             type R = TupleDistinct[Tuple.Concat[A, B]]
 
+/**
+ * Determines whether two expression kinds can be
+ * combined.
+ */
 trait CanCombineKind[A <: ExprKind, B <: ExprKind]
 
 object CanCombineKind:
@@ -110,6 +192,10 @@ object CanCombineKind:
         NotGiven[B <:< UngroupedColumn[?]]
     ): CanCombineKind[A, B]()
 
+/**
+ * Determines whether all elements of a kind tuple can be
+ * combined.
+ */
 trait CanCombineKindTuple[KS <: Tuple]
 
 object CanCombineKindTuple:
@@ -122,7 +208,14 @@ object CanCombineKindTuple:
 
     given emptyTuple: CanCombineKindTuple[EmptyTuple]()
 
+/**
+ * Marks non-grouped fields as `UngroupedColumn` after a `groupBy`
+ * clause. `CL` is the current query context level.
+ */
 trait ToUngrouped[T, CL <: Int]:
+    /**
+     * The transformed type.
+     */
     type R
 
     def toUngrouped(x: T): R
@@ -158,193 +251,216 @@ object ToUngrouped:
             def toUngrouped(x: H *: EmptyTuple): R =
                 h.toUngrouped(x.head) *: EmptyTuple
 
-trait ExcludeCurrentLevelColumn[KS <: Tuple, L <: Int]:
+/**
+ * Removes columns at the current context level (`CL`) from a kind
+ * tuple. Used for scope validation in lateral and correlated
+ * subqueries.
+ */
+trait ExcludeCurrentLevelColumn[KS <: Tuple, CL <: Int]:
+    /**
+     * The filtered kind tuple.
+     */
     type R <: Tuple
 
 object ExcludeCurrentLevelColumn:
-    type Aux[KS <: Tuple, L <: Int, O <: Tuple] = ExcludeCurrentLevelColumn[KS, L]:
+    type Aux[KS <: Tuple, CL <: Int, O <: Tuple] = ExcludeCurrentLevelColumn[KS, CL]:
         type R = O
 
-    given valueHeadTuple[T <: Tuple, L <: Int](using
-        t: ExcludeCurrentLevelColumn[T, L]
-    ): Aux[Value *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[Value *: T, L]:
+    given valueHeadTuple[T <: Tuple, CL <: Int](using
+        t: ExcludeCurrentLevelColumn[T, CL]
+    ): Aux[Value *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[Value *: T, CL]:
             type R = t.R
 
-    given columnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: ExcludeCurrentLevelColumn[T, L],
-        refl: HL =:= L
-    ): Aux[Column[HL] *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[Column[HL] *: T, L]:
+    given columnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: ExcludeCurrentLevelColumn[T, CL],
+        refl: HL =:= CL
+    ): Aux[Column[HL] *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = t.R
 
-    given outerColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: ExcludeCurrentLevelColumn[T, L],
-        refl: L > HL =:= true
-    ): Aux[Column[HL] *: T, L, Column[HL] *: t.R] =
-        new ExcludeCurrentLevelColumn[Column[HL] *: T, L]:
+    given outerColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: ExcludeCurrentLevelColumn[T, CL],
+        refl: CL > HL =:= true
+    ): Aux[Column[HL] *: T, CL, Column[HL] *: t.R] =
+        new ExcludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = Column[HL] *: t.R
 
-    given aggHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given aggHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Agg[HS] *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[Agg[HS] *: T, L]:
+    ): Aux[Agg[HS] *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = t.R
 
-    given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Agg[HS] *: T, L, Agg[h.R] *: t.R] =
-        new ExcludeCurrentLevelColumn[Agg[HS] *: T, L]:
+    ): Aux[Agg[HS] *: T, CL, Agg[h.R] *: t.R] =
+        new ExcludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = Agg[h.R] *: t.R
 
-    given windowHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given windowHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Window[HS] *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[Window[HS] *: T, L]:
+    ): Aux[Window[HS] *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = t.R
 
-    given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Window[HS] *: T, L, Window[h.R] *: t.R] =
-        new ExcludeCurrentLevelColumn[Window[HS] *: T, L]:
+    ): Aux[Window[HS] *: T, CL, Window[h.R] *: t.R] =
+        new ExcludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = Window[h.R] *: t.R
 
-    given groupedHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given groupedHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Grouped[HS] *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[Grouped[HS] *: T, L]:
+    ): Aux[Grouped[HS] *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = t.R
 
-    given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: ExcludeCurrentLevelColumn[HS, L],
-        t: ExcludeCurrentLevelColumn[T, L],
+    given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: ExcludeCurrentLevelColumn[HS, CL],
+        t: ExcludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Grouped[HS] *: T, L, Grouped[h.R] *: t.R] =
-        new ExcludeCurrentLevelColumn[Grouped[HS] *: T, L]:
+    ): Aux[Grouped[HS] *: T, CL, Grouped[h.R] *: t.R] =
+        new ExcludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = Grouped[h.R] *: t.R
 
-    given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: ExcludeCurrentLevelColumn[T, L],
-        refl: HL =:= L
-    ): Aux[UngroupedColumn[HL] *: T, L, t.R] =
-        new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, L]:
+    given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: ExcludeCurrentLevelColumn[T, CL],
+        refl: HL =:= CL
+    ): Aux[UngroupedColumn[HL] *: T, CL, t.R] =
+        new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = t.R
 
-    given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: ExcludeCurrentLevelColumn[T, L],
-        refl: L > HL =:= true
-    ): Aux[UngroupedColumn[HL] *: T, L, UngroupedColumn[HL] *: t.R] =
-        new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, L]:
+    given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: ExcludeCurrentLevelColumn[T, CL],
+        refl: CL > HL =:= true
+    ): Aux[UngroupedColumn[HL] *: T, CL, UngroupedColumn[HL] *: t.R] =
+        new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = UngroupedColumn[HL] *: t.R
 
-    given emptyTuple[L <: Int]: Aux[EmptyTuple, L, EmptyTuple] =
-        new ExcludeCurrentLevelColumn[EmptyTuple, L]:
+    given emptyTuple[CL <: Int]: Aux[EmptyTuple, CL, EmptyTuple] =
+        new ExcludeCurrentLevelColumn[EmptyTuple, CL]:
             type R = EmptyTuple
 
-trait IncludeCurrentLevelColumn[KS <: Tuple, L <: Int]:
+/**
+ * Keeps only columns at the current context level (`CL`) in a kind
+ * tuple. Used to verify that a correlated subquery correctly
+ * references columns from the outer query.
+ */
+trait IncludeCurrentLevelColumn[KS <: Tuple, CL <: Int]:
+    /**
+     * The filtered kind tuple.
+     */
     type R <: Tuple
 
 object IncludeCurrentLevelColumn:
-    type Aux[KS <: Tuple, L <: Int, O <: Tuple] = IncludeCurrentLevelColumn[KS, L]:
+    type Aux[KS <: Tuple, CL <: Int, O <: Tuple] = IncludeCurrentLevelColumn[KS, CL]:
         type R = O
 
-    given valueHeadTuple[T <: Tuple, L <: Int](using
-        t: IncludeCurrentLevelColumn[T, L]
-    ): Aux[Value *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[Value *: T, L]:
+    given valueHeadTuple[T <: Tuple, CL <: Int](using
+        t: IncludeCurrentLevelColumn[T, CL]
+    ): Aux[Value *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[Value *: T, CL]:
             type R = t.R
 
-    given columnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: IncludeCurrentLevelColumn[T, L],
-        refl: HL =:= L
-    ): Aux[Column[HL] *: T, L, Column[HL] *: t.R] =
-        new IncludeCurrentLevelColumn[Column[HL] *: T, L]:
+    given columnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: IncludeCurrentLevelColumn[T, CL],
+        refl: HL =:= CL
+    ): Aux[Column[HL] *: T, CL, Column[HL] *: t.R] =
+        new IncludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = Column[HL] *: t.R
 
-    given outerColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: IncludeCurrentLevelColumn[T, L],
-        refl: L > HL =:= true
-    ): Aux[Column[HL] *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[Column[HL] *: T, L]:
+    given outerColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: IncludeCurrentLevelColumn[T, CL],
+        refl: CL > HL =:= true
+    ): Aux[Column[HL] *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = t.R
 
-    given aggHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given aggHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Agg[HS] *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[Agg[HS] *: T, L]:
+    ): Aux[Agg[HS] *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = t.R
 
-    given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Agg[HS] *: T, L, Agg[h.R] *: t.R] =
-        new IncludeCurrentLevelColumn[Agg[HS] *: T, L]:
+    ): Aux[Agg[HS] *: T, CL, Agg[h.R] *: t.R] =
+        new IncludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = Agg[h.R] *: t.R
 
-    given windowHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given windowHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Window[HS] *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[Window[HS] *: T, L]:
+    ): Aux[Window[HS] *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = t.R
 
-    given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Window[HS] *: T, L, Window[h.R] *: t.R] =
-        new IncludeCurrentLevelColumn[Window[HS] *: T, L]:
+    ): Aux[Window[HS] *: T, CL, Window[h.R] *: t.R] =
+        new IncludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = Window[h.R] *: t.R
 
-    given groupedHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given groupedHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: h.R =:= EmptyTuple
-    ): Aux[Grouped[HS] *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[Grouped[HS] *: T, L]:
+    ): Aux[Grouped[HS] *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = t.R
 
-    given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, L <: Int](using
-        h: IncludeCurrentLevelColumn[HS, L],
-        t: IncludeCurrentLevelColumn[T, L],
+    given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
+        h: IncludeCurrentLevelColumn[HS, CL],
+        t: IncludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Grouped[HS] *: T, L, Grouped[h.R] *: t.R] =
-        new IncludeCurrentLevelColumn[Grouped[HS] *: T, L]:
+    ): Aux[Grouped[HS] *: T, CL, Grouped[h.R] *: t.R] =
+        new IncludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = Grouped[h.R] *: t.R
 
-    given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: IncludeCurrentLevelColumn[T, L],
-        refl: HL =:= L
-    ): Aux[UngroupedColumn[HL] *: T, L, UngroupedColumn[HL] *: t.R] =
-        new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, L]:
+    given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: IncludeCurrentLevelColumn[T, CL],
+        refl: HL =:= CL
+    ): Aux[UngroupedColumn[HL] *: T, CL, UngroupedColumn[HL] *: t.R] =
+        new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = UngroupedColumn[HL] *: t.R
 
-    given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, L <: Int](using
-        t: IncludeCurrentLevelColumn[T, L],
-        refl: L > HL =:= true
-    ): Aux[UngroupedColumn[HL] *: T, L, t.R] =
-        new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, L]:
+    given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
+        t: IncludeCurrentLevelColumn[T, CL],
+        refl: CL > HL =:= true
+    ): Aux[UngroupedColumn[HL] *: T, CL, t.R] =
+        new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = t.R
 
-    given emptyTuple[L <: Int]: Aux[EmptyTuple, L, EmptyTuple] =
-        new IncludeCurrentLevelColumn[EmptyTuple, L]:
+    given emptyTuple[CL <: Int]: Aux[EmptyTuple, CL, EmptyTuple] =
+        new IncludeCurrentLevelColumn[EmptyTuple, CL]:
             type R = EmptyTuple
 
+/**
+ * Tests whether an expression kind is a specific kind. `K` is the
+ * kind to test, `TK` is the target kind.
+ */
 trait IsKind[K <: ExprKind, TK <: ExprKind]:
+    /**
+     * `true` if `K` is `TK`.
+     */
     type R <: Boolean
 
 object IsKind:
@@ -359,7 +475,14 @@ object IsKind:
         new IsKind[K, TK]:
             type R = false
 
+/**
+ * Tests whether a kind tuple contains at least one instance of a
+ * specific kind. `KS` is the kind tuple, `TK` is the target kind.
+ */
 trait HasKind[KS <: Tuple, TK <: ExprKind]:
+    /**
+     * `true` if any element matches `TK`.
+     */
     type R <: Boolean
 
 object HasKind:
@@ -384,7 +507,14 @@ object HasKind:
         new HasKind[EmptyTuple, TK]:
             type R = false
 
+/**
+ * Tests whether all elements in a kind tuple are of a specific kind.
+ * `KS` is the kind tuple, `TK` is the target kind.
+ */
 trait AllIsKind[KS <: Tuple, TK <: ExprKind]:
+    /**
+     * `true` if every element matches `TK`.
+     */
     type R <: Boolean
 
 object AllIsKind:
@@ -404,6 +534,10 @@ object AllIsKind:
         new AllIsKind[H *: EmptyTuple, TK]:
             type R = h.R
 
+/**
+ * Validates that a kind tuple contains no column references
+ * that would create variable capture issues.
+ */
 trait IsNotVariable[KS <: Tuple]
 
 object IsNotVariable:
@@ -420,6 +554,10 @@ object IsNotVariable:
         nu: hu.R =:= false
     ): IsNotVariable[KS]()
 
+/**
+ * Validates that a kind tuple can legally appear inside an
+ * aggregate function.
+ */
 trait CanInAgg[KS <: Tuple]
 
 object CanInAgg:
@@ -430,11 +568,18 @@ object CanInAgg:
         nw: hw.R =:= false
     ): CanInAgg[KS]()
 
+/**
+ * Validates that an expression kind can be used with `.over()`.
+ */
 trait CanCallOver[K <: ExprKind]
 
 object CanCallOver:
     given agg[K <: Agg[?]]: CanCallOver[K]()
 
+/**
+ * Validates that a kind tuple can appear inside a window
+ * specification.
+ */
 trait CanInWindow[KS <: Tuple]
 
 object CanInWindow:
@@ -445,6 +590,10 @@ object CanInWindow:
         nu: hu.R =:= false
     ): CanInWindow[KS]()
 
+/**
+ * Validates that a kind tuple contains no aggregate or window
+ * functions, allowing it to appear in a simple clause.
+ */
 trait CanInSimpleClause[KS <: Tuple]
 
 object CanInSimpleClause:
@@ -457,6 +606,10 @@ object CanInSimpleClause:
         nu: hu.R =:= false
     ): CanInSimpleClause[KS]()
 
+/**
+ * Validates that a kind tuple can appear in a `filter` clause.
+ * No aggregate, window, or ungrouped column references are allowed.
+ */
 trait CanInFilter[KS <: Tuple]
 
 object CanInFilter:
@@ -469,7 +622,13 @@ object CanInFilter:
         nu: hu.R =:= false
     ): CanInFilter[KS]()
 
+/**
+ * Validates that a kind tuple can appear in a `map` clause.
+ */
 trait CanInMap[KS <: Tuple]:
+    /**
+     * The resulting query size.
+     */
     type R <: QuerySize
 
 object CanInMap:
@@ -496,6 +655,10 @@ object CanInMap:
         new CanInMap[KS]:
             type R = ManyRows
 
+/**
+ * Validates that a kind tuple can appear in a `map` clause
+ * after `groupBy`.
+ */
 trait CanInGroupedMap[KS <: Tuple]
 
 object CanInGroupedMap:
@@ -506,6 +669,10 @@ object CanInGroupedMap:
         nu: hu.R =:= false
     ): CanInGroupedMap[KS]()
 
+/**
+ * Validates that a kind tuple can appear in a `sortBy` clause.
+ * `S` is the query size of the result.
+ */
 trait CanInSort[KS <: Tuple, S <: QuerySize]
 
 object CanInSort:
@@ -523,6 +690,10 @@ object CanInSort:
         nu: hu.R =:= false
     ): CanInSort[KS, ManyRows]()
 
+/**
+ * Validates that a kind tuple can appear in a `sortBy` clause
+ * after `groupBy`.
+ */
 trait CanInGroupedSort[KS <: Tuple]
 
 object CanInGroupedSort:
@@ -533,6 +704,10 @@ object CanInGroupedSort:
         nu: hu.R =:= false
     ): CanInGroupedSort[KS]()
 
+/**
+ * Validates that a kind tuple can appear in a `groupBy`
+ * clause.
+ */
 trait CanInGroup[KS <: Tuple]
 
 object CanInGroup:
@@ -545,6 +720,9 @@ object CanInGroup:
         nu: hu.R =:= false
     ): CanInGroup[KS]()
 
+/**
+ * Validates that a kind tuple can appear in a `having` clause.
+ */
 trait CanInHaving[KS <: Tuple]
 
 object CanInHaving:
@@ -557,21 +735,31 @@ object CanInHaving:
         nu: hu.R =:= false
     ): CanInHaving[KS]()
 
-trait CanInRecognizeDefine[KS <: Tuple, L <: Int]
+/**
+ * Validates that a kind tuple can appear in a `define` clause
+ * of `matchRecognize`. `L` is the query context level.
+ */
+trait CanInRecognizeDefine[KS <: Tuple, CL <: Int]
 
 object CanInRecognizeDefine:
-    given validate[KS <: Tuple, L <: Int](using
+    given validate[KS <: Tuple, CL <: Int](using
         hc: HasKind[KS, Column[?]],
         nc: hc.R =:= false,
         hw: HasKind[KS, Window[?]],
         nw: hw.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false,
-        oks: ExcludeCurrentLevelColumn[KS, L],
+        oks: ExcludeCurrentLevelColumn[KS, CL],
         e: oks.R =:= EmptyTuple
-    ): CanInRecognizeDefine[KS, L]()
+    ): CanInRecognizeDefine[KS, CL]()
 
+/**
+ * Determines the query size after a `take` clause.
+ */
 trait TakeSize[T]:
+    /**
+     * The resulting query size.
+     */
     type R <: QuerySize
 
 object TakeSize:
