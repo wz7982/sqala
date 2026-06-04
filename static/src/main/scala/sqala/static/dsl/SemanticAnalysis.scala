@@ -575,7 +575,7 @@ object CanInAgg:
     ): CanInAgg[KS]()
 
 /**
- * Validates that an expression kind can be used with `.over()`.
+ * Validates that an expression kind can be used with `over` clause.
  */
 trait CanCallOver[K <: ExprKind]
 

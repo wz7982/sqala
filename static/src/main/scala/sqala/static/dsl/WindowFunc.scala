@@ -5,7 +5,7 @@ import sqala.ast.expr.{SqlExpr, SqlWindow}
 /**
  * An intermediate type produced by window functions (`rank`, `lag`,
  * etc.). A window function cannot be used as an expression until
- * `.over()` is called, matching the SQL requirement that window
+ * `over` is called, matching the SQL requirement that window
  * functions require an `OVER` clause.
  */
 final case class WindowFunc[T, KS <: Tuple](private[sqala] val expr: SqlExpr):

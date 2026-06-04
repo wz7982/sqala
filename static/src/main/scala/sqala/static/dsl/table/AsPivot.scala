@@ -12,11 +12,26 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 import scala.compiletime.ops.int.>
 
+/**
+ * Used by `pivot` to lift entity types and subqueries into a
+ * pivot table source. `CL` is the current query context level.
+ * `OKS` tracks the kind tuple of the outer query for scope
+ * validation.
+ */
 trait AsPivot[T, CL <: Int]:
+    /**
+     * The pivot table type.
+     */
     type R
 
+    /**
+     * The kind tuple of the outer query.
+     */
     type OKS <: Tuple
 
+    /**
+     * Converts the value to a pivot table source.
+     */
     def asPivot(x: T)(using QueryContext[CL]): R
 
 object AsPivot:

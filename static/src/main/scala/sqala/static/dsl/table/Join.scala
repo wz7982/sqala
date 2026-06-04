@@ -124,7 +124,7 @@ object FullJoin:
                 ta.toTuple(toa.toOption(a)) ++ tb.toTuple(tob.toOption(b))
 
 /**
- * A join table source produced by calling `.on(...)` on a `JoinPart`. 
+ * A join table source produced by calling `on` on a `JoinPart`. 
  */
 final case class FromJoin[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
@@ -133,7 +133,7 @@ final case class FromJoin[T, OKS <: Tuple, L <: Int](
 
 /**
  * An intermediate join before the condition is specified. Created by
- * `join`, `leftJoin`, etc., and converted to `FromJoin` via `.on(...)`.
+ * `join`, `leftJoin`, etc., and converted to `FromJoin` via `on`.
  */
 final case class JoinPart[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
