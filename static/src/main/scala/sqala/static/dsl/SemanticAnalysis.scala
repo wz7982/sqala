@@ -80,6 +80,9 @@ trait TransformExprKind[T, K <: ExprKind]:
      */
     type R
 
+    /**
+     * Transforms the expression to the target kind.
+     */
     def transform(x: T): R
 
 object TransformExprKind:
@@ -218,6 +221,9 @@ trait ToUngrouped[T, CL <: Int]:
      */
     type R
 
+    /**
+     * Marks the value as ungrouped.
+     */
     def toUngrouped(x: T): R
 
 object ToUngrouped:
