@@ -28,8 +28,7 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
         ]
 
     /**
-     * Runtime column accessor. Maps a field name to a typed column
-     * expression. Required by `Selectable`.
+     * Runtime column accessor. Required by `Selectable`.
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)

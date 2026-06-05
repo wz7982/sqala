@@ -24,8 +24,7 @@ final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
     type Fields = NamedTuple[N, V]
 
     /**
-     * Runtime column accessor. Uses compile-time index lookup to map a
-     * field name to its projected value. Required by `Selectable`.
+     * Runtime column accessor. Required by `Selectable`.
      */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]

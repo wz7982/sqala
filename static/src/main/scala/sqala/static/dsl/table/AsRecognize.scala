@@ -5,24 +5,55 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.table.*
 import sqala.static.dsl.ExprKind
 
+/**
+ * Applies `matchRecognize` configuration to a table. Each method
+ * returns an immutable copy with the updated value.
+ */
 trait AsRecognize[T]:
+    /**
+     * Initializes the `matchRecognize` clause on the table.
+     */
     def asRecognizeTable(x: T): T
 
+    /**
+     * Sets the table alias.
+     */
     def alias(x: T, name: String): T
 
+    /**
+     * Sets the `partitionBy` expressions.
+     */
     def setPartitionBy(x: T, items: List[SqlExpr]): T
 
+    /**
+     * Appends `orderBy` items.
+     */
     def setOrderBy(x: T, items: List[SqlOrderingItem]): T
 
+    /**
+     * Sets the rows-per-match mode.
+     */
     def setPerMatch(x: T, perMatch: SqlRecognizePatternRowsPerMatchMode): T
 
+    /**
+     * Sets the full `matchRecognize` configuration.
+     */
     def setRecognize(x: T, recognize: SqlMatchRecognize): T
 
+    /**
+     * Reads the current `matchRecognize` configuration.
+     */
     def fetchRecognize(x: T): SqlMatchRecognize
 
+    /**
+     * Reads the underlying SQL table.
+     */
     def fetchSqlTable(x: T): SqlTable
 
 object AsRecognize:
+    /**
+     * Creates an empty `matchRecognize` configuration.
+     */
     private[sqala] def createEmptyRecognize: SqlMatchRecognize =
         SqlMatchRecognize(
             Nil,
