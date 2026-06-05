@@ -394,7 +394,7 @@ extension [T, CL <: Int](table: T)(using
     def sortBy[S](sortValue: S)(using
         a: AsColumnSort[S, CL]
     ): RecognizePredefine[T, CL] =
-        val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
+        val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
         RecognizePredefine(r.setOrderBy(table, sort))
 
     def orderBy[S](sortValue: S)(using
@@ -629,7 +629,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
                 x.asSqlExpr,
                 SqlWindow(
                     o.partitionBy.map(_.asSqlExpr),
-                    o.sortBy.map(_.asSqlOrderBy),
+                    o.sortBy.map(_.asSqlOrderingItem),
                     o.frame
                 )
             )

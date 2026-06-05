@@ -12,5 +12,8 @@ final case class Sort[T, K <: ExprKind](
     private[sqala] val ordering: SqlOrdering,
     private[sqala] val nullsOrdering: Option[SqlNullsOrdering]
 ):
-    private[sqala] def asSqlOrderBy: SqlOrderingItem =
+    /**
+     * Converts this sort specification to a `SqlOrderingItem` AST node.
+     */
+    private[sqala] def asSqlOrderingItem: SqlOrderingItem =
         SqlOrderingItem(expr.asSqlExpr, Some(ordering), nullsOrdering)

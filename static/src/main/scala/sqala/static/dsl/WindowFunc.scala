@@ -50,7 +50,7 @@ final case class WindowFunc[T, KS <: Tuple](private[sqala] val expr: SqlExpr):
                 asSqlExpr,
                 SqlWindow(
                     o.partitionBy.map(_.asSqlExpr),
-                    o.sortBy.map(_.asSqlOrderBy),
+                    o.sortBy.map(_.asSqlOrderingItem),
                     o.frame
                 )
             )

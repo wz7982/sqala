@@ -512,7 +512,7 @@ def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
                 "PERCENTILE_CONT",
                 at.asExpr(x).asSqlExpr :: Nil,
                 Nil,
-                withinGroup.asSqlOrderBy :: Nil,
+                withinGroup.asSqlOrderingItem :: Nil,
                 None
             )
         )
@@ -537,7 +537,7 @@ def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
                 "PERCENTILE_DISC",
                 at.asExpr(x).asSqlExpr :: Nil,
                 Nil,
-                withinGroup.asSqlOrderBy :: Nil,
+                withinGroup.asSqlOrderingItem :: Nil,
                 None
             )
         )
@@ -564,7 +564,7 @@ def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup
             at.asExpr(x).asSqlExpr,
             as.asExpr(separator).asSqlExpr,
             None,
-            withinGroup.asSqlOrderBy :: Nil,
+            withinGroup.asSqlOrderingItem :: Nil,
             None
         )
     )

@@ -17,7 +17,7 @@ final case class RecognizePredefine[T, L <: Int](
     private[sqala] val r: AsRecognize[T]
 ):
     def sortBy[S](sortValue: S)(using a: AsColumnSort[S, L]): RecognizePredefine[T, L] =
-        val sort = a.asSorts(sortValue).map(_.asSqlOrderBy)
+        val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
         RecognizePredefine(r.setOrderBy(__table__, sort))
 
     def orderBy[S](sortValue: S)(using a: AsColumnSort[S, L]): RecognizePredefine[T, L] =

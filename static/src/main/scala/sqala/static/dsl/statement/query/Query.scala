@@ -406,7 +406,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         val sort = a.asSorts(f(params))
         SortedSelectQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: QueryContext[L] ?=> T => S)(using
@@ -600,7 +600,7 @@ final case class SortedSelectQuery[T, OKS <: Tuple, L <: Int](
         val sort = a.asSorts(f(params))
         SortedSelectQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: QueryContext[L] ?=> T => S)(using
@@ -626,7 +626,7 @@ final case class MappedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
         MappedSortedSelectQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
@@ -652,7 +652,7 @@ final case class MappedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: Quer
         MappedSortedSelectQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
@@ -765,7 +765,7 @@ final case class GroupedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         GroupedSortedSelectQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
@@ -793,7 +793,7 @@ final case class GroupedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         GroupedSortedSelectQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
@@ -813,7 +813,7 @@ final case class UnionQuery[T, OKS <: Tuple, L <: Int](
         val sort = s.asSorts(f(params))
         SortedUnionQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
@@ -829,7 +829,7 @@ final case class SortedUnionQuery[T, OKS <: Tuple, L <: Int](
         val sort = s.asSorts(f(params))
         SortedUnionQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
 
     def orderBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
@@ -883,7 +883,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         c: CombineKindTuple[OKS, e.R]
     ): ConnectBy[T, c.R, L] =
         val sort = f(table)
-        val sqlOrderBy = a.asSorts(sort).map(_.asSqlOrderBy)
+        val sqlOrderBy = a.asSorts(sort).map(_.asSqlOrderingItem)
         copy(
             connectByTree = connectByTree.copy(orderBy = connectByTree.orderBy ++ sqlOrderBy)
         )
