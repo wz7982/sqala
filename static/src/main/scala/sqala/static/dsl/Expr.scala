@@ -11,7 +11,7 @@ import scala.annotation.targetName
 final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     /**
      * Type-safe equality comparison. Typically used in `filter`, `on`, and `having`
-     * clauses. Maps to SQL `=`. The right-hand side can be a value, another
+     * clause. Maps to SQL `=`. The right-hand side can be a value, another
      * expression, or a subquery.
      *
      * {{{
@@ -42,7 +42,7 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
 
     /**
      * Type-safe inequality comparison. Typically used in `filter`, `on`, and `having`
-     * clauses. Maps to SQL `<>`. The right-hand side can be a value, another
+     * clause. Maps to SQL `<>`. The right-hand side can be a value, another
      * expression, or a subquery.
      *
      * {{{

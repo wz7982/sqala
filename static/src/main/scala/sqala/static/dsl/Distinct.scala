@@ -5,25 +5,79 @@ import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 
 import scala.NamedTuple.NamedTuple
 
+/**
+ * Wraps an expression after `mapDistinct`, used to validate the
+ * semantic legality of `sortBy` following a `DISTINCT` operation.
+ * Sort methods (`asc`, `desc`, etc.) can be chained for ordering.
+ */
 final case class Distinct[T, L <: Int](private[sqala] val expr: SqlExpr):
+    /**
+     * Ascending sort order. Maps to SQL `ASC`. Used in `sortBy` clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.asc)
+     * }}}
+     */
     def asc: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Asc, None)
 
+    /**
+     * Ascending sort order with nulls first. Maps to SQL
+     * `ASC NULLS FIRST`. Used in `sortBy` clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.ascNullsFirst)
+     * }}}
+     */
     def ascNullsFirst: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
 
+    /**
+     * Ascending sort order with nulls last. Maps to SQL
+     * `ASC NULLS LAST`. Used in `sortBy` clause clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.ascNullsLast)
+     * }}}
+     */
     def ascNullsLast: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
+    /**
+     * Descending sort order. Maps to SQL `DESC`. Used in `sortBy` clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.desc)
+     * }}}
+     */
     def desc: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Desc, None)
 
+    /**
+     * Descending sort order with nulls first. Maps to SQL
+     * `DESC NULLS FIRST`. Used in `sortBy` clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.descNullsFirst)
+     * }}}
+     */
     def descNullsFirst: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
 
+    /**
+     * Descending sort order with nulls last. Maps to SQL
+     * `DESC NULLS LAST`. Used in `sortBy` clause after `mapDistinct`.
+     *
+     * {{{
+     * from(User).mapDistinct(u => u.nickname).sortBy(n => n.descNullsLast)
+     * }}}
+     */
     def descNullsLast: DistinctSort[T, L] =
         DistinctSort(Expr(expr), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
 
+/**
+ * A sort specification for a `Distinct` expression.
+ */
 final case class DistinctSort[T, L <: Int](
     private[sqala] val expr: Expr[?, ?],
     private[sqala] val ordering: SqlOrdering,
@@ -32,9 +86,20 @@ final case class DistinctSort[T, L <: Int](
     private[sqala] def asSqlOrderBy: SqlOrderingItem =
         SqlOrderingItem(expr.asSqlExpr, Some(ordering), nullsOrdering)
 
+/**
+ * Lifts expressions and tuples into `Distinct` for validating
+ * the semantic legality of `sortBy` after `mapDistinct`. `CL` is the
+ * current query context level.
+ */
 trait ToDistinct[T, CL <: Int]:
+    /**
+     * The transformed type.
+     */
     type R
 
+    /**
+     * Converts the value to a `Distinct` type.
+     */
     def toDistinct(x: T): R
 
 object ToDistinct:

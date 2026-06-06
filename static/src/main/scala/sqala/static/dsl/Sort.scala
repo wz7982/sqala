@@ -4,7 +4,7 @@ import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 
 /**
  * An intermediate sort specification used by `sortBy`,
- * and window ordering clauses, combining an expression with an
+ * and window ordering clause, combining an expression with an
  * ordering direction and nulls handling.
  */
 final case class Sort[T, K <: ExprKind](

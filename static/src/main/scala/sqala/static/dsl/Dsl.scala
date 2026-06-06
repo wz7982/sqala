@@ -1282,7 +1282,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
 
     /**
      * Applies a window specification with `partitionBy` and
-     * `orderBy` clauses. Maps to `OVER (PARTITION BY ... ORDER BY ...)`.
+     * `orderBy` clause. Maps to `OVER (PARTITION BY ... ORDER BY ...)`.
      *
      * {{{
      * from(Post).map(p => sum(p.likeCount).over(

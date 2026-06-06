@@ -8,7 +8,7 @@ import scala.compiletime.ops.int.>
  * The `ExprKind` system tags each expression with its SQL semantic
  * category. This enables compile-time validation of where an
  * expression can legally appear — for example, aggregate functions
- * are rejected in `filter` clauses, and ungrouped columns are rejected
+ * are rejected in `filter` clause, and ungrouped columns are rejected
  * after `groupBy`.
  *
  * The validation rules are encoded as type classes with boolean

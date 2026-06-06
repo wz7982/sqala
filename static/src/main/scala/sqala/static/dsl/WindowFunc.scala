@@ -31,7 +31,7 @@ final case class WindowFunc[T, KS <: Tuple](private[sqala] val expr: SqlExpr):
 
     /**
      * Applies a window specification with `partitionBy` and `orderBy`
-     * clauses. Maps to SQL `OVER (PARTITION BY ... ORDER BY ...)`.
+     * clause. Maps to SQL `OVER (PARTITION BY ... ORDER BY ...)`.
      *
      * {{{
      * from(Post).map(p => rowNumber().over(

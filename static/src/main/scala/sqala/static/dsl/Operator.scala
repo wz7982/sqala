@@ -9,7 +9,7 @@ import scala.annotation.targetName
 extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     /**
      * Type-safe equality comparison. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `=`. Unlike raw `==` on `Expr`, this
+     * `having` clause. Maps to SQL `=`. Unlike raw `==` on `Expr`, this
      * operates on any object that can be lifted to an expression. Subqueries
      * must return at most one row, enforced at compile time.
      *
@@ -43,7 +43,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe inequality comparison. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `<>`. Unlike raw `!=` on `Expr`, this
+     * `having` clause. Maps to SQL `<>`. Unlike raw `!=` on `Expr`, this
      * operates on any object that can be lifted to an expression. Subqueries
      * must return at most one row, enforced at compile time.
      *
@@ -77,7 +77,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * `IS NULL` test. Typically used in `filter`, `on`, and `having`
-     * clauses.
+     * clause.
      *
      * {{{
      * from(User).filter(u => u.email.isNull)
@@ -94,7 +94,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe null-safe equality comparison. Typically used in `filter`,
-     * `on`, and `having` clauses. Maps to SQL `IS NOT DISTINCT FROM`. Unlike
+     * `on`, and `having` clause. Maps to SQL `IS NOT DISTINCT FROM`. Unlike
      * `===` which yields `NULL` when either side is `NULL`, this treats two
      * `NULL` values as equal. Subqueries must return at most one row,
      * enforced at compile time.
@@ -119,7 +119,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe greater-than comparison. Typically used in `filter`, `on`,
-     * and `having` clauses. Maps to SQL `>`. Operates on any object that can
+     * and `having` clause. Maps to SQL `>`. Operates on any object that can
      * be lifted to an expression. Subqueries must return at most one row,
      * enforced at compile time.
      *
@@ -153,7 +153,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe greater-than-or-equal comparison. Typically used in
-     * `filter`, `on`, and `having` clauses. Maps to SQL `>=`. Operates on
+     * `filter`, `on`, and `having` clause. Maps to SQL `>=`. Operates on
      * any object that can be lifted to an expression. Subqueries must return
      * at most one row, enforced at compile time.
      *
@@ -187,7 +187,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe less-than comparison. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `<`. Operates on any object that can be
+     * `having` clause. Maps to SQL `<`. Operates on any object that can be
      * lifted to an expression. Subqueries must return at most one row,
      * enforced at compile time.
      *
@@ -221,7 +221,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe less-than-or-equal comparison. Typically used in `filter`,
-     * `on`, and `having` clauses. Maps to SQL `<=`. Operates on any object
+     * `on`, and `having` clause. Maps to SQL `<=`. Operates on any object
      * that can be lifted to an expression. Subqueries must return at most one
      * row, enforced at compile time.
      *
@@ -255,7 +255,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe `IN` membership test. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `IN`. The right-hand side can be a list
+     * `having` clause. Maps to SQL `IN`. The right-hand side can be a list
      * of values, a subquery, or a tuple of values, expressions, and
      * subqueries. When used as part of a
      * tuple, subquery elements must return at most one row, enforced at
@@ -287,7 +287,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe `BETWEEN` range test. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `BETWEEN start AND end`. The bounds are
+     * `having` clause. Maps to SQL `BETWEEN start AND end`. The bounds are
      * inclusive. Operates on any object that can be lifted to an expression.
      * Subqueries must return at most one row, enforced at compile time.
      *
@@ -487,7 +487,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Logical AND. Typically used in `filter`, `on`, and
-     * `having` clauses to combine conditions. Maps to SQL `AND`. Both
+     * `having` clause to combine conditions. Maps to SQL `AND`. Both
      * sides must be boolean expressions.
      *
      * {{{
@@ -512,7 +512,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Logical OR. Typically used in `filter`, `on`, and
-     * `having` clauses to combine conditions. Maps to SQL `OR`. Both
+     * `having` clause to combine conditions. Maps to SQL `OR`. Both
      * sides must be boolean expressions.
      *
      * {{{
@@ -551,7 +551,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe `LIKE` pattern matching. Typically used in `filter`, `on`,
-     * and `having` clauses. Maps to SQL `LIKE`. The pattern supports SQL
+     * and `having` clause. Maps to SQL `LIKE`. The pattern supports SQL
      * wildcards `%` and `_`. For simple substring matching, use `contains`,
      * `startsWith`, or `endsWith`. Operates on any object that can be
      * lifted to an expression. Subqueries must return at most one row,
@@ -579,7 +579,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe substring containment test. Typically used in `filter`,
-     * `on`, and `having` clauses. Maps to SQL `LIKE '%value%'`.
+     * `on`, and `having` clause. Maps to SQL `LIKE '%value%'`.
      * The left-hand side accepts any object that can be
      * lifted to an expression, the right-hand side is a plain string.
      * Subqueries must return at most one row, enforced at compile time.
@@ -604,7 +604,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe prefix test. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `LIKE 'value%'`. The left-hand side
+     * `having` clause. Maps to SQL `LIKE 'value%'`. The left-hand side
      * accepts any object that can be lifted to an expression, the
      * right-hand side is a plain string. Subqueries must return at most
      * one row, enforced at compile time.
@@ -629,7 +629,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Type-safe suffix test. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `LIKE '%value'`. The left-hand side
+     * `having` clause. Maps to SQL `LIKE '%value'`. The left-hand side
      * accepts any object that can be lifted to an expression, the
      * right-hand side is a plain string. Subqueries must return at most
      * one row, enforced at compile time.
@@ -654,7 +654,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * `IS JSON` predicate. Typically used in `filter`, `on`, and
-     * `having` clauses. Tests whether the string expression is valid JSON.
+     * `having` clause. Tests whether the string expression is valid JSON.
      *
      * {{{
      * from(Log).filter(l => l.log.isJson)
@@ -671,7 +671,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * `IS JSON OBJECT` predicate. Typically used in `filter`, `on`, and
-     * `having` clauses. Tests whether the string expression is a valid JSON
+     * `having` clause. Tests whether the string expression is a valid JSON
      * object.
      *
      * {{{
@@ -689,7 +689,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * `IS JSON ARRAY` predicate. Typically used in `filter`, `on`, and
-     * `having` clauses. Tests whether the string expression is a valid JSON
+     * `having` clause. Tests whether the string expression is a valid JSON
      * array.
      *
      * {{{
@@ -707,7 +707,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * `IS JSON SCALAR` predicate. Typically used in `filter`, `on`, and
-     * `having` clauses. Tests whether the string expression is a valid JSON
+     * `having` clause. Tests whether the string expression is a valid JSON
      * scalar value (string, number, boolean, or null).
      *
      * {{{
@@ -724,10 +724,10 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         )
 
     /**
-     * Ascending sort order. Maps to SQL `ASC`. Used in `sort` clauses.
+     * Ascending sort order. Maps to SQL `ASC`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.asc)
+     * from(User).sortBy(u => u.nickname.asc)
      * }}}
      */
     def asc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
@@ -735,10 +735,10 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Ascending sort order with nulls first. Maps to SQL
-     * `ASC NULLS FIRST`. Used in `sort` clauses.
+     * `ASC NULLS FIRST`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.ascNullsFirst)
+     * from(User).sortBy(u => u.nickname.ascNullsFirst)
      * }}}
      */
     def ascNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
@@ -746,20 +746,20 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Ascending sort order with nulls last. Maps to SQL
-     * `ASC NULLS LAST`. Used in `sort` clauses.
+     * `ASC NULLS LAST`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.ascNullsLast)
+     * from(User).sortBy(u => u.nickname.ascNullsLast)
      * }}}
      */
     def ascNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
         Sort(aa.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
 
     /**
-     * Descending sort order. Maps to SQL `DESC`. Used in `sort` clauses.
+     * Descending sort order. Maps to SQL `DESC`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.desc)
+     * from(User).sortBy(u => u.nickname.desc)
      * }}}
      */
     def desc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
@@ -767,10 +767,10 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Descending sort order with nulls first. Maps to SQL
-     * `DESC NULLS FIRST`. Used in `sort` clauses.
+     * `DESC NULLS FIRST`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.descNullsFirst)
+     * from(User).sortBy(u => u.nickname.descNullsFirst)
      * }}}
      */
     def descNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
@@ -778,10 +778,10 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
 
     /**
      * Descending sort order with nulls last. Maps to SQL
-     * `DESC NULLS LAST`. Used in `sort` clauses.
+     * `DESC NULLS LAST`. Used in `sortBy` clause.
      *
      * {{{
-     * from(User).sort(u => u.nickname.descNullsLast)
+     * from(User).sortBy(u => u.nickname.descNullsLast)
      * }}}
      */
     def descNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
@@ -794,7 +794,7 @@ extension [A, B, CL <: Int](self: (A, B))(using
 )
     /**
      * Temporal `OVERLAPS` test. Typically used in `filter`, `on`, and
-     * `having` clauses. Maps to SQL `OVERLAPS`. Both sides must be
+     * `having` clause. Maps to SQL `OVERLAPS`. Both sides must be
      * `(start, end)` tuples of date-time expressions.
      *
      * {{{

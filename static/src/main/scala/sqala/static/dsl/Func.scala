@@ -193,7 +193,7 @@ def min[T, CL <: Int](x: T)(using
 
 /**
  * Returns an arbitrary non-null value from a group. Maps to
- * `ANY_VALUE(expr)`. Typically used in `map` clauses with
+ * `ANY_VALUE(expr)`. Typically used in `map` clause with
  * `groupBy` to pick a representative value. Aggregate functions,
  * window functions, and other expressions not allowed in aggregate
  * calls are rejected at compile time.
@@ -1690,7 +1690,7 @@ def overlay[A, B, S, E, CL <: Int](x: A, y: B, start: S, end: E)(using
 
 /**
  * Tests whether a string matches a regular expression. Maps to
- * `REGEXP_LIKE(expr, pattern)`. Typically used in `filter` clauses.
+ * `REGEXP_LIKE(expr, pattern)`. Typically used in `filter` clause.
  * Both arguments must be string expressions.
  *
  * {{{

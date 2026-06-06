@@ -9,6 +9,8 @@ import scala.compiletime.ops.int.>
 
 /**
  * Lifts a single expression or subquery into a grouping item.
+ * `CL` is the current query context level.
+ * `KS` is the kind tuple for semantic validation.
  */
 trait AsGroupItem[T, CL <: Int]:
     /**
@@ -73,7 +75,7 @@ object AsGroupItem:
 
 /**
  * Lifts expressions, subqueries, tuples, and named tuples into grouping
- * items for the `groupBy` clause.
+ * items for the `groupBy` clause. `CL` is the current query context level.
  */
 trait AsGroup[T, CL <: Int]:
     /**

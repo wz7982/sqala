@@ -9,6 +9,7 @@ import scala.compiletime.ops.int.>
 /**
  * Lifts values, expressions, subqueries, and tuples into the expression
  * layer for use in `filter`, `map`, and other DSL methods.
+ * `CL` is the current query context level.
  */
 trait AsExpr[T, CL <: Int]:
     /**

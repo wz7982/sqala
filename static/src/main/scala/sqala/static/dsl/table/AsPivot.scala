@@ -15,8 +15,6 @@ import scala.compiletime.ops.int.>
 /**
  * Used by `pivot` to lift entity types and subqueries into a
  * pivot table source. `CL` is the current query context level.
- * `OKS` tracks the kind tuple of the outer query for scope
- * validation.
  */
 trait AsPivot[T, CL <: Int]:
     /**

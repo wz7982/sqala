@@ -12,7 +12,6 @@ import scala.compiletime.ops.int.{-, >}
  * `lateral = true`. `CL` is the context level after `joinLateral`
  * incremented it by one; the level is restored here to verify that
  * the subquery correctly references columns from the left table.
- * `OKS` tracks the kind tuple of the outer query for scope validation.
  */
 trait AsLateralTable[T, CL <: Int]:
     /**
