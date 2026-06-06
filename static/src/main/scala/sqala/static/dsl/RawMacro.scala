@@ -2,7 +2,15 @@ package sqala.static.dsl
 
 import scala.quoted.{Expr, Quotes, Type}
 
+/**
+ * Internal macro that summons `AsExpr` instances for `rawExpr`
+ * interpolation arguments.
+ */
 private[sqala] object RawMacro:
+    /**
+     * Summons `AsExpr` instances for each argument in a `rawExpr`
+     * interpolation at compile time.
+     */
     inline def asExprInstances[CL <: Int](inline expr: Seq[Any]): List[AsExpr[?, ?]] =
         ${ RawMacroImpl.asExprInstances('expr) }
 

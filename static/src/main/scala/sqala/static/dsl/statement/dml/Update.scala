@@ -9,8 +9,15 @@ import sqala.static.dsl.table.Table
 
 import scala.deriving.Mirror
 
+/**
+ * A column name and update expression pair produced by `:=`.
+ */
 case class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: SqlExpr)
 
+/**
+ * Tracks the state of an `UPDATE` builder, restricting which
+ * methods are available at each stage.
+ */
 enum UpdateState:
     case Table
     case Entity
@@ -21,10 +28,22 @@ type UpdateEntity = UpdateState.Entity.type
 
 class UpdateSetContext
 
+/**
+ * An `UPDATE` statement builder, created by `update[T]`.
+ */
 class Update[T, S <: UpdateState](
     private[sqala] val table: Table[T, Column, 1],
     private[sqala] val tree: SqlStatement.Update
 )(using private[sqala] val qc: QueryContext[1]):
+    /**
+     * Adds `SET column = value` assignments. Multiple calls
+     * accumulate. The right-hand side can be a value, expression,
+     * or subquery.
+     *
+     * {{{
+     * update[User].set(u => u.name := "Alice")
+     * }}}
+     */
     def set(f: UpdateSetContext ?=> Table[T, Column, 1] => UpdatePair)(using
         S =:= UpdateTable
     ): Update[T, UpdateTable] =
@@ -33,6 +52,16 @@ class Update[T, S <: UpdateState](
         val updateExpr = pair.updateExpr
         new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
 
+    /**
+     * Adds a `WHERE` clause to the `UPDATE` statement. The condition
+     * must be a valid filter expression — aggregate functions, window
+     * functions, and other expressions not allowed in `where` are
+     * rejected at compile time.
+     *
+     * {{{
+     * update[User].set(u => u.name := "Alice").where(_.id == 1)
+     * }}}
+     */
     def where[F](f: QueryContext[1] ?=> Table[T, Column, 1] => F)(using
         a: AsExpr[F, 1],
         b: SqlBoolean[a.R],
@@ -60,6 +89,14 @@ object Update:
         val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, Nil, None)
         new Update(table, tree)
 
+    /**
+     * Creates an `UPDATE` statement from an entity object. The
+     * primary key fields are used to construct the `WHERE` clause,
+     * and the remaining fields become the `SET` assignments.
+     *
+     * When `skipNone` is `true`, fields with `None` values are
+     * omitted from the update.
+     */
     inline def updateByEntity[T <: Product](entity: T, skipNone: Boolean = false)(using
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
