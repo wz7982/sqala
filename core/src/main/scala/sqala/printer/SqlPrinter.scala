@@ -217,7 +217,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(words.next())
 
     /**
-     * Prints a `SELECT` query with all its clauses.
+     * Prints a `SELECT` query with all its clause.
      */
     def printSelect(select: SqlQuery.Select): Unit =
         printSpace()

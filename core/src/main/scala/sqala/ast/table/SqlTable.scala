@@ -4,7 +4,7 @@ import sqala.ast.expr.{SqlExpr, SqlJsonPassing}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 
 /**
- * A table reference used in `FROM` clauses.
+ * A table reference used in `FROM` clause.
  */
 enum SqlTable:
     /**
