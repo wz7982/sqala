@@ -6,8 +6,10 @@ import sqala.static.dsl.*
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
-import sqala.static.dsl.{table => SqlJsonColumnSqlTable}
 
+/**
+ * A JSON table source, constructed by `jsonTable`.
+ */
 final case class FromJson[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
@@ -57,27 +59,60 @@ object FromJson:
             )
         )
 
+/**
+ * A table reference produced by `from` when a `FromJson` is passed,
+ * enabling typed column access via `selectDynamic`.
+ */
 final case class JsonTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
 ) extends Selectable with AnyTable:
+    /**
+     * The structural type declaring available columns as a named tuple.
+     * Required by `Selectable`.
+     */
     type Fields = NamedTuple[N, V]
 
+    /**
+     * Runtime column accessor. Required by `Selectable`.
+     */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)
 
+/**
+ * A list of JSON table column definitions.
+ */
 final case class JsonColumns[N <: Tuple, V <: Tuple](private[sqala] val columns: List[JsonColumn])
 
+/**
+ * A JSON table column definition.
+ */
 sealed trait JsonColumn
+
+/**
+ * A nested path with its own column definitions.
+ */
 final case class JsonNestedColumns[N <: Tuple, V <: Tuple](
     private[sqala] val path: SqlExpr,
     private[sqala] val columns: List[JsonColumn]
 ) extends JsonColumn
+
+/**
+ * An ordinality column returning the row number.
+ */
 final class JsonOrdinalColumn extends JsonColumn
+
+/**
+ * A column extracting a JSON value at a given path.
+ */
 final case class JsonPathColumn[T](
     private[sqala] val path: SqlExpr,
     private[sqala] val `type`: SqlType
 ) extends JsonColumn
+
+/**
+ * A column checking existence of a JSON value at a given path.
+ */
 final case class JsonExistsColumn(private[sqala] val path: SqlExpr) extends JsonColumn

@@ -8,13 +8,24 @@ import sqala.static.dsl.statement.query.Query
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
+/**
+ * A table reference produced by `from` when a query is passed as a
+ * subquery source, with typed column access via `selectDynamic`.
+ */
 final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Subquery
 ) extends Selectable with AnyTable:
+    /**
+     * The structural type declaring available columns as a named tuple.
+     * Required by `Selectable`.
+     */
     type Fields = NamedTuple[N, V]
 
+    /**
+     * Runtime column accessor. Required by `Selectable`.
+     */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)

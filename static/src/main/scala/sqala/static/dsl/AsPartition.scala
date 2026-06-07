@@ -6,9 +6,19 @@ import sqala.static.dsl.statement.query.Query
 
 import scala.compiletime.ops.int.>
 
+/**
+ * Lifts values, expressions, and subqueries for `partitionBy`
+ * in window functions. `CL` is the current query context level.
+ */
 trait AsPartitionItem[T, CL <: Int]:
+    /**
+     * The kind tuple.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to an expression.
+     */
     def asExpr(x: T): Expr[?, ?]
 
 object AsPartitionItem:
@@ -43,9 +53,19 @@ object AsPartitionItem:
             def asExpr(x: Q): Expr[?, ?] =
                 Expr(SqlExpr.Subquery(None, x.tree))
 
+/**
+ * Collects partition items for `partitionBy` in window functions.
+ * `CL` is the current query context level.
+ */
 trait AsPartition[T, CL <: Int]:
+    /**
+     * The expression kind tuple of the `partitionBy` clause.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of partition expressions.
+     */
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsPartition:
@@ -80,7 +100,15 @@ object AsPartition:
             def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
                 h.asExpr(x.head) :: Nil
 
+/**
+ * Lifts expressions for `partitionBy` in `matchRecognize`,
+ * enforcing that the current context level matches the column
+ * level. `CL` is the current query context level.
+ */
 trait AsRecognizePartition[T, CL <: Int]:
+    /**
+     * Converts the value to a list of partition expressions.
+     */
     def asExprs(x: T): List[Expr[?, ?]]
 
 object AsRecognizePartition:

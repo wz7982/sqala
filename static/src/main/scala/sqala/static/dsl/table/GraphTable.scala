@@ -10,16 +10,26 @@ import sqala.static.dsl.statement.query.AsMap
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.compiletime.constValue
 
+/**
+ * A graph schema definition created by `createGraph`, combining
+ * vertex and edge schemas into a reusable graph descriptor.
+ */
 final case class GraphSchema[N <: Tuple, V <: Tuple](
     private[sqala] val __name__ : String,
     private[sqala] val __items__ : V
 )
 
+/**
+ * A vertex schema created by `vertex[T]`.
+ */
 final case class GraphVertexSchema[T](
     private[sqala] val __alias__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData
 )
 
+/**
+ * An edge schema created by `edge[T]`.
+ */
 final case class GraphEdgeSchema[T](
     private[sqala] val __alias__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
@@ -27,53 +37,74 @@ final case class GraphEdgeSchema[T](
     private[sqala] val __quantifier__ : Option[SqlGraphQuantifier]
 )
 
-trait TransformGraphSchema[T, L <: Int]:
+/**
+ * Transforms graph schema definitions into runtime graph elements,
+ * assigning query context and aliases. `CL` is the current query context level.
+ */
+trait TransformGraphSchema[T, CL <: Int]:
+    /**
+     * The transformed type.
+     */
     type R
 
-    def transform(x: T)(using qc: QueryContext[L]): R
+    /**
+     * Transforms the schema item into a graph element.
+     */
+    def transform(x: T)(using qc: QueryContext[CL]): R
 
 object TransformGraphSchema:
-    type Aux[T, L <: Int, O] = TransformGraphSchema[T, L]:
+    type Aux[T, CL <: Int, O] = TransformGraphSchema[T, CL]:
         type R = O
 
-    given vertex[T, L <: Int]: Aux[GraphVertexSchema[T], L, GraphVertex[T, L]] = new
-        TransformGraphSchema[GraphVertexSchema[T], L]:
-            type R = GraphVertex[T, L]
+    given vertex[T, CL <: Int]: Aux[GraphVertexSchema[T], CL, GraphVertex[T, CL]] = new
+        TransformGraphSchema[GraphVertexSchema[T], CL]:
+            type R = GraphVertex[T, CL]
 
-            def transform(x: GraphVertexSchema[T])(using qc: QueryContext[L]): R =
+            def transform(x: GraphVertexSchema[T])(using qc: QueryContext[CL]): R =
                 GraphVertex(x.__alias__, x.__metaData__)
 
-    given edge[T, L <: Int]: Aux[GraphEdgeSchema[T], L, GraphEdge[T, EmptyTuple, L]] = new
-        TransformGraphSchema[GraphEdgeSchema[T], L]:
-            type R = GraphEdge[T, EmptyTuple, L]
+    given edge[T, CL <: Int]: Aux[GraphEdgeSchema[T], CL, GraphEdge[T, EmptyTuple, CL]] = new
+        TransformGraphSchema[GraphEdgeSchema[T], CL]:
+            type R = GraphEdge[T, EmptyTuple, CL]
 
-            def transform(x: GraphEdgeSchema[T])(using qc: QueryContext[L]): R =
+            def transform(x: GraphEdgeSchema[T])(using qc: QueryContext[CL]): R =
                 GraphEdge(x.__alias__, x.__metaData__, x.__where__, x.__quantifier__)
 
-    given tuple[H, T <: Tuple, L <: Int](using
-        sh: TransformGraphSchema[H, L],
-        st: TransformGraphSchema[T, L],
+    given tuple[H, T <: Tuple, CL <: Int](using
+        sh: TransformGraphSchema[H, CL],
+        st: TransformGraphSchema[T, CL],
         tt: ToTuple[st.R]
-    ): Aux[H *: T, L, sh.R *: tt.R] =
-        new TransformGraphSchema[H *: T, L]:
+    ): Aux[H *: T, CL, sh.R *: tt.R] =
+        new TransformGraphSchema[H *: T, CL]:
             type R = sh.R *: tt.R
 
-            def transform(x: H *: T)(using qc: QueryContext[L]): R =
+            def transform(x: H *: T)(using qc: QueryContext[CL]): R =
                 sh.transform(x.head) *: tt.toTuple(st.transform(x.tail))
 
-    given emptyTuple[L <: Int]: Aux[EmptyTuple, L, EmptyTuple] = new
-        TransformGraphSchema[EmptyTuple, L]:
+    given emptyTuple[CL <: Int]: Aux[EmptyTuple, CL, EmptyTuple] = new
+        TransformGraphSchema[EmptyTuple, CL]:
             type R = EmptyTuple
 
-            def transform(x: EmptyTuple)(using qc: QueryContext[L]): R =
+            def transform(x: EmptyTuple)(using qc: QueryContext[CL]): R =
                 EmptyTuple
 
+/**
+ * A graph context within a `graphTable` block.
+ */
 final case class Graph[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __name__ : String,
     private[sqala] val __items__ : V
 )(using private[sqala] val qc: QueryContext[L]) extends Selectable:
+    /**
+     * The structural type declaring available vertex and edge labels
+     * as a named tuple. Required by `Selectable`.
+     */
     type Fields = NamedTuple[N, V]
 
+    /**
+     * Resolves a vertex or edge label by name, assigning a fresh
+     * alias for use in the graph pattern. Required by `Selectable`.
+     */
     inline def selectDynamic(name: String): Any =
         val alias = qc.fetchAlias
         val index = constValue[Index[N, name.type, 0]]
@@ -84,24 +115,56 @@ final case class Graph[N <: Tuple, V <: Tuple, L <: Int](
             case GraphEdge(_, metaData, where, quantifier) =>
                 GraphEdge(Some(alias), metaData, where, quantifier)
 
+    /**
+     * Starts a graph pattern match. The pattern is built from
+     * vertex and edge terms connected by graph symbols (`|-|`,
+     * `|->|`, `|~|`, etc.). Maps to `MATCH` in `GRAPH_TABLE`.
+     *
+     * {{{
+     * g.matching(
+     *     ("a" is g.person) |-|
+     *     ("f" is g.friends.filter(f => f.personAId > 1)) |->|
+     *     ("b" is g.person)
+     * )
+     * }}}
+     */
     def matching[PN <: Tuple, PV <: Tuple, POKS <: Tuple](pattern: GraphPattern[PN, PV, POKS, L])(using
         GraphContext
     ): GraphMatch[GraphPattern[PN, PV, POKS, L], POKS, L] =
         GraphMatch(__name__, pattern, pattern.__patterns__, None, None)
 
+/**
+ * A term in a graph pattern, representing either a vertex or
+ * an edge.
+ */
 sealed trait GraphPatternTerm[V, OKS <: Tuple, L <: Int]:
+    /**
+     * Converts this graph pattern term to its SQL AST representation.
+     */
     private[sqala] def asTerm: SqlGraphPatternTerm
 
+/**
+ * A vertex in a graph pattern. Created by `vertex[T]` and
+ * accessed via the `is` method in `matching` blocks.
+ */
 final case class GraphVertex[T, L <: Int](
     private[sqala] val __alias__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData
 )(using private[sqala] val qc: QueryContext[L]) extends Selectable with GraphPatternTerm[T, EmptyTuple, L]:
+    /**
+     * The structural type declaring available columns as a named tuple.
+     * Required by `Selectable`.
+     */
     type Fields =
         NamedTuple[
             Names[From[Unwrap[T, Option]]],
             Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, Column, L]]
         ]
 
+    /**
+     * Converts this vertex to a `VERTEX` term in the graph pattern AST,
+     * carrying the assigned alias and label name.
+     */
     override private[sqala] def asTerm: SqlGraphPatternTerm =
         SqlGraphPatternTerm.Vertex(
             __alias__,
@@ -109,22 +172,38 @@ final case class GraphVertex[T, L <: Int](
             None
         )
 
+    /**
+     * Runtime column accessor. Required by `Selectable`.
+     */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
         Expr(SqlExpr.Column(__alias__, __metaData__.columnNames(index)))
 
+/**
+ * An edge in a graph pattern. Created by `edge[T]` and accessed
+ * via the `is` method in `matching` blocks.
+ */
 final case class GraphEdge[T, OKS <: Tuple, L <: Int](
     private[sqala] val __alias__ : Option[String],
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __where__ : Option[SqlExpr],
     private[sqala] val __quantifier__ : Option[SqlGraphQuantifier]
 )(using private[sqala] val qc: QueryContext[L]) extends Selectable with GraphPatternTerm[T, OKS, L]:
+    /**
+     * The structural type declaring available columns as a named tuple.
+     * Required by `Selectable`.
+     */
     type Fields =
         NamedTuple[
             Names[From[Unwrap[T, Option]]],
             Tuple.Map[DropNames[From[Unwrap[T, Option]]], [x] =>> MapField[x, T, Column, L]]
         ]
 
+    /**
+     * Converts this edge to an `EDGE` term in the graph pattern AST,
+     * carrying the assigned alias, label, optional `WHERE` condition,
+     * and quantifier.
+     */
     override private[sqala] def asTerm: SqlGraphPatternTerm =
         __quantifier__.map: q =>
             SqlGraphPatternTerm.Quantified(
@@ -146,10 +225,21 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
                 SqlGraphSymbol.Dash
             )
 
+    /**
+     * Runtime column accessor. Required by `Selectable`.
+     */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
         Expr(SqlExpr.Column(__alias__, __metaData__.columnNames(index)))
 
+    /**
+     * Adds a `WHERE` condition to the edge. Maps to the `WHERE`
+     * clause inside the edge pattern in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ("f" is g.friends.filter(f => f.personAId > 1))
+     * }}}
+     */
     def filter[F](f: Table[T, Column, L] => F)(using
         gc: GraphContext,
         a: AsExpr[F, L],
@@ -167,6 +257,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
         val cond = a.asExpr(f(table)).asSqlExpr
         copy(__where__ = __where__.map(SqlExpr.Binary(_, SqlBinaryOperator.And, cond)).orElse(Some(cond)))
 
+    /**
+     * Alias of `filter`, provided for users familiar with `WHERE`.
+     *
+     * {{{
+     * ("f" is g.friends.where(f => f.personAId > 1))
+     * }}}
+     */
     def where[F](f: Table[T, Column, L] => F)(using
         gc: GraphContext,
         a: AsExpr[F, L],
@@ -178,6 +275,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
     ): GraphEdge[T, c.R, L] =
         filter(f)
 
+    /**
+     * Zero or more edge repetitions. Maps to `*`.
+     *
+     * {{{
+     * g.friends.*
+     * }}}
+     */
     def *(using GraphContext): GraphEdge[T, OKS, L] =
         copy(
             __quantifier__ = Some(
@@ -185,6 +289,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * One or more edge repetitions. Maps to `+`.
+     *
+     * {{{
+     * g.friends.+
+     * }}}
+     */
     def +(using GraphContext): GraphEdge[T, OKS, L] =
         copy(
             __quantifier__ = Some(
@@ -192,6 +303,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * Zero or one edge repetition. Maps to `?`.
+     *
+     * {{{
+     * g.friends.?
+     * }}}
+     */
     def ?(using GraphContext): GraphEdge[T, OKS, L] =
         copy(
             __quantifier__ = Some(
@@ -199,6 +317,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * Between `m` and `n` edge repetitions. Maps to `{m, n}`.
+     *
+     * {{{
+     * g.friends.between(1, 10)
+     * }}}
+     */
     def between[S, E](start: S, end: E)(using
         gc: GraphContext,
         as: AsExpr[S, L],
@@ -223,6 +348,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * At least `n` edge repetitions. Maps to `{m,}`.
+     *
+     * {{{
+     * g.friends.least(3)
+     * }}}
+     */
     def least[T](x: T)(using
         gc: GraphContext,
         a: AsExpr[T, L],
@@ -241,6 +373,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * At most `n` edge repetitions. Maps to `{,n}`.
+     *
+     * {{{
+     * g.friends.most(10)
+     * }}}
+     */
     def most[T](x: T)(using
         gc: GraphContext,
         a: AsExpr[T, L],
@@ -259,6 +398,13 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+    /**
+     * Exactly `n` edge repetitions. Maps to `{n}`.
+     *
+     * {{{
+     * g.friends.at(3)
+     * }}}
+     */
     def at[T](x: T)(using
         gc: GraphContext,
         a: AsExpr[T, L],
@@ -276,11 +422,23 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             )
         )
 
+/**
+ * An intermediate graph pattern after an edge has been connected,
+ * waiting for a vertex on the right side.
+ */
 final case class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
     private[sqala] val __items__ : V,
     private[sqala] val __patterns__ : List[SqlGraphPatternTerm],
     private[sqala] val __leftSymbol__ : SqlGraphSymbol
 )(using private[sqala] val qc: QueryContext[L]):
+    /**
+     * Connects to a vertex with a dash symbol, completing the
+     * edge-to-vertex connection. Maps to `-` in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ... |-| ("b" is g.person)
+     * }}}
+     */
     def |-|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -297,6 +455,14 @@ final case class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int
             __patterns__.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
+    /**
+     * Connects to a vertex with a tilde symbol, completing the
+     * edge-to-vertex connection. Maps to `~` in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ... |~| ("b" is g.person)
+     * }}}
+     */
     def |~|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -313,6 +479,14 @@ final case class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int
             __patterns__.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
+    /**
+     * Connects to a vertex with a right-arrow symbol, completing
+     * the edge-to-vertex connection. Maps to `->` in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ... |->| ("b" is g.person)
+     * }}}
+     */
     def |->|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -329,6 +503,15 @@ final case class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int
             __patterns__.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
+    /**
+     * Connects to a vertex with a right-tilde-arrow symbol,
+     * completing the edge-to-vertex connection. Maps to `~>`
+     * in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ... |~>| ("b" is g.person)
+     * }}}
+     */
     def |~>|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -345,16 +528,34 @@ final case class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int
             __patterns__.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
+/**
+ * A graph pattern at a vertex, ready to connect to an edge.
+ */
 final case class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
     private[sqala] val __items__ : V,
     private[sqala] val __patterns__ : List[SqlGraphPatternTerm]
 )(using private[sqala] val qc: QueryContext[L]) extends Selectable:
+    /**
+     * The structural type declaring matched pattern aliases as a
+     * named tuple. Required by `Selectable`.
+     */
     type Fields = NamedTuple[N, V]
 
+    /**
+     * Runtime pattern alias accessor. Required by `Selectable`.
+     */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)
 
+    /**
+     * Connects to an edge with a dash symbol. Maps to `-` in
+     * `GRAPH_TABLE`.
+     *
+     * {{{
+     * ("a" is g.person) |-| ...
+     * }}}
+     */
     def |-|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphEdge[PV, POKS, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -366,6 +567,14 @@ final case class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             leftSymbol
         )
 
+    /**
+     * Connects to an edge with a tilde symbol. Maps to `~` in
+     * `GRAPH_TABLE`.
+     *
+     * {{{
+     * ("a" is g.person) |~| ...
+     * }}}
+     */
     def |~|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphEdge[PV, POKS, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -377,6 +586,14 @@ final case class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             leftSymbol
         )
 
+    /**
+     * Connects to an edge with a left-arrow symbol. Maps to `<-`
+     * in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ("a" is g.person) |<-| ...
+     * }}}
+     */
     def |<-|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphEdge[PV, POKS, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -388,6 +605,14 @@ final case class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             leftSymbol
         )
 
+    /**
+     * Connects to an edge with a left-tilde-arrow symbol.
+     * Maps to `<~` in `GRAPH_TABLE`.
+     *
+     * {{{
+     * ("a" is g.person) |<~| ...
+     * }}}
+     */
     def |<~|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphEdge[PV, POKS, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
@@ -399,6 +624,9 @@ final case class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             leftSymbol
         )
 
+/**
+ * A graph match after `matching`.
+ */
 final case class GraphMatch[T, OKS <: Tuple, L <: Int](
     private[sqala] val __name__ : String,
     private[sqala] val __pattern__ : T,
@@ -406,6 +634,20 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
     private[sqala] val __where__ : Option[SqlExpr],
     private[sqala] val __rows__ : Option[SqlGraphRowsMode]
 )(using private[sqala] val qc: QueryContext[L]):
+    /**
+     * Defines the output columns of the graph query. Accepts a
+     * named tuple where each field becomes a result column.
+     * The function's parameter provides typed access to all
+     * matched pattern aliases.
+     *
+     * {{{
+     * .columns(p => (
+     *     personA = p.a.name,
+     *     personB = p.b.name,
+     *     meetingDate = p.f.meetingDate
+     * ))
+     * }}}
+     */
     def columns[MN <: Tuple, MV <: Tuple](f: T => NamedTuple[MN, MV])(using
         gc: GraphContext,
         m: AsMap[MV, L],
@@ -432,6 +674,13 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
             Some(alias)
         )
 
+    /**
+     * Adds a `WHERE` condition to the graph match.
+     *
+     * {{{
+     * .filter(p => p.a.id > 1)
+     * }}}
+     */
     def filter[F](f: T => F)(using
         gc: GraphContext,
         a: AsExpr[F, L],
@@ -450,6 +699,13 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
             __rows__
         )
 
+    /**
+     * Alias of `filter`, provided for users familiar with `WHERE`.
+     *
+     * {{{
+     * .where(p => p.a.id > 1)
+     * }}}
+     */
     def where[F](f: T => F)(using
         gc: GraphContext,
         a: AsExpr[F, L],
@@ -461,6 +717,10 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
     ): GraphMatch[T, c.R, L] =
         filter(f)
 
+/**
+ * A graph table source produced by `columns`, ready to be passed
+ * to `from`.
+ */
 final case class FromGraph[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
@@ -495,13 +755,24 @@ object FromGraph:
             )
         )
 
+/**
+ * A table reference produced by `from` when a `FromGraph` is
+ * passed, enabling typed column access via `selectDynamic`.
+ */
 final case class GraphTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Graph
 ) extends Selectable with AnyTable:
+    /**
+     * The structural type declaring available columns as a named tuple.
+     * Required by `Selectable`.
+     */
     type Fields = NamedTuple[N, V]
 
+    /**
+     * Runtime column accessor. Required by `Selectable`.
+     */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
         __items__.toList(index)

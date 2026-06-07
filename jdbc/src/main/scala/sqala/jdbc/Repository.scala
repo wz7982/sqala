@@ -11,11 +11,32 @@ import sqala.static.dsl.statement.query.Query
 
 import scala.quoted.{Expr, Quotes, Type}
 
+/**
+ * A repository trait derived by a macro from the method name.
+ * The name `N` is parsed to determine the query operation
+ * (`fetchBy`, `findBy`, `countBy`, `pageBy`, `existsBy`, etc.),
+ * conditions, and sort order. Accessing a repository method
+ * on `JdbcContext` via `applyDynamic` will invoke the
+ * generated `createQuery` implementation.
+ */
 trait Repository[T, N <: String]:
+    /**
+     * The argument type of the repository method.
+     * Derived from the column names and conditions in the method name.
+     */
     type Args
 
+    /**
+     * The return type of the repository method.
+     * Derived from the operation prefix (`fetch`/`find`/`count`/`page`/`exists`).
+     */
     type R
 
+    /**
+     * Creates and executes the query corresponding to the
+     * repository method name. Delegates to the appropriate
+     * execution strategy (`fetch`, `find`, `page`, `count`, or `exists`).
+     */
     def createQuery(
         dialect: Dialect,
         standardEscapeStrings: Boolean,

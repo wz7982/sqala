@@ -6,6 +6,11 @@ import sqala.static.dsl.{tableCte, Index, ToTuple}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
 
+/**
+ * A table reference for recursive CTE queries, linked to the
+ * internal `__cte__` pseudo-table. Produced by `withRecursive`
+ * as the parameter to the recursive step and final projection.
+ */
 final case class RecursiveTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : Option[String],
     private[sqala] val __items__ : V,

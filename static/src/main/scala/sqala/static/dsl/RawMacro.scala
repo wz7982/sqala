@@ -2,12 +2,20 @@ package sqala.static.dsl
 
 import scala.quoted.{Expr, Quotes, Type}
 
+/**
+ * Internal macro that summons `AsExpr` instances for `rawExpr`
+ * interpolation arguments.
+ */
 private[sqala] object RawMacro:
-    inline def asSqlInstances[CL <: Int](inline expr: Seq[Any]): List[AsExpr[?, ?]] =
-        ${ RawMacroImpl.asSqlInstances('expr) }
+    /**
+     * Summons `AsExpr` instances for each argument in a `rawExpr`
+     * interpolation at compile time.
+     */
+    inline def asExprInstances[CL <: Int](inline expr: Seq[Any]): List[AsExpr[?, ?]] =
+        ${ RawMacroImpl.asExprInstances('expr) }
 
 private[sqala] object RawMacroImpl:
-    def asSqlInstances[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[AsExpr[?, ?]]] =
+    def asExprInstances[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[AsExpr[?, ?]]] =
         import q.reflect.*
 
         def removeInlined(term: Term): Term =

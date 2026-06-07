@@ -3,13 +3,32 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
 
+/**
+ * Lifts values, tuples, sequences, and arrays into `in` operands, 
+ * computing the result type and kind tuple. `CL` is the
+ * current query context level.
+ */
 trait CanIn[A, B, CL <: Int]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * The kind tuple.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of expressions.
+     */
     def asExprs(x: B): List[Expr[?, ?]]
 
+    /**
+     * Converts the value to a single expression, wrapping multiple
+     * operands in a tuple. Subqueries are passed through without
+     * wrapping.
+     */
     def asExpr(x: B): Expr[?, ?] =
         val exprList = asExprs(x)
         exprList.map(_.asSqlExpr) match

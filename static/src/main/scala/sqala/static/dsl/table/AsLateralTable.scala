@@ -7,11 +7,27 @@ import sqala.static.dsl.*
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.{-, >}
 
+/**
+ * Lifts various DSL types into a lateral table reference, setting
+ * `lateral = true`. `CL` is the context level after `joinLateral`
+ * incremented it by one; the level is restored here to verify that
+ * the subquery correctly references columns from the left table.
+ */
 trait AsLateralTable[T, CL <: Int]:
+    /**
+     * The table reference type.
+     */
     type R
 
+    /**
+     * The kind tuple of the outer query.
+     */
     type OKS <: Tuple
 
+    /**
+     * Converts the value to a lateral table reference and its SQL
+     * table AST.
+     */
     def asTable(x: T)(using QueryContext[CL]): (R, SqlTable)
 
 object AsLateralTable:

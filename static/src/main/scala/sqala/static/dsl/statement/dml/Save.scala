@@ -6,9 +6,16 @@ import sqala.metadata.{AsSqlExpr, TableMacro}
 
 import scala.deriving.Mirror
 
+/**
+ * Wraps an upsert statement.
+ */
 class Save(private[sqala] val tree: SqlStatement.Upsert)
 
 object Save:
+    /**
+     * Creates an upsert statement from an entity, determining
+     * primary key and update columns from table metadata.
+     */
     inline def saveByEntity[T <: Product](entity: T)(using m: Mirror.ProductOf[T]): Save =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]

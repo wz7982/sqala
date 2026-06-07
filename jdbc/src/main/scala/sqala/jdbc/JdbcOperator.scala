@@ -6,6 +6,11 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.unsafeNulls
 
+/**
+ * Executes a query and decodes the result set into a list of
+ * typed values using the given `JdbcDecoder`. Parameters are
+ * bound by their Scala type to the appropriate JDBC setter.
+ */
 private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T]): List[T] =
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
@@ -31,6 +36,12 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
+/**
+ * Streams a query result in cursor batches using a forward‑only
+ * result set. Invokes the callback `f` for each batch of `size`
+ * rows. Supports large result sets without loading all rows into
+ * memory.
+ */
 private[sqala] def jdbcCursorQuery[T, R](
     conn: Connection,
     sql: String,
@@ -73,6 +84,12 @@ private[sqala] def jdbcCursorQuery[T, R](
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
+/**
+ * Executes a query and decodes the result set into a list of
+ * `Map[String, Any]`, mapping each column label to its value.
+ * Column nullability is reflected by wrapping nullable values
+ * in `Option`.
+ */
 private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any]): List[Map[String, Any]] =
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
@@ -127,6 +144,9 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
         if stmt != null then stmt.close()
         if rs != null then rs.close()
 
+/**
+ * Executes a DML statement and returns the affected row count.
+ */
 private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int =
     var stmt: PreparedStatement = null
     try
@@ -146,6 +166,11 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): In
     finally
         if stmt != null then stmt.close()
 
+/**
+ * Executes a DML statement and returns the generated keys as a
+ * list of `Long` values. Used for retrieving auto‑increment
+ * primary keys after inserts.
+ */
 private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] =
     var stmt: PreparedStatement = null
     val result = ListBuffer[Long]()
