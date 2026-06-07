@@ -1756,7 +1756,7 @@ def charLength[A, CL <: Int](x: A)(using
     Expr(
         SqlExpr.GeneralFunc(
             None,
-            "CLAR_LENGTH",
+            "CHAR_LENGTH",
             a.asExpr(x).asSqlExpr :: Nil,
             Nil,
             Nil,
