@@ -184,15 +184,16 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
         a: AsTableParam[t.R, L],
         tt: ToTuple[a.R]
     ): FromPivot[f.N, tt.R, OKS, L] =
-        def combineAll(withinList: List[List[SqlExpr]]): List[SqlExpr] = withinList match
-            case Nil => Nil
-            case head :: Nil => head
-            case head :: tail =>
-                for
-                    x <- head
-                    y <- combineAll(tail)
-                yield
-                    SqlExpr.Binary(x, SqlBinaryOperator.And, y)
+        def combineAll(withinList: List[List[SqlExpr]]): List[SqlExpr] =
+            withinList match
+                case Nil => Nil
+                case head :: Nil => head
+                case head :: tail =>
+                    for
+                        x <- head
+                        y <- combineAll(tail)
+                    yield
+                        SqlExpr.Binary(x, SqlBinaryOperator.And, y)
 
         val withinList = items.toList.map(_.asInstanceOf[PivotWithin[?]])
         val conditions = combineAll:

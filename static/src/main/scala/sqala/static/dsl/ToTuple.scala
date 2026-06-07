@@ -24,9 +24,11 @@ object ToTuple:
     given tupleToTuple[T <: Tuple]: Aux[T, T] = new ToTuple[T]:
         type R = T
 
-        def toTuple(x: T): R = x
+        def toTuple(x: T): R =
+            x
 
     given toTuple[T](using NotGiven[T <:< Tuple]): Aux[T, T *: EmptyTuple] = new ToTuple[T]:
         type R = T *: EmptyTuple
 
-        def toTuple(x: T): R = x *: EmptyTuple
+        def toTuple(x: T): R =
+            x *: EmptyTuple

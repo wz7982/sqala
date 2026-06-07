@@ -295,7 +295,8 @@ final case class RecognizePatternName[N <: Tuple, T, L <: Int](
 )(using
     private[sqala] val r: AsRecognize[T]
 ) extends Dynamic:
-    def selectDynamic(name: String): String = name
+    def selectDynamic(name: String): String =
+        name
 
 /**
  * A term in a `matchRecognize` row pattern.
