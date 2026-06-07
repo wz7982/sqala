@@ -6,9 +6,25 @@ import sqala.metadata.*
 
 import java.time.*
 
+/**
+ * Counts all rows. Maps to `COUNT(*)`.
+ *
+ * {{{
+ * from(Post).map(p => count())
+ * }}}
+ */
 def count[CL <: Int]()(using QueryContext[CL]): Expr[Long, Agg[EmptyTuple]] =
     Expr(SqlExpr.CountAsteriskFunc(None, None))
 
+/**
+ * Counts non-null values of an expression. Maps to `COUNT(expr)`.
+ * Aggregate functions, window functions, and other expressions
+ * not allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).map(p => count(p.likeCount))
+ * }}}
+ */
 def count[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -26,6 +42,16 @@ def count[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Counts distinct non-null values of an expression. Maps to
+ * `COUNT(DISTINCT expr)`. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => countDistinct(p.likeCount))
+ * }}}
+ */
 def countDistinct[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -43,6 +69,17 @@ def countDistinct[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the sum of a numeric expression. Maps to `SUM(expr)`.
+ * Returns an optional result, since `SUM` is `NULL` when all values
+ * are null. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount))
+ * }}}
+ */
 def sum[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -64,6 +101,16 @@ def sum[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the average of a numeric expression. Maps to
+ * `AVG(expr)`. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => avg(p.likeCount))
+ * }}}
+ */
 def avg[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -82,6 +129,16 @@ def avg[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the maximum value of an expression. Maps to `MAX(expr)`.
+ * Returns an optional result. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => max(p.likeCount))
+ * }}}
+ */
 def max[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -103,6 +160,16 @@ def max[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the minimum value of an expression. Maps to `MIN(expr)`.
+ * Returns an optional result. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => min(p.likeCount))
+ * }}}
+ */
 def min[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -124,6 +191,17 @@ def min[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Returns an arbitrary non-null value from a group. Maps to
+ * `ANY_VALUE(expr)`. Typically used in `map` clause with
+ * `groupBy` to pick a representative value. Aggregate functions,
+ * window functions, and other expressions not allowed in aggregate
+ * calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).groupBy(p => p.channelId).map((g, p) => anyValue(p.title))
+ * }}}
+ */
 def anyValue[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -145,6 +223,16 @@ def anyValue[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the population standard deviation of a numeric expression.
+ * Maps to `STDDEV_POP(expr)`. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => stddevPop(p.likeCount))
+ * }}}
+ */
 def stddevPop[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -163,6 +251,16 @@ def stddevPop[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the sample standard deviation of a numeric expression.
+ * Maps to `STDDEV_SAMP(expr)`. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => stddevSamp(p.likeCount))
+ * }}}
+ */
 def stddevSamp[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -181,6 +279,16 @@ def stddevSamp[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the population variance of a numeric expression.
+ * Maps to `VAR_POP(expr)`. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => varPop(p.likeCount))
+ * }}}
+ */
 def varPop[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -199,6 +307,16 @@ def varPop[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the sample variance of a numeric expression.
+ * Maps to `VAR_SAMP(expr)`. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected
+ * at compile time.
+ *
+ * {{{
+ * from(Post).map(p => varSamp(p.likeCount))
+ * }}}
+ */
 def varSamp[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -217,6 +335,17 @@ def varSamp[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Computes the population covariance of two numeric expressions.
+ * Maps to `COVAR_POP(x, y)`. Both arguments must be numeric
+ * expressions. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => covarPop(p.likeCount, p.viewCount))
+ * }}}
+ */
 def covarPop[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -240,6 +369,17 @@ def covarPop[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the sample covariance of two numeric expressions.
+ * Maps to `COVAR_SAMP(x, y)`. Both arguments must be numeric
+ * expressions. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => covarSamp(p.likeCount, p.viewCount))
+ * }}}
+ */
 def covarSamp[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -263,6 +403,16 @@ def covarSamp[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the correlation coefficient of two numeric expressions.
+ * Maps to `CORR(x, y)`. Both arguments must be numeric expressions.
+ * Aggregate functions, window functions, and other expressions not
+ * allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).map(p => corr(p.likeCount, p.viewCount))
+ * }}}
+ */
 def corr[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -286,6 +436,17 @@ def corr[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the slope of the linear regression line for two numeric
+ * expressions. Maps to `REGR_SLOPE(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrSlope(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrSlope[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -309,6 +470,17 @@ def regrSlope[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the intercept of the linear regression line for two
+ * numeric expressions. Maps to `REGR_INTERCEPT(x, y)`. Both arguments
+ * must be numeric expressions. Aggregate functions, window functions,
+ * and other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrIntercept(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrIntercept[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -332,6 +504,17 @@ def regrIntercept[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the number of non-null pairs for linear regression.
+ * Maps to `REGR_COUNT(x, y)`. Both arguments must be numeric
+ * expressions. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrCount(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrCount[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -355,6 +538,17 @@ def regrCount[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the R-squared of the linear regression for two numeric
+ * expressions. Maps to `REGR_R2(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrR2(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrR2[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -378,6 +572,17 @@ def regrR2[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the average of the independent variable for linear
+ * regression. Maps to `REGR_AVGX(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrAvgx(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrAvgx[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -401,6 +606,17 @@ def regrAvgx[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the average of the dependent variable for linear
+ * regression. Maps to `REGR_AVGY(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrAvgy(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrAvgy[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -424,6 +640,17 @@ def regrAvgy[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the sum of squares of the independent variable for linear
+ * regression. Maps to `REGR_SXX(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrSxx(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrSxx[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -447,6 +674,17 @@ def regrSxx[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the sum of squares of the dependent variable for linear
+ * regression. Maps to `REGR_SYY(x, y)`. Both arguments must be
+ * numeric expressions. Aggregate functions, window functions, and
+ * other expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrSyy(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrSyy[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -470,6 +708,17 @@ def regrSyy[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the sum of cross products for linear regression.
+ * Maps to `REGR_SXY(x, y)`. Both arguments must be numeric
+ * expressions. Aggregate functions, window functions, and other
+ * expressions not allowed in aggregate calls are rejected at
+ * compile time.
+ *
+ * {{{
+ * from(Post).map(p => regrSxy(p.likeCount, p.viewCount))
+ * }}}
+ */
 def regrSxy[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -493,6 +742,18 @@ def regrSxy[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes a continuous percentile over a group. Maps to
+ * `PERCENTILE_CONT(expr)`. The first argument is a numeric
+ * expression, the second is a sort specification on a numeric
+ * expression.
+ * Aggregate functions, window functions, and other expressions not
+ * allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).map(p => percentileCont(0.5, p.likeCount.desc))
+ * }}}
+ */
 def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST, SK])(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -512,12 +773,24 @@ def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
                 "PERCENTILE_CONT",
                 at.asExpr(x).asSqlExpr :: Nil,
                 Nil,
-                withinGroup.asSqlOrderBy :: Nil,
+                withinGroup.asSqlOrderingItem :: Nil,
                 None
             )
         )
     )
 
+/**
+ * Computes a discrete percentile over a group. Maps to
+ * `PERCENTILE_DISC(expr)`. The first argument is a numeric
+ * expression, the second is a sort specification on a numeric
+ * expression.
+ * Aggregate functions, window functions, and other expressions not
+ * allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).map(p => percentileDisc(0.5, p.likeCount.desc))
+ * }}}
+ */
 def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST, SK])(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -537,12 +810,23 @@ def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
                 "PERCENTILE_DISC",
                 at.asExpr(x).asSqlExpr :: Nil,
                 Nil,
-                withinGroup.asSqlOrderBy :: Nil,
+                withinGroup.asSqlOrderingItem :: Nil,
                 None
             )
         )
     )
 
+/**
+ * Concatenates string values with a separator, ordered by a sort
+ * specification. Maps to `LISTAGG(expr, separator)`. Both arguments
+ * must be string expressions, the third is a sort specification.
+ * Aggregate functions, window functions, and other expressions not
+ * allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).map(p => listAgg(p.title, ", ", p.id.desc))
+ * }}}
+ */
 def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -564,11 +848,17 @@ def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup
             at.asExpr(x).asSqlExpr,
             as.asExpr(separator).asSqlExpr,
             None,
-            withinGroup.asSqlOrderBy :: Nil,
+            withinGroup.asSqlOrderingItem :: Nil,
             None
         )
     )
 
+/**
+ * Alias of `listAgg`, provided for users familiar with `STRING_AGG`.
+ * {{{
+ * from(Post).map(p => stringAgg(p.title, ", ", p.id.desc))
+ * }}}
+ */
 def stringAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -586,6 +876,12 @@ def stringAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGro
 ): Expr[Option[String], Agg[c.R]] =
     listAgg(x, separator, withinGroup)
 
+/**
+ * Alias of `listAgg`, provided for users familiar with `GROUP_CONCAT`.
+ * {{{
+ * from(Post).map(p => groupConcat(p.title, ", ", p.id.desc))
+ * }}}
+ */
 def groupConcat[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup: Sort[ST, SK])(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -603,6 +899,16 @@ def groupConcat[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinG
 ): Expr[Option[String], Agg[c.R]] =
     listAgg(x, separator, withinGroup)
 
+/**
+ * Aggregates key and value pairs into a JSON object. Maps to
+ * `JSON_OBJECTAGG(key VALUE value)`. Aggregate functions, window
+ * functions, and other expressions not allowed in aggregate calls
+ * are rejected at compile time.
+ *
+ * {{{
+ * from(Post).groupBy(p => p.authorId).map((g, p) => jsonObjectAgg(p.id, p.title))
+ * }}}
+ */
 def jsonObjectAgg[K, V, CL <: Int](key: K, value: V)(using
     qc: QueryContext[CL],
     ak: AsExpr[K, CL],
@@ -625,6 +931,15 @@ def jsonObjectAgg[K, V, CL <: Int](key: K, value: V)(using
         )
     )
 
+/**
+ * Aggregates values into a JSON array. Maps to `JSON_ARRAYAGG(expr)`.
+ * Aggregate functions, window functions, and other expressions not
+ * allowed in aggregate calls are rejected at compile time.
+ *
+ * {{{
+ * from(Post).groupBy(p => p.authorId).map((g, p) => jsonArrayAgg(p.title))
+ * }}}
+ */
 def jsonArrayAgg[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -642,6 +957,10 @@ def jsonArrayAgg[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the matched pattern name in `matchRecognize`. Maps to
+ * `CLASSIFIER()`.
+ */
 def classifier[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[String, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
@@ -654,6 +973,10 @@ def classifier[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr
         )
     )
 
+/**
+ * Returns the sequential match number in `matchRecognize`. Maps to
+ * `MATCH_NUMBER()`.
+ */
 def matchNumber[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[Int, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
@@ -666,6 +989,14 @@ def matchNumber[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Exp
         )
     )
 
+/**
+ * Returns the first value of an expression in `matchRecognize`.
+ * Maps to `FIRST(expr)`.
+ *
+ * {{{
+ * first(expr)
+ * }}}
+ */
 def first[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -688,6 +1019,14 @@ def first[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the first N values of an expression in `matchRecognize`.
+ * Maps to `FIRST(expr, n)`.
+ *
+ * {{{
+ * first(expr, n)
+ * }}}
+ */
 def first[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -715,6 +1054,14 @@ def first[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the last value of an expression in `matchRecognize`.
+ * Maps to `LAST(expr)`.
+ *
+ * {{{
+ * last(expr)
+ * }}}
+ */
 def last[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -737,6 +1084,14 @@ def last[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the last N values of an expression in `matchRecognize`.
+ * Maps to `LAST(expr, n)`.
+ *
+ * {{{
+ * last(expr, n)
+ * }}}
+ */
 def last[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -764,6 +1119,14 @@ def last[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the previous value of an expression in `matchRecognize`.
+ * Maps to `PREV(expr)`.
+ *
+ * {{{
+ * prev(expr)
+ * }}}
+ */
 def prev[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -786,6 +1149,14 @@ def prev[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the previous N-th value of an expression in
+ * `matchRecognize`. Maps to `PREV(expr, n)`.
+ *
+ * {{{
+ * prev(expr, n)
+ * }}}
+ */
 def prev[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -813,6 +1184,14 @@ def prev[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the next value of an expression in `matchRecognize`.
+ * Maps to `NEXT(expr)`.
+ *
+ * {{{
+ * next(expr)
+ * }}}
+ */
 def next[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -835,6 +1214,14 @@ def next[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the next N-th value of an expression in
+ * `matchRecognize`. Maps to `NEXT(expr, n)`.
+ *
+ * {{{
+ * next(expr, n)
+ * }}}
+ */
 def next[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
@@ -862,6 +1249,15 @@ def next[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Extracts a substring starting from a position. Maps to
+ * `SUBSTRING(expr FROM start)`. The first argument must be a string
+ * expression, the second must be a numeric expression.
+ *
+ * {{{
+ * from(Post).map(p => substring(p.title, 1))
+ * }}}
+ */
 def substring[T, S, CL <: Int](x: T, start: S)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -878,6 +1274,16 @@ def substring[T, S, CL <: Int](x: T, start: S)(using
         )
     )
 
+/**
+ * Extracts a substring of a given length. Maps to
+ * `SUBSTRING(expr FROM start FOR end)`. The first argument must be
+ * a string expression, the second and third must be numeric
+ * expressions.
+ *
+ * {{{
+ * from(Post).map(p => substring(p.title, 1, 5))
+ * }}}
+ */
 def substring[T, S, E, CL <: Int](x: T, start: S, end: E)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -897,6 +1303,13 @@ def substring[T, S, E, CL <: Int](x: T, start: S, end: E)(using
         )
     )
 
+/**
+ * Converts a string to uppercase. Maps to `UPPER(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => upper(p.title))
+ * }}}
+ */
 def upper[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -914,6 +1327,13 @@ def upper[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Converts a string to lowercase. Maps to `LOWER(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => lower(p.title))
+ * }}}
+ */
 def lower[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
@@ -931,6 +1351,15 @@ def lower[T, CL <: Int](x: T)(using
         )
     )
 
+/**
+ * Left-pads a string to a given length. Maps to `LPAD(expr, n)`.
+ * The first argument must be a string expression, the second must
+ * be a numeric expression.
+ *
+ * {{{
+ * from(Post).map(p => lpad(p.title, 10))
+ * }}}
+ */
 def lpad[T, N, CL <: Int](x: T, n: N)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -950,6 +1379,15 @@ def lpad[T, N, CL <: Int](x: T, n: N)(using
         )
     )
 
+/**
+ * Left-pads a string with a custom pad character. Maps to
+ * `LPAD(expr, n, pad)`. The first and third arguments must be
+ * string expressions, the second must be a numeric expression.
+ *
+ * {{{
+ * from(Post).map(p => lpad(p.title, 10, " "))
+ * }}}
+ */
 def lpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -972,6 +1410,15 @@ def lpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
         )
     )
 
+/**
+ * Right-pads a string to a given length. Maps to `RPAD(expr, n)`.
+ * The first argument must be a string expression, the second must
+ * be a numeric expression.
+ *
+ * {{{
+ * from(Post).map(p => rpad(p.title, 10))
+ * }}}
+ */
 def rpad[T, N, CL <: Int](x: T, n: N)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -991,6 +1438,15 @@ def rpad[T, N, CL <: Int](x: T, n: N)(using
         )
     )
 
+/**
+ * Right-pads a string with a custom pad character. Maps to
+ * `RPAD(expr, n, pad)`. The first and third arguments must be
+ * string expressions, the second must be a numeric expression.
+ *
+ * {{{
+ * from(Post).map(p => rpad(p.title, 10, " "))
+ * }}}
+ */
 def rpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
     qc: QueryContext[CL],
     at: AsExpr[T, CL],
@@ -1013,6 +1469,14 @@ def rpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
         )
     )
 
+/**
+ * Trims whitespace from both sides of a string. Maps to
+ * `BTRIM(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => btrim(p.title))
+ * }}}
+ */
 def btrim[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1030,6 +1494,14 @@ def btrim[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Trims specified characters from both sides of a string. Maps to
+ * `BTRIM(expr, chars)`.
+ *
+ * {{{
+ * from(Post).map(p => btrim(p.title, " "))
+ * }}}
+ */
 def btrim[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1049,6 +1521,14 @@ def btrim[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Trims whitespace from the left side of a string. Maps to
+ * `LTRIM(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => ltrim(p.title))
+ * }}}
+ */
 def ltrim[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1066,6 +1546,14 @@ def ltrim[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Trims specified characters from the left side of a string.
+ * Maps to `LTRIM(expr, chars)`.
+ *
+ * {{{
+ * from(Post).map(p => ltrim(p.title, " "))
+ * }}}
+ */
 def ltrim[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1085,6 +1573,14 @@ def ltrim[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Trims whitespace from the right side of a string. Maps to
+ * `RTRIM(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => rtrim(p.title))
+ * }}}
+ */
 def rtrim[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1102,6 +1598,14 @@ def rtrim[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Trims specified characters from the right side of a string.
+ * Maps to `RTRIM(expr, chars)`.
+ *
+ * {{{
+ * from(Post).map(p => rtrim(p.title, " "))
+ * }}}
+ */
 def rtrim[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1121,6 +1625,16 @@ def rtrim[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Replaces a substring starting from a position. Maps to
+ * `OVERLAY(expr PLACING placing FROM start)`. The first two
+ * arguments must be string expressions, the third must be a numeric
+ * expression.
+ *
+ * {{{
+ * from(Post).map(p => overlay(p.title, "abc", 1))
+ * }}}
+ */
 def overlay[A, B, S, CL <: Int](x: A, y: B, start: S)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1141,6 +1655,16 @@ def overlay[A, B, S, CL <: Int](x: A, y: B, start: S)(using
         )
     )
 
+/**
+ * Replaces a substring of a given length. Maps to
+ * `OVERLAY(expr PLACING placing FROM start FOR end)`. The first
+ * two arguments must be string expressions, the third and fourth
+ * must be numeric expressions.
+ *
+ * {{{
+ * from(Post).map(p => overlay(p.title, "abc", 1, 3))
+ * }}}
+ */
 def overlay[A, B, S, E, CL <: Int](x: A, y: B, start: S, end: E)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1164,6 +1688,15 @@ def overlay[A, B, S, E, CL <: Int](x: A, y: B, start: S, end: E)(using
         )
     )
 
+/**
+ * Tests whether a string matches a regular expression. Maps to
+ * `REGEXP_LIKE(expr, pattern)`. Typically used in `filter` clause.
+ * Both arguments must be string expressions.
+ *
+ * {{{
+ * from(Post).filter(p => regexpLike(p.title, "^[A-Z]"))
+ * }}}
+ */
 def regexpLike[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1183,6 +1716,14 @@ def regexpLike[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Finds the position of a substring. Maps to `POSITION(x IN y)`.
+ * Both arguments must be string expressions.
+ *
+ * {{{
+ * from(Post).map(p => position("abc", p.title))
+ * }}}
+ */
 def position[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1198,6 +1739,14 @@ def position[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Returns the character length of a string. Maps to
+ * `CHAR_LENGTH(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => charLength(p.title))
+ * }}}
+ */
 def charLength[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1215,6 +1764,13 @@ def charLength[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the byte length of a string. Maps to `OCTET_LENGTH(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => octetLength(p.title))
+ * }}}
+ */
 def octetLength[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1232,6 +1788,13 @@ def octetLength[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the absolute value. Maps to `ABS(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => abs(p.likeCount))
+ * }}}
+ */
 def abs[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1249,6 +1812,13 @@ def abs[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the remainder of division. Maps to `MOD(x, y)`.
+ *
+ * {{{
+ * from(Post).map(p => mod(p.likeCount, 10))
+ * }}}
+ */
 def mod[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1268,6 +1838,13 @@ def mod[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the sine. Maps to `SIN(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => sin(p.likeCount))
+ * }}}
+ */
 def sin[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1285,6 +1862,13 @@ def sin[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the cosine. Maps to `COS(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => cos(p.likeCount))
+ * }}}
+ */
 def cos[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1302,6 +1886,13 @@ def cos[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the tangent. Maps to `TAN(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => tan(p.likeCount))
+ * }}}
+ */
 def tan[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1319,6 +1910,13 @@ def tan[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the hyperbolic sine. Maps to `SINH(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => sinh(p.likeCount))
+ * }}}
+ */
 def sinh[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1336,6 +1934,13 @@ def sinh[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the hyperbolic cosine. Maps to `COSH(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => cosh(p.likeCount))
+ * }}}
+ */
 def cosh[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1353,6 +1958,13 @@ def cosh[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the hyperbolic tangent. Maps to `TANH(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => tanh(p.likeCount))
+ * }}}
+ */
 def tanh[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1370,6 +1982,13 @@ def tanh[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the arc sine. Maps to `ASIN(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => asin(p.likeCount))
+ * }}}
+ */
 def asin[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1387,6 +2006,13 @@ def asin[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the arc cosine. Maps to `ACOS(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => acos(p.likeCount))
+ * }}}
+ */
 def acos[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1404,6 +2030,13 @@ def acos[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the arc tangent. Maps to `ATAN(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => atan(p.likeCount))
+ * }}}
+ */
 def atan[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1421,6 +2054,13 @@ def atan[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the logarithm to a given base. Maps to `LOG(base, expr)`.
+ *
+ * {{{
+ * from(Post).map(p => log(10, p.likeCount))
+ * }}}
+ */
 def log[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1440,6 +2080,13 @@ def log[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the base-10 logarithm. Maps to `LOG10(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => log10(p.likeCount))
+ * }}}
+ */
 def log10[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1457,6 +2104,13 @@ def log10[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the natural logarithm. Maps to `LN(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => ln(p.likeCount))
+ * }}}
+ */
 def ln[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1474,6 +2128,13 @@ def ln[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes e raised to a power. Maps to `EXP(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => exp(p.likeCount))
+ * }}}
+ */
 def exp[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1491,6 +2152,13 @@ def exp[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes a value raised to a power. Maps to `POWER(x, y)`.
+ *
+ * {{{
+ * from(Post).map(p => power(p.likeCount, 2))
+ * }}}
+ */
 def power[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1510,6 +2178,13 @@ def power[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the square root. Maps to `SQRT(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => sqrt(p.likeCount))
+ * }}}
+ */
 def sqrt[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1527,6 +2202,13 @@ def sqrt[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Rounds down to the nearest integer. Maps to `FLOOR(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => floor(p.likeCount))
+ * }}}
+ */
 def floor[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1544,6 +2226,13 @@ def floor[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Rounds up to the nearest integer. Maps to `CEIL(expr)`.
+ *
+ * {{{
+ * from(Post).map(p => ceil(p.likeCount))
+ * }}}
+ */
 def ceil[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1561,6 +2250,14 @@ def ceil[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Rounds to a given number of decimal places. Maps to
+ * `ROUND(expr, n)`.
+ *
+ * {{{
+ * from(Post).map(p => round(p.likeCount, 2))
+ * }}}
+ */
 def round[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1580,6 +2277,14 @@ def round[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the bucket number for a value in a histogram. Maps to
+ * `WIDTH_BUCKET(x, min, max, num)`.
+ *
+ * {{{
+ * from(Post).map(p => widthBucket(p.likeCount, 0, 100, 10))
+ * }}}
+ */
 def widthBucket[A, B, C, D, CL <: Int](x: A, min: B, max: C, num: D)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1608,6 +2313,13 @@ def widthBucket[A, B, C, D, CL <: Int](x: A, min: B, max: C, num: D)(using
         )
     )
 
+/**
+ * Parses a string expression as a JSON expression. Maps to `JSON(expr)`.
+ *
+ * {{{
+ * from(Log).map(l => json(l.data))
+ * }}}
+ */
 def json[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1622,6 +2334,14 @@ def json[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Extracts a scalar JSON value at a path. Maps to
+ * `JSON_VALUE(expr, path)`.
+ *
+ * {{{
+ * from(Log).map(l => jsonValue(json(l.data), "$.name"))
+ * }}}
+ */
 def jsonValue[A, P, CL <: Int](x: A, path: P)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1641,6 +2361,14 @@ def jsonValue[A, P, CL <: Int](x: A, path: P)(using
         )
     )
 
+/**
+ * Extracts a JSON object or array at a path. Maps to
+ * `JSON_QUERY(expr, path)`.
+ *
+ * {{{
+ * from(Log).map(l => jsonQuery(json(l.data), "$.items"))
+ * }}}
+ */
 def jsonQuery[A, P, CL <: Int](x: A, path: P)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1662,6 +2390,13 @@ def jsonQuery[A, P, CL <: Int](x: A, path: P)(using
         )
     )
 
+/**
+ * Tests whether a JSON path exists. Maps to `JSON_EXISTS(expr, path)`.
+ *
+ * {{{
+ * from(Log).filter(l => jsonExists(json(l.data), "$.name"))
+ * }}}
+ */
 def jsonExists[A, P, CL <: Int](x: A, path: P)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1679,9 +2414,20 @@ def jsonExists[A, P, CL <: Int](x: A, path: P)(using
         )
     )
 
+/**
+ * A key and value pair for `jsonObject`.
+ */
 final case class JsonObjectPair[KS <: Tuple](key: SqlExpr, value: SqlExpr)
 
 extension [K, CL <: Int](key: K)(using qc: QueryContext[CL], ak: AsExpr[K, CL], ask: AsSqlExpr[ak.R], ktk: KindToTuple[ak.K])
+    /**
+     * Pairs a key with a value for `jsonObject`. Maps to
+     * `key VALUE value`.
+     *
+     * {{{
+     * jsonObject(p.id value p.title)
+     * }}}
+     */
     infix def value[V](value: V)(using
         av: AsExpr[V, CL],
         asv: AsSqlExpr[av.R],
@@ -1690,9 +2436,19 @@ extension [K, CL <: Int](key: K)(using qc: QueryContext[CL], ak: AsExpr[K, CL], 
     ): JsonObjectPair[c.R] =
         JsonObjectPair(ak.asExpr(key).asSqlExpr, av.asExpr(value).asSqlExpr)
 
+/**
+ * Converts key and value pairs into the argument list for
+ * `jsonObject`.
+ */
 trait AsJsonObject[T]:
+    /**
+     * The combined kind tuple of the key and value pairs.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of `JsonObjectPair`.
+     */
     def asJsonObjects(x: T): List[JsonObjectPair[?]]
 
 object AsJsonObject:
@@ -1725,6 +2481,14 @@ object AsJsonObject:
             def asJsonObjects(x: JsonObjectPair[EKS] *: EmptyTuple): List[JsonObjectPair[?]] =
                 x.head :: Nil
 
+/**
+ * Constructs a JSON object from key and value pairs. Maps to
+ * `JSON_OBJECT(key VALUE value, ...)`.
+ *
+ * {{{
+ * from(Post).map(p => jsonObject(p.id.value(p.title)))
+ * }}}
+ */
 def jsonObject[T, CL <: Int](items: T)(using
     qc: QueryContext[CL],
     j: AsJsonObject[T]
@@ -1738,6 +2502,14 @@ def jsonObject[T, CL <: Int](items: T)(using
         )
     )
 
+/**
+ * Constructs a JSON array from elements. Maps to
+ * `JSON_ARRAY(expr, ...)`.
+ *
+ * {{{
+ * from(Post).map(p => jsonArray(p.id, p.title))
+ * }}}
+ */
 def jsonArray[A, CL <: Int](items: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1752,31 +2524,78 @@ def jsonArray[A, CL <: Int](items: A)(using
         )
     )
 
+/**
+ * Returns the current date. Maps to `CURRENT_DATE`.
+ *
+ * {{{
+ * from(Post).map(p => currentDate())
+ * }}}
+ */
 def currentDate[CL <: Int]()(using QueryContext[CL]): Expr[LocalDate, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_DATE")
     )
 
+/**
+ * Returns the current time with timezone. Maps to `CURRENT_TIME`.
+ *
+ * {{{
+ * from(Post).map(p => currentTime())
+ * }}}
+ */
 def currentTime[CL <: Int]()(using QueryContext[CL]): Expr[OffsetTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIME")
     )
 
+/**
+ * Returns the current timestamp with timezone. Maps to
+ * `CURRENT_TIMESTAMP`.
+ *
+ * {{{
+ * from(Post).map(p => currentTimestamp())
+ * }}}
+ */
 def currentTimestamp[CL <: Int]()(using QueryContext[CL]): Expr[OffsetDateTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("CURRENT_TIMESTAMP")
     )
 
+/**
+ * Returns the current local time without timezone. Maps to
+ * `LOCALTIME`.
+ *
+ * {{{
+ * from(Post).map(p => localTime())
+ * }}}
+ */
 def localTime[CL <: Int]()(using QueryContext[CL]): Expr[LocalTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIME")
     )
 
+/**
+ * Returns the current local timestamp without timezone. Maps to
+ * `LOCALTIMESTAMP`.
+ *
+ * {{{
+ * from(Post).map(p => localTimestamp())
+ * }}}
+ */
 def localTimestamp[CL <: Int]()(using QueryContext[CL]): Expr[LocalDateTime, Composite[EmptyTuple]] =
     Expr(
         SqlExpr.IdentFunc("LOCALTIMESTAMP")
     )
 
+/**
+ * Constructs a geometry from WKT text with an SRID. Maps to
+ * `ST_GeomFromText(text, srid)`. Part of the ISO/IEC 13249
+ * spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stGeomFromText(p.wkt, 4326))
+ * }}}
+ */
 def stGeomFromText[A, S, CL <: Int](x: A, srid: S)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1796,6 +2615,14 @@ def stGeomFromText[A, S, CL <: Int](x: A, srid: S)(using
         )
     )
 
+/**
+ * Converts a geometry to WKT text. Maps to `ST_AsText(expr)`.
+ * Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stAsText(p.location))
+ * }}}
+ */
 def stAsText[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1813,6 +2640,14 @@ def stAsText[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Converts a geometry to GeoJSON text. Maps to
+ * `ST_AsGeoJson(expr)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stAsGeoJson(p.location))
+ * }}}
+ */
 def stAsGeoJson[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1830,6 +2665,14 @@ def stAsGeoJson[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the geometry type name. Maps to
+ * `ST_GeometryType(expr)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stGeometryType(p.location))
+ * }}}
+ */
 def stGeometryType[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1847,6 +2690,14 @@ def stGeometryType[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the X coordinate of a point. Maps to `ST_X(expr)`.
+ * Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stX(p.location))
+ * }}}
+ */
 def stX[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1864,6 +2715,14 @@ def stX[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the Y coordinate of a point. Maps to `ST_Y(expr)`.
+ * Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stY(p.location))
+ * }}}
+ */
 def stY[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1881,6 +2740,14 @@ def stY[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the area of a geometry. Maps to `ST_Area(expr)`.
+ * Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stArea(p.location))
+ * }}}
+ */
 def stArea[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1898,6 +2765,14 @@ def stArea[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Computes the length of a geometry. Maps to `ST_Length(expr)`.
+ * Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stLength(p.location))
+ * }}}
+ */
 def stLength[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -1915,6 +2790,14 @@ def stLength[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Tests whether one geometry contains another. Maps to
+ * `ST_Contains(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stContains(p.location, p.location))
+ * }}}
+ */
 def stContains[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1934,6 +2817,14 @@ def stContains[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether one geometry is within another. Maps to
+ * `ST_Within(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stWithin(p.location, p.location))
+ * }}}
+ */
 def stWithin[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1953,6 +2844,14 @@ def stWithin[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether two geometries intersect. Maps to
+ * `ST_Intersects(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stIntersects(p.location, p.location))
+ * }}}
+ */
 def stIntersects[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1972,6 +2871,14 @@ def stIntersects[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether two geometries touch. Maps to
+ * `ST_Touches(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stTouches(p.location, p.location))
+ * }}}
+ */
 def stTouches[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -1991,6 +2898,14 @@ def stTouches[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether two geometries overlap. Maps to
+ * `ST_Overlaps(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stOverlaps(p.location, p.location))
+ * }}}
+ */
 def stOverlaps[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2010,6 +2925,14 @@ def stOverlaps[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether two geometries cross. Maps to
+ * `ST_Crosses(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stCrosses(p.location, p.location))
+ * }}}
+ */
 def stCrosses[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2029,6 +2952,14 @@ def stCrosses[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Tests whether two geometries are disjoint. Maps to
+ * `ST_Disjoint(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).filter(p => stDisjoint(p.location, p.location))
+ * }}}
+ */
 def stDisjoint[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2048,6 +2979,14 @@ def stDisjoint[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the intersection of two geometries. Maps to
+ * `ST_Intersection(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stIntersection(p.location, p.location))
+ * }}}
+ */
 def stIntersection[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2067,6 +3006,14 @@ def stIntersection[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the union of two geometries. Maps to
+ * `ST_Union(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stUnion(p.location, p.location))
+ * }}}
+ */
 def stUnion[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2086,6 +3033,14 @@ def stUnion[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the difference of two geometries. Maps to
+ * `ST_Difference(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stDifference(p.location, p.location))
+ * }}}
+ */
 def stDifference[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2105,6 +3060,14 @@ def stDifference[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the symmetric difference of two geometries. Maps to
+ * `ST_SymDifference(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stSymDifference(p.location, p.location))
+ * }}}
+ */
 def stSymDifference[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2124,6 +3087,14 @@ def stSymDifference[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Computes the distance between two geometries. Maps to
+ * `ST_Distance(x, y)`. Part of the ISO/IEC 13249 spatial standard.
+ *
+ * {{{
+ * from(Place).map(p => stDistance(p.location, p.location))
+ * }}}
+ */
 def stDistance[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2143,6 +3114,14 @@ def stDistance[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
+/**
+ * Returns the rank of each row with gaps. Maps to `RANK()`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => rank().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def rank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
     WindowFunc(
         SqlExpr.GeneralFunc(
@@ -2155,6 +3134,14 @@ def rank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
         )
     )
 
+/**
+ * Returns the rank of each row without gaps. Maps to
+ * `DENSE_RANK()`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => denseRank().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def denseRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
     WindowFunc(
         SqlExpr.GeneralFunc(
@@ -2167,7 +3154,15 @@ def denseRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple]
         )
     )
 
-def percentRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
+/**
+ * Returns the percentile rank of each row. Maps to `PERCENT_RANK()`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => percentRank().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
+def percentRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[BigDecimal, EmptyTuple] =
     WindowFunc(
         SqlExpr.GeneralFunc(
             None,
@@ -2179,6 +3174,14 @@ def percentRank[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTupl
         )
     )
 
+/**
+ * Returns the cumulative distribution of each row. Maps to
+ * `CUME_DIST()`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => cumeDist().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def cumeDist[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
     WindowFunc(
         SqlExpr.GeneralFunc(
@@ -2191,6 +3194,14 @@ def cumeDist[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] 
         )
     )
 
+/**
+ * Returns the sequential row number. Maps to `ROW_NUMBER()`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => rowNumber().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def rowNumber[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple] =
     WindowFunc(
         SqlExpr.GeneralFunc(
@@ -2203,6 +3214,14 @@ def rowNumber[CL <: Int]()(using QueryContext[CL]): WindowFunc[Long, EmptyTuple]
         )
     )
 
+/**
+ * Divides rows into a specified number of buckets. Maps to
+ * `NTILE(n)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => ntile(4).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def ntile[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2221,6 +3240,14 @@ def ntile[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the first value in a window frame. Maps to
+ * `FIRST_VALUE(expr)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => firstValue(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def firstValue[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2239,6 +3266,14 @@ def firstValue[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the first non-null value in a window frame. Maps to
+ * `FIRST_VALUE(expr) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => firstValueIgnoreNulls(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2257,6 +3292,14 @@ def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the last value in a window frame. Maps to
+ * `LAST_VALUE(expr)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lastValue(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lastValue[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2275,6 +3318,14 @@ def lastValue[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the last non-null value in a window frame. Maps to
+ * `LAST_VALUE(expr) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lastValueIgnoreNulls(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lastValueIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2293,6 +3344,14 @@ def lastValueIgnoreNulls[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the N-th value in a window frame from the first row.
+ * Maps to `NTH_VALUE(expr, n)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => nthValue(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def nthValue[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2317,6 +3376,14 @@ def nthValue[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the N-th non-null value from the first row. Maps to
+ * `NTH_VALUE(expr, n) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => nthValueIgnoreNulls(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def nthValueIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2341,6 +3408,14 @@ def nthValueIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the N-th value from the last row. Maps to
+ * `NTH_VALUE(expr, n) FROM LAST`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => nthValueFromLast(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def nthValueFromLast[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2365,6 +3440,15 @@ def nthValueFromLast[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the N-th non-null value from the last row. Maps to
+ * `NTH_VALUE(expr, n) FROM LAST IGNORE NULLS`. Must have an
+ * `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => nthValueFromLastIgnoreNulls(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2389,6 +3473,14 @@ def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
         )
     )
 
+/**
+ * Returns the value of a preceding row. Maps to `LAG(expr)`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lag(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lag[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2407,6 +3499,14 @@ def lag[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the non-null value of a preceding row. Maps to
+ * `LAG(expr) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lagIgnoreNulls(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lagIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2425,6 +3525,14 @@ def lagIgnoreNulls[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the value offset rows before. Maps to `LAG(expr, n)`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lag(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lag[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2448,6 +3556,14 @@ def lag[A, O, CL <: Int](x: A, offset: O)(using
         )
     )
 
+/**
+ * Returns the non-null value offset rows before. Maps to
+ * `LAG(expr, n) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lagIgnoreNulls(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lagIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2471,6 +3587,14 @@ def lagIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
         )
     )
 
+/**
+ * Returns the value offset rows before, with a default for missing
+ * rows. Maps to `LAG(expr, n, d)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lag(p.title, 2, "N/A").over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2503,6 +3627,15 @@ def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         )
     )
 
+/**
+ * Returns the non-null value offset rows before, with a default
+ * for missing rows. Maps to `LAG(expr, n, d) IGNORE NULLS`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lagIgnoreNulls(p.title, 2, "N/A").over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2535,6 +3668,14 @@ def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         )
     )
 
+/**
+ * Returns the value of a following row. Maps to `LEAD(expr)`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lead(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lead[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2553,6 +3694,14 @@ def lead[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the non-null value of a following row. Maps to
+ * `LEAD(expr) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => leadIgnoreNulls(p.title).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def leadIgnoreNulls[A, CL <: Int](x: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
@@ -2571,6 +3720,14 @@ def leadIgnoreNulls[A, CL <: Int](x: A)(using
         )
     )
 
+/**
+ * Returns the value offset rows after. Maps to `LEAD(expr, n)`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lead(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lead[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2594,6 +3751,14 @@ def lead[A, O, CL <: Int](x: A, offset: O)(using
         )
     )
 
+/**
+ * Returns the non-null value offset rows after. Maps to
+ * `LEAD(expr, n) IGNORE NULLS`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => leadIgnoreNulls(p.title, 2).over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def leadIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2617,6 +3782,14 @@ def leadIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
         )
     )
 
+/**
+ * Returns the value offset rows after, with a default for missing
+ * rows. Maps to `LEAD(expr, n, d)`. Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => lead(p.title, 2, "N/A").over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
@@ -2649,6 +3822,15 @@ def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         )
     )
 
+/**
+ * Returns the non-null value offset rows after, with a default
+ * for missing rows. Maps to `LEAD(expr, n, d) IGNORE NULLS`.
+ * Must have an `over` clause.
+ *
+ * {{{
+ * from(Post).map(p => leadIgnoreNulls(p.title, 2, "N/A").over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
+ * }}}
+ */
 def leadIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],

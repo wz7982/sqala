@@ -7,6 +7,10 @@ import java.time.{OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
 
+/**
+ * Determines whether two types are compatible for comparison
+ * operators (===, <>, >, <, etc.).
+ */
 trait Compare[A, B]
 
 object Compare:
@@ -86,9 +90,18 @@ object Compare:
         Compare[AH, BH]
     ): Compare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
 
+/**
+ * Computes the result type of addition (via `+`).
+ */
 trait Plus[A, B]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * Produces the SQL expression for the addition.
+     */
     def plus(x: SqlExpr, y: SqlExpr): SqlExpr
 
 object Plus:
@@ -123,7 +136,13 @@ object Plus:
             def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
                 SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
 
+/**
+ * Computes the result type of subtraction (via `-`).
+ */
 trait Minus[A, B]:
+    /**
+     * The result type.
+     */
     type R
 
 object Minus:
@@ -150,7 +169,14 @@ object Minus:
         new Minus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
+/**
+ * Computes the result type of a comparison.
+ * Always wraps `Boolean` with `Option` if either side is optional.
+ */
 trait Relation[A, B]:
+    /**
+     * The result type.
+     */
     type R
 
 object Relation:
@@ -161,6 +187,10 @@ object Relation:
         new Relation[A, B]:
             type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 
+/**
+ * Determines whether a type can be used as a `rows` or `groups`
+ * frame bound.
+ */
 trait CanInRowsOrGroupsFrame[T]
 
 object CanInRowsOrGroupsFrame:
@@ -170,6 +200,10 @@ object CanInRowsOrGroupsFrame:
 
     given nothing: CanInRowsOrGroupsFrame[Nothing]()
 
+/**
+ * Determines whether `S` and `T` can be used together in a `range`
+ * frame (`S` is the sort key type, `T` is the bound type).
+ */
 trait CanInRangeFrame[S, T]
 
 object CanInRangeFrame:
@@ -181,7 +215,13 @@ object CanInRangeFrame:
 
     given nothing[S]: CanInRangeFrame[S, Nothing]()
 
+/**
+ * Computes the return type of `unnest`.
+ */
 trait UnnestReturn[T]:
+    /**
+     * The result type.
+     */
     type R
 
 object UnnestReturn:
@@ -192,7 +232,14 @@ object UnnestReturn:
         new UnnestReturn[T]:
             type R = FlattenUnnest[T]
 
+/**
+ * Computes the result type of a conditional expression (such as
+ * `caseWhen` or `ifNull`).
+ */
 trait Return[A, B]:
+    /**
+     * The result type.
+     */
     type R
 
 object Return:
@@ -271,11 +318,25 @@ object Return:
         new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
+/**
+ * Maps union query items, producing column expressions
+ * for `union`, `unionAll`, etc. `CL` is the query context level.
+ */
 trait Union[A, B, CL <: Int]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * The number of expressions consumed by each query item.
+     */
     def offset: Int
 
+    /**
+     * Maps the query item at the given cursor position to a column
+     * expression.
+     */
     def unionQueryItems(x: A, cursor: Int): R
 
 object Union:
@@ -288,7 +349,8 @@ object Union:
         new Union[Expr[A, AK], Expr[B, BK], CL]:
             type R = Expr[r.R, Column[CL]]
 
-            def offset: Int = 1
+            def offset: Int = 
+                1
 
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
                 Expr(SqlExpr.Column(None, s"c$cursor"))
@@ -301,7 +363,8 @@ object Union:
         new Union[AH *: AT, BH *: BT, CL]:
             type R = h.R *: tt.R
 
-            def offset: Int = h.offset + t.offset
+            def offset: Int = 
+                h.offset + t.offset
 
             def unionQueryItems(x: AH *: AT, cursor: Int): R =
                 h.unionQueryItems(x.head, cursor) *:
@@ -313,7 +376,8 @@ object Union:
         new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
             type R = h.R *: EmptyTuple
 
-            def offset: Int = h.offset
+            def offset: Int = 
+                h.offset
 
             def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
                 h.unionQueryItems(x.head, cursor) *: EmptyTuple
@@ -325,7 +389,8 @@ object Union:
         new Union[NamedTuple[AN, AV], NamedTuple[BN, BV], CL]:
             type R = NamedTuple[AN, t.R]
 
-            def offset: Int = u.offset
+            def offset: Int = 
+                u.offset
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
@@ -337,7 +402,8 @@ object Union:
         new Union[NamedTuple[AN, AV], BV, CL]:
             type R = NamedTuple[AN, t.R]
 
-            def offset: Int = u.offset
+            def offset: Int = 
+                u.offset
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))

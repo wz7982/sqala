@@ -6,10 +6,23 @@ import sqala.metadata.{SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
 
+/**
+ * A `DELETE` statement builder, created by `delete[T]`.
+ */
 class Delete[T](
     private[sqala] val table: Table[T, Column, 1],
     private[sqala] val tree: SqlStatement.Delete
 )(using private[sqala] val qc: QueryContext[1]):
+    /**
+     * Adds a `WHERE` clause to the `DELETE` statement. The condition
+     * must be a valid filter expression — aggregate functions, window
+     * functions, and other expressions not allowed in `where` are
+     * rejected at compile time.
+     *
+     * {{{
+     * delete[User].where(_.id == 1)
+     * }}}
+     */
     def where[F](f: QueryContext[1] ?=> Table[T, Column, 1] => F)(using
         a: AsExpr[F, 1],
         b: SqlBoolean[a.R],

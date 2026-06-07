@@ -5,33 +5,48 @@ import sqala.metadata.*
 
 import java.time.{LocalDateTime, OffsetDateTime}
 
+/**
+ * Provides the target type for a `as` method.
+ */
 trait Cast[T, R]:
+    /**
+     * The target type.
+     */
     def castType: SqlType
 
 object Cast:
     given string[T: AsSqlExpr]: Cast[T, String] with
-        def castType: SqlType = SqlType.Varchar(None)
+        def castType: SqlType = 
+            SqlType.Varchar(None)
 
     given int[T: SqlNumber]: Cast[T, Int] with
-        def castType: SqlType = SqlType.Int
+        def castType: SqlType = 
+            SqlType.Int
 
     given long[T: SqlNumber]: Cast[T, Long] with
-        def castType: SqlType = SqlType.Long
+        def castType: SqlType = 
+            SqlType.Long
 
     given float[T: SqlNumber]: Cast[T, Float] with
-        def castType: SqlType = SqlType.Float
+        def castType: SqlType = 
+            SqlType.Float
 
     given double[T: SqlNumber]: Cast[T, Double] with
-        def castType: SqlType = SqlType.Double
+        def castType: SqlType = 
+            SqlType.Double
 
-    given decimal[T: SqlNumber]: Cast[T, Double] with
-        def castType: SqlType = SqlType.Decimal(None)
+    given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
+        def castType: SqlType = 
+            SqlType.Decimal(None)
 
     given json[T: SqlString]: Cast[T, Json] with
-        def castType: SqlType = SqlType.Json
+        def castType: SqlType = 
+            SqlType.Json
 
     given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
-        def castType: SqlType = SqlType.Timestamp(None)
+        def castType: SqlType = 
+            SqlType.Timestamp(None)
 
     given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
-        def castType: SqlType = SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+        def castType: SqlType = 
+            SqlType.Timestamp(Some(SqlTimeZoneMode.With))

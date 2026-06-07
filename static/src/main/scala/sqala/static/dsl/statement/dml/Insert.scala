@@ -9,8 +9,11 @@ import sqala.static.dsl.table.Table
 
 import scala.deriving.Mirror
 
+/**
+ * Tracks the state of an `INSERT` builder, restricting which
+ * methods are available at each stage.
+ */
 enum InsertState:
-    case New
     case Entity
     case Table
     case Values
@@ -24,9 +27,19 @@ type InsertValues = InsertState.Values.type
 
 type InsertQuery = InsertState.Query.type
 
+/**
+ * An `INSERT` statement builder, created by `insert[T]`.
+ */
 class Insert[T, S <: InsertState](
     private[sqala] val tree: SqlStatement.Insert
 ):
+    /**
+     * Selects columns to insert.
+     *
+     * {{{
+     * insert[User](u => (u.id, u.name))
+     * }}}
+     */
     inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsExpr[I, 1]): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
@@ -41,11 +54,19 @@ class Insert[T, S <: InsertState](
             SqlStatement.Insert(sqlTable, columns, SqlInsertMode.Values(Nil))
         new Insert(tree)
 
-    inline def values(rows: List[T])(using
+    /**
+     * Provides multiple rows of values for the `INSERT`. Maps to
+     * `VALUES (...), (...)`.
+     *
+     * {{{
+     * insert[User](u => (u.id, u.name)).values(List((1, "Alice"), (2, "Bob")))
+     * }}}
+     */
+    inline def values(rows: Seq[T])(using
         S =:= InsertTable
     ): Insert[T, InsertValues] =
         val instances = AsSqlExpr.summonInstances[T]
-        val insertValues = rows.map: row =>
+        val insertValues = rows.toList.map: row =>
             val data: List[Any] = inline row match
                 case t: Tuple => t.toList
                 case x => x :: Nil
@@ -53,6 +74,14 @@ class Insert[T, S <: InsertState](
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(tree.copy(mode = SqlInsertMode.Values(insertValues)))
 
+    /**
+     * Provides a single row of values for the `INSERT`. Maps to
+     * `VALUES (...)`.
+     *
+     * {{{
+     * insert[User](u => (u.id, u.name)).values((1, "Alice"))
+     * }}}
+     */
     inline def values(row: T)(using
         S =:= InsertTable
     ): Insert[T, InsertValues] =
@@ -65,6 +94,10 @@ object Insert:
             SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, SqlInsertMode.Values(Nil))
         new Insert(tree)
 
+    /**
+     * Creates an `INSERT` statement from entity objects, excluding
+     * auto-increment columns.
+     */
     inline def insertByEntities[T <: Product](entities: Seq[T])(using
         p: Mirror.ProductOf[T]
     ): Insert[T, InsertEntity] =

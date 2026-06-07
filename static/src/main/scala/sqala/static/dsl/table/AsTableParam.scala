@@ -3,11 +3,25 @@ package sqala.static.dsl.table
 import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.{Column, Expr, ExprKind, ToTuple}
 
+/**
+ * Generates column expressions (as `c1`, `c2`, ...) for subquery
+ * and table function result items. `CL` is the current query context
+ * level.
+ */
 trait AsTableParam[T, CL <: Int]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * The number of columns consumed by this item.
+     */
     def offset: Int
 
+    /**
+     * Produces the column expression at the given cursor position.
+     */
     def asTableParam(queryAlias: Option[String], cursor: Int): R
 
 object AsTableParam:

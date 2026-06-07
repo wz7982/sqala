@@ -2,9 +2,19 @@ package sqala.static.dsl.table
 
 import sqala.static.dsl.{ExprKind, ToTuple, TransformExprKind}
 
+/**
+ * Transforms the expression kind of table fields, used when table
+ * columns are re-categorized.
+ */
 trait TransformTableKind[T, K[_ <: Int] <: ExprKind]:
+    /**
+     * The transformed table type.
+     */
     type R
 
+    /**
+     * Applies the kind transformation to the table.
+     */
     def transform(x: T): R
 
 object TransformTableKind:

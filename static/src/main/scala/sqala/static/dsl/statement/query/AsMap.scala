@@ -9,13 +9,30 @@ import sqala.static.dsl.table.*
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>
 
+/**
+ * Generates `SELECT` items from table sources. Each table type
+ * produces column expressions with aliases (`c1`, `c2`, ...),
+ * tracking the cursor offset for multi-table projection.
+ */
 trait AsSelect[T]:
+    /**
+     * The transformed table type.
+     */
     type R
 
+    /**
+     * Transforms the table to the `SELECT`-ready form.
+     */
     def transform(x: T): R
 
+    /**
+     * The number of columns consumed by this table.
+     */
     def offset(x: T): Int
 
+    /**
+     * Produces `SELECT` items with auto-incremented column aliases.
+     */
     def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
 
 object AsSelect:
@@ -210,15 +227,35 @@ object AsSelect:
             def asSelectItems(x: TH *: EmptyTuple, cursor: Int): List[SqlSelectItem.Expr] =
                 ah.asSelectItems(x.head, cursor)
 
+/**
+ * Generates `SELECT` items from `map` clause expressions. Lifts
+ * values, expressions, subqueries, tuples, and named tuples into
+ * column expressions. `CL` is the current query context level.
+ */
 trait AsMap[T, CL <: Int]:
+    /**
+     * The transformed expression type.
+     */
     type R
 
+    /**
+     * The kind tuple of the mapped expressions.
+     */
     type KS <: Tuple
 
+    /**
+     * Transforms the expression to the mapped form.
+     */
     def transform(x: T): R
 
+    /**
+     * The number of columns consumed.
+     */
     def offset(x: T): Int
 
+    /**
+     * Produces `SELECT` items with auto-incremented column aliases.
+     */
     def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
 
 object AsMap:

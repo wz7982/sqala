@@ -3,7 +3,7 @@ package sqala.ast.expr
 import sqala.ast.order.SqlOrderingItem
 
 /**
- * A window specification for window function `OVER` clauses.
+ * A window specification for window function `OVER` clause.
  *
  * Renders as `[PARTITION BY expr [, ...]] [ORDER BY ordering_item [, ...]] [ROWS|RANGE|GROUPS frame]`.
  */

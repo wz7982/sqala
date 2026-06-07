@@ -7,9 +7,20 @@ import sqala.static.dsl.statement.query.Query
 
 import scala.compiletime.ops.int.>
 
+/**
+ * Lifts values, expressions, and subqueries for `sortBy` in
+ * queries. `S` is the query size. `CL` is the current query
+ * context level.
+ */
 trait AsSortItem[T, S <: QuerySize, CL <: Int]:
+    /**
+     * The expression kind tuple of the sort item.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a `Sort`.
+     */
     def asSort(x: T): Sort[?, ?]
 
 object AsSortItem:
@@ -53,9 +64,19 @@ object AsSortItem:
             def asSort(x: Q): Sort[?, ?] =
                 Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
 
+/**
+ * Collects sort items for `sortBy` in queries. `S` is the query
+ * size. `CL` is the current query context level.
+ */
 trait AsSort[T, S <: QuerySize, CL <: Int]:
+    /**
+     * The combined kind tuple of the sort clause.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of `Sort` values.
+     */
     def asSorts(x: T): List[Sort[?, ?]]
 
 object AsSort:
@@ -90,9 +111,19 @@ object AsSort:
             def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
                 h.asSort(x.head) :: Nil
 
+/**
+ * Lifts values, expressions, and subqueries for `sortBy` after
+ * `groupBy`. `CL` is the current query context level.
+ */
 trait AsGroupedSortItem[T, CL <: Int]:
+    /**
+     * The expression kind tuple of the sort item.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a `Sort`.
+     */
     def asSort(x: T): Sort[?, ?]
 
 object AsGroupedSortItem:
@@ -135,9 +166,19 @@ object AsGroupedSortItem:
             def asSort(x: Q): Sort[?, ?] =
                 Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
 
+/**
+ * Collects sort items for `sortBy` after `groupBy`. `CL` is the
+ * current query context level.
+ */
 trait AsGroupedSort[T, CL <: Int]:
+    /**
+     * The combined kind tuple of the sort clause.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of `Sort` values.
+     */
     def asSorts(x: T): List[Sort[?, ?]]
 
 object AsGroupedSort:
@@ -172,7 +213,14 @@ object AsGroupedSort:
             def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
                 h.asSort(x.head) :: Nil
 
+/**
+ * Collects distinct sort items for `sortBy` after `mapDistinct`.
+ * `CL` is the current query context level.
+ */
 trait AsDistinctSortItem[T, CL <: Int]:
+    /**
+     * Converts the value to a list of `DistinctSort` values.
+     */
     def asSort(x: T): DistinctSort[?, ?]
 
 object AsDistinctSortItem:
@@ -184,7 +232,14 @@ object AsDistinctSortItem:
         def asSort(x: DistinctSort[T, EL]): DistinctSort[?, ?] =
             x
 
+/**
+ * Collects distinct sort items for `sortBy` after `mapDistinct`.
+ * `CL` is the current query context level.
+ */
 trait AsDistinctSort[T, CL <: Int]:
+    /**
+     * Converts the value to a list of `DistinctSort` values.
+     */
     def asSorts(x: T): List[DistinctSort[?, ?]]
 
 object AsDistinctSort:
@@ -205,11 +260,24 @@ object AsDistinctSort:
         def asSorts(x: H *: EmptyTuple): List[DistinctSort[?, ?]] =
             h.asSort(x.head) :: Nil
 
+/**
+ * Lifts values, expressions, and subqueries for `sortBy` in a
+ * window `over` clause. `CL` is the current query context level.
+ */
 trait AsOverSortItem[T, CL <: Int]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * The expression kind tuple of the sort item.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a `Sort`.
+     */
     def asSort(x: T): Sort[?, ?]
 
 object AsOverSortItem:
@@ -256,11 +324,24 @@ object AsOverSortItem:
             def asSort(x: Q): Sort[?, ?] =
                 Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
 
+/**
+ * Collects sort items for `sortBy` in a window `over` clause.
+ * `CL` is the current query context level.
+ */
 trait AsOverSort[T, CL <: Int]:
+    /**
+     * The result type.
+     */
     type R
 
+    /**
+     * The combined kind tuple of the sort clause.
+     */
     type KS <: Tuple
 
+    /**
+     * Converts the value to a list of `Sort` values.
+     */
     def asSorts(x: T): List[Sort[?, ?]]
 
 object AsOverSort:
@@ -304,7 +385,14 @@ object AsOverSort:
             def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
                 h.asSort(x.head) :: Nil
 
+/**
+ * Lifts column expressions for `sortBy` in contexts requiring
+ * column-level validation `CL` is the current query context level.
+ */
 trait AsColumnSortItem[T, CL <: Int]:
+    /**
+     * Converts the value to a `Sort`.
+     */
     def asSort(x: T): Sort[?, ?]
 
 object AsColumnSortItem:
@@ -316,7 +404,14 @@ object AsColumnSortItem:
         def asSort(x: Sort[T, Column[EL]]): Sort[?, ?] =
             x
 
+/**
+ * Collects column sort items for `sortBy` in column-level
+ * contexts.
+ */
 trait AsColumnSort[T, CL <: Int]:
+    /**
+     * Converts the value to a list of `Sort` values.
+     */
     def asSorts(x: T): List[Sort[?, ?]]
 
 object AsColumnSort:

@@ -11,11 +11,25 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 import scala.compiletime.ops.int.>
 
+/**
+ * Used by `from` to lift various DSL types into a table reference
+ * and its AST node. `CL` is the current query context level, used for
+ * scope validation.
+ */
 trait AsTable[T, CL <: Int]:
+    /**
+     * The table reference type.
+     */
     type R
 
+    /**
+     * The kind tuple of the outer query.
+     */
     type OKS <: Tuple
 
+    /**
+     * Converts the value to a table reference and its AST.
+     */
     def asTable(x: T)(using QueryContext[CL]): (R, SqlTable)
 
 object AsTable:
@@ -166,13 +180,13 @@ object AsTable:
                 val sqlValues = SqlQuery.Values(exprList, None)
                 (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 
-    given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[JoinTable[T, TOKS, CL], CL, T, TOKS] =
-        new AsTable[JoinTable[T, TOKS, CL], CL]:
+    given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
+        new AsTable[FromJoin[T, TOKS, CL], CL]:
             type R = T
 
             type OKS = TOKS
 
-            def asTable(x: JoinTable[T, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
+            def asTable(x: FromJoin[T, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 (x.params, x.sqlTable)
 
     given tuple[H, T <: Tuple, CL <: Int](using

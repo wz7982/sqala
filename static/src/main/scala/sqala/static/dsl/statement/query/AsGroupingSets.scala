@@ -3,7 +3,13 @@ package sqala.static.dsl.statement.query
 import sqala.ast.expr.SqlExpr
 import sqala.static.dsl.{Expr, Grouped}
 
+/**
+ * Converts a single grouping sets item into a `SqlExpr`.
+ */
 trait AsGroupingSetsItem[T]:
+    /**
+     * Converts the item to a SQL expression.
+     */
     def asSqlExpr(x: T): SqlExpr
 
 object AsGroupingSetsItem:
@@ -29,7 +35,14 @@ object AsGroupingSetsItem:
         def asSqlExpr(x: Unit): SqlExpr =
             SqlExpr.Tuple(Nil)
 
+/**
+ * Collects grouping sets items into a list of `SqlExpr` for the
+ * `groupBySets` clause.
+ */
 trait AsGroupingSets[T]:
+    /**
+     * Converts the grouping sets to a list of SQL expressions.
+     */
     def asSqlExprs(x: T): List[SqlExpr]
 
 object AsGroupingSets:

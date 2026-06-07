@@ -2,9 +2,19 @@ package sqala.static.dsl
 
 import scala.util.NotGiven
 
+/**
+ * Converts a type to a tuple. Existing tuples pass through unchanged;
+ * non-tuple types are wrapped in a single-element tuple.
+ */
 trait ToTuple[T]:
+    /**
+     * The tuple representation of `T`.
+     */
     type R <: Tuple
 
+    /**
+     * Converts the value to its tuple form.
+     */
     def toTuple(x: T): R
 
 object ToTuple:

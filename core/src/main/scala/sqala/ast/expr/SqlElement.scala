@@ -97,7 +97,7 @@ enum SqlJsonNodeType:
     case Scalar
 
 /**
- * Character encoding for JSON format clauses.
+ * Character encoding for JSON format clause.
  */
 enum SqlJsonEncoding:
     /**
