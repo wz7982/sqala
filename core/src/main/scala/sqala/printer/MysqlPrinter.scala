@@ -22,21 +22,21 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         sqlBuilder.append(", ")
         printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
 
-    override def printUpsert(upsert: SqlStatement.Upsert): Unit =
+    override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
-        printTable(upsert.table)
+        printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(upsert.columns)(printIdent)
+        printList(statement.columns)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(upsert.values)(printExpr)
+        printList(statement.values)(printExpr)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
 
-        printList(upsert.updateColumns): u =>
+        printList(statement.updateColumns): u =>
             printIdent(u)
             sqlBuilder.append(" = VALUES (")
             printIdent(u)
@@ -77,10 +77,10 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
             case _ =>
                 super.printBinaryExpr(expr)
 
-    override def printValues(values: SqlQuery.Values): Unit =
+    override def printValuesQuery(query: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
-        printList(values.values.map(SqlExpr.Tuple(_))): v =>
+        printList(query.values.map(SqlExpr.Tuple(_))): v =>
             sqlBuilder.append("ROW")
             printExpr(v)
 

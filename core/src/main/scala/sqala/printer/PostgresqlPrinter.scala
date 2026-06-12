@@ -25,25 +25,25 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
                 sqlBuilder.append("OFFSET ")
                 printExpr(o)
 
-    override def printUpsert(upsert: SqlStatement.Upsert): Unit =
+    override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
-        printTable(upsert.table)
+        printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(upsert.columns)(printIdent)
+        printList(statement.columns)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(upsert.values)(printExpr)
+        printList(statement.values)(printExpr)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON CONFLICT (")
-        printList(upsert.primaryKeys)(printIdent)
+        printList(statement.primaryKeys)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" DO UPDATE SET ")
 
-        printList(upsert.updateColumns): u =>
+        printList(statement.updateColumns): u =>
             printIdent(u)
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")
