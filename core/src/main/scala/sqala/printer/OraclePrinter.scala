@@ -11,7 +11,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
         ()
 
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        expr.unit match
+        expr.`type` match
             case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 val func = SqlExpr.GeneralFunc(
                     None,

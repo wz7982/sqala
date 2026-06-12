@@ -49,7 +49,7 @@ enum SqlExpr:
      *
      * Renders as `DATE '2023-01-01'|TIMESTAMP '2023-01-01 12:00:00'|TIME '12:00:00'`.
      */
-    case TimeLiteral(unit: SqlTimeType, time: String)
+    case TimeLiteral(`type`: SqlTimeType, time: String)
 
     /**
      * An interval literal.
