@@ -363,7 +363,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case c: SqlExpr.Column => printColumnExpr(c)
             case SqlExpr.NullLiteral => printNullLiteralExpr()
             case s: SqlExpr.StringLiteral => printStringLiteralExpr(s)
-            case n: SqlExpr.NumberLiteral[_] => printNumberLiteralExpr(n)
+            case n: SqlExpr.NumberLiteral => printNumberLiteralExpr(n)
             case b: SqlExpr.BooleanLiteral => printBooleanLiteralExpr(b)
             case t: SqlExpr.TimeLiteral => printTimeLiteralExpr(t)
             case i: SqlExpr.IntervalLiteral => printIntervalLiteralExpr(i)
@@ -430,7 +430,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a numeric literal expression.
      */
-    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
+    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
         sqlBuilder.append(expr.number)
 
     /**

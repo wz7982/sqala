@@ -37,28 +37,28 @@ object AsSqlExpr:
             SqlType.Int
 
         def asSqlExpr(x: Int): SqlExpr =
-            SqlExpr.NumberLiteral(x)
+            SqlExpr.NumberLiteral(BigDecimal(x.toString))
 
     given long: AsSqlExpr[Long] with
         def sqlType: SqlType =
             SqlType.Long
 
         def asSqlExpr(x: Long): SqlExpr =
-            SqlExpr.NumberLiteral(x)
+            SqlExpr.NumberLiteral(BigDecimal(x.toString))
 
     given float: AsSqlExpr[Float] with
         def sqlType: SqlType =
             SqlType.Float
 
         def asSqlExpr(x: Float): SqlExpr =
-            SqlExpr.NumberLiteral(x)
+            SqlExpr.NumberLiteral(BigDecimal(x.toString))
 
     given double: AsSqlExpr[Double] with
         def sqlType: SqlType =
             SqlType.Double
 
         def asSqlExpr(x: Double): SqlExpr =
-            SqlExpr.NumberLiteral(x)
+            SqlExpr.NumberLiteral(BigDecimal(x.toString))
 
     given decimal: AsSqlExpr[BigDecimal] with
         def sqlType: SqlType =
