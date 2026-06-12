@@ -57,47 +57,47 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     def printStatement(statement: SqlStatement): Unit =
         statement match
             case update: SqlStatement.Update => 
-                printUpdate(update)
+                printUpdateStatement(update)
             case insert: SqlStatement.Insert => 
-                printInsert(insert)
+                printInsertStatement(insert)
             case delete: SqlStatement.Delete => 
-                printDelete(delete)
+                printDeleteStatement(delete)
             case upsert: SqlStatement.Upsert => 
-                printUpsert(upsert)
+                printUpsertStatement(upsert)
             case truncate: SqlStatement.Truncate => 
-                printTruncate(truncate)
+                printTruncateStatement(truncate)
 
     /**
      * Prints an `UPDATE` statement.
      */
-    def printUpdate(update: SqlStatement.Update): Unit =
+    def printUpdateStatement(statement: SqlStatement.Update): Unit =
         sqlBuilder.append("UPDATE ")
-        printTable(update.table)
+        printTable(statement.table)
         sqlBuilder.append(" SET ")
 
-        printList(update.setPairs): i =>
+        printList(statement.setPairs): i =>
             printIdent(i.column)
             sqlBuilder.append(" = ")
             printExpr(i.value)
 
-        for i <- update.where do
+        for i <- statement.where do
             sqlBuilder.append(" WHERE ")
             printExpr(i)
 
     /**
      * Prints an `INSERT` statement.
      */
-    def printInsert(insert: SqlStatement.Insert): Unit =
+    def printInsertStatement(statement: SqlStatement.Insert): Unit =
         sqlBuilder.append("INSERT INTO ")
-        printTable(insert.table)
+        printTable(statement.table)
 
-        if insert.columns.nonEmpty then
+        if statement.columns.nonEmpty then
             sqlBuilder.append(" (")
-            printList(insert.columns)(printIdent)
+            printList(statement.columns)(printIdent)
             sqlBuilder.append(")")
 
         sqlBuilder.append(" ")
-        insert.mode match
+        statement.mode match
             case SqlInsertMode.Values(values) =>
                 sqlBuilder.append("VALUES ")
                 printList(values.map(SqlExpr.Tuple(_)))(printExpr)
@@ -107,20 +107,20 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a `DELETE` statement.
      */
-    def printDelete(delete: SqlStatement.Delete): Unit =
+    def printDeleteStatement(statement: SqlStatement.Delete): Unit =
         sqlBuilder.append("DELETE FROM ")
-        printTable(delete.table)
+        printTable(statement.table)
 
-        for i <- delete.where do
+        for i <- statement.where do
             sqlBuilder.append(" WHERE ")
             printExpr(i)
 
     /**
      * Prints a `MERGE` (upsert) statement.
      */
-    def printUpsert(upsert: SqlStatement.Upsert): Unit =
+    def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
         sqlBuilder.append("MERGE INTO ")
-        val table = upsert.table.copy(alias = Some(SqlTableAlias("t1", Nil)))
+        val table = statement.table.copy(alias = Some(SqlTableAlias("t1", Nil)))
         printTable(table)
         sqlBuilder.append("\n")
 
@@ -128,7 +128,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
         val query = SqlQuery.Select(
             None,
-            upsert.values.zip(upsert.columns).map((v, c) => SqlSelectItem.Expr(v, Some(c))),
+            statement.values.zip(statement.columns).map((v, c) => SqlSelectItem.Expr(v, Some(c))),
             Nil,
             None,
             None,
@@ -146,21 +146,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
 
         sqlBuilder.append("ON (")
-        for index <- upsert.primaryKeys.indices do
+        for index <- statement.primaryKeys.indices do
             printIdent("t1")
             sqlBuilder.append(".")
-            printIdent(upsert.primaryKeys(index))
+            printIdent(statement.primaryKeys(index))
             sqlBuilder.append(" = ")
             printIdent("t2")
             sqlBuilder.append(".")
-            printIdent(upsert.primaryKeys(index))
-            if index < upsert.primaryKeys.size - 1 then
+            printIdent(statement.primaryKeys(index))
+            if index < statement.primaryKeys.size - 1 then
                 sqlBuilder.append(" AND ")
         sqlBuilder.append(")")
         sqlBuilder.append("\n")
 
         sqlBuilder.append("WHEN MATCHED THEN UPDATE SET ")
-        printList(upsert.updateColumns): u =>
+        printList(statement.updateColumns): u =>
             printIdent("t1")
             sqlBuilder.append(".")
             printIdent(u)
@@ -171,31 +171,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
 
         sqlBuilder.append("WHEN NOT MATCHED THEN INSERT (")
-        printList(upsert.columns): c =>
+        printList(statement.columns): c =>
             printIdent(c)
         sqlBuilder.append(")")
         sqlBuilder.append("\n")
 
         sqlBuilder.append("VALUES (")
-        printList(upsert.values)(printExpr)
+        printList(statement.values)(printExpr)
         sqlBuilder.append(")")
 
     /**
      * Prints a `TRUNCATE` statement.
      */
-    def printTruncate(truncate: SqlStatement.Truncate): Unit =
+    def printTruncateStatement(statement: SqlStatement.Truncate): Unit =
         sqlBuilder.append("TRUNCATE TABLE ")
-        printTable(truncate.table)
+        printTable(statement.table)
 
     /**
      * Dispatches a query to its specific printer method and appends any row-level locks.
      */
     def printQuery(query: SqlQuery): Unit =
         query match
-            case select: SqlQuery.Select => printSelect(select)
-            case set: SqlQuery.Set => printSet(set)
-            case values: SqlQuery.Values => printValues(values)
-            case cte: SqlQuery.Cte => printCte(cte)
+            case select: SqlQuery.Select => printSelectQuery(select)
+            case set: SqlQuery.Set => printSetQuery(set)
+            case values: SqlQuery.Values => printValuesQuery(values)
+            case cte: SqlQuery.Cte => printCteQuery(cte)
 
         for l <- query.lock do
             sqlBuilder.append("\n")
@@ -203,7 +203,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printLock(l)
 
     /**
-     * Prints a quantifier (`DISTINCT|ALL|custom`).
+     * Prints a quantifier.
      */
     def printQuantifier(quantifier: SqlQuantifier): Unit =
         quantifier match
@@ -225,31 +225,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a `SELECT` query with all its clause.
      */
-    def printSelect(select: SqlQuery.Select): Unit =
+    def printSelectQuery(query: SqlQuery.Select): Unit =
         printSpace()
         sqlBuilder.append("SELECT")
 
-        select.quantifier.foreach: q =>
+        query.quantifier.foreach: q =>
             sqlBuilder.append(" ")
             printQuantifier(q)
 
-        if select.select.nonEmpty then
+        if query.select.nonEmpty then
             sqlBuilder.append("\n")
-            printList(select.select, ",\n")(printSelectItem |> printWithSpace)
+            printList(query.select, ",\n")(printSelectItem |> printWithSpace)
 
-        if select.from.nonEmpty then
+        if query.from.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("FROM\n")
-            printList(select.from, ",\n")(printTable |> printWithSpace)
+            printList(query.from, ",\n")(printTable |> printWithSpace)
 
-        for w <- select.where do
+        for w <- query.where do
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("WHERE\n")
             w |> printWithSpace(printExpr)
 
-        for g <- select.groupBy do
+        for g <- query.groupBy do
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("GROUP BY")
@@ -259,31 +259,31 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("\n")
             printList(g.items, ",\n")(printGroupingItem |> printWithSpace)
 
-        for h <- select.having do
+        for h <- query.having do
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("HAVING\n")
             h |> printWithSpace(printExpr)
 
-        if select.orderBy.nonEmpty then
+        if query.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
-            printList(select.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+            printList(query.orderBy, ",\n")(printOrderingItem |> printWithSpace)
 
-        for l <- select.limit do
+        for l <- query.limit do
             sqlBuilder.append("\n")
             printSpace()
             printLimit(l)
 
     /**
-     * Prints a set operation (`UNION|EXCEPT|INTERSECT`) between two queries.
+     * Prints a set operation between two queries.
      */
-    def printSet(set: SqlQuery.Set): Unit =
+    def printSetQuery(query: SqlQuery.Set): Unit =
         printSpace()
         sqlBuilder.append("(\n")
         push()
-        printQuery(set.left)
+        printQuery(query.left)
         pull()
         sqlBuilder.append("\n")
         printSpace()
@@ -291,14 +291,14 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
 
         printSpace()
-        set.operator match
+        query.operator match
             case SqlSetOperator.Union(_) =>
                 sqlBuilder.append("UNION")
             case SqlSetOperator.Except(_) =>
                 sqlBuilder.append("EXCEPT")
             case SqlSetOperator.Intersect(_) =>
                 sqlBuilder.append("INTERSECT")
-        for q <- set.operator.quantifier do
+        for q <- query.operator.quantifier do
             sqlBuilder.append(" ")
             printQuantifier(q)
         sqlBuilder.append("\n")
@@ -306,19 +306,19 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printSpace()
         sqlBuilder.append("(\n")
         push()
-        printQuery(set.right)
+        printQuery(query.right)
         pull()
         sqlBuilder.append("\n")
         printSpace()
         sqlBuilder.append(")")
 
-        if set.orderBy.nonEmpty then
+        if query.orderBy.nonEmpty then
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("ORDER BY\n")
-            printList(set.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+            printList(query.orderBy, ",\n")(printOrderingItem |> printWithSpace)
 
-        for l <- set.limit do
+        for l <- query.limit do
             sqlBuilder.append("\n")
             printSpace()
             printLimit(l)
@@ -326,18 +326,18 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a `VALUES` clause.
      */
-    def printValues(values: SqlQuery.Values): Unit =
+    def printValuesQuery(query: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
-        printList(values.values.map(SqlExpr.Tuple(_)))(printExpr)
+        printList(query.values.map(SqlExpr.Tuple(_)))(printExpr)
 
     /**
      * Prints a `WITH` (common table expression) query.
      */
-    def printCte(cte: SqlQuery.Cte): Unit =
+    def printCteQuery(query: SqlQuery.Cte): Unit =
         printSpace()
         sqlBuilder.append("WITH")
-        if cte.recursive then printCteRecursive()
+        if query.recursive then printCteRecursive()
         sqlBuilder.append("\n")
 
         def printWithItem(item: SqlWithItem): Unit =
@@ -357,9 +357,9 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             sqlBuilder.append(")")
 
-        printList(cte.queryItems, ",\n")(printWithItem)
+        printList(query.queryItems, ",\n")(printWithItem)
         sqlBuilder.append("\n")
-        printQuery(cte.query)
+        printQuery(query.query)
 
     /**
      * Dispatches an expression to its specific printer method.

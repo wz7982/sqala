@@ -15,16 +15,16 @@ class SqlitePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
             sqlBuilder.append(" OFFSET ")
             printExpr(f)
 
-    override def printUpsert(upsert: SqlStatement.Upsert): Unit =
+    override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT OR REPLACE INTO ")
-        printTable(upsert.table)
+        printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(upsert.columns)(printIdent)
+        printList(statement.columns)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(upsert.values)(printExpr)
+        printList(statement.values)(printExpr)
         sqlBuilder.append(")")
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =

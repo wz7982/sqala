@@ -1,6 +1,6 @@
 package sqala.dynamic.dsl
 
-import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
+import sqala.ast.group.{SqlGroup, SqlGroupingItem}
 import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator}
@@ -89,7 +89,7 @@ final case class SelectQuery(override private[sqala] val tree: SqlQuery.Select) 
             tree.copy(
                 groupBy =
                     Some(
-                        SqlGroupBy(
+                        SqlGroup(
                             tree.groupBy.flatMap(_.quantifier),
                             groupItems ++ exprs.toList.map(i => SqlGroupingItem.Expr(i.asSqlExpr))
                         )

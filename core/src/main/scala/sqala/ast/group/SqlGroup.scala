@@ -8,7 +8,7 @@ import sqala.ast.quantifier.SqlQuantifier
  *
  * Renders as `GROUP BY [DISTINCT|ALL] grouping_item [, ...]`.
  */
-case class SqlGroupBy(quantifier: Option[SqlQuantifier], items: List[SqlGroupingItem])
+case class SqlGroup(quantifier: Option[SqlQuantifier], items: List[SqlGroupingItem])
 
 /**
  * A grouping item within a `GROUP BY` clause.

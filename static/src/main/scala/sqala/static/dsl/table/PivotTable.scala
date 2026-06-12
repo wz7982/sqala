@@ -1,7 +1,7 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
+import sqala.ast.group.{SqlGroup, SqlGroupingItem}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.*
@@ -56,7 +56,7 @@ final case class Pivot[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
         val newQuery =
             __sqlQuery__.copy(
                 groupBy = Some(
-                    SqlGroupBy(None, group.map(g => SqlGroupingItem.Expr(g)))
+                    SqlGroup(None, group.map(g => SqlGroupingItem.Expr(g)))
                 )
             )
         PivotGroupBy[N, V, GN, GV, OKS, L](__items__, group, newQuery)
