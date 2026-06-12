@@ -22,9 +22,10 @@ object AsGroupingSetsItem:
         t: AsGroupingSetsItem[T]
     ): AsGroupingSetsItem[Expr[H, K] *: T] with
         def asSqlExpr(x: Expr[H, K] *: T): SqlExpr =
-            val tailExpr = t.asSqlExpr(x.tail) match
-                case SqlExpr.Tuple(list) => list
-                case i => i :: Nil
+            val tailExpr = 
+                t.asSqlExpr(x.tail) match
+                    case SqlExpr.Tuple(list) => list
+                    case i => i :: Nil
             SqlExpr.Tuple(h.asSqlExpr(x.head) :: tailExpr)
 
     given emptyTuple: AsGroupingSetsItem[EmptyTuple] with
