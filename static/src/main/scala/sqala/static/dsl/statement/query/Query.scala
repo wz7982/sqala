@@ -1,7 +1,7 @@
 package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubqueryQuantifier}
-import sqala.ast.group.{SqlGroupBy, SqlGroupingItem}
+import sqala.ast.group.{SqlGroup, SqlGroupingItem}
 import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
@@ -764,7 +764,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             a.asGroup(group) *: tt.toTuple(tu.transform(params)),
             tree.copy(
                 groupBy = Some(
-                    SqlGroupBy(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)))
+                    SqlGroup(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)))
                 )
             )
         )
@@ -796,7 +796,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             to.toOption(a.asGroup(group)) *: tt.toTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
-                    SqlGroupBy(None, SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil)
+                    SqlGroup(None, SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil)
                 )
             )
         )
@@ -827,7 +827,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             to.toOption(a.asGroup(group)) *: tt.toTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
-                    SqlGroupBy(None, SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil)
+                    SqlGroup(None, SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil)
                 )
             )
         )
@@ -862,7 +862,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             to.toOption(group) *: tt.toTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
-                    SqlGroupBy(None, SqlGroupingItem.GroupingSets(groupExprs) :: Nil)
+                    SqlGroup(None, SqlGroupingItem.GroupingSets(groupExprs) :: Nil)
                 )
             )
         )

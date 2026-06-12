@@ -1,7 +1,7 @@
 package sqala.ast.statement
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.group.SqlGroupBy
+import sqala.ast.group.SqlGroup
 import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
@@ -117,7 +117,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
         select: List[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr],
-        groupBy: Option[SqlGroupBy],
+        groupBy: Option[SqlGroup],
         having: Option[SqlExpr],
         orderBy: List[SqlOrderingItem],
         limit: Option[SqlLimit],
