@@ -35,7 +35,7 @@ enum SqlExpr:
      *
      * Renders as `42`, `3.14`, etc.
      */
-    case NumberLiteral[N: Numeric](number: N)
+    case NumberLiteral(number: BigDecimal)
 
     /**
      * A boolean literal.
