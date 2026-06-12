@@ -10,20 +10,20 @@ import sqala.ast.order.SqlOrderingItem
  * `MATCH_RECOGNIZE(
  *   [PARTITION BY expr [, ...]]
  *   [ORDER BY ordering_item [, ...]]
- *   [MEASURES expr AS "alias" [, ...]]
+ *   MEASURES expr AS "alias" [, ...]
  *   [ONE ROW PER MATCH|ALL ROWS PER MATCH [SHOW EMPTY MATCHES|OMIT EMPTY MATCHES|WITH UNMATCHED ROWS]]
  *   [AFTER MATCH SKIP TO NEXT ROW|PAST LAST ROW|TO LAST "name"|TO "name"]
  *   [INITIAL|SEEK]
  *   PATTERN (term)
  *   [SUBSET "name" = (pattern [, ...]), [, ...]]
- *   [DEFINE "name" AS expr [, ...]]
+ *   DEFINE "name" AS expr [, ...]
  * ) [[AS] "alias" [("column_alias" [, ...])]]`.
  */
 case class SqlMatchRecognize(
     partitionBy: List[SqlExpr],
     orderBy: List[SqlOrderingItem],
     measures: List[SqlRecognizeMeasureItem],
-    rowsPerMatch: Option[SqlRecognizePatternRowsPerMatchMode],
+    rowsPerMatchMode: Option[SqlRecognizePatternRowsPerMatchMode],
     rowPattern: SqlRowPattern,
     alias: Option[SqlTableAlias]
 )
@@ -89,7 +89,7 @@ enum SqlRecognizePatternEmptyMatchMode:
  *   [DEFINE "name" AS expr [, ...]]`.
  */
 case class SqlRowPattern(
-    afterMatch: Option[SqlRowPatternSkipMode],
+    afterMatchMode: Option[SqlRowPatternSkipMode],
     strategy: Option[SqlRowPatternStrategy],
     pattern: SqlRowPatternTerm,
     subset: List[SqlRowPatternSubsetItem],

@@ -38,12 +38,12 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON CONFLICT (")
-        printList(upsert.pkList)(printIdent)
+        printList(upsert.primaryKeys)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" DO UPDATE SET ")
 
-        printList(upsert.updateList): u =>
+        printList(upsert.updateColumns): u =>
             printIdent(u)
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")

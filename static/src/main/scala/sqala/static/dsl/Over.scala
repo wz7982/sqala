@@ -185,9 +185,9 @@ final case class BoundedOver[KS <: Tuple](
     private def setExclude(exclude: SqlWindowFrameExcludeMode): SqlWindowFrame =
         boundedFrame match
             case s: SqlWindowFrame.Start =>
-                s.copy(exclude = Some(exclude))
+                s.copy(excludeMode = Some(exclude))
             case b: SqlWindowFrame.Between =>
-                b.copy(exclude = Some(exclude))
+                b.copy(excludeMode = Some(exclude))
 
     /**
      * Excludes the current row from the window frame. Maps to

@@ -163,7 +163,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val u = Update.updateByEntity[A](entity, skipNone)
-        if u.tree.setList.isEmpty then
+        if u.tree.setPairs.isEmpty then
             0
         else
             val sql = statementToString(u.tree, dialect, standardEscapeStrings)

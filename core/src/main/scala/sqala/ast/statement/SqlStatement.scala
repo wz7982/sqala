@@ -55,7 +55,7 @@ enum SqlStatement:
      *
      * Renders as `UPDATE table SET "column" = expr [, ...] [WHERE expr]`.
      */
-    case Update(table: SqlTable.Ident, setList: List[SqlUpdateSetPair], where: Option[SqlExpr])
+    case Update(table: SqlTable.Ident, setPairs: List[SqlUpdateSetPair], where: Option[SqlExpr])
 
     /**
      * A `TRUNCATE` statement.
@@ -70,7 +70,13 @@ enum SqlStatement:
      * Renders as
      * `MERGE INTO ...`.
      */
-    case Upsert(table: SqlTable.Ident, columns: List[String], values: List[SqlExpr], pkList: List[String], updateList: List[String])
+    case Upsert(
+        table: SqlTable.Ident, 
+        columns: List[String], 
+        values: List[SqlExpr],
+        primaryKeys: List[String], 
+        updateColumns: List[String]
+    )
 
 object SqlStatement:
     extension (delete: Delete)

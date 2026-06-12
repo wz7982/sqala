@@ -104,7 +104,7 @@ object AsRecognize:
                 __sqlTable__ = x.__sqlTable__.copy(
                     matchRecognize =
                         x.__sqlTable__.matchRecognize.map: m =>
-                            m.copy(rowsPerMatch = Some(perMatch))
+                            m.copy(rowsPerMatchMode = Some(perMatch))
                     )
             )
 
@@ -155,7 +155,7 @@ object AsRecognize:
                 __sqlTable__ = x.__sqlTable__.copy(
                     matchRecognize =
                         x.__sqlTable__.matchRecognize.map: m =>
-                            m.copy(rowsPerMatch = Some(perMatch))
+                            m.copy(rowsPerMatchMode = Some(perMatch))
                     )
             )
 

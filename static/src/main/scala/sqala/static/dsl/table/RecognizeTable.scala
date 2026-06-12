@@ -141,7 +141,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(SqlRowPatternSkipMode.ToNextRow)
+                    afterMatchMode = Some(SqlRowPatternSkipMode.ToNextRow)
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
@@ -156,7 +156,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(SqlRowPatternSkipMode.PastLastRow)
+                    afterMatchMode = Some(SqlRowPatternSkipMode.PastLastRow)
                 )
             )
         Recognize(r.setRecognize(__table__, newRecognize))
@@ -175,7 +175,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(
+                    afterMatchMode = Some(
                         SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )
@@ -196,7 +196,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(
+                    afterMatchMode = Some(
                         SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )
@@ -217,7 +217,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
-                    afterMatch = Some(
+                    afterMatchMode = Some(
                         SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T, L](__table__)))
                     )
                 )

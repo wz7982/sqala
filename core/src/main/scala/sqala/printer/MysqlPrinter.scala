@@ -36,7 +36,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
 
         sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
 
-        printList(upsert.updateList): u =>
+        printList(upsert.updateColumns): u =>
             printIdent(u)
             sqlBuilder.append(" = VALUES (")
             printIdent(u)

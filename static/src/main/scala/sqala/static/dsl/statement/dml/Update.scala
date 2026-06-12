@@ -50,7 +50,7 @@ class Update[T, S <: UpdateState](
         given UpdateSetContext = new UpdateSetContext
         val pair = f(table)
         val updateExpr = pair.updateExpr
-        new Update(table, tree.copy(setList = tree.setList :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
+        new Update(table, tree.copy(setPairs = tree.setPairs :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
 
     /**
      * Adds a `WHERE` clause to the `UPDATE` statement. The condition
