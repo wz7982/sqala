@@ -75,7 +75,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printTable(update.table)
         sqlBuilder.append(" SET ")
 
-        printList(update.setList): i =>
+        printList(update.setPairs): i =>
             printIdent(i.column)
             sqlBuilder.append(" = ")
             printExpr(i.value)
@@ -146,21 +146,21 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
 
         sqlBuilder.append("ON (")
-        for index <- upsert.pkList.indices do
+        for index <- upsert.primaryKeys.indices do
             printIdent("t1")
             sqlBuilder.append(".")
-            printIdent(upsert.pkList(index))
+            printIdent(upsert.primaryKeys(index))
             sqlBuilder.append(" = ")
             printIdent("t2")
             sqlBuilder.append(".")
-            printIdent(upsert.pkList(index))
-            if index < upsert.pkList.size - 1 then
+            printIdent(upsert.primaryKeys(index))
+            if index < upsert.primaryKeys.size - 1 then
                 sqlBuilder.append(" AND ")
         sqlBuilder.append(")")
         sqlBuilder.append("\n")
 
         sqlBuilder.append("WHEN MATCHED THEN UPDATE SET ")
-        printList(upsert.updateList): u =>
+        printList(upsert.updateColumns): u =>
             printIdent("t1")
             sqlBuilder.append(".")
             printIdent(u)
