@@ -22,7 +22,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
         printChars(expr.string)
 
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        expr.unit match
+        expr.`type` match
             case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 val cast = SqlExpr.Cast(
                     SqlExpr.StringLiteral(expr.time),

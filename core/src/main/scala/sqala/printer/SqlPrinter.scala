@@ -446,8 +446,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a time literal expression.
      */
     def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        def printUnit(unit: SqlTimeType): Unit =
-            unit match
+        def printType(`type`: SqlTimeType): Unit =
+            `type` match
                 case SqlTimeType.Timestamp(mode) =>
                     sqlBuilder.append("TIMESTAMP")
                     for m <- mode do
@@ -461,7 +461,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                         sqlBuilder.append(" ")
                         printTimeZoneMode(m)
 
-        printUnit(expr.unit)
+        printType(expr.`type`)
         sqlBuilder.append(" ")
         printChars(expr.time)
 
