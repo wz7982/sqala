@@ -87,7 +87,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: LocalDate): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Date, formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeType.Date, formatter.format(x))
 
     given localDateTime: AsSqlExpr[LocalDateTime] with
         def sqlType: SqlType =
@@ -95,7 +95,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: LocalDateTime): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp(None), formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeType.Timestamp(None), formatter.format(x))
 
     given localTime: AsSqlExpr[LocalTime] with
         def sqlType: SqlType =
@@ -103,7 +103,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: LocalTime): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time(None), formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeType.Time(None), formatter.format(x))
 
     given offsetDateTime: AsSqlExpr[OffsetDateTime] with
         def sqlType: SqlType =
@@ -111,7 +111,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: OffsetDateTime): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn XXX")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)), formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)), formatter.format(x))
 
     given offsetTime: AsSqlExpr[OffsetTime] with
         def sqlType: SqlType =
@@ -119,7 +119,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: OffsetTime): SqlExpr =
             val formatter = DateTimeFormatter.ofPattern("HH:mm:ss XXX")
-            SqlExpr.TimeLiteral(SqlTimeLiteralUnit.Time(Some(SqlTimeZoneMode.With)), formatter.format(x))
+            SqlExpr.TimeLiteral(SqlTimeType.Time(Some(SqlTimeZoneMode.With)), formatter.format(x))
 
     given json: AsSqlExpr[Json] with
         def sqlType: SqlType =

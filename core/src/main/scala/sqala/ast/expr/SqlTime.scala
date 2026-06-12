@@ -74,7 +74,7 @@ enum SqlIntervalField:
 /**
  * Units for time or date literal expressions.
  */
-enum SqlTimeLiteralUnit:
+enum SqlTimeType:
     /**
      * `TIMESTAMP` literal, optionally with a time zone mode.
      *
