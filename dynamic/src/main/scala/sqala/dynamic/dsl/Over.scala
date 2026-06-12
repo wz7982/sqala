@@ -13,9 +13,9 @@ final case class Over(
     private def setExclude(exclude: SqlWindowFrameExcludeMode): Option[SqlWindowFrame] =
         frame.map:
             case s: SqlWindowFrame.Start =>
-                s.copy(exclude = Some(exclude))
+                s.copy(excludeMode = Some(exclude))
             case b: SqlWindowFrame.Between =>
-                b.copy(exclude = Some(exclude))
+                b.copy(excludeMode = Some(exclude))
 
     def orderBy(orders: Order*): Over =
         copy(orderBy = orderBy ++ orders.toList.map(_.order))

@@ -48,18 +48,24 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Returns the complete generated string.
      */
-    def sql: String = sqlBuilder.toString
+    def sql: String = 
+        sqlBuilder.toString
 
     /**
      * Dispatches a statement to its specific printer method.
      */
     def printStatement(statement: SqlStatement): Unit =
         statement match
-            case update: SqlStatement.Update => printUpdate(update)
-            case insert: SqlStatement.Insert => printInsert(insert)
-            case delete: SqlStatement.Delete => printDelete(delete)
-            case upsert: SqlStatement.Upsert => printUpsert(upsert)
-            case truncate: SqlStatement.Truncate => printTruncate(truncate)
+            case update: SqlStatement.Update => 
+                printUpdate(update)
+            case insert: SqlStatement.Insert => 
+                printInsert(insert)
+            case delete: SqlStatement.Delete => 
+                printDelete(delete)
+            case upsert: SqlStatement.Upsert => 
+                printUpsert(upsert)
+            case truncate: SqlStatement.Truncate => 
+                printTruncate(truncate)
 
     /**
      * Prints an `UPDATE` statement.
@@ -650,7 +656,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for t <- expr.nodeType do
             sqlBuilder.append(" ")
             printType(t)
-        for u <- expr.uniqueness do
+        for u <- expr.uniquenessMode do
             sqlBuilder.append(" ")
             printJsonUniquenessMode(u)
 
@@ -1128,7 +1134,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for i <- expr.input do
             sqlBuilder.append(" ")
             printJsonInput(i)
-        for u <- expr.uniqueness do
+        for u <- expr.uniquenessMode do
             sqlBuilder.append(" ")
             printJsonUniquenessMode(u)
         sqlBuilder.append(")")
@@ -1197,7 +1203,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for n <- expr.nullConstructor do
             sqlBuilder.append(" ")
             printJsonNullConstructor(n)
-        for u <- expr.uniqueness do
+        for u <- expr.uniquenessMode do
             sqlBuilder.append(" ")
             printJsonUniquenessMode(u)
         for o <- expr.output do
@@ -1506,7 +1512,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         for n <- expr.nullConstructor do
             sqlBuilder.append(" ")
             printJsonNullConstructor(n)
-        for u <- expr.uniqueness do
+        for u <- expr.uniquenessMode do
             sqlBuilder.append(" ")
             printJsonUniquenessMode(u)
         for o <- expr.output do
@@ -1660,7 +1666,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(m)
 
         printIdent(table.name)
-        for p <- table.period do
+        for p <- table.periodForMode do
             p match
                 case SqlTablePeriodForMode.SystemTimeAsOf(expr) =>
                     sqlBuilder.append(" FOR SYSTEM_TIME AS OF ")
@@ -2034,7 +2040,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
 
         printSpace()
         sqlBuilder.append("MATCH")
-        for m <- table.`match` do
+        for m <- table.matchMode do
             sqlBuilder.append(" ")
             m match
                 case SqlGraphMatchMode.Repeatable(mode) =>
@@ -2052,7 +2058,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("WHERE\n")
             w |> printWithSpace(printExpr)
 
-        for r <- table.rows do
+        for r <- table.rowsMode do
             sqlBuilder.append("\n")
             printSpace()
             r match
@@ -2087,7 +2093,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         printSpace()
         sqlBuilder.append(")")
 
-        for e <- table.`export` do
+        for e <- table.exportMode do
             sqlBuilder.append("\n")
             printSpace()
             e match
@@ -2214,7 +2220,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("MEASURES\n")
             printList(matchRecognize.measures, ",\n")(printMeasure |> printWithSpace)
 
-        for m <- matchRecognize.rowsPerMatch do
+        for m <- matchRecognize.rowsPerMatchMode do
             sqlBuilder.append("\n")
             printSpace()
             m match
@@ -2440,7 +2446,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append("SEEK")
 
         push()
-        for m <- pattern.afterMatch do
+        for m <- pattern.afterMatchMode do
             printSpace()
             sqlBuilder.append("AFTER MATCH ")
             m match

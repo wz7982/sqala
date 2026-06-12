@@ -15,7 +15,7 @@ enum SqlTable:
     case Ident(
         name: String,
         alias: Option[SqlTableAlias],
-        period: Option[SqlTablePeriodForMode],
+        periodForMode: Option[SqlTablePeriodForMode],
         matchRecognize: Option[SqlMatchRecognize],
         sample: Option[SqlTableSample]
     )
@@ -77,20 +77,20 @@ enum SqlTable:
      *   MATCH pattern [, ...]
      *   [WHERE expr]
      *   [rows_mode]
-     *   [COLUMNS(column [, ...])]
-     *   [EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])|EXPORT SINGLETONS (pattern [, ...])|EXPORT NO SINGLETONS]
+     *   COLUMNS(column [, ...])
+     *   [EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])|EXPORT SINGLETONS (pattern [, ...])|EXPORT NO SINGLETONS])
      *   [[AS] "alias" [("column_alias" [, ...])]]
      *   [match_recognize]`.
      */
     case Graph(
         lateral: Boolean,
         name: String,
-        `match`: Option[SqlGraphMatchMode],
+        matchMode: Option[SqlGraphMatchMode],
         patterns: List[SqlGraphPattern],
         where: Option[SqlExpr],
-        rows: Option[SqlGraphRowsMode],
+        rowsMode: Option[SqlGraphRowsMode],
         columns: List[SqlSelectItem],
-        `export`: Option[SqlGraphExportMode],
+        exportMode: Option[SqlGraphExportMode],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )

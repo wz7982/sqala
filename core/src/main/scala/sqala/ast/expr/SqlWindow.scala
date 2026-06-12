@@ -30,7 +30,7 @@ enum SqlWindowFrame:
     case Start(
         unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
-        exclude: Option[SqlWindowFrameExcludeMode]
+        excludeMode: Option[SqlWindowFrameExcludeMode]
     )
 
     /**
@@ -46,7 +46,7 @@ enum SqlWindowFrame:
         unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
         end: SqlWindowFrameBound,
-        exclude: Option[SqlWindowFrameExcludeMode]
+        excludeMode: Option[SqlWindowFrameExcludeMode]
     )
 
 /**
