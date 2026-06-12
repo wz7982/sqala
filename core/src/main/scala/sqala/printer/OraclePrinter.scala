@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.{SqlExpr, SqlTimeLiteralUnit, SqlTimeZoneMode, SqlType}
+import sqala.ast.expr.{SqlExpr, SqlTimeType, SqlTimeZoneMode, SqlType}
 import sqala.ast.table.SqlTableAlias
 
 /**
@@ -12,7 +12,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
 
     override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         expr.unit match
-            case SqlTimeLiteralUnit.Timestamp(Some(SqlTimeZoneMode.With)) =>
+            case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_TIMESTAMP_TZ",
@@ -22,7 +22,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                     None
                 )
                 printExpr(func)
-            case SqlTimeLiteralUnit.Timestamp(_) =>
+            case SqlTimeType.Timestamp(_) =>
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_TIMESTAMP",
@@ -32,7 +32,7 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                     None
                 )
                 printExpr(func)
-            case SqlTimeLiteralUnit.Date =>
+            case SqlTimeType.Date =>
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_DATE",
