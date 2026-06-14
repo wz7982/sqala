@@ -45,7 +45,7 @@ object AsLateralTable:
             type OKS = e.R
 
             def asTable(x: FromFunc[T, Column, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                val sqlTable: SqlTable.Func = x.__sqlTable__.copy(lateral = true)
+                val sqlTable: SqlTable.Func = x.__sqlTable__.copy(withLateral = true)
                 val table =
                     FuncTable[T, Column, CL - 1](x.__aliasName__, x.__fieldNames__, x.__columnNames__, sqlTable)
                 (table, sqlTable)
@@ -61,7 +61,7 @@ object AsLateralTable:
             type OKS = e.R
 
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                val sqlTable: SqlTable.Json = x.__sqlTable__.copy(lateral = true)
+                val sqlTable: SqlTable.Json = x.__sqlTable__.copy(withLateral = true)
                 val table =
                     JsonTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)), sqlTable)
                 (table, sqlTable)
@@ -77,7 +77,7 @@ object AsLateralTable:
             type OKS = e.R
 
             def asTable(x: FromGraph[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                val sqlTable: SqlTable.Graph = x.__sqlTable__.copy(lateral = true)
+                val sqlTable: SqlTable.Graph = x.__sqlTable__.copy(withLateral = true)
                 val table = GraphTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)), sqlTable)
                 (table, sqlTable)
 

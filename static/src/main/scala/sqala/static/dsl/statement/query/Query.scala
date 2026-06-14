@@ -198,8 +198,8 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(Some(sqlExpr), l.fetch))
@@ -207,10 +207,10 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         Query(params, newTree)
 
@@ -228,14 +228,14 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      * Internal implementation for `take` and `takeWithTies`.
      * Handles merging an existing `OFFSET` with the new `LIMIT`/`FETCH`
      * clause, and propagates the new fetch specification through
-     * `Select`, `Set`, and `Cte` query types.
+     * `Select`, `Set`, and `With` query types.
      */
     private[sqala] def takeExpr[TS <: QuerySize](n: SqlExpr, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T, OKS, L, TS] =
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
@@ -243,10 +243,10 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         Query(params, newTree)
 
@@ -285,7 +285,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Update(None)))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Update(None)))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Update(None)))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Update(None)))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Update(None)))
         Query(params, newTree)
 
@@ -301,7 +301,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
         Query(params, newTree)
 
@@ -317,7 +317,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
         Query(params, newTree)
 
@@ -333,7 +333,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Share(None)))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Share(None)))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Share(None)))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Share(None)))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Share(None)))
         Query(params, newTree)
 
@@ -349,7 +349,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
         Query(params, newTree)
 
@@ -365,7 +365,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
             case s: SqlQuery.Set => s.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
-            case c: SqlQuery.Cte => c.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
+            case c: SqlQuery.With => c.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
             case v: SqlQuery.Values => v.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
         Query(params, newTree)
 
@@ -393,7 +393,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
                     tree match
                         case s: SqlQuery.Select => s.copy(limit = None, orderBy = Nil)
                         case s: SqlQuery.Set => s.copy(limit = None)
-                        case c: SqlQuery.Cte => c.copy(query = removeLimitAndOrderBy(c.query))
+                        case c: SqlQuery.With => c.copy(query = removeLimitAndOrderBy(c.query))
                         case _ => tree
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
                     None,
@@ -447,8 +447,8 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(Some(sqlExpr), l.fetch))
@@ -456,10 +456,10 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         SortedQuery(params, newTree)
 
@@ -470,8 +470,8 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
@@ -479,10 +479,10 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         SortedQuery(params, newTree)
 
@@ -1513,7 +1513,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         val withItem = SqlWithItem(
             tableCte, metaData.columnNames :+ columnPseudoLevel, unionQuery
         )
-        val cteTree: SqlQuery.Cte = SqlQuery.Cte(
+        val cteTree: SqlQuery.With = SqlQuery.With(
             true,
             withItem :: Nil,
             mapTree.copy(select = sqlSelect),

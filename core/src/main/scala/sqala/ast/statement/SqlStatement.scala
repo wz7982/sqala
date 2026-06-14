@@ -71,10 +71,10 @@ enum SqlStatement:
      * `MERGE INTO ...`.
      */
     case Upsert(
-        table: SqlTable.Ident, 
-        columns: List[String], 
+        table: SqlTable.Ident,
+        columns: List[String],
         values: List[SqlExpr],
-        primaryKeys: List[String], 
+        primaryKeys: List[String],
         updateColumns: List[String]
     )
 
@@ -128,9 +128,9 @@ enum SqlQuery(val lock: Option[SqlLock]):
      * A set operation combining two queries.
      *
      * Renders as
-     * `query UNION|EXCEPT|INTERSECT [DISTINCT|ALL] query 
-     *   [ORDER BY ordering [, ...]] 
-     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES] 
+     * `query UNION|EXCEPT|INTERSECT [DISTINCT|ALL] query
+     *   [ORDER BY ordering [, ...]]
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]
      *   [FOR UPDATE|SHARE]`.
      */
     case Set(
@@ -157,8 +157,8 @@ enum SqlQuery(val lock: Option[SqlLock]):
      *
      * Renders as `WITH [RECURSIVE] with_item [, ...] query [FOR UPDATE|SHARE]`.
      */
-    case Cte(
-        recursive: Boolean,
+    case With(
+        withRecursive: Boolean,
         queryItems: List[SqlWithItem],
         query: SqlQuery,
         override val lock: Option[SqlLock]

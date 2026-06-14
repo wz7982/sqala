@@ -161,7 +161,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
         None,
         None
     )
-    val tree = SqlQuery.Cte(
+    val tree = SqlQuery.With(
         true,
         SqlWithItem(tableCte, columns, withTree) :: Nil,
         finalQuery.tree,
