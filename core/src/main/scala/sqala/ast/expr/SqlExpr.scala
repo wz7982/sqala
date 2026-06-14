@@ -3,6 +3,7 @@ package sqala.ast.expr
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
+import sqala.ast.token.SqlCustomToken
 
 /**
  * An expression enum.
@@ -444,9 +445,9 @@ enum SqlExpr:
     /**
      * A free-form custom expression with interpolated sub-expressions.
      *
-     * Renders as `(words(0) exprs(0) words(1) exprs(1) ... words(n))`.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      *
-     * The `words` and `exprs` are interleaved, and the whole
+     * The `tokens` are interleaved, and the whole
      * expression is wrapped in parentheses.
      */
-    case Custom(words: List[String], exprs: List[SqlExpr])
+    case Custom(tokens: List[SqlCustomToken])

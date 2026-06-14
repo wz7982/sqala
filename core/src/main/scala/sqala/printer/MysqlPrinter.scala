@@ -7,6 +7,7 @@ import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.token.SqlCustomToken
 
 /**
  * MySQL dialect printer.
@@ -59,7 +60,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 printExpr(
                     SqlExpr.Binary(
                         expr.left,
-                        SqlBinaryOperator.Custom("<=>"),
+                        SqlBinaryOperator.Custom(SqlCustomToken.Keyword("<=>") :: Nil),
                         expr.right
                     )
                 )
@@ -69,7 +70,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                         SqlUnaryOperator.Not,
                         SqlExpr.Binary(
                             expr.left,
-                            SqlBinaryOperator.Custom("<=>"),
+                            SqlBinaryOperator.Custom(SqlCustomToken.Keyword("<=>") :: Nil),
                             expr.right
                         )
                     )
@@ -142,7 +143,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 ) :: Nil,
                 Some(SqlExpr.NumberLiteral(0))
             )
-            
+
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)

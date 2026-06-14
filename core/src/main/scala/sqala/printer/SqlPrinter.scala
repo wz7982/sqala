@@ -7,6 +7,7 @@ import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.*
+import sqala.ast.token.SqlCustomToken
 import sqala.util.|>
 
 /**
@@ -227,17 +228,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("ALL")
             case SqlQuantifier.Distinct =>
                 sqlBuilder.append("DISTINCT")
-            case SqlQuantifier.Custom(words, exprs) =>
-                val wordsIterator = words.iterator
-                val exprsIterator = exprs.iterator
-
-                printKeyword(wordsIterator.next())
-                while wordsIterator.hasNext do
-                    sqlBuilder.append(" ")
-                    val currentExpr = exprsIterator.next()
-                    printExpr(currentExpr)
-                    sqlBuilder.append(" ")
-                    printKeyword(wordsIterator.next())
+            case SqlQuantifier.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a `SELECT` query with all its clause.
@@ -566,8 +558,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("MINUTE")
             case SqlTimeUnit.Second =>
                 sqlBuilder.append("SECOND")
-            case SqlTimeUnit.Custom(unit) =>
-                printKeyword(unit)
+            case SqlTimeUnit.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints an interval field specification.
@@ -617,8 +609,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("-")
             case SqlUnaryOperator.Not =>
                 sqlBuilder.append("NOT")
-            case SqlUnaryOperator.Custom(operator) =>
-                printKeyword(operator)
+            case SqlUnaryOperator.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a unary expression.
@@ -674,8 +666,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("AND")
             case SqlBinaryOperator.Or =>
                 sqlBuilder.append("OR")
-            case SqlBinaryOperator.Custom(operator) =>
-                printKeyword(operator)
+            case SqlBinaryOperator.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a binary expression.
@@ -1038,8 +1030,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
             case SqlType.Array(arrayType) =>
                 printType(arrayType)
                 sqlBuilder.append("[]")
-            case SqlType.Custom(customType) =>
-                printKeyword(customType)
+            case SqlType.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a window function expression.
@@ -1180,7 +1172,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints an identity function expression.
      */
     def printIdentFuncExpr(expr: SqlExpr.IdentFunc): Unit =
-        printKeyword(expr.name)
+        printIdentWithoutQuote(expr.name)
 
     /**
      * Prints a substring function expression.
@@ -1457,8 +1449,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("UTF16")
             case SqlJsonEncoding.Utf32 =>
                 sqlBuilder.append("UTF32")
-            case SqlJsonEncoding.Custom(encode) =>
-                printKeyword(encode)
+            case SqlJsonEncoding.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a JSON input format clause.
@@ -1812,7 +1804,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a nulls treatment function expression.
      */
     def printNullsTreatmentFuncExpr(expr: SqlExpr.NullsTreatmentFunc): Unit =
-        printKeyword(expr.name)
+        printIdentWithoutQuote(expr.name)
         sqlBuilder.append("(")
         printList(expr.args)(printExpr)
         sqlBuilder.append(")")
@@ -1851,7 +1843,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a general function expression.
      */
     def printGeneralFuncExpr(expr: SqlExpr.GeneralFunc): Unit =
-        printKeyword(expr.name)
+        printIdentWithoutQuote(expr.name)
         sqlBuilder.append("(")
 
         expr.quantifier.foreach: q =>
@@ -1897,18 +1889,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      */
     def printCustomExpr(expr: SqlExpr.Custom): Unit =
         sqlBuilder.append("(")
-
-        val words = expr.words.iterator
-        val exprs = expr.exprs.iterator
-
-        printKeyword(words.next())
-        while words.hasNext do
-            sqlBuilder.append(" ")
-            val currentExpr = exprs.next()
-            printExpr(currentExpr)
-            sqlBuilder.append(" ")
-            printKeyword(words.next())
-
+        printList(expr.tokens, " ")(printCustomToken)
         sqlBuilder.append(")")
 
     /**
@@ -1942,8 +1923,6 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("BERNOULLI")
             case SqlTableSampleMode.System =>
                 sqlBuilder.append("SYSTEM")
-            case SqlTableSampleMode.Custom(mode) =>
-                printKeyword(mode)
 
     /**
      * Prints a `TABLESAMPLE` clause.
@@ -2011,7 +1990,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      */
     def printFuncTable(table: SqlTable.Func): Unit =
         if table.withLateral then sqlBuilder.append("LATERAL ")
-        printKeyword(table.name)
+        printIdentWithoutQuote(table.name)
         sqlBuilder.append("(")
         printList(table.args)(printExpr)
         sqlBuilder.append(")")
@@ -2537,8 +2516,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("FULL OUTER JOIN")
             case SqlJoinType.Cross =>
                 sqlBuilder.append("CROSS JOIN")
-            case SqlJoinType.Custom(customType) =>
-                printKeyword(customType)
+            case SqlJoinType.Custom(tokens) =>
+                printList(tokens, " ")(printCustomToken)
 
     /**
      * Prints a join condition.
@@ -3026,6 +3005,18 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         pull()
 
     /**
+     * Prints a custom token.
+     */
+    def printCustomToken(token: SqlCustomToken): Unit =
+        token match
+            case SqlCustomToken.Keyword(keyword) =>
+                for c <- keyword do
+                    if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '(' || c == ')' then
+                        sqlBuilder.append(c)
+            case SqlCustomToken.Expr(expr) =>
+                printExpr(expr)
+
+    /**
      * Prints a quoted identifier with proper escaping.
      */
     def printIdent(ident: String): Unit =
@@ -3040,14 +3031,12 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append(rightQuote)
 
     /**
-     * Prints a custom keyword.
+     * Prints a identifier without quotes.
      */
-    def printKeyword(keyword: String): Unit =
-        for c <- keyword do
-            if c == rightQuote then ()
-            else if c == '\'' then ()
-            else if c == '\\' && !standardEscapeStrings then ()
-            else sqlBuilder.append(c)
+    def printIdentWithoutQuote(ident: String): Unit =
+        for c <- ident do
+            if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' then
+                sqlBuilder.append(c)
 
     /**
      * Prints a quoted string literal with single-quote and backslash escaping.
