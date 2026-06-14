@@ -1,6 +1,7 @@
 package sqala.ast.table
 
 import sqala.ast.expr.SqlExpr
+import sqala.ast.token.SqlCustomToken
 
 /**
  * Join type for table joins.
@@ -44,9 +45,9 @@ enum SqlJoinType:
     /**
      * A custom join type with a free-form name.
      *
-     * Renders as the given `type` string directly.
+     * Renders as the given `tokens` directly.
      */
-    case Custom(`type`: String)
+    case Custom(tokens: List[SqlCustomToken])
 
 /**
  * Join condition for table joins.

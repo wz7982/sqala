@@ -185,10 +185,3 @@ enum SqlTableSampleMode:
      * Renders as `SYSTEM`.
      */
     case System
-
-    /**
-     * A custom sampling mode with a free-form name.
-     *
-     * Renders as the given `mode` string directly.
-     */
-    case Custom(mode: String)

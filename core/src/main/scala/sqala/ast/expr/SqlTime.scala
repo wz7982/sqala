@@ -1,5 +1,7 @@
 package sqala.ast.expr
 
+import sqala.ast.token.SqlCustomToken
+
 /**
  * Time units used in `EXTRACT` and interval expressions.
  */
@@ -49,9 +51,9 @@ enum SqlTimeUnit:
     /**
      * A custom time unit with a free-form name.
      *
-     * Renders as the given `unit` string directly.
+     * Renders as the given `tokens` directly.
      */
-    case Custom(unit: String)
+    case Custom(tokens: List[SqlCustomToken])
 
 /**
  * Interval field specifications used in `INTERVAL` literals.

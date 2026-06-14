@@ -16,13 +16,14 @@ extension (s: StringContext)
         val argIterator = args.iterator
         val builder = new StringBuilder(strings.next())
         while strings.hasNext do
-            val arg = argIterator.next()
-            arg match
-                case l: List[_] =>
-                    builder.append(l.map(_ => "?").mkString("(", ", ", ")"))
-                    argArray.appendAll(l)
-                case _ =>
-                    builder.append("?")
-                    argArray.append(arg)
+            if argIterator.hasNext then
+                val arg = argIterator.next()
+                arg match
+                    case l: List[_] =>
+                        builder.append(l.map(_ => "?").mkString("(", ", ", ")"))
+                        argArray.appendAll(l)
+                    case _ =>
+                        builder.append("?")
+                        argArray.append(arg)
             builder.append(strings.next())
         NativeSql(builder.toString, argArray.toArray)

@@ -1,5 +1,7 @@
 package sqala.ast.expr
 
+import sqala.ast.token.SqlCustomToken
+
 /**
  * Data types used in `CAST` expressions and column definitions.
  */
@@ -154,6 +156,6 @@ enum SqlType:
     /**
      * A custom type with a free-form name.
      *
-     * Renders as the given `type` string directly.
+     * Renders as the given `tokens` directly.
      */
-    case Custom(`type`: String)
+    case Custom(tokens: List[SqlCustomToken])

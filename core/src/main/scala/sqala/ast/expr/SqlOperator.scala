@@ -1,5 +1,7 @@
 package sqala.ast.expr
 
+import sqala.ast.token.SqlCustomToken
+
 /**
  * Binary operators used in expressions.
  *
@@ -149,9 +151,9 @@ enum SqlBinaryOperator(val precedence: Int):
     /**
      * A custom binary operator with a free-form name.
      *
-     * Renders as the given `operator` string directly.
+     * Renders as the given `tokens` directly.
      */
-    case Custom(operator: String) extends SqlBinaryOperator(0)
+    case Custom(tokens: List[SqlCustomToken]) extends SqlBinaryOperator(0)
 
 /**
  * Unary operators used in expressions.
@@ -181,6 +183,6 @@ enum SqlUnaryOperator:
     /**
      * A custom unary operator with a free-form name.
      *
-     * Renders as the given `operator` string directly.
+     * Renders as the given `tokens` directly.
      */
-    case Custom(operator: String)
+    case Custom(tokens: List[SqlCustomToken])

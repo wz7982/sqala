@@ -1,6 +1,6 @@
 package sqala.ast.quantifier
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.token.SqlCustomToken
 
 /**
  * Quantifiers for aggregate functions and set operations.
@@ -23,9 +23,9 @@ enum SqlQuantifier:
     /**
      * A custom quantifier with interpolated sub-expressions.
      *
-     * Renders as `(words(0) exprs(0) words(1) exprs(1) ... words(n))`.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      *
-     * The `words` and `exprs` are interleaved, and the whole
+     * The `tokens` are interleaved, and the whole
      * expression is wrapped in parentheses.
      */
-    case Custom(words: List[String], exprs: List[SqlExpr])
+    case Custom(tokens: List[SqlCustomToken])

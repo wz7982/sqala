@@ -1,5 +1,7 @@
 package sqala.ast.expr
 
+import sqala.ast.token.SqlCustomToken
+
 /**
  * A `WHEN ... THEN ...` branch in a `CASE` expression.
  *
@@ -126,7 +128,7 @@ enum SqlJsonEncoding:
      *
      * Renders as the given `encoding` string directly.
      */
-    case Custom(encoding: String)
+    case Custom(tokens: List[SqlCustomToken])
 
 /**
  * Null handling mode for JSON functions.
