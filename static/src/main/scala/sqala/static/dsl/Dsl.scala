@@ -600,7 +600,7 @@ inline def vertex[T](label: String): GraphVertexSchema[T] =
 /**
  * Creates an edge schema for a graph query. The type parameter is
  * the entity class for the edge.
- * 
+ *
  * {{{
  * val friendGraph = createGraph(name = "friend_graph")(
  *     person = vertex[Person](label = "person"),
@@ -840,7 +840,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.OneRow))
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -850,7 +850,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
+        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.AllRows(None)))
 
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
     /**
@@ -1580,7 +1580,7 @@ extension [T](expr: Expr[T, Column[1]])
         a: AsExpr[R, 1],
         c: Compare[T, a.R],
         uc: UpdateSetContext
-    ): UpdatePair = 
+    ): UpdatePair =
         expr match
             case Expr(SqlExpr.Column(_, columnName)) =>
                 UpdatePair(columnName, a.asExpr(updateExpr).asSqlExpr)

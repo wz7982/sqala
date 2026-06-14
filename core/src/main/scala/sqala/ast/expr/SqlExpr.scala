@@ -97,7 +97,7 @@ enum SqlExpr:
         expr: SqlExpr,
         nodeType: Option[SqlJsonNodeType],
         uniquenessMode: Option[SqlJsonUniquenessMode],
-        not: Boolean
+        withNot: Boolean
     )
 
     /**
@@ -105,21 +105,21 @@ enum SqlExpr:
      *
      * Renders as `expr [NOT] BETWEEN expr AND expr`.
      */
-    case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, not: Boolean)
+    case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, withNot: Boolean)
 
     /**
      * A `LIKE` pattern-matching predicate.
      *
      * Renders as `expr [NOT] LIKE pattern [ESCAPE expr]`.
      */
-    case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], not: Boolean)
+    case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean)
 
     /**
      * A `SIMILAR TO` pattern-matching predicate.
      *
      * Renders as `expr [NOT] SIMILAR TO pattern [ESCAPE expr]`.
      */
-    case SimilarTo(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], not: Boolean)
+    case SimilarTo(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean)
 
     /**
      * A searched `CASE` expression.

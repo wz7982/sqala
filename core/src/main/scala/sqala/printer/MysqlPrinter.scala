@@ -106,25 +106,34 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         expr.quantifier.foreach: q =>
             printQuantifier(q)
             sqlBuilder.append(" ")
+
         printExpr(expr.expr)
+
         if expr.withinGroup.nonEmpty then
             sqlBuilder.append(" ORDER BY ")
             printList(expr.withinGroup)(printOrderingItem)
+
         sqlBuilder.append(" SEPARATOR ")
         printExpr(expr.separator)
+
         sqlBuilder.append(")")
+
         for f <- expr.filter do
             printFuncFilter(f)
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
             ordering match
-                case Asc => sqlBuilder.append("ASC")
-                case Desc => sqlBuilder.append("DESC")
+                case Asc =>
+                    sqlBuilder.append("ASC")
+                case Desc =>
+                    sqlBuilder.append("DESC")
 
-        val order = orderBy.ordering match
-            case None | Some(Asc) => Asc
-            case _ => Desc
+        val order =
+            orderBy.ordering match
+                case None | Some(Asc) => Asc
+                case _ => Desc
+
         val orderExpr =
             SqlExpr.Case(
                 SqlCaseBranch(
@@ -133,6 +142,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 ) :: Nil,
                 Some(SqlExpr.NumberLiteral(0))
             )
+            
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)

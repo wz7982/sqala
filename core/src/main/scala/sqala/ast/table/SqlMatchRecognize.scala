@@ -23,7 +23,7 @@ case class SqlMatchRecognize(
     partitionBy: List[SqlExpr],
     orderBy: List[SqlOrderingItem],
     measures: List[SqlRecognizeMeasureItem],
-    rowsPerMatchMode: Option[SqlRecognizePatternRowsPerMatchMode],
+    rowsMode: Option[SqlRecognizePatternRowsMode],
     rowPattern: SqlRowPattern,
     alias: Option[SqlTableAlias]
 )
@@ -38,7 +38,7 @@ case class SqlRecognizeMeasureItem(expr: SqlExpr, alias: String)
 /**
  * Rows-per-match mode for `MATCH_RECOGNIZE`.
  */
-enum SqlRecognizePatternRowsPerMatchMode:
+enum SqlRecognizePatternRowsMode:
     /**
      * One row per match.
      *

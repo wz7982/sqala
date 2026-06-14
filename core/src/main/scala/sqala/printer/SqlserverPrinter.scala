@@ -80,6 +80,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
         val order = orderBy.ordering match
             case None | Some(Asc) => Asc
             case _ => Desc
+
         val orderExpr =
             SqlExpr.Case(
                 SqlCaseBranch(
@@ -88,6 +89,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
                 ) :: Nil,
                 Some(SqlExpr.NumberLiteral(0))
             )
+            
         (order, orderBy.nullsOrdering) match
             case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
                 printExpr(orderBy.expr)

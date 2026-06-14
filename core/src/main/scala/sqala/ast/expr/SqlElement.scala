@@ -155,14 +155,14 @@ enum SqlJsonQueryWrapperBehavior:
      *
      * Renders as `WITH [CONDITIONAL|UNCONDITIONAL] [ARRAY] WRAPPER`.
      */
-    case With(mode: Option[SqlJsonQueryWrapperBehaviorMode], array: Boolean)
+    case With(mode: Option[SqlJsonQueryWrapperBehaviorMode], withArray: Boolean)
 
     /**
      * Do not wrap the result, optionally without an array wrapper.
      *
      * Renders as `WITHOUT [ARRAY] WRAPPER`.
      */
-    case Without(array: Boolean)
+    case Without(withArray: Boolean)
 
 /**
  * Wrapper behavior mode for `JSON_QUERY`.
@@ -187,7 +187,7 @@ enum SqlJsonQueryWrapperBehaviorMode:
  *
  * Renders as `[KEEP|OMIT] QUOTES [ON SCALAR STRING]`.
  */
-case class SqlJsonQueryQuotesBehavior(mode: SqlJsonQueryQuotesBehaviorMode, onScalarString: Boolean)
+case class SqlJsonQueryQuotesBehavior(mode: SqlJsonQueryQuotesBehaviorMode, withOnScalarString: Boolean)
 
 /**
  * Quotes behavior mode.

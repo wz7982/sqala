@@ -50,7 +50,7 @@ final case class RecognizePredefine[T, L <: Int](
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, L] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.OneRow))
+        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -60,7 +60,7 @@ final case class RecognizePredefine[T, L <: Int](
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, L] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsPerMatchMode.AllRows(None)))
+        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsMode.AllRows(None)))
 
     /**
      * Pre-defines pattern variable labels as a literal type tuple.
