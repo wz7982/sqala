@@ -36,8 +36,8 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.offset, Some(SqlFetch(value(n).asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only))))
@@ -45,10 +45,10 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         Query(newTree)
 
@@ -57,8 +57,8 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.Cte(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(Some(sqlExpr), l.fetch))
@@ -66,10 +66,10 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.Cte(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.Cte(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
             case _ => tree
         Query(newTree)
 

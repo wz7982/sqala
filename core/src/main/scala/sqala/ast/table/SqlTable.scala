@@ -26,7 +26,7 @@ enum SqlTable:
      * Renders as `[LATERAL] name(expr [, ...]) [WITH ORDINALITY] [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
      */
     case Func(
-        lateral: Boolean,
+        withLateral: Boolean,
         name: String,
         args: List[SqlExpr],
         withOrdinality: Boolean,
@@ -40,7 +40,7 @@ enum SqlTable:
      * Renders as `[LATERAL] (query) [[AS] "alias" [("column_alias" [, ...])]] [match_recognize]`.
      */
     case Subquery(
-        lateral: Boolean,
+        withLateral: Boolean,
         query: SqlQuery,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
@@ -58,7 +58,7 @@ enum SqlTable:
      *   [match_recognize]`.
      */
     case Json(
-        lateral: Boolean,
+        withLateral: Boolean,
         expr: SqlExpr,
         path: SqlExpr,
         pathAlias: Option[String],
@@ -83,7 +83,7 @@ enum SqlTable:
      *   [match_recognize]`.
      */
     case Graph(
-        lateral: Boolean,
+        withLateral: Boolean,
         name: String,
         matchMode: Option[SqlGraphMatchMode],
         patterns: List[SqlGraphPattern],

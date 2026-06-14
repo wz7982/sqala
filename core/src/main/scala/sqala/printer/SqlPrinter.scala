@@ -210,8 +210,8 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
                 printSetQuery(set)
             case values: SqlQuery.Values =>
                 printValuesQuery(values)
-            case cte: SqlQuery.Cte =>
-                printCteQuery(cte)
+            case `with`: SqlQuery.With =>
+                printWithQuery(`with`)
 
         for l <- query.lock do
             sqlBuilder.append("\n")
@@ -375,10 +375,10 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a `WITH` (common table expression) query.
      */
-    def printCteQuery(query: SqlQuery.Cte): Unit =
+    def printWithQuery(query: SqlQuery.With): Unit =
         printSpace()
         sqlBuilder.append("WITH")
-        if query.recursive then
+        if query.withRecursive then
             sqlBuilder.append(" ")
             printCteRecursive()
         sqlBuilder.append("\n")
@@ -2010,7 +2010,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a function table reference.
      */
     def printFuncTable(table: SqlTable.Func): Unit =
-        if table.lateral then sqlBuilder.append("LATERAL ")
+        if table.withLateral then sqlBuilder.append("LATERAL ")
         printKeyword(table.name)
         sqlBuilder.append("(")
         printList(table.args)(printExpr)
@@ -2031,7 +2031,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a subquery table reference.
      */
     def printSubqueryTable(table: SqlTable.Subquery): Unit =
-        if table.lateral then sqlBuilder.append("LATERAL ")
+        if table.withLateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("(\n")
         push()
         printQuery(table.query)
@@ -2132,7 +2132,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a JSON table reference.
      */
     def printJsonTable(table: SqlTable.Json): Unit =
-        if table.lateral then sqlBuilder.append("LATERAL ")
+        if table.withLateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("JSON_TABLE(\n")
         push()
         printSpace()
@@ -2469,7 +2469,7 @@ abstract class SqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a graph table reference.
      */
     def printGraphTable(table: SqlTable.Graph): Unit =
-        if table.lateral then sqlBuilder.append("LATERAL ")
+        if table.withLateral then sqlBuilder.append("LATERAL ")
         sqlBuilder.append("GRAPH_TABLE(\n")
         push()
         printSpace()
