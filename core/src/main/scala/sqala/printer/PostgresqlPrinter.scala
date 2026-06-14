@@ -14,7 +14,9 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
                 false
             case _ =>
                 true
-        if standardMode then super.printLimit(limit)
+
+        if standardMode then
+            super.printLimit(limit)
         else
             for f <- limit.fetch do
                 sqlBuilder.append("LIMIT ")

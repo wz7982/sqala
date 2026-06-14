@@ -33,7 +33,7 @@ trait AsRecognize[T]:
     /**
      * Sets the rows-per-match mode.
      */
-    def setPerMatch(x: T, perMatch: SqlRecognizePatternRowsPerMatchMode): T
+    def setPerMatch(x: T, perMatch: SqlRecognizePatternRowsMode): T
 
     /**
      * Sets the full `matchRecognize` configuration.
@@ -99,12 +99,12 @@ object AsRecognize:
                 )
             )
 
-        def setPerMatch(x: Table[T, K, L], perMatch: SqlRecognizePatternRowsPerMatchMode): Table[T, K, L] =
+        def setPerMatch(x: Table[T, K, L], perMatch: SqlRecognizePatternRowsMode): Table[T, K, L] =
             x.copy(
                 __sqlTable__ = x.__sqlTable__.copy(
                     matchRecognize =
                         x.__sqlTable__.matchRecognize.map: m =>
-                            m.copy(rowsPerMatchMode = Some(perMatch))
+                            m.copy(rowsMode = Some(perMatch))
                     )
             )
 
@@ -150,12 +150,12 @@ object AsRecognize:
                     )
             )
 
-        def setPerMatch(x: SubqueryTable[N, V, L], perMatch: SqlRecognizePatternRowsPerMatchMode): SubqueryTable[N, V, L] =
+        def setPerMatch(x: SubqueryTable[N, V, L], perMatch: SqlRecognizePatternRowsMode): SubqueryTable[N, V, L] =
             x.copy(
                 __sqlTable__ = x.__sqlTable__.copy(
                     matchRecognize =
                         x.__sqlTable__.matchRecognize.map: m =>
-                            m.copy(rowsPerMatchMode = Some(perMatch))
+                            m.copy(rowsMode = Some(perMatch))
                     )
             )
 

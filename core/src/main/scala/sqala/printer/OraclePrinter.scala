@@ -55,7 +55,6 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
                 super.printType(`type`)
 
     override def printTableAlias(alias: SqlTableAlias): Unit =
-        sqlBuilder.append(" ")
         printIdent(alias.alias)
         if alias.columnAliases.nonEmpty then
             sqlBuilder.append("(")

@@ -29,7 +29,7 @@ enum SqlTable:
         lateral: Boolean,
         name: String,
         args: List[SqlExpr],
-        withOrd: Boolean,
+        withOrdinality: Boolean,
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
     )
