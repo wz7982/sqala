@@ -39,6 +39,16 @@ object CanCompare:
 
     given stringAndTime[A: SqlString, B: SqlTime]: CanCompare[A, B]()
 
+    given custom[T, R](using CustomField[T, R]): CanCompare[T, T]()
+
+    given customAndOptionCustom[T, R](using
+        CustomField[T, R]
+    ): CanCompare[T, Option[T]]()
+
+    given optionCustom[T, R](using
+        CustomField[T, R]
+    ): CanCompare[Option[T], T]()
+
     given array[A, B](using
         CanCompare[A, B]
     ): CanCompare[Array[A], Array[B]]()
@@ -413,6 +423,24 @@ object Return:
     given stringAndTime[A: SqlString, B: SqlTime]: Aux[A, B, TimeResult[A, B]] =
         new Return[A, B]:
             type R = TimeResult[A, B]
+
+    given custom[T, R](using 
+        CustomField[T, R]
+    ): Aux[T, T, T] =
+        new Return[T, T]:
+            type R = T
+
+    given customAndOptionCustom[T, R](using
+        CustomField[T, R]
+    ): Aux[T, Option[T], Option[T]] =
+        new Return[T, Option[T]]:
+            type R = Option[T]
+
+    given optionCustomAndCustom[T, R](using
+        CustomField[T, R]
+    ): Aux[Option[T], T, Option[T]] =
+        new Return[Option[T], T]:
+            type R = Option[T]
 
     given array[A, B](using
         r: Return[A, B]
