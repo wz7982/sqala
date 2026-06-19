@@ -778,12 +778,12 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
      * Supports grouping by expressions, tuples, and named tuples.
      *
      * {{{
-     * from(Entity).groupBy(e => (a = e.a, b = e.b))(
+     * from(Entity).groupBySets(e => (a = e.a, b = e.b))(
      *     g => groupingSets((), g.a, (g.a, g.b))
      * ).map((g, e) => (g.a, g.b, count()))
      * }}}
      */
-    def groupBy[G, S](f: QueryContext[L] ?=> T => G)(using
+    def groupBySets[G, S](f: QueryContext[L] ?=> T => G)(using
         a: AsGroup[G, L],
         i: CanInGroup[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
@@ -792,7 +792,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         tot: ToOption[T],
         tu: TransformTableKind[tot.R, UngroupedColumn],
         tt: ToTuple[tu.R]
-    )(g: a.R => S)(using
+    )(g: QueryContext[L] ?=> a.R => S)(using
         s: AsMultidimensionalGrouping[S]
     ): Grouping[to.R *: tt.R, c.R, L] =
         val group = a.asGroup(f(params))
