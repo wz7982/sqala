@@ -2,6 +2,7 @@ package sqala.ast.table
 
 import sqala.ast.expr.{SqlExpr, SqlJsonPassing}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
+import sqala.util.NonEmptyList
 
 /**
  * A table reference used in `FROM` clause.
@@ -63,7 +64,7 @@ enum SqlTable:
         path: SqlExpr,
         pathAlias: Option[String],
         passingItems: List[SqlJsonPassing],
-        columns: List[SqlJsonColumn],
+        columns: NonEmptyList[SqlJsonColumn],
         onError: Option[SqlJsonErrorBehavior],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]
@@ -86,10 +87,10 @@ enum SqlTable:
         withLateral: Boolean,
         name: String,
         matchMode: Option[SqlGraphMatchMode],
-        patterns: List[SqlGraphPattern],
+        patterns: NonEmptyList[SqlGraphPattern],
         where: Option[SqlExpr],
         rowsMode: Option[SqlGraphRowsMode],
-        columns: List[SqlSelectItem],
+        columns: NonEmptyList[SqlSelectItem],
         exportMode: Option[SqlGraphExportMode],
         alias: Option[SqlTableAlias],
         matchRecognize: Option[SqlMatchRecognize]

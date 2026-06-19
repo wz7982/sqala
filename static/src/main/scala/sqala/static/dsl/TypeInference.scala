@@ -1,7 +1,8 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
 import sqala.metadata.*
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import java.time.{OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple
@@ -11,84 +12,201 @@ import scala.compiletime.ops.boolean.||
  * Determines whether two types are compatible for comparison
  * operators (===, <>, >, <, etc.).
  */
-trait Compare[A, B]
+trait CanCompare[A, B]
 
-object Compare:
-    given number[A: SqlNumber, B: SqlNumber]: Compare[A, B]()
+object CanCompare:
+    given number[A: SqlNumber, B: SqlNumber]: CanCompare[A, B]()
 
-    given dateTime[A: SqlDateTime, B: SqlDateTime]: Compare[A, B]()
+    given dateTime[A: SqlDateTime, B: SqlDateTime]: CanCompare[A, B]()
 
-    given time[A: SqlTime, B: SqlTime]: Compare[A, B]()
+    given time[A: SqlTime, B: SqlTime]: CanCompare[A, B]()
 
-    given string[A: SqlString, B: SqlString]: Compare[A, B]()
+    given string[A: SqlString, B: SqlString]: CanCompare[A, B]()
 
-    given boolean[A: SqlBoolean, B: SqlBoolean]: Compare[A, B]()
+    given boolean[A: SqlBoolean, B: SqlBoolean]: CanCompare[A, B]()
 
-    given json[A: SqlJson, B: SqlJson]: Compare[A, B]()
+    given json[A: SqlJson, B: SqlJson]: CanCompare[A, B]()
 
-    given geometry[A: SqlGeometry, B: SqlGeometry]: Compare[A, B]()
+    given geometry[A: SqlGeometry, B: SqlGeometry]: CanCompare[A, B]()
 
-    given interval[A: SqlInterval, B: SqlInterval]: Compare[A, B]()
+    given interval[A: SqlInterval, B: SqlInterval]: CanCompare[A, B]()
 
-    given dateTimeAndString[A: SqlDateTime, B: SqlString]: Compare[A, B]()
+    given dateTimeAndString[A: SqlDateTime, B: SqlString]: CanCompare[A, B]()
 
-    given stringAndDateTime[A: SqlString, B: SqlDateTime]: Compare[A, B]()
+    given stringAndDateTime[A: SqlString, B: SqlDateTime]: CanCompare[A, B]()
 
-    given timeAndString[A: SqlTime, B: SqlString]: Compare[A, B]()
+    given timeAndString[A: SqlTime, B: SqlString]: CanCompare[A, B]()
 
-    given stringAndTime[A: SqlString, B: SqlTime]: Compare[A, B]()
+    given stringAndTime[A: SqlString, B: SqlTime]: CanCompare[A, B]()
 
     given array[A, B](using
-        Compare[A, B]
-    ): Compare[Array[A], Array[B]]()
+        CanCompare[A, B]
+    ): CanCompare[Array[A], Array[B]]()
 
     given arrayAndOptionArray[A, B](using
-        Compare[A, B]
-    ): Compare[Array[A], Option[Array[B]]]()
+        CanCompare[A, B]
+    ): CanCompare[Array[A], Option[Array[B]]]()
 
     given optionArrayAndArray[A, B](using
-        Compare[A, B]
-    ): Compare[Option[Array[A]], Array[B]]()
+        CanCompare[A, B]
+    ): CanCompare[Option[Array[A]], Array[B]]()
 
     given optionArray[A, B](using
-        Compare[A, B]
-    ): Compare[Option[Array[A]], Option[Array[B]]]()
+        CanCompare[A, B]
+    ): CanCompare[Option[Array[A]], Option[Array[B]]]()
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        Compare[AH, BH],
-        Compare[AT, BT]
-    ): Compare[AH *: AT, BH *: BT]()
+        CanCompare[AH, BH],
+        CanCompare[AT, BT]
+    ): CanCompare[AH *: AT, BH *: BT]()
 
     given tupleAndOptionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        Compare[AH, BH],
-        Compare[AT, BT]
-    ): Compare[AH *: AT, Option[BH *: BT]]()
+        CanCompare[AH, BH],
+        CanCompare[AT, BT]
+    ): CanCompare[AH *: AT, Option[BH *: BT]]()
 
     given optionTupleAndTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        Compare[AH, BH],
-        Compare[AT, BT]
-    ): Compare[Option[AH *: AT], BH *: BT]()
+        CanCompare[AH, BH],
+        CanCompare[AT, BT]
+    ): CanCompare[Option[AH *: AT], BH *: BT]()
 
     given optionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        Compare[AH, BH],
-        Compare[AT, BT]
-    ): Compare[Option[AH *: AT], Option[BH *: BT]]()
+        CanCompare[AH, BH],
+        CanCompare[AT, BT]
+    ): CanCompare[Option[AH *: AT], Option[BH *: BT]]()
 
     given tuple1[AH, BH](using
-        Compare[AH, BH]
-    ): Compare[AH *: EmptyTuple, BH *: EmptyTuple]()
+        CanCompare[AH, BH]
+    ): CanCompare[AH *: EmptyTuple, BH *: EmptyTuple]()
 
     given tuple1AndOptionTuple1[AH, BH](using
-        Compare[AH, BH]
-    ): Compare[AH *: EmptyTuple, Option[BH *: EmptyTuple]]()
+        CanCompare[AH, BH]
+    ): CanCompare[AH *: EmptyTuple, Option[BH *: EmptyTuple]]()
 
     given optionTuple1AndTuple1[AH, BH](using
-        Compare[AH, BH]
-    ): Compare[Option[AH *: EmptyTuple], BH *: EmptyTuple]()
+        CanCompare[AH, BH]
+    ): CanCompare[Option[AH *: EmptyTuple], BH *: EmptyTuple]()
 
     given optionTuple1AndOptionTuple1[AH, BH](using
-        Compare[AH, BH]
-    ): Compare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
+        CanCompare[AH, BH]
+    ): CanCompare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
+
+/**
+ * Lifts values, tuples, sequences, and arrays into `in` operands, 
+ * computing the result type and kind tuple. `CL` is the
+ * current query context level.
+ */
+trait In[A, B, CL <: Int]:
+    /**
+     * The result type.
+     */
+    type R
+
+    /**
+     * The kind tuple.
+     */
+    type KS <: Tuple
+
+    /**
+     * Converts the value to a list of expressions.
+     */
+    def asExprs(x: B): List[Expr[?, ?]]
+
+    /**
+     * Converts the value to a single expression, wrapping multiple
+     * operands in a tuple. Subqueries are passed through without
+     * wrapping.
+     */
+    def asSqlExpr(expr: SqlExpr, x: B): SqlExpr =
+        val exprList = asExprs(x)
+        exprList match
+            case Nil =>
+                SqlExpr.BooleanLiteral(false)
+            case Expr(SqlExpr.Subquery(query)) :: Nil =>
+                SqlExpr.In(expr, SqlInRightOperand.Subquery(query), false)
+            case _ =>
+                SqlExpr.In(
+                    expr, 
+                    SqlInRightOperand.Values(exprList.map(_.asSqlExpr).toNonEmptyList), 
+                    false
+                )
+
+object In:
+    type Aux[A, B, CL <: Int, O, OKS <: Tuple] = In[A, B, CL]:
+        type R = O
+
+        type KS = OKS
+
+    given expr[A, B, CL <: Int](using
+        aa: AsExpr[A, CL],
+        ab: AsExpr[B, CL],
+        r: Relation[aa.R, ab.R],
+        kt: KindToTuple[ab.K]
+    ): Aux[A, B, CL, r.R, kt.R] =
+        new In[A, B, CL]:
+            type R = r.R
+
+            type KS = kt.R
+
+            def asExprs(x: B): List[Expr[?, ?]] =
+                ab.asExpr(x) :: Nil
+
+    given tuple[A, H, T <: Tuple, CL <: Int](using
+        aa: AsExpr[A, CL],
+        ah: AsExpr[H, CL],
+        t: In[A, T, CL],
+        rh: Relation[aa.R, ah.R],
+        r: Relation[rh.R, t.R],
+        kth: KindToTuple[ah.K],
+        c: CombineKindTuple[kth.R, t.KS]
+    ): Aux[A, H *: T, CL, r.R, c.R] =
+        new In[A, H *: T, CL]:
+            type R = r.R
+
+            type KS = c.R
+
+            def asExprs(x: H *: T): List[Expr[?, ?]] =
+                ah.asExpr(x.head) :: t.asExprs(x.tail)
+
+    given tuple1[A, H, CL <: Int](using
+        aa: AsExpr[A, CL],
+        ah: AsExpr[H, CL],
+        r: Relation[aa.R, ah.R],
+        kth: KindToTuple[ah.K]
+    ): Aux[A, H *: EmptyTuple, CL, r.R, kth.R] =
+        new In[A, H *: EmptyTuple, CL]:
+            type R = r.R
+
+            type KS = kth.R
+
+            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
+                ah.asExpr(x.head) :: Nil
+
+    given seq[A, B, S <: Seq[B], CL <: Int](using
+        aa: AsExpr[A, CL],
+        ab: AsSqlExpr[B],
+        r: Relation[aa.R, B]
+    ): Aux[A, S, CL, r.R, Value *: EmptyTuple] =
+        new In[A, S, CL]:
+            type R = r.R
+
+            type KS = Value *: EmptyTuple
+
+            def asExprs(x: S): List[Expr[?, ?]] =
+                x.toList.map(i => Expr(ab.asSqlExpr(i)))
+
+    given array[A, B, CL <: Int](using
+        aa: AsExpr[A, CL],
+        ab: AsSqlExpr[B],
+        r: Relation[aa.R, B],
+    ): Aux[A, Array[B], CL, r.R, Value *: EmptyTuple] =
+        new In[A, Array[B], CL]:
+            type R = r.R
+
+            type KS = Value *: EmptyTuple
+
+            def asExprs(x: Array[B]): List[Expr[?, ?]] =
+                x.toList.map(i => Expr(ab.asSqlExpr(i)))
 
 /**
  * Computes the result type of addition (via `+`).
@@ -183,7 +301,9 @@ object Relation:
     type Aux[A, B, O] = Relation[A, B]:
         type R = O
 
-    given relation[A, B](using Compare[A, B]): Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
+    given relation[A, B](using 
+        CanCompare[A, B]
+    ): Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
         new Relation[A, B]:
             type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 

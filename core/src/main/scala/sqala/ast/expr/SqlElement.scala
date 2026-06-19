@@ -1,6 +1,26 @@
 package sqala.ast.expr
 
+import sqala.ast.statement.SqlQuery
 import sqala.ast.token.SqlCustomToken
+import sqala.util.NonEmptyList
+
+/**
+ * A right-hand operand for an `IN` expression.
+ */
+enum SqlInRightOperand:
+    /**
+     * A parenthesized list of expressions.
+     *
+     * Renders as `(expr [, ...])`.
+     */
+    case Values(items: NonEmptyList[SqlExpr])
+
+    /**
+     * A subquery.
+     *
+     * Renders as `(subquery)`.
+     */
+    case Subquery(query: SqlQuery)
 
 /**
  * A `WHEN ... THEN ...` branch in a `CASE` expression.

@@ -20,11 +20,11 @@ class SqlitePrinter(override val standardEscapeStrings: Boolean) extends SqlPrin
         printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(statement.columns)(printIdent)
+        printList(statement.columns.toList)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(statement.values)(printExpr)
+        printList(statement.values.toList)(printExpr)
         sqlBuilder.append(")")
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =

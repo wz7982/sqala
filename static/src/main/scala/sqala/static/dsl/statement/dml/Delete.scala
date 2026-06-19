@@ -9,7 +9,7 @@ import sqala.static.dsl.table.Table
 /**
  * A `DELETE` statement builder, created by `delete[T]`.
  */
-class Delete[T](
+final class Delete[T](
     private[sqala] val table: Table[T, Column, 1],
     private[sqala] val tree: SqlStatement.Delete
 )(using private[sqala] val qc: QueryContext[1]):

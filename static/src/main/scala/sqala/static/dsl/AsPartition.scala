@@ -51,7 +51,7 @@ object AsPartitionItem:
             type KS = OKS
 
             def asExpr(x: Q): Expr[?, ?] =
-                Expr(SqlExpr.Subquery(None, x.tree))
+                Expr(SqlExpr.Subquery(x.tree))
 
 /**
  * Collects partition items for `partitionBy` in window functions.

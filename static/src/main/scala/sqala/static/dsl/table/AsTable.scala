@@ -5,6 +5,7 @@ import sqala.ast.table.{SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
@@ -177,7 +178,9 @@ object AsTable:
                 val exprList = x.toList.map: datum =>
                     instances.zip(datum.productIterator).map: (i, v) =>
                         i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
-                val sqlValues = SqlQuery.Values(exprList, None)
+                .map: i =>
+                    i.toNonEmptyList
+                val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, None)
                 (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 
     given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =

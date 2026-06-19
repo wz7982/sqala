@@ -28,16 +28,12 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     @targetName("equal")
     def ==[R, CL <: Int](that: R)(using
         qc: QueryContext[CL],
-        ar: AsRightOperand[R, CL],
+        ar: AsComparison[R, CL],
         r: Relation[T, ar.R],
         ck: CombineKind[K, ar.K]
     ): Expr[r.R, ck.R] =
         Expr(
-            SqlExpr.Binary(
-                asSqlExpr,
-                SqlBinaryOperator.Equal,
-                ar.asExpr(that).asSqlExpr
-            )
+            ar.asSqlExpr(asSqlExpr, ComparisonOperator.Equal, that)
         )
 
     /**
@@ -59,16 +55,12 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     @targetName("notEqual")
     def !=[R, CL <: Int](that: R)(using
         qc: QueryContext[CL],
-        ar: AsRightOperand[R, CL],
+        ar: AsComparison[R, CL],
         r: Relation[T, ar.R],
         ck: CombineKind[K, ar.K]
     ): Expr[r.R, ck.R] =
         Expr(
-            SqlExpr.Binary(
-                asSqlExpr,
-                SqlBinaryOperator.NotEqual,
-                ar.asExpr(that).asSqlExpr
-            )
+            ar.asSqlExpr(asSqlExpr, ComparisonOperator.NotEqual, that)
         )
 
     /**
@@ -79,10 +71,6 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
         import SqlExpr.*
 
         expr match
-            case Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(Nil)) =>
-                BooleanLiteral(false)
-            case Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(Nil)) =>
-                BooleanLiteral(true)
             case Unary(SqlUnaryOperator.Not, e) =>
                 e match
                     case BooleanLiteral(boolean) =>
@@ -91,18 +79,12 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
                         Like(expr, pattern, escape, !not)
                     case SimilarTo(expr, pattern, escape, not) =>
                         SimilarTo(expr, pattern, escape, !not)
-                    case Binary(left, SqlBinaryOperator.In, right) =>
-                        Binary(left, SqlBinaryOperator.NotIn, right)
-                    case Binary(left, SqlBinaryOperator.NotIn, right) =>
-                        Binary(left, SqlBinaryOperator.In, right)
-                    case Binary(left, SqlBinaryOperator.IsDistinctFrom, right) =>
-                        Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right)
-                    case Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right) =>
-                        Binary(left, SqlBinaryOperator.IsDistinctFrom, right)
-                    case Binary(left, SqlBinaryOperator.Is, right) =>
-                        Binary(left, SqlBinaryOperator.IsNot, right)
-                    case Binary(left, SqlBinaryOperator.IsNot, right) =>
-                        Binary(left, SqlBinaryOperator.Is, right)
+                    case In(left, right, not) =>
+                        In(left, right, !not)
+                    case Binary(left, SqlBinaryOperator.IsDistinctFrom(not), right) =>
+                        Binary(left, SqlBinaryOperator.IsDistinctFrom(!not), right)
+                    case Binary(left, SqlBinaryOperator.Is(not), right) =>
+                        Binary(left, SqlBinaryOperator.Is(!not), right)
                     case Between(expr, s, e, n) =>
                         Between(expr, s, e, !n)
                     case _ => SqlExpr.Unary(SqlUnaryOperator.Not, e)

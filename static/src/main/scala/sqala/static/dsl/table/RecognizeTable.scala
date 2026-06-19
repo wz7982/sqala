@@ -4,6 +4,7 @@ import sqala.ast.table.*
 import sqala.metadata.SqlNumber
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.{constValue, constValueTuple}
@@ -112,7 +113,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
-            .copy(rowPattern = recognize.rowPattern.copy(define = defines))
+            .copy(rowPattern = recognize.rowPattern.copy(define = defines.toNonEmptyList))
         Recognize(r.setRecognize(__table__, newRecognize))
 
     /**

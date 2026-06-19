@@ -3,6 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.*
 import sqala.ast.statement.SqlQuery
 import sqala.metadata.{AsSqlExpr, Interval}
+import sqala.util.NonEmptyList.toNonEmptyList
 
 def column(tableName: String, columnName: String): Expr =
     Expr(SqlExpr.Column(Some(tableName), columnName))
@@ -14,16 +15,16 @@ def value[V: AsSqlExpr as a](v: V): Expr =
     Expr(a.asSqlExpr(v))
 
 def subquery(query: Query): Expr =
-    Expr(SqlExpr.Subquery(None, query.tree))
+    Expr(SqlExpr.Subquery(query.tree))
 
-def any(query: Query): Expr =
-    Expr(SqlExpr.Subquery(Some(SqlSubqueryQuantifier.Any), query.tree))
+def any(query: Query): QuantifiedSubquery =
+    QuantifiedSubquery(SqlSubqueryQuantifier.Any, query.tree)
 
-def all(query: Query): Expr =
-    Expr(SqlExpr.Subquery(Some(SqlSubqueryQuantifier.All), query.tree))
+def all(query: Query): QuantifiedSubquery =
+    QuantifiedSubquery(SqlSubqueryQuantifier.All, query.tree)
 
 def exists(query: Query): Expr =
-    Expr(SqlExpr.Subquery(Some(SqlSubqueryQuantifier.Exists), query.tree))
+    Expr(SqlExpr.ExistsPredicate(query.tree))
 
 def table(name: String): Table =
     Table(name, None)
@@ -41,9 +42,19 @@ def caseWhen(exprs: Expr*): Expr =
     val caseBranches =
         exprs.grouped(2).toList.map(i => (i(0), i(1)))
     if caseBranches.length * 2 == exprs.length then
-        Expr(SqlExpr.Case(caseBranches.map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)), None))
+        Expr(
+            SqlExpr.Case(
+                caseBranches.map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)).toNonEmptyList, 
+                None
+            )
+        )
     else
-        Expr(SqlExpr.Case(caseBranches.dropRight(1).map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)), Some(exprs.last.asSqlExpr)))
+        Expr(
+            SqlExpr.Case(
+                caseBranches.dropRight(1).map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr)).toNonEmptyList, 
+                Some(exprs.last.asSqlExpr)
+            )
+        )
 
 def caseWhen(exprs: List[Expr]): Expr =
     caseWhen(exprs*)
@@ -68,7 +79,7 @@ extension (n: Int)
         Interval(n.toString, SqlTimeUnit.Second)
 
 def coalesce(x: Expr, y: Expr): Expr =
-    Expr(SqlExpr.Coalesce(x.asSqlExpr :: y.asSqlExpr :: Nil))
+    Expr(SqlExpr.Coalesce((x.asSqlExpr :: y.asSqlExpr :: Nil).toNonEmptyList))
 
 def ifNull(x: Expr, y: Expr): Expr =
     coalesce(x, y)
@@ -77,7 +88,7 @@ def nullIf(x: Expr, y: Expr): Expr =
     Expr(SqlExpr.NullIf(x.asSqlExpr, y.asSqlExpr))
 
 def grouping(x: Expr): Expr =
-    Expr(SqlExpr.Grouping(x.asSqlExpr :: Nil))
+    Expr(SqlExpr.Grouping((x.asSqlExpr :: Nil).toNonEmptyList))
 
 def currentRow: FrameBound =
     FrameBound(SqlWindowFrameBound.CurrentRow)

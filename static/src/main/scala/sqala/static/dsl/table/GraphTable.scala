@@ -6,6 +6,7 @@ import sqala.ast.table.*
 import sqala.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.compiletime.constValue
@@ -745,10 +746,10 @@ object FromGraph:
                 lateral,
                 name,
                 None,
-                patterns,
+                patterns.toNonEmptyList,
                 where,
                 rows,
-                columns,
+                columns.toNonEmptyList,
                 None,
                 alias.map(SqlTableAlias(_, Nil)),
                 None

@@ -307,7 +307,7 @@ object AsMap:
             type KS = OKS
 
             def transform(x: Q): R =
-                Expr(SqlExpr.Subquery(None, x.tree))
+                Expr(SqlExpr.Subquery(x.tree))
 
             def offset(x: Q): Int =
                 1

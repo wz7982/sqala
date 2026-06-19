@@ -9,6 +9,7 @@ import sqala.metadata.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
@@ -164,7 +165,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     )
     val tree = SqlQuery.With(
         true,
-        SqlWithItem(tableCte, columns, withTree) :: Nil,
+        (SqlWithItem(tableCte, columns, withTree) :: Nil).toNonEmptyList,
         finalQuery.tree,
         None
     )
@@ -708,8 +709,11 @@ def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatter
  * .pattern(d => permute(d.a, d.b, d.c))
  * }}}
  */
-def permute[CL <: Int](terms: RecognizePatternTerm[CL]*)(using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
-    RecognizePatternTerm(SqlRowPatternTerm.Permute(terms.toList.map(_.pattern), None))
+def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using 
+    QueryContext[CL], 
+    MatchRecognizeContext
+): RecognizePatternTerm[CL] =
+    RecognizePatternTerm(SqlRowPatternTerm.Permute((term.pattern :: terms.toList.map(_.pattern)).toNonEmptyList, None))
 
 /**
  * Excludes a pattern from the output in `matchRecognize`. Maps to
@@ -887,10 +891,13 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
  *     .map((g, p) => (author = p.authorId, count = count(), groupingAuthorId = grouping(p.authorId)))
  * }}}
  */
-def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using QueryContext[CL], GroupingContext): Expr[Int, Agg[K *: EmptyTuple]] =
+def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using 
+    QueryContext[CL], 
+    GroupingContext
+): Expr[Int, Agg[K *: EmptyTuple]] =
     Expr(
         SqlExpr.Grouping(
-            x.asSqlExpr :: Nil
+            (x.asSqlExpr :: Nil).toNonEmptyList
         )
     )
 
@@ -932,7 +939,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
         av: AsExpr[V, CL],
         as: AsSqlExpr[a.R],
         asv: AsSqlExpr[av.R],
-        i: CanIn[T, V, CL],
+        i: In[T, V, CL],
         ia: CanInAgg[i.KS],
         e: ExcludeCurrentLevelColumn[i.KS, CL],
         refl: e.R =:= EmptyTuple
@@ -1164,10 +1171,10 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?,
         c: CombineKindTuple[KS, kt.R]
     ): Expr[r.R, Composite[c.R]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i(0), i(1)))
+            exprs.grouped(2).toList.map(i => (i(0), i(1))).map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr))
         Expr(
             SqlExpr.Case(
-                caseBranches.map((i, t) => SqlCaseBranch(i.asSqlExpr, t.asSqlExpr)),
+                caseBranches.toNonEmptyList,
                 Some(a.asExpr(result).asSqlExpr)
             )
         )
@@ -1211,7 +1218,7 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
 ): Expr[r.R, c.R] =
     Expr(
         SqlExpr.Coalesce(
-            aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil
+            (aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil).toNonEmptyList
         )
     )
 
@@ -1467,11 +1474,55 @@ def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T,
     refl: L > CL =:= true
 ): Expr[Boolean, Composite[OKS]] =
     Expr(
-        SqlExpr.Subquery(
-            Some(SqlSubqueryQuantifier.Exists),
+        SqlExpr.ExistsPredicate(
             query.tree
         )
     )
+
+/**
+  * Creates a `CUBE` clause. Maps to `CUBE(exprs)`.
+  * 
+  * {{{
+  * from(Post).groupBy(p => (id = p.id, title = p.title))(g => cube(g.id, g.title)).map((g, p) => count())
+  * }}}
+  */
+def cube[T, CL <: Int](x: T)(using 
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    ak: AllIsKind[kt.R, Grouped[?]],
+    refl: ak.R =:= true
+): Cube =
+    Cube(a.asExprs(x).map(_.asSqlExpr))
+
+/**
+  * Creates a `ROLLUP` clause. Maps to `ROLLUP(exprs)`.
+  * 
+  * {{{
+  * from(Post).groupBy(p => (id = p.id, title = p.title))(g => rollup(g.id, g.title)).map((g, p) => count())
+  * }}}
+  */
+def rollup[T, CL <: Int](x: T)(using 
+    qc: QueryContext[CL],
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
+    ak: AllIsKind[kt.R, Grouped[?]],
+    refl: ak.R =:= true
+): Rollup =
+    Rollup(a.asExprs(x).map(_.asSqlExpr))
+
+/**
+  * Creates a `GROUPING SETS` clause. Maps to `GROUPING SETS(exprs)`.
+  * 
+  * {{{
+  * from(Post).groupBy(p => (id = p.id, title = p.title))(g => groupingSets(g.id, g.title, ())).map((g, p) => count())
+  * }}}
+  */
+def groupingSets[T, CL <: Int](x: T)(using 
+    qc: QueryContext[CL],
+    a: AsMultidimensionalGrouping[T]
+): GroupingSets =
+    GroupingSets(a.asSqlGroupingItems(x))
 
 /**
  * Creates a custom function call expression. Maps to `name(args...)`.
@@ -1579,7 +1630,7 @@ extension [T](expr: Expr[T, Column[1]])
     @targetName("to")
     def :=[R](updateExpr: R)(using
         a: AsExpr[R, 1],
-        c: Compare[T, a.R],
+        c: CanCompare[T, a.R],
         uc: UpdateSetContext
     ): UpdatePair =
         expr match

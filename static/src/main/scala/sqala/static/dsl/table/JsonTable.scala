@@ -3,6 +3,8 @@ package sqala.static.dsl.table
 import sqala.ast.expr.{SqlExpr, SqlType}
 import sqala.ast.table.{SqlJsonColumn, SqlTable, SqlTableAlias}
 import sqala.static.dsl.*
+import sqala.util.NonEmptyList
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
@@ -28,7 +30,7 @@ object FromJson:
     ): FromJson[JsonColumnNameFlatten[N, V], t.R, OKS, CL] =
         var index = 0
 
-        def toSqlColumns(columns: List[JsonColumn]): List[SqlJsonColumn] =
+        def toSqlColumns(columns: List[JsonColumn]): NonEmptyList[SqlJsonColumn] =
             columns.map:
                 case p: JsonPathColumn[?] =>
                     index += 1
@@ -41,6 +43,7 @@ object FromJson:
                     SqlJsonColumn.Exists(s"c$index", SqlType.Boolean, Some(e.path), None)
                 case n: JsonNestedColumns[?, ?] =>
                     SqlJsonColumn.Nested(n.path, None, toSqlColumns(n.columns))
+            .toNonEmptyList
 
         val sqlColumns = toSqlColumns(columns.columns)
         FromJson(

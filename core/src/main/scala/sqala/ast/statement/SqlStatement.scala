@@ -6,6 +6,7 @@ import sqala.ast.limit.SqlLimit
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.SqlTable
+import sqala.util.NonEmptyList
 
 /**
  * Insert data source mode.
@@ -16,7 +17,7 @@ enum SqlInsertMode:
      *
      * Renders as `VALUES (expr [, ...]) [, ...]`.
      */
-    case Values(values: List[List[SqlExpr]])
+    case Values(values: NonEmptyList[NonEmptyList[SqlExpr]])
 
     /**
      * Insert from a subquery.
@@ -55,7 +56,7 @@ enum SqlStatement:
      *
      * Renders as `UPDATE table SET "column" = expr [, ...] [WHERE expr]`.
      */
-    case Update(table: SqlTable.Ident, setPairs: List[SqlUpdateSetPair], where: Option[SqlExpr])
+    case Update(table: SqlTable.Ident, setPairs: NonEmptyList[SqlUpdateSetPair], where: Option[SqlExpr])
 
     /**
      * A `TRUNCATE` statement.
@@ -72,10 +73,10 @@ enum SqlStatement:
      */
     case Upsert(
         table: SqlTable.Ident,
-        columns: List[String],
-        values: List[SqlExpr],
-        primaryKeys: List[String],
-        updateColumns: List[String]
+        columns: NonEmptyList[String],
+        values: NonEmptyList[SqlExpr],
+        primaryKeys: NonEmptyList[String],
+        updateColumns: NonEmptyList[String]
     )
 
 object SqlStatement:
@@ -148,7 +149,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
      * Renders as `VALUES (expr [, ...]) [, ...] [FOR UPDATE|SHARE]`.
      */
     case Values(
-        values: List[List[SqlExpr]],
+        values: NonEmptyList[NonEmptyList[SqlExpr]],
         override val lock: Option[SqlLock]
     ) extends SqlQuery(lock)
 
@@ -159,7 +160,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
      */
     case With(
         withRecursive: Boolean,
-        queryItems: List[SqlWithItem],
+        withItems: NonEmptyList[SqlWithItem],
         query: SqlQuery,
         override val lock: Option[SqlLock]
     ) extends SqlQuery(lock)

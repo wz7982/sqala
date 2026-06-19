@@ -6,6 +6,7 @@ import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator}
 import sqala.metadata.Dialect
 import sqala.util.queryToString
+import sqala.util.NonEmptyList.toNonEmptyList
 
 sealed class Query(private[sqala] val tree: SqlQuery):
     def ast: SqlQuery =
@@ -84,14 +85,14 @@ final case class SelectQuery(override private[sqala] val tree: SqlQuery.Select) 
         orderBy(orders*)
 
     def groupBy(exprs: Expr*): SelectQuery =
-        val groupItems = tree.groupBy.map(_.items).getOrElse(Nil)
+        val groupItems = tree.groupBy.map(_.items.toList).getOrElse(Nil)
         SelectQuery(
             tree.copy(
                 groupBy =
                     Some(
                         SqlGroup(
                             tree.groupBy.flatMap(_.quantifier),
-                            groupItems ++ exprs.toList.map(i => SqlGroupingItem.Expr(i.asSqlExpr))
+                            (groupItems ++ exprs.toList.map(i => SqlGroupingItem.Expr(i.asSqlExpr))).toNonEmptyList
                         )
                     )
             )

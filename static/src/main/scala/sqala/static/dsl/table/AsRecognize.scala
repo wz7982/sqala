@@ -4,6 +4,7 @@ import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.table.*
 import sqala.static.dsl.ExprKind
+import sqala.util.NonEmptyList
 
 /**
  * Applies `matchRecognize` configuration to a table. Each method
@@ -65,7 +66,7 @@ object AsRecognize:
                 None,
                 SqlRowPatternTerm.Dollar(None),
                 Nil,
-                Nil
+                NonEmptyList(SqlRowPatternDefineItem("tmp", SqlExpr.NullLiteral), Nil)
             ),
             None
         )

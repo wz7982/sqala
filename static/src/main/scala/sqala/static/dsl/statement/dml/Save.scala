@@ -3,13 +3,14 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, TableMacro}
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.deriving.Mirror
 
 /**
  * Wraps an upsert statement.
  */
-class Save(private[sqala] val tree: SqlStatement.Upsert)
+final class Save(private[sqala] val tree: SqlStatement.Upsert)
 
 object Save:
     /**
@@ -33,6 +34,10 @@ object Save:
             .map((c, _) => c)
         val tree: SqlStatement.Upsert =
             SqlStatement.Upsert(
-                SqlTable.Ident(tableName, None, None, None, None), columns, values, primaryKeys, updateColumns
+                SqlTable.Ident(tableName, None, None, None, None), 
+                columns.toNonEmptyList, 
+                values.toNonEmptyList, 
+                primaryKeys.toNonEmptyList, 
+                updateColumns.toNonEmptyList
             )
         new Save(tree)

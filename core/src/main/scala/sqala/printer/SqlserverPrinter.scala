@@ -5,6 +5,7 @@ import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
+import sqala.util.NonEmptyList
 
 /**
  * SQL Server dialect printer.
@@ -83,10 +84,13 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlP
 
         val orderExpr =
             SqlExpr.Case(
-                SqlCaseBranch(
-                    SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is, SqlExpr.NullLiteral),
-                    SqlExpr.NumberLiteral(1)
-                ) :: Nil,
+                NonEmptyList(
+                    SqlCaseBranch(
+                        SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral),
+                        SqlExpr.NumberLiteral(1)
+                    ),
+                    Nil
+                ),
                 Some(SqlExpr.NumberLiteral(0))
             )
             
