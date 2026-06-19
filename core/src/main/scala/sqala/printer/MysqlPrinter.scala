@@ -8,6 +8,7 @@ import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.ast.token.SqlCustomToken
+import sqala.util.NonEmptyList
 
 /**
  * MySQL dialect printer.
@@ -28,16 +29,16 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
         printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(statement.columns)(printIdent)
+        printList(statement.columns.toList)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(statement.values)(printExpr)
+        printList(statement.values.toList)(printExpr)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
 
-        printList(statement.updateColumns): u =>
+        printList(statement.updateColumns.toList): u =>
             printIdent(u)
             sqlBuilder.append(" = VALUES (")
             printIdent(u)
@@ -56,7 +57,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                         None
                     )
                 )
-            case SqlBinaryOperator.IsNotDistinctFrom =>
+            case SqlBinaryOperator.IsDistinctFrom(true) =>
                 printExpr(
                     SqlExpr.Binary(
                         expr.left,
@@ -64,7 +65,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                         expr.right
                     )
                 )
-            case SqlBinaryOperator.IsDistinctFrom =>
+            case SqlBinaryOperator.IsDistinctFrom(false) =>
                 printExpr(
                     SqlExpr.Unary(
                         SqlUnaryOperator.Not,
@@ -81,7 +82,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
     override def printValuesQuery(query: SqlQuery.Values): Unit =
         printSpace()
         sqlBuilder.append("VALUES ")
-        printList(query.values.map(SqlExpr.Tuple(_))): v =>
+        printList(query.values.toList.map(SqlExpr.Tuple(_))): v =>
             sqlBuilder.append("ROW")
             printExpr(v)
 
@@ -137,10 +138,13 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
 
         val orderExpr =
             SqlExpr.Case(
-                SqlCaseBranch(
-                    SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is, SqlExpr.NullLiteral),
-                    SqlExpr.NumberLiteral(1)
-                ) :: Nil,
+                NonEmptyList(
+                    SqlCaseBranch(
+                        SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral),
+                        SqlExpr.NumberLiteral(1)
+                    ),
+                    Nil
+                ),
                 Some(SqlExpr.NumberLiteral(0))
             )
 

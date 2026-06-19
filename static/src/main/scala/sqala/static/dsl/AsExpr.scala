@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.compiletime.ops.int.>
 
@@ -36,7 +37,8 @@ trait AsExpr[T, CL <: Int]:
         if exprList.size == 1 then
             Expr(exprList.head.asSqlExpr)
         else
-            Expr(SqlExpr.Tuple(exprList.map(_.asSqlExpr)))
+            val exprs = exprList.map(_.asSqlExpr)
+            Expr(SqlExpr.Tuple(exprs.toNonEmptyList))
 
 object AsExpr:
     type Aux[T, CL <: Int, O, OK <: ExprKind] = AsExpr[T, CL]:
@@ -72,7 +74,7 @@ object AsExpr:
             type K = Composite[OKS]
 
             def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.Subquery(None, x.tree)) :: Nil
+                Expr(SqlExpr.Subquery(x.tree)) :: Nil
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsExpr[H, CL],

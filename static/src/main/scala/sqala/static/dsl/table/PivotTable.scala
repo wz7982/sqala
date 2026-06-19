@@ -6,6 +6,7 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.{AsMap, Query}
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
@@ -56,7 +57,7 @@ final case class Pivot[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
         val newQuery =
             __sqlQuery__.copy(
                 groupBy = Some(
-                    SqlGroup(None, group.map(g => SqlGroupingItem.Expr(g)))
+                    SqlGroup(None, group.map(g => SqlGroupingItem.Expr(g)).toNonEmptyList)
                 )
             )
         PivotGroupBy[N, V, GN, GV, OKS, L](__items__, group, newQuery)

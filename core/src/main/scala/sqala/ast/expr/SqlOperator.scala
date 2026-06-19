@@ -60,44 +60,16 @@ enum SqlBinaryOperator(val precedence: Int):
     /**
      * `IS DISTINCT FROM` null-safe comparison.
      *
-     * Renders as `IS DISTINCT FROM`.
+     * Renders as `IS [NOT] DISTINCT FROM`.
      */
-    case IsDistinctFrom extends SqlBinaryOperator(30)
-
-    /**
-     * `IS NOT DISTINCT FROM` null-safe comparison.
-     *
-     * Renders as `IS NOT DISTINCT FROM`.
-     */
-    case IsNotDistinctFrom extends SqlBinaryOperator(30)
+    case IsDistinctFrom(withNot: Boolean) extends SqlBinaryOperator(30)
 
     /**
      * `IS` value check.
      *
-     * Renders as `IS`.
+     * Renders as `IS [NOT]`.
      */
-    case Is extends SqlBinaryOperator(30)
-
-    /**
-     * `IS NOT` value check.
-     *
-     * Renders as `IS NOT`.
-     */
-    case IsNot extends SqlBinaryOperator(30)
-
-    /**
-     * `IN` membership test.
-     *
-     * Renders as `IN`.
-     */
-    case In extends SqlBinaryOperator(30)
-
-    /**
-     * `NOT IN` membership test.
-     *
-     * Renders as `NOT IN`.
-     */
-    case NotIn extends SqlBinaryOperator(30)
+    case Is(withNot: Boolean) extends SqlBinaryOperator(30)
 
     /**
      * Greater-than comparison.
@@ -182,6 +154,53 @@ enum SqlUnaryOperator:
 
     /**
      * A custom unary operator with a free-form name.
+     *
+     * Renders as the given `tokens` directly.
+     */
+    case Custom(tokens: List[SqlCustomToken])
+
+/**
+ * Quantified comparison operators used in expressions.
+ */
+enum SqlQuantifiedComparisonOperator:
+    /**
+     * Equality comparison.
+     *
+     * Renders as `=`.
+     */
+    case Equal
+    /**
+     * Not-equal comparison.
+     *
+     * Renders as `<>`.
+     */
+    case NotEqual
+    /**
+     * Greater-than comparison.
+     *
+     * Renders as `>`.
+     */
+    case GreaterThan
+    /**
+     * Greater-than-or-equal comparison.
+     *
+     * Renders as `>=`.
+     */
+    case GreaterThanEqual
+    /**
+     * Less-than comparison.
+     *
+     * Renders as `<`.
+     */
+    case LessThan
+    /**
+     * Less-than-or-equal comparison.
+     *
+     * Renders as `<=`.
+     */
+    case LessThanEqual
+    /**
+     * A custom quantified comparison operator with a free-form name.
      *
      * Renders as the given `tokens` directly.
      */

@@ -19,10 +19,3 @@ enum SqlSubqueryQuantifier:
      * Renders as `ALL`.
      */
     case All
-
-    /**
-     * `EXISTS` quantifier.
-     *
-     * Renders as `EXISTS`.
-     */
-    case Exists

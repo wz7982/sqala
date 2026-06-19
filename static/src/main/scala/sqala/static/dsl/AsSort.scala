@@ -62,7 +62,7 @@ object AsSortItem:
             type KS = OKS
 
             def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
+                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` in queries. `S` is the query
@@ -164,7 +164,7 @@ object AsGroupedSortItem:
             type KS = OKS
 
             def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
+                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` after `groupBy`. `CL` is the
@@ -322,7 +322,7 @@ object AsOverSortItem:
             type KS = OKS
 
             def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(None, x.tree)), SqlOrdering.Asc, None)
+                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` in a window `over` clause.

@@ -6,13 +6,14 @@ import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.deriving.Mirror
 
 /**
  * A column name and update expression pair produced by `:=`.
  */
-case class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: SqlExpr)
+final case class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: SqlExpr)
 
 /**
  * Tracks the state of an `UPDATE` builder, restricting which
@@ -26,14 +27,33 @@ type UpdateTable = UpdateState.Table.type
 
 type UpdateEntity = UpdateState.Entity.type
 
-class UpdateSetContext
+/**
+ * Context for `:=`.
+ */
+final class UpdateSetContext
+
+/**
+  * Represents an `UPDATE` statement.
+  */
+final case class UpdateTree(
+    private[sqala] val table: SqlTable.Ident,
+    private[sqala] val setPairs: List[SqlUpdateSetPair],
+    private[sqala] val where: Option[SqlExpr]
+):
+    /**
+     * Returns a copy with the given condition added to the `WHERE` clause
+     * via `AND`.
+     */
+    def addWhere(condition: SqlExpr): UpdateTree =
+        copy(where = where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
+
 
 /**
  * An `UPDATE` statement builder, created by `update[T]`.
  */
-class Update[T, S <: UpdateState](
+final class Update[T, S <: UpdateState](
     private[sqala] val table: Table[T, Column, 1],
-    private[sqala] val tree: SqlStatement.Update
+    private[sqala] val tree: UpdateTree
 )(using private[sqala] val qc: QueryContext[1]):
     /**
      * Adds `SET column = value` assignments. Multiple calls
@@ -50,7 +70,10 @@ class Update[T, S <: UpdateState](
         given UpdateSetContext = new UpdateSetContext
         val pair = f(table)
         val updateExpr = pair.updateExpr
-        new Update(table, tree.copy(setPairs = tree.setPairs :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
+        new Update(
+            table, 
+            tree.copy(setPairs = (tree.setPairs :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
+        )
 
     /**
      * Adds a `WHERE` clause to the `UPDATE` statement. The condition
@@ -72,6 +95,16 @@ class Update[T, S <: UpdateState](
         val condition = a.asExpr(f(table))
         new Update(table, tree.addWhere(condition.asSqlExpr))
 
+    /**
+     * Returns an `UPDATE` statement.
+     */
+    private[sqala] def toSqlStatement: SqlStatement.Update =
+        SqlStatement.Update(
+            tree.table, 
+            tree.setPairs.toNonEmptyList, 
+            tree.where
+        )
+
 object Update:
     given qc: QueryContext[1] = QueryContext(0)
 
@@ -86,7 +119,7 @@ object Update:
             None
         )
         val table = Table[T, Column, 1](Some(alias), metaData, sqlTable)
-        val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, Nil, None)
+        val tree = UpdateTree(sqlTable, Nil, None)
         new Update(table, tree)
 
     /**
@@ -130,5 +163,5 @@ object Update:
         val condition =
             if conditions.isEmpty then None
             else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
-        val tree: SqlStatement.Update = SqlStatement.Update(sqlTable, updateColumns, condition)
+        val tree = UpdateTree(sqlTable, updateColumns, condition)
         new Update(table, tree)

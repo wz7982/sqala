@@ -3,6 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.SqlSelectItem
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.annotation.targetName
 
@@ -14,35 +15,111 @@ final case class Expr(private[sqala] val expr: SqlExpr):
     def ==(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Equal, expr.asSqlExpr))
 
+    @targetName("eq")
+    def ==(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.Equal, 
+                query.quantifier, 
+                query.query
+            )
+        )
+
     @targetName("ne")
     def !=(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.NotEqual, expr.asSqlExpr))
 
+    @targetName("ne")
+    def !=(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.NotEqual, 
+                query.quantifier, 
+                query.query
+            )
+        )
+
     @targetName("eqIgnoreNulls")
     def <=>(expr: Expr): Expr =
-        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.IsNotDistinctFrom, expr.asSqlExpr))
+        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.IsDistinctFrom(true), expr.asSqlExpr))
 
     def isNull: Expr =
-        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Is, SqlExpr.NullLiteral))
+        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral))
 
     @targetName("gt")
     def >(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.GreaterThan, expr.asSqlExpr))
 
+    @targetName("gt")
+    def >(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.GreaterThan, 
+                query.quantifier, 
+                query.query
+            )
+        )
+
     @targetName("ge")
     def >=(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.GreaterThanEqual, expr.asSqlExpr))
+
+    @targetName("ge")
+    def >=(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.GreaterThanEqual, 
+                query.quantifier, 
+                query.query
+            )
+        )
 
     @targetName("lt")
     def <(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.LessThan, expr.asSqlExpr))
 
+    @targetName("lt")
+    def <(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.LessThan, 
+                query.quantifier, 
+                query.query
+            )
+        )
+
     @targetName("le")
     def <=(expr: Expr): Expr =
         Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.LessThanEqual, expr.asSqlExpr))
 
+    @targetName("le")
+    def <=(query: QuantifiedSubquery): Expr =
+        Expr(
+            SqlExpr.QuantifiedComparisonPredicate(
+                asSqlExpr, 
+                SqlQuantifiedComparisonOperator.LessThanEqual, 
+                query.quantifier, 
+                query.query
+            )
+        )
+
     def in(list: List[Expr]): Expr =
-        Expr(SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.In, SqlExpr.Tuple(list.map(_.asSqlExpr))))
+        if list.isEmpty then
+            Expr(SqlExpr.BooleanLiteral(false))
+        else
+            Expr(
+                SqlExpr.In(asSqlExpr, SqlInRightOperand.Values(list.map(_.asSqlExpr).toNonEmptyList), false)
+            )
+
+    def in(query: Query): Expr =
+        Expr(
+            SqlExpr.In(asSqlExpr, SqlInRightOperand.Subquery(query.tree), false)
+        )
 
     def between(start: Expr, end: Expr): Expr =
         Expr(SqlExpr.Between(asSqlExpr, start.asSqlExpr, end.asSqlExpr, false))
@@ -138,10 +215,6 @@ final case class Expr(private[sqala] val expr: SqlExpr):
         import SqlExpr.*
 
         expr match
-            case Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(Nil)) =>
-                BooleanLiteral(false)
-            case Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(Nil)) =>
-                BooleanLiteral(true)
             case Unary(SqlUnaryOperator.Not, e) =>
                 e match
                     case BooleanLiteral(boolean) =>
@@ -150,18 +223,12 @@ final case class Expr(private[sqala] val expr: SqlExpr):
                         Like(expr, pattern, escape, !not)
                     case SimilarTo(expr, pattern, escape, not) =>
                         SimilarTo(expr, pattern, escape, !not)
-                    case Binary(left, SqlBinaryOperator.In, right) =>
-                        Binary(left, SqlBinaryOperator.NotIn, right)
-                    case Binary(left, SqlBinaryOperator.NotIn, right) =>
-                        Binary(left, SqlBinaryOperator.In, right)
-                    case Binary(left, SqlBinaryOperator.IsDistinctFrom, right) =>
-                        Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right)
-                    case Binary(left, SqlBinaryOperator.IsNotDistinctFrom, right) =>
-                        Binary(left, SqlBinaryOperator.IsDistinctFrom, right)
-                    case Binary(left, SqlBinaryOperator.Is, right) =>
-                        Binary(left, SqlBinaryOperator.IsNot, right)
-                    case Binary(left, SqlBinaryOperator.IsNot, right) =>
-                        Binary(left, SqlBinaryOperator.Is, right)
+                    case In(left, right, not) =>
+                        In(left, right, !not)
+                    case Binary(left, SqlBinaryOperator.IsDistinctFrom(not), right) =>
+                        Binary(left, SqlBinaryOperator.IsDistinctFrom(!not), right)
+                    case Binary(left, SqlBinaryOperator.Is(not), right) =>
+                        Binary(left, SqlBinaryOperator.Is(!not), right)
                     case Between(expr, s, e, n) =>
                         Between(expr, s, e, !n)
                     case _ => SqlExpr.Unary(SqlUnaryOperator.Not, e)

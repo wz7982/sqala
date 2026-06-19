@@ -2,6 +2,7 @@ package sqala.ast.table
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
+import sqala.util.NonEmptyList
 
 /**
  * A `MATCH_RECOGNIZE` clause for row pattern recognition.
@@ -93,7 +94,7 @@ case class SqlRowPattern(
     strategy: Option[SqlRowPatternStrategy],
     pattern: SqlRowPatternTerm,
     subset: List[SqlRowPatternSubsetItem],
-    define: List[SqlRowPatternDefineItem]
+    define: NonEmptyList[SqlRowPatternDefineItem]
 )
 
 /**
@@ -240,7 +241,7 @@ enum SqlRowPatternTerm(val quantifier: Option[SqlRowPatternQuantifier]):
      * Renders as `PERMUTE(term [, ...]) [quantifier]`.
      */
     case Permute(
-        terms: List[SqlRowPatternTerm],
+        terms: NonEmptyList[SqlRowPatternTerm],
         override val quantifier: Option[SqlRowPatternQuantifier]
     ) extends SqlRowPatternTerm(quantifier)
 
@@ -278,4 +279,4 @@ case class SqlRowPatternDefineItem(name: String, expr: SqlExpr)
  *
  * Renders as `"name" = (pattern [, ...])`.
  */
-case class SqlRowPatternSubsetItem(name: String, patternNames: List[String])
+case class SqlRowPatternSubsetItem(name: String, patternNames: NonEmptyList[String])

@@ -1,6 +1,7 @@
 package sqala.ast.table
 
 import sqala.ast.expr.*
+import sqala.util.NonEmptyList
 
 /**
  * Error behavior for JSON table functions.
@@ -83,5 +84,5 @@ enum SqlJsonColumn:
     case Nested(
         path: SqlExpr,
         pathAlias: Option[String],
-        columns: List[SqlJsonColumn]
+        columns: NonEmptyList[SqlJsonColumn]
     )

@@ -8,8 +8,10 @@ import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, Dialect, TableMacroImpl}
 import sqala.static.dsl.QueryContext
 import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.quoted.{Expr, Quotes, Type}
+import sqala.ast.expr.SqlInRightOperand
 
 /**
  * A repository trait derived by a macro from the method name.
@@ -294,9 +296,9 @@ object Repository:
                                         val left = SqlExpr.Column(None, columnName)
                                         op match
                                             case "isNull" =>
-                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Is, SqlExpr.NullLiteral))
+                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral))
                                             case "isNotNull" =>
-                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.IsNot, SqlExpr.NullLiteral))
+                                                condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.Is(true), SqlExpr.NullLiteral))
                                             case "in" =>
                                                 val value = valueIterator.next().asInstanceOf[Seq[Any]]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[Any]]
@@ -304,7 +306,7 @@ object Repository:
                                                 if exprs.isEmpty then
                                                     condBuffer.addOne(SqlExpr.BooleanLiteral(false))
                                                 else
-                                                    condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.In, SqlExpr.Tuple(exprs.toList)))
+                                                    condBuffer.addOne(SqlExpr.In(left, SqlInRightOperand.Values(exprs.toList.toNonEmptyList), false))
                                             case "notIn" =>
                                                 val value = valueIterator.next().asInstanceOf[Seq[Any]]
                                                 val instance = instanceIterator.next().asInstanceOf[AsSqlExpr[Any]]
@@ -312,7 +314,7 @@ object Repository:
                                                 if exprs.isEmpty then
                                                     condBuffer.addOne(SqlExpr.BooleanLiteral(true))
                                                 else
-                                                    condBuffer.addOne(SqlExpr.Binary(left, SqlBinaryOperator.NotIn, SqlExpr.Tuple(exprs.toList)))
+                                                    condBuffer.addOne(SqlExpr.In(left, SqlInRightOperand.Values(exprs.toList.toNonEmptyList), true))
                                             case "between" =>
                                                 val start = valueIterator.next()
                                                 val startInstance = instanceIterator.next().asInstanceOf[AsSqlExpr[Any]]

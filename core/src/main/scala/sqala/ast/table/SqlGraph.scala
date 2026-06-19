@@ -1,6 +1,7 @@
 package sqala.ast.table
 
 import sqala.ast.expr.SqlExpr
+import sqala.util.NonEmptyList
 
 /**
  * Rows mode for `GRAPH_TABLE`.
@@ -44,14 +45,14 @@ enum SqlGraphExportMode:
      *
      * Renders as `EXPORT ALL SINGLETONS EXCEPT (pattern [, ...])`.
      */
-    case AllSingletons(exceptPatterns: List[String])
+    case AllSingletons(exceptPatterns: NonEmptyList[String])
 
     /**
      * Export only the given singletons.
      *
      * Renders as `EXPORT SINGLETONS (pattern [, ...])`.
      */
-    case Singletons(patterns: List[String])
+    case Singletons(patterns: NonEmptyList[String])
 
     /**
      * Do not export singletons.

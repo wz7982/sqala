@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.*
+import sqala.util.NonEmptyList
 
 import scala.annotation.targetName
 
@@ -29,16 +30,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("equal")
     def ===[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.Equal,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.Equal, that)
         )
 
     /**
@@ -63,16 +60,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("notEqual")
     def <>[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.NotEqual,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.NotEqual, that)
         )
 
     /**
@@ -87,7 +80,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         Expr(
             SqlExpr.Binary(
                 aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.Is,
+                SqlBinaryOperator.Is(false),
                 SqlExpr.NullLiteral
             )
         )
@@ -105,14 +98,14 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("eqIgnoreNulls")
     def <=>[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsExpr[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Boolean, c.R] =
         Expr(
             SqlExpr.Binary(
                 aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.IsNotDistinctFrom,
+                SqlBinaryOperator.IsDistinctFrom(true),
                 ab.asExpr(that).asSqlExpr
             )
         )
@@ -139,16 +132,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("gt")
     def >[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.GreaterThan,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.GreaterThan, that)
         )
 
     /**
@@ -173,16 +162,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("ge")
     def >=[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.GreaterThanEqual,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.GreaterThanEqual, that)
         )
 
     /**
@@ -207,16 +192,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("lt")
     def <[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.LessThan,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.LessThan, that)
         )
 
     /**
@@ -241,16 +222,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("le")
     def <=[B](that: B)(using
-        ab: AsRightOperand[B, CL],
+        ab: AsComparison[B, CL],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.LessThanEqual,
-                ab.asExpr(that).asSqlExpr
-            )
+            ab.asSqlExpr(aa.asExpr(self).asSqlExpr, ComparisonOperator.LessThanEqual, that)
         )
 
     /**
@@ -273,16 +250,12 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def in[B](exprs: B)(using
-        i: CanIn[A, B, CL],
+        i: In[A, B, CL],
         kt: KindToTuple[aa.K],
         c: CombineKindTuple[kt.R, i.KS]
     ): Expr[i.R, Composite[c.R]] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.In,
-                i.asExpr(exprs).asSqlExpr
-            )
+            i.asSqlExpr(aa.asExpr(self).asSqlExpr, exprs)
         )
 
     /**
@@ -818,15 +791,17 @@ extension [A, B, CL <: Int](self: (A, B))(using
         Expr(
             SqlExpr.Binary(
                 SqlExpr.Tuple(
-                    aa.asExpr(self._1).asSqlExpr ::
-                    ab.asExpr(self._2).asSqlExpr ::
-                    Nil
+                    NonEmptyList(
+                        aa.asExpr(self._1).asSqlExpr,
+                        ab.asExpr(self._2).asSqlExpr :: Nil
+                    )
                 ),
                 SqlBinaryOperator.Overlaps,
                 SqlExpr.Tuple(
-                    ac.asExpr(that._1).asSqlExpr ::
-                    ad.asExpr(that._2).asSqlExpr ::
-                    Nil
+                    NonEmptyList(
+                        ac.asExpr(that._1).asSqlExpr,
+                        ad.asExpr(that._2).asSqlExpr :: Nil
+                    )
                 )
             )
         )

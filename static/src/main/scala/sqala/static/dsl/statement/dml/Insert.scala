@@ -6,6 +6,7 @@ import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, TableMacro}
 import sqala.static.dsl.{AsExpr, Column, Expr}
 import sqala.static.dsl.table.Table
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.deriving.Mirror
 
@@ -28,10 +29,19 @@ type InsertValues = InsertState.Values.type
 type InsertQuery = InsertState.Query.type
 
 /**
+ * Represents an `INSERT` statement.
+ */
+final case class InsertTree(
+    private[sqala] val table: SqlTable.Ident, 
+    private[sqala] val columns: List[String],
+    private[sqala] val values: List[List[SqlExpr]]
+)
+
+/**
  * An `INSERT` statement builder, created by `insert[T]`.
  */
-class Insert[T, S <: InsertState](
-    private[sqala] val tree: SqlStatement.Insert
+final class Insert[T, S <: InsertState](
+    private[sqala] val tree: InsertTree
 ):
     /**
      * Selects columns to insert.
@@ -50,8 +60,8 @@ class Insert[T, S <: InsertState](
             i match
                 case Expr(SqlExpr.Column(_, c)) => c
                 case _ => throw MatchError(i)
-        val tree: SqlStatement.Insert =
-            SqlStatement.Insert(sqlTable, columns, SqlInsertMode.Values(Nil))
+        val tree =
+            InsertTree(sqlTable, columns, Nil)
         new Insert(tree)
 
     /**
@@ -72,7 +82,7 @@ class Insert[T, S <: InsertState](
                 case x => x :: Nil
             data.zip(instances).map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
-        new Insert(tree.copy(mode = SqlInsertMode.Values(insertValues)))
+        new Insert(tree.copy(values = insertValues))
 
     /**
      * Provides a single row of values for the `INSERT`. Maps to
@@ -87,11 +97,24 @@ class Insert[T, S <: InsertState](
     ): Insert[T, InsertValues] =
         values(row :: Nil)
 
+    /**
+     * Returns an `INSERT` statement.
+     */
+    private[sqala] def toSqlStatement: SqlStatement.Insert =
+        SqlStatement.Insert(
+            tree.table, 
+            tree.columns, 
+            SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
+        )
+
+
 object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
-        val tree: SqlStatement.Insert =
-            SqlStatement.Insert(SqlTable.Ident(tableName, None, None, None, None), Nil, SqlInsertMode.Values(Nil))
+        val tree =
+            InsertTree(
+                SqlTable.Ident(tableName, None, None, None, None), Nil, Nil
+            )
         new Insert(tree)
 
     /**
@@ -117,7 +140,9 @@ object Insert:
             data.map: (datum, instance) =>
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(
-            SqlStatement.Insert(
-                SqlTable.Ident(tableName, None, None, None, None), columns, SqlInsertMode.Values(values.toList)
+            InsertTree(
+                SqlTable.Ident(tableName, None, None, None, None), 
+                columns, 
+                values.toList
             )
         )

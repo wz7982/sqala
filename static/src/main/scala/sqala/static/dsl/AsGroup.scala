@@ -68,10 +68,10 @@ object AsGroupItem:
             type KS = OKS
 
             def asGroup(x: Q): R =
-                Expr(SqlExpr.Subquery(None, x.tree))
+                Expr(SqlExpr.Subquery(x.tree))
 
             def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.Subquery(None, x.tree)) :: Nil
+                Expr(SqlExpr.Subquery(x.tree)) :: Nil
 
 /**
  * Lifts expressions, subqueries, tuples, and named tuples into grouping

@@ -52,7 +52,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(insert: Insert[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = statementToString(insert.tree, dialect, standardEscapeStrings)
+        val sql = statementToString(insert.toSqlStatement, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -64,7 +64,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(update: Update[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = statementToString(update.tree, dialect, standardEscapeStrings)
+        val sql = statementToString(update.toSqlStatement, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -105,7 +105,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -122,7 +122,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entities)
-        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -139,7 +139,7 @@ final class JdbcContext(
         l: Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = statementToString(i.tree, dialect, standardEscapeStrings)
+        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
         l.printLog(sql, Array.empty[Any])
         val id = execute(c => jdbcExecReturnKey(c, sql, Array.empty[Any])).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
@@ -166,7 +166,7 @@ final class JdbcContext(
         if u.tree.setPairs.isEmpty then
             0
         else
-            val sql = statementToString(u.tree, dialect, standardEscapeStrings)
+            val sql = statementToString(u.toSqlStatement, dialect, standardEscapeStrings)
             executeDml(sql, Array.empty[Any])
 
     /**

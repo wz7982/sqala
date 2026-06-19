@@ -1,6 +1,6 @@
 package sqala.static.dsl.statement.query
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlSubqueryQuantifier}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.group.{SqlGroup, SqlGroupingItem}
 import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
@@ -10,6 +10,7 @@ import sqala.metadata.{Dialect, SqlBoolean}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.{Table, TransformTableKind}
 import sqala.util.queryToString
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.compiletime.ops.int.-
 
@@ -418,7 +419,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      * expression.
      */
     private[sqala] def exists: Query[Expr[Boolean, Column[L]], EmptyTuple, L, OneRow] =
-        val expr = Expr[Boolean, Column[L]](SqlExpr.Subquery(Some(SqlSubqueryQuantifier.Exists), tree))
+        val expr = Expr[Boolean, Column[L]](SqlExpr.ExistsPredicate(tree))
         val outerQuery: SqlQuery.Select = SqlQuery.Select(
             None,
             SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
@@ -733,7 +734,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
 
     /**
      * Adds a `GROUP BY` clause. All non-grouped columns are marked as
-     * `UngroupedColumn` and rejected from subsequent `filter` or `map`
+     * `UngroupedColumn` and rejected from subsequent `having` or `map`
      * unless wrapped in aggregate functions.
      *
      * Supports grouping by expressions, tuples, and named tuples.
@@ -764,83 +765,21 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             a.asGroup(group) *: tt.toTuple(tu.transform(params)),
             tree.copy(
                 groupBy = Some(
-                    SqlGroup(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)))
+                    SqlGroup(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)).toNonEmptyList)
                 )
             )
         )
 
     /**
-     * Adds a `GROUP BY CUBE` clause, generating all possible grouping
-     * combinations (2^n sets). All non-grouped columns and the grouping
-     * expressions themselves are wrapped with `Option` since `CUBE`
-     * introduces nulls for absent dimension values.
+     * Adds a multi-dimensional `GROUP BY` clause. All non-grouped columns are marked as
+     * `UngroupedColumn` and rejected from subsequent `having` or `map`
+     * unless wrapped in aggregate functions.
      *
-     * {{{
-     * from(Person).groupByCube(p => (age = p.age, nation = p.nation))
-     *     .map((g, p) => (g.age, g.nation, count()))
-     * }}}
-     */
-    def groupByCube[G](f: QueryContext[L] ?=> T => G)(using
-        a: AsGroup[G, L],
-        i: CanInGroup[a.KS],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        to: ToOption[a.R],
-        tot: ToOption[T],
-        tu: TransformTableKind[tot.R, UngroupedColumn],
-        tt: ToTuple[tu.R]
-    ): Grouping[to.R *: tt.R, c.R, L] =
-        val group = f(params)
-        val groupExprs = a.asExprs(group)
-        Grouping(
-            to.toOption(a.asGroup(group)) *: tt.toTuple(tu.transform(tot.toOption(params))),
-            tree.copy(
-                groupBy = Some(
-                    SqlGroup(None, SqlGroupingItem.Cube(groupExprs.map(_.asSqlExpr)) :: Nil)
-                )
-            )
-        )
-
-    /**
-     * Adds a `GROUP BY ROLLUP` clause, generating hierarchical groupings
-     * (n + 1 sets). Like `CUBE`, wraps non-grouped columns and grouping
-     * expressions with `Option`.
-     *
-     * {{{
-     * from(Person).groupByRollup(p => (age = p.age, nation = p.nation))
-     *     .map((g, p) => (g.age, g.nation, count()))
-     * }}}
-     */
-    def groupByRollup[G](f: QueryContext[L] ?=> T => G)(using
-        a: AsGroup[G, L],
-        i: CanInGroup[a.KS],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        to: ToOption[a.R],
-        tot: ToOption[T],
-        tu: TransformTableKind[tot.R, UngroupedColumn],
-        tt: ToTuple[tu.R]
-    ): Grouping[to.R *: tt.R, c.R, L] =
-        val group = f(params)
-        val groupExprs = a.asExprs(group)
-        Grouping(
-            to.toOption(a.asGroup(group)) *: tt.toTuple(tu.transform(tot.toOption(params))),
-            tree.copy(
-                groupBy = Some(
-                    SqlGroup(None, SqlGroupingItem.Rollup(groupExprs.map(_.asSqlExpr)) :: Nil)
-                )
-            )
-        )
-
-    /**
-     * Adds a `GROUP BY GROUPING SETS` clause, allowing arbitrary grouping
-     * combinations. The grouping function specifies the base grouping
-     * expression, and the second function builds a nested tuple of grouping
-     * sets. Pass `()` for the empty grouping set.
+     * Supports grouping by expressions, tuples, and named tuples.
      *
      * {{{
      * from(Entity).groupBySets(e => (a = e.a, b = e.b))(
-     *     g => ((), g.a, (g.a, g.b))
+     *     g => groupingSets((), g.a, (g.a, g.b))
      * ).map((g, e) => (g.a, g.b, count()))
      * }}}
      */
@@ -853,16 +792,16 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         tot: ToOption[T],
         tu: TransformTableKind[tot.R, UngroupedColumn],
         tt: ToTuple[tu.R]
-    )(g: a.R => S)(using
-        s: AsGroupingSets[S]
+    )(g: QueryContext[L] ?=> a.R => S)(using
+        s: AsMultidimensionalGrouping[S]
     ): Grouping[to.R *: tt.R, c.R, L] =
         val group = a.asGroup(f(params))
-        val groupExprs = s.asSqlExprs(g(group))
+        val groupingItems = s.asSqlGroupingItems(g(group))
         Grouping(
             to.toOption(group) *: tt.toTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
-                    SqlGroup(None, SqlGroupingItem.GroupingSets(groupExprs) :: Nil)
+                    SqlGroup(None, groupingItems.toNonEmptyList)
                 )
             )
         )
@@ -1515,7 +1454,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         )
         val cteTree: SqlQuery.With = SqlQuery.With(
             true,
-            withItem :: Nil,
+            (withItem :: Nil).toNonEmptyList,
             mapTree.copy(select = sqlSelect),
             None
         )

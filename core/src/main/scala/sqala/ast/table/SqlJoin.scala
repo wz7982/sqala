@@ -2,6 +2,7 @@ package sqala.ast.table
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.token.SqlCustomToken
+import sqala.util.NonEmptyList
 
 /**
  * Join type for table joins.
@@ -65,4 +66,4 @@ enum SqlJoinCondition:
      *
      * Renders as `USING("column" [, ...])`.
      */
-    case Using(columnNames: List[String])
+    case Using(columnNames: NonEmptyList[String])

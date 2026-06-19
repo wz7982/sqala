@@ -32,20 +32,20 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sql
         printTable(statement.table)
 
         sqlBuilder.append(" (")
-        printList(statement.columns)(printIdent)
+        printList(statement.columns.toList)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" VALUES (")
-        printList(statement.values)(printExpr)
+        printList(statement.values.toList)(printExpr)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" ON CONFLICT (")
-        printList(statement.primaryKeys)(printIdent)
+        printList(statement.primaryKeys.toList)(printIdent)
         sqlBuilder.append(")")
 
         sqlBuilder.append(" DO UPDATE SET ")
 
-        printList(statement.updateColumns): u =>
+        printList(statement.updateColumns.toList): u =>
             printIdent(u)
             sqlBuilder.append(" = ")
             sqlBuilder.append("EXCLUDED.")

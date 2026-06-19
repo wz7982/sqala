@@ -4,6 +4,7 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
 import sqala.ast.token.SqlCustomToken
+import sqala.util.NonEmptyList
 
 /**
  * An expression enum.
@@ -64,7 +65,7 @@ enum SqlExpr:
      *
      * Renders as `(expr [, ...])`.
      */
-    case Tuple(items: List[SqlExpr])
+    case Tuple(items: NonEmptyList[SqlExpr])
 
     /**
      * An array expression.
@@ -102,6 +103,13 @@ enum SqlExpr:
     )
 
     /**
+     * An `IN` predicate.
+     * 
+     * Renders as `expr [NOT] IN (expr [, ...])|(query)`.
+     */
+    case In(expr: SqlExpr, in: SqlInRightOperand, withNot: Boolean)
+
+    /**
      * A `BETWEEN` predicate.
      *
      * Renders as `expr [NOT] BETWEEN expr AND expr`.
@@ -127,21 +135,21 @@ enum SqlExpr:
      *
      * Renders as `CASE WHEN expr THEN expr [WHEN expr THEN expr ...] [ELSE expr] END`.
      */
-    case Case(branches: List[SqlCaseBranch], default: Option[SqlExpr])
+    case Case(branches: NonEmptyList[SqlCaseBranch], default: Option[SqlExpr])
 
     /**
      * A simple `CASE` expression.
      *
      * Renders as `CASE expr WHEN expr THEN expr [WHEN expr THEN expr ...] [ELSE expr] END`.
      */
-    case SimpleCase(expr: SqlExpr, branches: List[SqlCaseBranch], default: Option[SqlExpr])
+    case SimpleCase(expr: SqlExpr, branches: NonEmptyList[SqlCaseBranch], default: Option[SqlExpr])
 
     /**
      * A `COALESCE` expression: returns the first non-NULL value in the list.
      *
      * Renders as `COALESCE(expr [, ...])`.
      */
-    case Coalesce(items: List[SqlExpr])
+    case Coalesce(items: NonEmptyList[SqlExpr])
 
     /**
      * A `NULLIF` expression: returns NULL when `expr` equals `test`,
@@ -170,7 +178,26 @@ enum SqlExpr:
      *
      * Renders as `[ANY|ALL|EXISTS] (query)`.
      */
-    case Subquery(quantifier: Option[SqlSubqueryQuantifier], query: SqlQuery)
+    case Subquery(query: SqlQuery)
+
+    /**
+     * An `EXISTS` predicate.
+     *
+     * Renders as `EXISTS (query)`.
+     */
+    case ExistsPredicate(query: SqlQuery)
+
+    /**
+     * A quantified comparison predicate.
+     *
+     * Renders as `expr operator [ANY|ALL](query)`.
+     */
+    case QuantifiedComparisonPredicate(
+        expr: SqlExpr,
+        operator: SqlQuantifiedComparisonOperator,
+        quantifier: SqlSubqueryQuantifier,
+        query: SqlQuery
+    )
 
     /**
      * A `GROUPING` expression: returns 1 if a column is being aggregated
@@ -178,7 +205,7 @@ enum SqlExpr:
      *
      * Renders as `GROUPING(expr [, ...])`.
      */
-    case Grouping(items: List[SqlExpr])
+    case Grouping(items: NonEmptyList[SqlExpr])
 
     /**
      * A raw, unquoted identifier used as a function name.
