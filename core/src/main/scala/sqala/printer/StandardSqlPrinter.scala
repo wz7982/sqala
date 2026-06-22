@@ -3105,7 +3105,9 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                         c == '~' ||
                         c == '&' ||
                         c == '|' ||
-                        c == ','
+                        c == ',' ||
+                        c == '#' ||
+                        c == '@'
                     then
                         sqlBuilder.append(c)
             case SqlUnsafeCustomToken.Expr(expr) =>
