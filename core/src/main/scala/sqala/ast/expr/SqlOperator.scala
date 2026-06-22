@@ -1,6 +1,6 @@
 package sqala.ast.expr
 
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 
 /**
  * Binary operators used in expressions.
@@ -121,11 +121,12 @@ enum SqlBinaryOperator(val precedence: Int):
     case Or extends SqlBinaryOperator(10)
 
     /**
-     * A custom binary operator with a free-form name.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
-     * Renders as the given `tokens` directly.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      */
-    case Custom(tokens: List[SqlCustomToken]) extends SqlBinaryOperator(0)
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken]) extends SqlBinaryOperator(0)
 
 /**
  * Unary operators used in expressions.
@@ -153,11 +154,12 @@ enum SqlUnaryOperator:
     case Not
 
     /**
-     * A custom unary operator with a free-form name.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
-     * Renders as the given `tokens` directly.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])
 
 /**
  * Quantified comparison operators used in expressions.
@@ -169,39 +171,46 @@ enum SqlQuantifiedComparisonOperator:
      * Renders as `=`.
      */
     case Equal
+
     /**
      * Not-equal comparison.
      *
      * Renders as `<>`.
      */
     case NotEqual
+
     /**
      * Greater-than comparison.
      *
      * Renders as `>`.
      */
     case GreaterThan
+
     /**
      * Greater-than-or-equal comparison.
      *
      * Renders as `>=`.
      */
     case GreaterThanEqual
+
     /**
      * Less-than comparison.
      *
      * Renders as `<`.
      */
     case LessThan
+
     /**
      * Less-than-or-equal comparison.
      *
      * Renders as `<=`.
      */
     case LessThanEqual
+
     /**
-     * A custom quantified comparison operator with a free-form name.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
-     * Renders as the given `tokens` directly.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])

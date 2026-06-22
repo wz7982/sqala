@@ -1,8 +1,9 @@
 package sqala.ast.expr
 
 import sqala.ast.statement.SqlQuery
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
+import sqala.ast.{expr => SqlCustomToken}
 
 /**
  * A right-hand operand for an `IN` expression.
@@ -28,6 +29,39 @@ enum SqlInRightOperand:
  * Renders as `WHEN expr THEN expr`.
  */
 case class SqlCaseBranch(when: SqlExpr, `then`: SqlExpr)
+
+/**
+ * Character encoding.
+ */
+enum SqlEncoding:
+    /**
+     * UTF-8 encoding.
+     *
+     * Renders as `UTF8`.
+     */
+    case Utf8
+
+    /**
+     * UTF-16 encoding.
+     *
+     * Renders as `UTF16`.
+     */
+    case Utf16
+
+    /**
+     * UTF-32 encoding.
+     *
+     * Renders as `UTF32`.
+     */
+    case Utf32
+
+    /**
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
+     *
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
+     */
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])
 
 /**
  * A `TRIM` specification with optional mode and value.
@@ -117,38 +151,6 @@ enum SqlJsonNodeType:
      * Renders as `SCALAR`.
      */
     case Scalar
-
-/**
- * Character encoding for JSON format clause.
- */
-enum SqlJsonEncoding:
-    /**
-     * UTF-8 encoding.
-     *
-     * Renders as `UTF8`.
-     */
-    case Utf8
-
-    /**
-     * UTF-16 encoding.
-     *
-     * Renders as `UTF16`.
-     */
-    case Utf16
-
-    /**
-     * UTF-32 encoding.
-     *
-     * Renders as `UTF32`.
-     */
-    case Utf32
-
-    /**
-     * A custom encoding with a free-form name.
-     *
-     * Renders as the given `encoding` string directly.
-     */
-    case Custom(tokens: List[SqlCustomToken])
 
 /**
  * Null handling mode for JSON functions.
@@ -394,14 +396,14 @@ enum SqlJsonExistsErrorBehavior:
  *
  * Renders as `FORMAT JSON [ENCODING UTF8|UTF16|UTF32]`.
  */
-case class SqlJsonInput(encoding: Option[SqlJsonEncoding])
+case class SqlJsonInput(encoding: Option[SqlEncoding])
 
 /**
  * Output format specification for JSON returning functions.
  *
  * Renders as `FORMAT JSON [ENCODING UTF8|UTF16|UTF32]`.
  */
-case class SqlJsonOutputFormat(encoding: Option[SqlJsonEncoding])
+case class SqlJsonOutputFormat(encoding: Option[SqlEncoding])
 
 /**
  * A `RETURNING` clause for JSON functions.

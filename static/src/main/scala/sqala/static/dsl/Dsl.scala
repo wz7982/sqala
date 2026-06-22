@@ -4,7 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.*
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.metadata.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
@@ -1563,7 +1563,7 @@ def createBinaryExpr[T, CL <: Int](left: Expr[?, ?], operator: String, right: Ex
     Expr(
         SqlExpr.Binary(
             left.asSqlExpr,
-            SqlBinaryOperator.Custom(SqlCustomToken.Keyword(operator) :: Nil),
+            SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword(operator) :: Nil),
             right.asSqlExpr
         )
     )

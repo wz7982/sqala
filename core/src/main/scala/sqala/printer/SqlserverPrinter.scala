@@ -10,7 +10,7 @@ import sqala.util.NonEmptyList
 /**
  * SQL Server dialect printer.
  */
-class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
     override val leftQuote: Char = '['
 
     override val rightQuote: Char = ']'
