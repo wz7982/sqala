@@ -7,7 +7,7 @@ import sqala.ast.statement.SqlStatement
 /**
  * SQLite dialect printer.
  */
-class SqlitePrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+class SqlitePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
     override def printLimit(limit: SqlLimit): Unit =
         sqlBuilder.append("LIMIT ")
         printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))

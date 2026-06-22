@@ -1,6 +1,6 @@
 package sqala.ast.quantifier
 
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 
 /**
  * Quantifiers for aggregate functions and set operations.
@@ -21,11 +21,9 @@ enum SqlQuantifier:
     case Distinct
 
     /**
-     * A custom quantifier with interpolated sub-expressions.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
      * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
-     *
-     * The `tokens` are interleaved, and the whole
-     * expression is wrapped in parentheses.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])

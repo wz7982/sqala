@@ -3,9 +3,10 @@ package sqala.ast.token
 import sqala.ast.expr.SqlExpr
 
 /**
- * A custom token that can be used in SQL queries.
+ * ⚠️ A unsafe custom token that can be used in SQL queries.
+ * ⚠️ Do not pass user input directly!
  */
-enum SqlCustomToken:
+enum SqlUnsafeCustomToken:
     /**
      * A keyword token.
      *

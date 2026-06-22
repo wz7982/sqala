@@ -6,7 +6,7 @@ import sqala.ast.table.SqlTableAlias
 /**
  * Oracle dialect printer.
  */
-class OraclePrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+class OraclePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
     override def printCteRecursive(): Unit =
         ()
 

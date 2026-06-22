@@ -3,7 +3,7 @@ package sqala.ast.expr
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
 
 /**
@@ -470,11 +470,9 @@ enum SqlExpr:
     case MatchPhase(phase: SqlMatchPhase, expr: SqlExpr)
 
     /**
-     * A free-form custom expression with interpolated sub-expressions.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
      * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
-     *
-     * The `tokens` are interleaved, and the whole
-     * expression is wrapped in parentheses.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])

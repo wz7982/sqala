@@ -7,13 +7,13 @@ import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.{SqlQuery, SqlStatement}
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
 
 /**
  * MySQL dialect printer.
  */
-class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+class MysqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
     override val leftQuote: Char = '`'
 
     override val rightQuote: Char = '`'
@@ -61,7 +61,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                 printExpr(
                     SqlExpr.Binary(
                         expr.left,
-                        SqlBinaryOperator.Custom(SqlCustomToken.Keyword("<=>") :: Nil),
+                        SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword("<=>") :: Nil),
                         expr.right
                     )
                 )
@@ -71,7 +71,7 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrint
                         SqlUnaryOperator.Not,
                         SqlExpr.Binary(
                             expr.left,
-                            SqlBinaryOperator.Custom(SqlCustomToken.Keyword("<=>") :: Nil),
+                            SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword("<=>") :: Nil),
                             expr.right
                         )
                     )

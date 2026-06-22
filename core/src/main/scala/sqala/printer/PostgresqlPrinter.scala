@@ -7,7 +7,7 @@ import sqala.ast.statement.SqlStatement
 /**
  * PostgreSQL dialect printer.
  */
-class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends SqlPrinter(standardEscapeStrings):
+class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
     override def printLimit(limit: SqlLimit): Unit =
         val standardMode = limit.fetch match
             case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>

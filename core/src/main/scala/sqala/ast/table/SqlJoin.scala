@@ -1,7 +1,7 @@
 package sqala.ast.table
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
 
 /**
@@ -44,11 +44,12 @@ enum SqlJoinType:
     case Cross
 
     /**
-     * A custom join type with a free-form name.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
-     * Renders as the given `tokens` directly.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])
 
 /**
  * Join condition for table joins.

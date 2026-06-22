@@ -1,6 +1,6 @@
 package sqala.ast.expr
 
-import sqala.ast.token.SqlCustomToken
+import sqala.ast.token.SqlUnsafeCustomToken
 
 /**
  * Data types used in `CAST` expressions and column definitions.
@@ -154,8 +154,9 @@ enum SqlType:
     case Array(`type`: SqlType)
 
     /**
-     * A custom type with a free-form name.
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
      *
-     * Renders as the given `tokens` directly.
+     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
      */
-    case Custom(tokens: List[SqlCustomToken])
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])
