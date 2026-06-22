@@ -3,7 +3,6 @@ package sqala.ast.expr
 import sqala.ast.statement.SqlQuery
 import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
-import sqala.ast.{expr => SqlCustomToken}
 
 /**
  * A right-hand operand for an `IN` expression.
