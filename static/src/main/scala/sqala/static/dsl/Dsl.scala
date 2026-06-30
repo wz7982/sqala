@@ -938,7 +938,6 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
         pc: PivotContext,
         av: AsExpr[V, CL],
         as: AsSqlExpr[a.R],
-        asv: AsSqlExpr[av.R],
         i: In[T, V, CL],
         ia: CanInAgg[i.KS],
         e: ExcludeCurrentLevelColumn[i.KS, CL],
