@@ -66,10 +66,12 @@ object AsExpr:
 
     given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
         a: AsExpr[T, CL],
+        to: ToOption[Expr[a.R, Column[CL]]],
+        ao: AsExpr[to.R, CL],
         refl: L > CL =:= true
-    ): Aux[Q, CL, a.R, Composite[OKS]] =
+    ): Aux[Q, CL, ao.R, Composite[OKS]] =
         new AsExpr[Q, CL]:
-            type R = a.R
+            type R = ao.R
 
             type K = Composite[OKS]
 
