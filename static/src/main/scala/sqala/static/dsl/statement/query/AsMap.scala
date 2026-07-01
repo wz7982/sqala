@@ -299,21 +299,23 @@ object AsMap:
     given scalarQuery[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
         a: AsExpr[T, CL],
         as: AsSqlExpr[a.R],
+        to: ToOption[Expr[a.R, Column[CL]]],
+        ao: AsExpr[to.R, CL],
         refl: L > CL =:= true
-    ): Aux[Q, CL, Expr[a.R, Column[CL]], OKS] =
+    ): Aux[Q, CL, to.R, OKS] =
         new AsMap[Q, CL]:
-            type R = Expr[a.R, Column[CL]]
+            type R = to.R
 
             type KS = OKS
 
             def transform(x: Q): R =
-                Expr(SqlExpr.Subquery(x.tree))
+                to.toOption(Expr(SqlExpr.Subquery(x.tree)))
 
             def offset(x: Q): Int =
                 1
 
             def asSelectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
-                SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c$cursor")) :: Nil
+                SqlSelectItem.Expr(ao.asExpr(transform(x)).asSqlExpr, Some(s"c$cursor")) :: Nil
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
