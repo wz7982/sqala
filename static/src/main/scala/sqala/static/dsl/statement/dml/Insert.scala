@@ -1,14 +1,16 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.{SqlInsertMode, SqlStatement}
+import sqala.ast.statement.{SqlInsertMode, SqlQuery, SqlStatement}
 import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, TableMacro}
 import sqala.static.dsl.{AsExpr, Column, Expr}
+import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.table.Table
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.deriving.Mirror
+import sqala.static.dsl.Result
 
 /**
  * Tracks the state of an `INSERT` builder, restricting which
@@ -34,7 +36,8 @@ type InsertQuery = InsertState.Query.type
 final case class InsertTree(
     private[sqala] val table: SqlTable.Ident, 
     private[sqala] val columns: List[String],
-    private[sqala] val values: List[List[SqlExpr]]
+    private[sqala] val values: List[List[SqlExpr]],
+    private[sqala] val query: Option[SqlQuery]
 )
 
 /**
@@ -61,7 +64,7 @@ final class Insert[T, S <: InsertState](
                 case Expr(SqlExpr.Column(_, c)) => c
                 case _ => throw MatchError(i)
         val tree =
-            InsertTree(sqlTable, columns, Nil)
+            InsertTree(sqlTable, columns, Nil, None)
         new Insert(tree)
 
     /**
@@ -98,22 +101,42 @@ final class Insert[T, S <: InsertState](
         values(row :: Nil)
 
     /**
+      * Provides a query for the `INSERT`. Maps to
+      * `(SELECT ...)`
+      *
+      * {{{
+     * insert[User](u => (u.id, u.name)).query(from(User).filter(u => u.id == 1).map(u => (u.id, u.name)))
+     * }}}
+      */
+    def query[QT](query: Query[QT, ?, ?, ?])(using 
+        r: Result[QT], 
+        rs: r.R =:= T,
+        refl: S =:= InsertTable
+    ): Insert[T, InsertQuery] =
+        new Insert(tree.copy(query = Some(query.tree)))
+
+    /**
      * Returns an `INSERT` statement.
      */
     private[sqala] def toSqlStatement: SqlStatement.Insert =
+        val insertData =
+            if tree.query.isDefined then
+                SqlInsertMode.Subquery(tree.query.get)
+            else
+                SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
+
         SqlStatement.Insert(
             tree.table, 
             tree.columns, 
-            SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
+            insertData
         )
-
 
 object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree =
             InsertTree(
-                SqlTable.Ident(tableName, None, None, None, None), Nil, Nil
+                SqlTable.Ident(tableName, None, None, None, None), Nil, Nil, None
             )
         new Insert(tree)
 
@@ -143,6 +166,7 @@ object Insert:
             InsertTree(
                 SqlTable.Ident(tableName, None, None, None, None), 
                 columns, 
-                values.toList
+                values.toList,
+                None
             )
         )
