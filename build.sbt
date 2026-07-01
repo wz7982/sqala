@@ -39,7 +39,9 @@ lazy val commonSettings = Seq(
     scalacOptions += "-Wunused:locals",
     scalacOptions += "-Wunused:explicits",
     scalacOptions += "-Wsafe-init",
-    scalacOptions += "-Yexplicit-nulls"
+    scalacOptions += "-Yexplicit-nulls",
+
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
