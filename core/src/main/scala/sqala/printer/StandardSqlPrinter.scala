@@ -772,7 +772,9 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             case SqlInRightOperand.Values(values) =>
                 printExpr(SqlExpr.Tuple(values))
             case SqlInRightOperand.Subquery(query) =>
+                sqlBuilder.append("(")
                 printQuery(query)
+                sqlBuilder.append(")")
 
     /**
      * Prints an in expression.
