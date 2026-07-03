@@ -1,6 +1,6 @@
 package sqala.ast.table
 
-import sqala.ast.expr.{SqlExpr, SqlJsonPassing}
+import sqala.ast.expr.{SqlExpr, SqlJsonPassingItem}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.util.NonEmptyList
 
@@ -63,7 +63,7 @@ enum SqlTable:
         expr: SqlExpr,
         path: SqlExpr,
         pathAlias: Option[String],
-        passingItems: List[SqlJsonPassing],
+        passingItems: List[SqlJsonPassingItem],
         columns: NonEmptyList[SqlJsonColumn],
         onError: Option[SqlJsonErrorBehavior],
         alias: Option[SqlTableAlias],
