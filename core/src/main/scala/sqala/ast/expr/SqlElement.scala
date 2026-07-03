@@ -117,7 +117,7 @@ enum SqlJsonUniquenessMode:
  *
  * Renders as `expr AS "alias"`.
  */
-case class SqlJsonPassing(expr: SqlExpr, alias: String)
+case class SqlJsonPassingItem(expr: SqlExpr, alias: String)
 
 /**
  * JSON node type check.

@@ -1402,7 +1402,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
 
         if expr.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
-            printList(expr.passingItems)(printJsonPassing)
+            printList(expr.passingItems)(printJsonPassingItem)
 
         for o <- expr.output do
             sqlBuilder.append(" ")
@@ -1437,7 +1437,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
 
         if expr.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
-            printList(expr.passingItems)(printJsonPassing)
+            printList(expr.passingItems)(printJsonPassingItem)
 
         for o <- expr.output do
             sqlBuilder.append(" ")
@@ -1520,7 +1520,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
 
         if expr.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
-            printList(expr.passingItems)(printJsonPassing)
+            printList(expr.passingItems)(printJsonPassingItem)
 
         for e <- expr.onError do
             sqlBuilder.append(" ")
@@ -1572,7 +1572,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
     /**
      * Prints a JSON passing argument.
      */
-    def printJsonPassing(passing: SqlJsonPassing): Unit =
+    def printJsonPassingItem(passing: SqlJsonPassingItem): Unit =
         printExpr(passing.expr)
         sqlBuilder.append(" AS ")
         printIdent(passing.alias)
@@ -2201,7 +2201,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
 
         if table.passingItems.nonEmpty then
             sqlBuilder.append(" PASSING ")
-            printList(table.passingItems)(printJsonPassing)
+            printList(table.passingItems)(printJsonPassingItem)
 
         sqlBuilder.append(" COLUMNS(\n")
         push()

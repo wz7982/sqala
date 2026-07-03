@@ -284,7 +284,7 @@ enum SqlExpr:
     case JsonQueryFunc(
         expr: SqlExpr,
         path: SqlExpr,
-        passingItems: List[SqlJsonPassing],
+        passingItems: List[SqlJsonPassingItem],
         output: Option[SqlJsonOutput],
         wrapper: Option[SqlJsonQueryWrapperBehavior],
         quotes: Option[SqlJsonQueryQuotesBehavior],
@@ -305,7 +305,7 @@ enum SqlExpr:
     case JsonValueFunc(
         expr: SqlExpr,
         path: SqlExpr,
-        passingItems: List[SqlJsonPassing],
+        passingItems: List[SqlJsonPassingItem],
         output: Option[SqlJsonOutput],
         onEmpty: Option[SqlJsonValueEmptyBehavior],
         onError: Option[SqlJsonValueErrorBehavior]
@@ -352,7 +352,7 @@ enum SqlExpr:
     case JsonExistsFunc(
         expr: SqlExpr,
         path: SqlExpr,
-        passingItems: List[SqlJsonPassing],
+        passingItems: List[SqlJsonPassingItem],
         onError: Option[SqlJsonExistsErrorBehavior]
     )
 
