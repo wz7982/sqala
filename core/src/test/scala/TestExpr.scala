@@ -1,4 +1,5 @@
 import sqala.ast.expr.*
+import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.SqlQuery
 import sqala.util.NonEmptyList
 
@@ -360,3 +361,57 @@ class TestExpr extends munit.FunSuite:
         )
         for (p, sql) <- cases do
             assertEquals(createSql(_.printMatchPhase(p)), sql)
+
+    test("window frame unit"):
+        val cases: List[(SqlWindowFrameUnit, String)] = List(
+            SqlWindowFrameUnit.Rows -> "ROWS",
+            SqlWindowFrameUnit.Range -> "RANGE",
+            SqlWindowFrameUnit.Groups -> "GROUPS",
+        )
+        for (u, sql) <- cases do
+            assertEquals(createSql(_.printWindowFrameUnit(u)), sql)
+
+    test("window frame bound"):
+        val cases: List[(SqlWindowFrameBound, String)] = List(
+            SqlWindowFrameBound.CurrentRow -> "CURRENT ROW",
+            SqlWindowFrameBound.UnboundedPreceding -> "UNBOUNDED PRECEDING",
+            SqlWindowFrameBound.UnboundedFollowing -> "UNBOUNDED FOLLOWING",
+            SqlWindowFrameBound.Preceding(SqlExpr.NumberLiteral(1)) -> "1 PRECEDING",
+            SqlWindowFrameBound.Following(SqlExpr.NumberLiteral(10)) -> "10 FOLLOWING",
+        )
+        for (b, sql) <- cases do
+            assertEquals(createSql(_.printWindowFrameBound(b)), sql)
+
+    test("window frame exclude mode"):
+        val cases: List[(SqlWindowFrameExcludeMode, String)] = List(
+            SqlWindowFrameExcludeMode.CurrentRow -> "CURRENT ROW",
+            SqlWindowFrameExcludeMode.Group -> "GROUP",
+            SqlWindowFrameExcludeMode.Ties -> "TIES",
+            SqlWindowFrameExcludeMode.NoOthers -> "NO OTHERS",
+        )
+        for (m, sql) <- cases do
+            assertEquals(createSql(_.printWindowFrameExcludeMode(m)), sql)
+
+    test("window frame"):
+        val cases: List[(SqlWindowFrame, String)] = List(
+            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None) -> " ROWS CURRENT ROW",
+            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, Some(SqlWindowFrameExcludeMode.CurrentRow)) -> " ROWS CURRENT ROW EXCLUDE CURRENT ROW",
+            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, None) -> " ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING",
+            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, Some(SqlWindowFrameExcludeMode.Group)) -> " ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE GROUP",
+        )
+        for (f, sql) <- cases do
+            assertEquals(createSql(_.printWindowFrame(f)), sql)
+
+    test("window"):
+        val frame = SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None)
+        val item = SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)
+        val cases: List[(SqlWindow, String)] = List(
+            SqlWindow(Nil, Nil, None) -> "()",
+            SqlWindow(List(SqlExpr.Column(None, "a")), Nil, None) -> """(PARTITION BY "a")""",
+            SqlWindow(Nil, List(item), None) -> """(ORDER BY "b" ASC)""",
+            SqlWindow(List(SqlExpr.Column(None, "a")), List(item), None) -> """(PARTITION BY "a" ORDER BY "b" ASC)""",
+            SqlWindow(Nil, Nil, Some(frame)) -> "(ROWS CURRENT ROW)",
+            SqlWindow(List(SqlExpr.Column(None, "a")), List(item), Some(frame)) -> """(PARTITION BY "a" ORDER BY "b" ASC ROWS CURRENT ROW)""",
+        )
+        for (w, sql) <- cases do
+            assertEquals(createSql(_.printWindow(w)), sql)

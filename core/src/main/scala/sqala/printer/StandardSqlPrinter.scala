@@ -1149,7 +1149,6 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
     def printWindowFrame(frame: SqlWindowFrame): Unit =
         frame match
             case SqlWindowFrame.Start(unit, start, exclude) =>
-                sqlBuilder.append(" ")
                 printWindowFrameUnit(unit)
                 sqlBuilder.append(" ")
                 printWindowFrameBound(start)
@@ -1158,7 +1157,6 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" EXCLUDE ")
                     printWindowFrameExcludeMode(e)
             case SqlWindowFrame.Between(unit, start, end, exclude) =>
-                sqlBuilder.append(" ")
                 printWindowFrameUnit(unit)
                 sqlBuilder.append(" BETWEEN ")
                 printWindowFrameBound(start)
@@ -1166,7 +1164,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 printWindowFrameBound(end)
 
                 for e <- exclude do
-                    sqlBuilder.append(" ")
+                    sqlBuilder.append(" EXCLUDE ")
                     printWindowFrameExcludeMode(e)
 
     /**
@@ -1186,6 +1184,8 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             printList(window.orderBy)(printOrderingItem)
 
         for f <- window.frame do
+            if window.partitionBy.nonEmpty || window.orderBy.nonEmpty then
+                sqlBuilder.append(" ")
             printWindowFrame(f)
 
         sqlBuilder.append(")")
