@@ -176,7 +176,7 @@ enum SqlExpr:
     /**
      * A subquery expression, optionally prefixed with a quantifier.
      *
-     * Renders as `[ANY|ALL|EXISTS] (query)`.
+     * Renders as `(query)`.
      */
     case Subquery(query: SqlQuery)
 
