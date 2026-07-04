@@ -1,5 +1,6 @@
 import sqala.ast.expr.*
-import sqala.ast.order.SqlOrderingItem
+import sqala.ast.order.*
+import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
 import sqala.util.NonEmptyList
 
@@ -394,10 +395,10 @@ class TestExpr extends munit.FunSuite:
 
     test("window frame"):
         val cases: List[(SqlWindowFrame, String)] = List(
-            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None) -> " ROWS CURRENT ROW",
-            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, Some(SqlWindowFrameExcludeMode.CurrentRow)) -> " ROWS CURRENT ROW EXCLUDE CURRENT ROW",
-            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, None) -> " ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING",
-            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, Some(SqlWindowFrameExcludeMode.Group)) -> " ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE GROUP",
+            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None) -> "ROWS CURRENT ROW",
+            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, Some(SqlWindowFrameExcludeMode.CurrentRow)) -> "ROWS CURRENT ROW EXCLUDE CURRENT ROW",
+            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, None) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING",
+            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, Some(SqlWindowFrameExcludeMode.Group)) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE GROUP",
         )
         for (f, sql) <- cases do
             assertEquals(createSql(_.printWindowFrame(f)), sql)
@@ -415,3 +416,579 @@ class TestExpr extends munit.FunSuite:
         )
         for (w, sql) <- cases do
             assertEquals(createSql(_.printWindow(w)), sql)
+
+    test("column"):
+        val cases: List[(SqlExpr.Column, String)] = List(
+            SqlExpr.Column(None, "x") -> """"x"""",
+            SqlExpr.Column(Some("t"), "x") -> """"t"."x"""",
+            SqlExpr.Column(None, """x"; DROP TABLE users; --""") -> """"x""; DROP TABLE users; --"""",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)
+
+    test("null literal"):
+        assertEquals(createSql(_.printExpr(SqlExpr.NullLiteral)), "NULL")
+
+    test("string literal"):
+        val cases: List[(SqlExpr.StringLiteral, String)] = List(
+            SqlExpr.StringLiteral("hello") -> "'hello'",
+            SqlExpr.StringLiteral("") -> "''",
+            SqlExpr.StringLiteral("it's") -> "'it''s'",
+        )
+        for (s, sql) <- cases do
+            assertEquals(createSql(_.printExpr(s)), sql)
+
+    test("number literal"):
+        val cases: List[(SqlExpr.NumberLiteral, String)] = List(
+            SqlExpr.NumberLiteral(BigDecimal(42)) -> "42",
+            SqlExpr.NumberLiteral(BigDecimal("3.14")) -> "3.14",
+        )
+        for (n, sql) <- cases do
+            assertEquals(createSql(_.printExpr(n)), sql)
+
+    test("boolean literal"):
+        val cases: List[(SqlExpr.BooleanLiteral, String)] = List(
+            SqlExpr.BooleanLiteral(true) -> "TRUE",
+            SqlExpr.BooleanLiteral(false) -> "FALSE",
+        )
+        for (b, sql) <- cases do
+            assertEquals(createSql(_.printExpr(b)), sql)
+
+    test("time literal"):
+        val cases: List[(SqlExpr.TimeLiteral, String)] = List(
+            SqlExpr.TimeLiteral(SqlTimeType.Date, "2023-01-01") -> "DATE '2023-01-01'",
+            SqlExpr.TimeLiteral(SqlTimeType.Timestamp(None), "2023-01-01 12:00:00") -> "TIMESTAMP '2023-01-01 12:00:00'",
+            SqlExpr.TimeLiteral(SqlTimeType.Time(None), "12:00:00") -> "TIME '12:00:00'",
+        )
+        for (t, sql) <- cases do
+            assertEquals(createSql(_.printExpr(t)), sql)
+
+    test("interval literal"):
+        val cases: List[(SqlExpr.IntervalLiteral, String)] = List(
+            SqlExpr.IntervalLiteral("1", SqlIntervalField.Single(SqlTimeUnit.Day)) -> "INTERVAL '1' DAY",
+            SqlExpr.IntervalLiteral("1-6", SqlIntervalField.To(SqlTimeUnit.Year, SqlTimeUnit.Month)) -> "INTERVAL '1-6' YEAR TO MONTH",
+        )
+        for (i, sql) <- cases do
+            assertEquals(createSql(_.printExpr(i)), sql)
+
+    test("tuple"):
+        val cases: List[(SqlExpr.Tuple, String)] = List(
+            SqlExpr.Tuple(NonEmptyList(SqlExpr.NumberLiteral(1), Nil)) -> "(1)",
+            SqlExpr.Tuple(NonEmptyList(SqlExpr.NumberLiteral(1), List(SqlExpr.NumberLiteral(2), SqlExpr.NumberLiteral(3)))) -> "(1, 2, 3)",
+        )
+        for (t, sql) <- cases do
+            assertEquals(createSql(_.printExpr(t)), sql)
+
+    test("array"):
+        val inner1 = SqlExpr.Array(List(SqlExpr.NumberLiteral(1)))
+        val inner2 = SqlExpr.Array(List(SqlExpr.NumberLiteral(2)))
+        val cases: List[(SqlExpr.Array, String)] = List(
+            SqlExpr.Array(List(SqlExpr.NumberLiteral(1))) -> "ARRAY[1]",
+            SqlExpr.Array(List(SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(2))) -> "ARRAY[1, 2]",
+            SqlExpr.Array(List(inner1, inner2)) -> "ARRAY[ARRAY[1], ARRAY[2]]",
+        )
+        for (a, sql) <- cases do
+            assertEquals(createSql(_.printExpr(a)), sql)
+
+    test("unary"):
+        val cases: List[(SqlExpr.Unary, String)] = List(
+            SqlExpr.Unary(SqlUnaryOperator.Not, SqlExpr.Column(None, "x")) -> """NOT("x")""",
+            SqlExpr.Unary(SqlUnaryOperator.Negative, SqlExpr.NumberLiteral(1)) -> "-(1)",
+            SqlExpr.Unary(SqlUnaryOperator.Positive, SqlExpr.NumberLiteral(1)) -> "+(1)",
+        )
+        for (u, sql) <- cases do
+            assertEquals(createSql(_.printExpr(u)), sql)
+
+    test("binary"):
+        val col = (n: String) => SqlExpr.Column(None, n)
+        val colA = col("a") 
+        val colB = col("b") 
+        val colC = col("c")
+        val cases: List[(SqlExpr.Binary, String)] = List(
+            SqlExpr.Binary(SqlExpr.NumberLiteral(1), SqlBinaryOperator.Plus, SqlExpr.NumberLiteral(2)) -> "1 + 2",
+            SqlExpr.Binary(SqlExpr.NumberLiteral(1), SqlBinaryOperator.Times, SqlExpr.NumberLiteral(2)) -> "1 * 2",
+            SqlExpr.Binary(SqlExpr.Binary(colA, SqlBinaryOperator.Plus, colB), SqlBinaryOperator.Times, colC) -> """("a" + "b") * "c"""",
+            SqlExpr.Binary(colA, SqlBinaryOperator.Times, SqlExpr.Binary(colB, SqlBinaryOperator.Plus, colC)) -> """"a" * ("b" + "c")""",
+            SqlExpr.Binary(SqlExpr.Binary(colA, SqlBinaryOperator.Times, colB), SqlBinaryOperator.Plus, colC) -> """"a" * "b" + "c"""",
+            SqlExpr.Binary(colA, SqlBinaryOperator.Plus, SqlExpr.Binary(colB, SqlBinaryOperator.Times, colC)) -> """"a" + "b" * "c"""",
+        )
+        for (b, sql) <- cases do
+            assertEquals(createSql(_.printExpr(b)), sql)
+
+    test("json test"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.JsonTest, String)] = List(
+            SqlExpr.JsonTest(col, None, None, false) -> """"x" IS JSON""",
+            SqlExpr.JsonTest(col, None, Some(SqlJsonUniquenessMode.With), false) -> """"x" IS JSON WITH UNIQUE KEYS""",
+            SqlExpr.JsonTest(col, Some(SqlJsonNodeType.Value), None, false) -> """"x" IS JSON VALUE""",
+            SqlExpr.JsonTest(col, Some(SqlJsonNodeType.Value), Some(SqlJsonUniquenessMode.With), false) -> """"x" IS JSON VALUE WITH UNIQUE KEYS""",
+            SqlExpr.JsonTest(col, None, None, true) -> """"x" IS NOT JSON""",
+            SqlExpr.JsonTest(col, None, Some(SqlJsonUniquenessMode.With), true) -> """"x" IS NOT JSON WITH UNIQUE KEYS""",
+            SqlExpr.JsonTest(col, Some(SqlJsonNodeType.Value), None, true) -> """"x" IS NOT JSON VALUE""",
+            SqlExpr.JsonTest(col, Some(SqlJsonNodeType.Value), Some(SqlJsonUniquenessMode.With), true) -> """"x" IS NOT JSON VALUE WITH UNIQUE KEYS""",
+        )
+        for (j, sql) <- cases do
+            assertEquals(createSql(_.printExpr(j)), sql)
+
+    test("in"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.In, String)] = List(
+            SqlExpr.In(col, SqlInRightOperand.Values(NonEmptyList(SqlExpr.NumberLiteral(1), Nil)), false) -> """"x" IN (1)""",
+            SqlExpr.In(col, SqlInRightOperand.Values(NonEmptyList(SqlExpr.NumberLiteral(1), List(SqlExpr.NumberLiteral(2)))), true) -> """"x" NOT IN (1, 2)""",
+        )
+        for (i, sql) <- cases do
+            assertEquals(createSql(_.printExpr(i)), sql)
+
+    test("between"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.Between, String)] = List(
+            SqlExpr.Between(col, SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(10), false) -> """"x" BETWEEN 1 AND 10""",
+            SqlExpr.Between(col, SqlExpr.NumberLiteral(1), SqlExpr.NumberLiteral(10), true) -> """"x" NOT BETWEEN 1 AND 10""",
+        )
+        for (b, sql) <- cases do
+            assertEquals(createSql(_.printExpr(b)), sql)
+
+    test("like"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.Like, String)] = List(
+            SqlExpr.Like(col, SqlExpr.StringLiteral("%abc%"), None, false) -> """"x" LIKE '%abc%'""",
+            SqlExpr.Like(col, SqlExpr.StringLiteral("%abc%"), None, true) -> """"x" NOT LIKE '%abc%'""",
+            SqlExpr.Like(col, SqlExpr.StringLiteral("%abc%"), Some(SqlExpr.StringLiteral("\\")), true) -> """"x" NOT LIKE '%abc%' ESCAPE '\'""",
+        )
+        for (l, sql) <- cases do
+            assertEquals(createSql(_.printExpr(l)), sql)
+
+    test("similar to"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.SimilarTo, String)] = List(
+            SqlExpr.SimilarTo(col, SqlExpr.StringLiteral("%abc%"), None, false) -> """"x" SIMILAR TO '%abc%'""",
+            SqlExpr.SimilarTo(col, SqlExpr.StringLiteral("%abc%"), None, true) -> """"x" NOT SIMILAR TO '%abc%'""",
+        )
+        for (s, sql) <- cases do
+            assertEquals(createSql(_.printExpr(s)), sql)
+
+    test("case"):
+        val col = (n: String) => SqlExpr.Column(None, n)
+        val cases: List[(SqlExpr.Case, String)] = List(
+            SqlExpr.Case(NonEmptyList(SqlCaseBranch(col("a"), col("b")), Nil), None) -> """CASE WHEN "a" THEN "b" END""",
+            SqlExpr.Case(NonEmptyList(SqlCaseBranch(col("a"), col("b")), List(SqlCaseBranch(col("c"), col("d")))), Some(col("e"))) -> """CASE WHEN "a" THEN "b" WHEN "c" THEN "d" ELSE "e" END""",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)
+
+    test("simple case"):
+        val col = (n: String) => SqlExpr.Column(None, n)
+        val cases: List[(SqlExpr.SimpleCase, String)] = List(
+            SqlExpr.SimpleCase(col("x"), NonEmptyList(SqlCaseBranch(col("a"), col("b")), Nil), None) -> """CASE "x" WHEN "a" THEN "b" END""",
+            SqlExpr.SimpleCase(col("x"), NonEmptyList(SqlCaseBranch(col("a"), col("b")), List(SqlCaseBranch(col("c"), col("d")))), Some(col("e"))) -> """CASE "x" WHEN "a" THEN "b" WHEN "c" THEN "d" ELSE "e" END""",
+        )
+        for (s, sql) <- cases do
+            assertEquals(createSql(_.printExpr(s)), sql)
+
+    test("coalesce"):
+        val cases: List[(SqlExpr.Coalesce, String)] = List(
+            SqlExpr.Coalesce(NonEmptyList(SqlExpr.NumberLiteral(1), Nil)) -> "COALESCE(1)",
+            SqlExpr.Coalesce(NonEmptyList(SqlExpr.NumberLiteral(1), List(SqlExpr.NumberLiteral(2), SqlExpr.NumberLiteral(3)))) -> "COALESCE(1, 2, 3)",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)
+
+    test("nullif"):
+        val col = SqlExpr.Column(None, "x")
+        assertEquals(createSql(_.printExpr(SqlExpr.NullIf(col, SqlExpr.Column(None, "y")))), """NULLIF("x", "y")""")
+
+    test("cast"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.Cast, String)] = List(
+            SqlExpr.Cast(col, SqlType.Int) -> """CAST("x" AS INTEGER)""",
+            SqlExpr.Cast(col, SqlType.Varchar(Some(255))) -> """CAST("x" AS VARCHAR(255))""",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)
+
+    test("window expr"):
+        val col = SqlExpr.CountAsteriskFunc(None, None)
+        val cases: List[(SqlExpr.Window, String)] = List(
+            SqlExpr.Window(col, SqlWindow(Nil, Nil, None)) -> """COUNT(*) OVER ()""",
+            SqlExpr.Window(col, SqlWindow(List(SqlExpr.Column(None, "y")), Nil, None)) -> """COUNT(*) OVER (PARTITION BY "y")""",
+        )
+        for (w, sql) <- cases do
+            assertEquals(createSql(_.printExpr(w)), sql)
+
+    test("subquery"):
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        assertEquals(createSql(_.printExpr(SqlExpr.Subquery(q))), "(\n    VALUES (1)\n)")
+
+    test("exists predicate"):
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        assertEquals(createSql(_.printExpr(SqlExpr.ExistsPredicate(q))), "EXISTS(\n    VALUES (1)\n)")
+
+    test("quantified comparison predicate"):
+        val col = SqlExpr.Column(None, "x")
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        assertEquals(createSql(_.printExpr(SqlExpr.QuantifiedComparisonPredicate(col, SqlQuantifiedComparisonOperator.Equal, SqlSubqueryQuantifier.Any, q))), "\"x\" = ANY(\n    VALUES (1)\n)")
+
+    test("grouping"):
+        val col = SqlExpr.Column(None, "x")
+        assertEquals(createSql(_.printExpr(SqlExpr.Grouping(NonEmptyList(col, List(SqlExpr.Column(None, "y")))))), """GROUPING("x", "y")""")
+
+    test("ident func"):
+        assertEquals(createSql(_.printExpr(SqlExpr.IdentFunc("FUNC"))), "FUNC")
+        assertEquals(createSql(_.printExpr(SqlExpr.IdentFunc("FUNC \""))), """FUNC""")
+
+    test("substring func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.SubstringFunc, String)] = List(
+            SqlExpr.SubstringFunc(col, SqlExpr.NumberLiteral(2), None) -> """SUBSTRING("x" FROM 2)""",
+            SqlExpr.SubstringFunc(col, SqlExpr.NumberLiteral(2), Some(SqlExpr.NumberLiteral(3))) -> """SUBSTRING("x" FROM 2 FOR 3)""",
+        )
+        for (s, sql) <- cases do
+            assertEquals(createSql(_.printExpr(s)), sql)
+
+    test("trim func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.TrimFunc, String)] = List(
+            SqlExpr.TrimFunc(col, None) -> """TRIM("x")""",
+            SqlExpr.TrimFunc(col, Some(SqlTrim(None, Some(SqlExpr.Column(None, "y"))))) -> """TRIM("y" FROM "x")""",
+        )
+        for (t, sql) <- cases do
+            assertEquals(createSql(_.printExpr(t)), sql)
+
+    test("overlay func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.OverlayFunc, String)] = List(
+            SqlExpr.OverlayFunc(col, SqlExpr.Column(None, "y"), SqlExpr.NumberLiteral(2), None) -> """OVERLAY("x" PLACING "y" FROM 2)""",
+            SqlExpr.OverlayFunc(col, SqlExpr.Column(None, "y"), SqlExpr.NumberLiteral(2), Some(SqlExpr.NumberLiteral(3))) -> """OVERLAY("x" PLACING "y" FROM 2 FOR 3)""",
+        )
+        for (o, sql) <- cases do
+            assertEquals(createSql(_.printExpr(o)), sql)
+
+    test("position func"):
+        assertEquals(createSql(_.printExpr(SqlExpr.PositionFunc(SqlExpr.Column(None, "x"), SqlExpr.Column(None, "y")))), """POSITION("x" IN "y")""")
+
+    test("extract func"):
+        assertEquals(createSql(_.printExpr(SqlExpr.ExtractFunc(SqlTimeUnit.Year, SqlExpr.Column(None, "x")))), """EXTRACT(YEAR FROM "x")""")
+
+    test("json serialize func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.JsonSerializeFunc, String)] = List(
+            SqlExpr.JsonSerializeFunc(col, None) -> """JSON_SERIALIZE("x")""",
+            SqlExpr.JsonSerializeFunc(col, Some(SqlJsonOutput(SqlType.Int, None))) -> """JSON_SERIALIZE("x" RETURNING INTEGER)""",
+        )
+        for (j, sql) <- cases do
+            assertEquals(createSql(_.printExpr(j)), sql)
+
+    test("json parse func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.JsonParseFunc, String)] = List(
+            SqlExpr.JsonParseFunc(col, None, None) -> """JSON("x")""",
+            SqlExpr.JsonParseFunc(col, Some(SqlJsonInput(None)), None) -> """JSON("x" FORMAT JSON)""",
+            SqlExpr.JsonParseFunc(col, None, Some(SqlJsonUniquenessMode.With)) -> """JSON("x" WITH UNIQUE KEYS)""",
+            SqlExpr.JsonParseFunc(col, Some(SqlJsonInput(None)), Some(SqlJsonUniquenessMode.With)) -> """JSON("x" FORMAT JSON WITH UNIQUE KEYS)""",
+        )
+        for (j, sql) <- cases do
+            assertEquals(createSql(_.printExpr(j)), sql)
+
+    test("json query func"):
+        val col = SqlExpr.Column(None, "x")
+        val path = SqlExpr.StringLiteral("$.key")
+        val passingVariants: List[(List[SqlJsonPassingItem], String)] = List(
+            Nil -> "",
+            List(SqlJsonPassingItem(col, "alias")) -> """ PASSING "x" AS "alias"""",
+            List(SqlJsonPassingItem(col, "a"), SqlJsonPassingItem(col, "b")) -> """ PASSING "x" AS "a", "x" AS "b"""",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        val wrapperVariants: List[(Option[SqlJsonQueryWrapperBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonQueryWrapperBehavior.Without(false)) -> " WITHOUT WRAPPER",
+        )
+        val quotesVariants: List[(Option[SqlJsonQueryQuotesBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonQueryQuotesBehavior(SqlJsonQueryQuotesBehaviorMode.Keep, false)) -> " KEEP QUOTES",
+        )
+        val onEmptyVariants: List[(Option[SqlJsonQueryEmptyBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonQueryEmptyBehavior.Error) -> " ERROR ON EMPTY",
+        )
+        val onErrorVariants: List[(Option[SqlJsonQueryErrorBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonQueryErrorBehavior.Null) -> " NULL ON ERROR",
+        )
+        for
+            (passing, pStr) <- passingVariants
+            (output, oStr) <- outputVariants
+            (wrapper, wStr) <- wrapperVariants
+            (quotes, qStr) <- quotesVariants
+            (onEmpty, eStr) <- onEmptyVariants
+            (onError, rStr) <- onErrorVariants
+        do
+            val expr = SqlExpr.JsonQueryFunc(col, path, passing, output, wrapper, quotes, onEmpty, onError)
+            val expected = s"""JSON_QUERY("x", '$$.key'$pStr$oStr$wStr$qStr$eStr$rStr)"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json value func"):
+        val col = SqlExpr.Column(None, "x")
+        val path = SqlExpr.StringLiteral("$.key")
+        val passingVariants: List[(List[SqlJsonPassingItem], String)] = List(
+            Nil -> "",
+            List(SqlJsonPassingItem(col, "alias")) -> """ PASSING "x" AS "alias"""",
+            List(SqlJsonPassingItem(col, "a"), SqlJsonPassingItem(col, "b")) -> """ PASSING "x" AS "a", "x" AS "b"""",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        val onEmptyVariants: List[(Option[SqlJsonValueEmptyBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonValueEmptyBehavior.Null) -> " NULL ON EMPTY",
+        )
+        val onErrorVariants: List[(Option[SqlJsonValueErrorBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonValueErrorBehavior.Error) -> " ERROR ON ERROR",
+        )
+        for
+            (passing, pStr) <- passingVariants
+            (output, oStr) <- outputVariants
+            (onEmpty, eStr) <- onEmptyVariants
+            (onError, rStr) <- onErrorVariants
+        do
+            val expr = SqlExpr.JsonValueFunc(col, path, passing, output, onEmpty, onError)
+            val expected = s"""JSON_VALUE("x", '$$.key'$pStr$oStr$eStr$rStr)"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json object func"):
+        val col = SqlExpr.Column(None, "x")
+        val itemsVariants: List[(List[SqlJsonObjectItem], String)] = List(
+            Nil -> "",
+            List(SqlJsonObjectItem(col, col)) -> """"x" VALUE "x"""",
+            List(SqlJsonObjectItem(col, col), SqlJsonObjectItem(SqlExpr.Column(None, "k2"), SqlExpr.Column(None, "v2"))) -> """"x" VALUE "x", "k2" VALUE "v2"""",
+        )
+        val nullConstructorVariants: List[(Option[SqlJsonNullConstructor], String)] = List(
+            None -> "",
+            Some(SqlJsonNullConstructor.Null) -> " NULL ON NULL",
+        )
+        val uniquenessModeVariants: List[(Option[SqlJsonUniquenessMode], String)] = List(
+            None -> "",
+            Some(SqlJsonUniquenessMode.With) -> " WITH UNIQUE KEYS",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        for
+            (items, iStr) <- itemsVariants
+            (nullConstructor, nStr) <- nullConstructorVariants
+            (uniquenessMode, uStr) <- uniquenessModeVariants
+            (output, oStr) <- outputVariants
+        do
+            val expr = SqlExpr.JsonObjectFunc(items, nullConstructor, uniquenessMode, output)
+            val expected = s"JSON_OBJECT($iStr$nStr$uStr$oStr)"
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json array func"):
+        val col = SqlExpr.Column(None, "x")
+        val itemsVariants: List[(List[SqlJsonArrayItem], String)] = List(
+            Nil -> "",
+            List(SqlJsonArrayItem(col, None)) -> """"x"""",
+            List(SqlJsonArrayItem(col, None), SqlJsonArrayItem(SqlExpr.Column(None, "y"), None)) -> """"x", "y"""",
+        )
+        val nullConstructorVariants: List[(Option[SqlJsonNullConstructor], String)] = List(
+            None -> "",
+            Some(SqlJsonNullConstructor.Null) -> " NULL ON NULL",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        for
+            (items, iStr) <- itemsVariants
+            (nullConstructor, nStr) <- nullConstructorVariants
+            (output, oStr) <- outputVariants
+        do
+            val expr = SqlExpr.JsonArrayFunc(items, nullConstructor, output)
+            val expected = s"JSON_ARRAY($iStr$nStr$oStr)"
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json exists func"):
+        val col = SqlExpr.Column(None, "x")
+        val path = SqlExpr.StringLiteral("$.key")
+        val passingVariants: List[(List[SqlJsonPassingItem], String)] = List(
+            Nil -> "",
+            List(SqlJsonPassingItem(col, "alias")) -> """ PASSING "x" AS "alias"""",
+            List(SqlJsonPassingItem(col, "a"), SqlJsonPassingItem(col, "b")) -> """ PASSING "x" AS "a", "x" AS "b"""",
+        )
+        val onErrorVariants: List[(Option[SqlJsonExistsErrorBehavior], String)] = List(
+            None -> "",
+            Some(SqlJsonExistsErrorBehavior.True) -> " TRUE ON ERROR",
+        )
+        for
+            (passing, pStr) <- passingVariants
+            (onError, eStr) <- onErrorVariants
+        do
+            val expr = SqlExpr.JsonExistsFunc(col, path, passing, onError)
+            val expected = s"""JSON_EXISTS("x", '$$.key'$pStr$eStr)"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("count asterisk func"):
+        val cases: List[(SqlExpr.CountAsteriskFunc, String)] = List(
+            SqlExpr.CountAsteriskFunc(None, None) -> "COUNT(*)",
+            SqlExpr.CountAsteriskFunc(Some("t"), None) -> """COUNT("t".*)""",
+            SqlExpr.CountAsteriskFunc(None, Some(SqlExpr.BooleanLiteral(true))) -> """COUNT(*) FILTER (WHERE TRUE)""",
+            SqlExpr.CountAsteriskFunc(Some("t"), Some(SqlExpr.BooleanLiteral(true))) -> """COUNT("t".*) FILTER (WHERE TRUE)""",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)
+
+    test("list agg func"):
+        val col = SqlExpr.Column(None, "x")
+        val sep = SqlExpr.StringLiteral(",")
+        val quantifierVariants: List[(Option[SqlQuantifier], String)] = List(
+            None -> "",
+            Some(SqlQuantifier.Distinct) -> "DISTINCT ",
+        )
+        val onOverflowVariants: List[(Option[SqlListAggOnOverflow], String)] = List(
+            None -> "",
+            Some(SqlListAggOnOverflow.Error) -> " ON OVERFLOW ERROR",
+        )
+        val withinGroupVariants: List[(List[SqlOrderingItem], String)] = List(
+            Nil -> "",
+            List(SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)) -> """ WITHIN GROUP (ORDER BY "b" ASC)""",
+        )
+        val filterVariants: List[(Option[SqlExpr], String)] = List(
+            None -> "",
+            Some(SqlExpr.BooleanLiteral(true)) -> """ FILTER (WHERE TRUE)""",
+        )
+        for
+            (quantifier, qStr) <- quantifierVariants
+            (onOverflow, oStr) <- onOverflowVariants
+            (withinGroup, wStr) <- withinGroupVariants
+            (filter, fStr) <- filterVariants
+        do
+            val expr = SqlExpr.ListAggFunc(quantifier, col, sep, onOverflow, withinGroup, filter)
+            val expected = s"""LISTAGG($qStr"x", ','$oStr)$wStr$fStr"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json object agg func"):
+        val col = SqlExpr.Column(None, "x")
+        val nullConstructorVariants: List[(Option[SqlJsonNullConstructor], String)] = List(
+            None -> "",
+            Some(SqlJsonNullConstructor.Null) -> " NULL ON NULL",
+        )
+        val uniquenessModeVariants: List[(Option[SqlJsonUniquenessMode], String)] = List(
+            None -> "",
+            Some(SqlJsonUniquenessMode.With) -> " WITH UNIQUE KEYS",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        val filterVariants: List[(Option[SqlExpr], String)] = List(
+            None -> "",
+            Some(SqlExpr.BooleanLiteral(true)) -> """ FILTER (WHERE TRUE)""",
+        )
+        for
+            (nullConstructor, nStr) <- nullConstructorVariants
+            (uniquenessMode, uStr) <- uniquenessModeVariants
+            (output, oStr) <- outputVariants
+            (filter, fStr) <- filterVariants
+        do
+            val expr = SqlExpr.JsonObjectAggFunc(SqlJsonObjectItem(col, col), nullConstructor, uniquenessMode, output, filter)
+            val expected = s"""JSON_OBJECTAGG("x" VALUE "x"$nStr$uStr$oStr)$fStr"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("json array agg func"):
+        val col = SqlExpr.Column(None, "x")
+        val orderByVariants: List[(List[SqlOrderingItem], String)] = List(
+            Nil -> "",
+            List(SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)) -> """ ORDER BY "b" ASC""",
+            List(SqlOrderingItem(SqlExpr.Column(None, "a"), None, None), SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)) -> """ ORDER BY "a" ASC, "b" ASC""",
+        )
+        val nullConstructorVariants: List[(Option[SqlJsonNullConstructor], String)] = List(
+            None -> "",
+            Some(SqlJsonNullConstructor.Null) -> " NULL ON NULL",
+        )
+        val outputVariants: List[(Option[SqlJsonOutput], String)] = List(
+            None -> "",
+            Some(SqlJsonOutput(SqlType.Int, None)) -> " RETURNING INTEGER",
+        )
+        val filterVariants: List[(Option[SqlExpr], String)] = List(
+            None -> "",
+            Some(SqlExpr.BooleanLiteral(true)) -> """ FILTER (WHERE TRUE)""",
+        )
+        for
+            (orderBy, bStr) <- orderByVariants
+            (nullConstructor, nStr) <- nullConstructorVariants
+            (output, oStr) <- outputVariants
+            (filter, fStr) <- filterVariants
+        do
+            val expr = SqlExpr.JsonArrayAggFunc(SqlJsonArrayItem(col, None), orderBy, nullConstructor, output, filter)
+            val expected = s"""JSON_ARRAYAGG("x"$bStr$nStr$oStr)$fStr"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("nulls treatment func"):
+        val col = SqlExpr.Column(None, "x")
+        val cases: List[(SqlExpr.NullsTreatmentFunc, String)] = List(
+            SqlExpr.NullsTreatmentFunc("LAG", List(col), None) -> """LAG("x")""",
+            SqlExpr.NullsTreatmentFunc("LAG", List(col), Some(SqlWindowNullsMode.Respect)) -> """LAG("x") RESPECT NULLS""",
+        )
+        for (n, sql) <- cases do
+            assertEquals(createSql(_.printExpr(n)), sql)
+
+    test("nth value func"):
+        val col = SqlExpr.Column(None, "x")
+        val fromModeVariants: List[(Option[SqlNthValueFromMode], String)] = List(
+            None -> "",
+            Some(SqlNthValueFromMode.First) -> " FROM FIRST",
+        )
+        val nullsModeVariants: List[(Option[SqlWindowNullsMode], String)] = List(
+            None -> "",
+            Some(SqlWindowNullsMode.Respect) -> " RESPECT NULLS",
+        )
+        for
+            (fromMode, fStr) <- fromModeVariants
+            (nullsMode, nStr) <- nullsModeVariants
+        do
+            val expr = SqlExpr.NthValueFunc(col, SqlExpr.NumberLiteral(3), fromMode, nullsMode)
+            val expected = s"""NTH_VALUE("x", 3)$fStr$nStr"""
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("general func"):
+        val col = SqlExpr.Column(None, "x")
+        val quantifierVariants: List[(Option[SqlQuantifier], String)] = List(
+            None -> "",
+            Some(SqlQuantifier.All) -> "ALL ",
+        )
+        val argsVariants: List[(List[SqlExpr], String)] = List(
+            Nil -> "",
+            List(col) -> """"x"""",
+            List(col, SqlExpr.Column(None, "y")) -> """"x", "y"""",
+        )
+        val orderByVariants: List[(List[SqlOrderingItem], String)] = List(
+            Nil -> "",
+            List(SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)) -> """ORDER BY "b" ASC""",
+        )
+        val withinGroupVariants: List[(List[SqlOrderingItem], String)] = List(
+            Nil -> "",
+            List(SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)) -> """ WITHIN GROUP (ORDER BY "b" ASC)""",
+        )
+        val filterVariants: List[(Option[SqlExpr], String)] = List(
+            None -> "",
+            Some(SqlExpr.BooleanLiteral(true)) -> """ FILTER (WHERE TRUE)""",
+        )
+        for
+            (quantifier, qStr) <- quantifierVariants
+            (args, aStr) <- argsVariants
+            (orderBy, bStr) <- orderByVariants
+            (withinGroup, wStr) <- withinGroupVariants
+            (filter, fStr) <- filterVariants
+        do
+            val expr = SqlExpr.GeneralFunc(quantifier, "MY_FUNC", args, orderBy, withinGroup, filter)
+            val inner = qStr + aStr + (if bStr.nonEmpty then " " + bStr else "")
+            val expected = s"MY_FUNC($inner)$wStr$fStr"
+            assertEquals(createSql(_.printExpr(expr)), expected)
+
+    test("match phase"):
+        assertEquals(createSql(_.printExpr(SqlExpr.MatchPhase(SqlMatchPhase.Final, SqlExpr.Column(None, "x")))) , """FINAL "x"""")
