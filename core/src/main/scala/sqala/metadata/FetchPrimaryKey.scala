@@ -113,7 +113,6 @@ private[sqala] object FetchPrimaryKey:
                                 None,
                                 None,
                                 Nil,
-                                None,
                                 None
                             )
 

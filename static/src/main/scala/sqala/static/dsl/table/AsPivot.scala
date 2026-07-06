@@ -78,7 +78,6 @@ object AsPivot:
                     None,
                     None,
                     Nil,
-                    None,
                     None
                 )
                 Pivot(
@@ -111,7 +110,6 @@ object AsPivot:
                     None,
                     None,
                     Nil,
-                    None,
                     None
                 )
                 Pivot(subquery.__items__, tree)

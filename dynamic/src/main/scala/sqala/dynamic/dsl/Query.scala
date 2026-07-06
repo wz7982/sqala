@@ -16,29 +16,29 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         queryToString(tree, dialect, standardEscapeStrings)
 
     def union(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Union(None), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Union(None), None, that.tree, Nil, None))
 
     def unionAll(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Union(Some(SqlQuantifier.All)), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Union(Some(SqlQuantifier.All)), None, that.tree, Nil, None))
 
     def except(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Except(None), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Except(None), None, that.tree, Nil, None))
 
     def exceptAll(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Except(Some(SqlQuantifier.All)), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Except(Some(SqlQuantifier.All)), None, that.tree, Nil, None))
 
     def intersect(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Intersect(None), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Intersect(None), None, that.tree, Nil, None))
 
     def intersectAll(that: Query): UnionQuery =
-        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Intersect(Some(SqlQuantifier.All)), that.tree, Nil, None, None))
+        UnionQuery(SqlQuery.Set(tree, SqlSetOperator.Intersect(Some(SqlQuantifier.All)), None, that.tree, Nil, None))
 
     def limit(n: Int): Query =
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(l.offset, Some(SqlFetch(value(n).asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only))))
@@ -46,10 +46,10 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
+            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
             case _ => tree
         Query(newTree)
 
@@ -58,8 +58,8 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val limit = tree match
             case s: SqlQuery.Select => s.limit
             case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select, _) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set, _) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
+            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
             case _ => None
         val sqlLimit = limit
             .map(l => SqlLimit(Some(sqlExpr), l.fetch))
@@ -67,10 +67,10 @@ sealed class Query(private[sqala] val tree: SqlQuery):
         val newTree = tree match
             case s: SqlQuery.Select => s.copy(limit = sqlLimit)
             case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select, l) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
-            case SqlQuery.With(w, r, s: SqlQuery.Set, l) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit), l)
+            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
+            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
+                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
             case _ => tree
         Query(newTree)
 

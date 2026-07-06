@@ -97,9 +97,9 @@ object SqlStatement:
             update.copy(where = update.where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
 /**
- * Query statement, optionally with a row-level lock.
+ * Query statement.
  */
-enum SqlQuery(val lock: Option[SqlLock]):
+enum SqlQuery:
     /**
      * A `SELECT` query.
      *
@@ -110,8 +110,7 @@ enum SqlQuery(val lock: Option[SqlLock]):
      *   [GROUP BY [DISTINCT|ALL] grouping_item [, ...]]
      *   [HAVING expr]
      *   [ORDER BY ordering_item [, ...]]
-     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]
-     *   [FOR UPDATE|SHARE]`.
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
      */
     case Select(
         quantifier: Option[SqlQuantifier],
@@ -121,49 +120,50 @@ enum SqlQuery(val lock: Option[SqlLock]):
         groupBy: Option[SqlGroup],
         having: Option[SqlExpr],
         orderBy: List[SqlOrderingItem],
-        limit: Option[SqlLimit],
-        override val lock: Option[SqlLock]
-    ) extends SqlQuery(lock)
+        limit: Option[SqlLimit]
+    )
 
     /**
      * A set operation combining two queries.
      *
      * Renders as
-     * `query UNION|EXCEPT|INTERSECT [DISTINCT|ALL] query
+     * `query UNION|EXCEPT|INTERSECT [DISTINCT|ALL] [CORRESPONDING [BY (column [, ...])]] query
      *   [ORDER BY ordering [, ...]]
-     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]
-     *   [FOR UPDATE|SHARE]`.
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
      */
     case Set(
         left: SqlQuery,
         operator: SqlSetOperator,
+        corresponding: Option[SqlSetCorresponding],
         right: SqlQuery,
         orderBy: List[SqlOrderingItem],
-        limit: Option[SqlLimit],
-        override val lock: Option[SqlLock]
-    ) extends SqlQuery(lock)
+        limit: Option[SqlLimit]
+    )
 
     /**
      * A `VALUES` clause used as a query.
      *
-     * Renders as `VALUES (expr [, ...]) [, ...] [FOR UPDATE|SHARE]`.
+     * Renders as 
+     * `VALUES (expr [, ...]) [, ...] [FOR UPDATE|SHARE]
+     * [ORDER BY ordering [, ...]]
+     * [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
      */
     case Values(
         values: NonEmptyList[NonEmptyList[SqlExpr]],
-        override val lock: Option[SqlLock]
-    ) extends SqlQuery(lock)
+        orderBy: List[SqlOrderingItem],
+        limit: Option[SqlLimit]
+    )
 
     /**
      * A common table expression (CTE) query.
      *
-     * Renders as `WITH [RECURSIVE] with_item [, ...] query [FOR UPDATE|SHARE]`.
+     * Renders as `WITH [RECURSIVE] with_item [, ...] query`.
      */
     case With(
         withRecursive: Boolean,
         withItems: NonEmptyList[SqlWithItem],
-        query: SqlQuery,
-        override val lock: Option[SqlLock]
-    ) extends SqlQuery(lock)
+        query: SqlQuery
+    )
 
 object SqlQuery:
     extension (select: Select)

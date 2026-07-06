@@ -2,6 +2,7 @@ import sqala.ast.expr.*
 import sqala.ast.order.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList
 
 class TestExpr extends munit.FunSuite:
@@ -985,10 +986,25 @@ class TestExpr extends munit.FunSuite:
             (withinGroup, wStr) <- withinGroupVariants
             (filter, fStr) <- filterVariants
         do
-            val expr = SqlExpr.GeneralFunc(quantifier, "MY_FUNC", args, orderBy, withinGroup, filter)
+            val expr = SqlExpr.GeneralFunc(quantifier, "FUNC", args, orderBy, withinGroup, filter)
             val inner = qStr + aStr + (if bStr.nonEmpty then " " + bStr else "")
-            val expected = s"MY_FUNC($inner)$wStr$fStr"
+            val expected = s"FUNC($inner)$wStr$fStr"
             assertEquals(createSql(_.printExpr(expr)), expected)
 
     test("match phase"):
         assertEquals(createSql(_.printExpr(SqlExpr.MatchPhase(SqlMatchPhase.Final, SqlExpr.Column(None, "x")))) , """FINAL "x"""")
+
+    test("unsafe custom"):
+        val cases: List[(SqlExpr.UnsafeCustom, String)] = List(
+            SqlExpr.UnsafeCustom(List(
+                SqlUnsafeCustomToken.Keyword("MATCH("),
+                SqlUnsafeCustomToken.Expr(SqlExpr.Column(None, "title")),
+                SqlUnsafeCustomToken.Keyword(", "),
+                SqlUnsafeCustomToken.Expr(SqlExpr.Column(None, "body")),
+                SqlUnsafeCustomToken.Keyword(") AGAINST ("),
+                SqlUnsafeCustomToken.Expr(SqlExpr.StringLiteral("search text")),
+                SqlUnsafeCustomToken.Keyword("IN BOOLEAN MODE)"),
+            )) -> """(MATCH( "title" ,  "body" ) AGAINST ( 'search text' IN BOOLEAN MODE))""",
+        )
+        for (c, sql) <- cases do
+            assertEquals(createSql(_.printExpr(c)), sql)

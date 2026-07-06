@@ -180,7 +180,7 @@ object AsTable:
                         i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
                 .map: i =>
                     i.toNonEmptyList
-                val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, None)
+                val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
                 (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 
     given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
