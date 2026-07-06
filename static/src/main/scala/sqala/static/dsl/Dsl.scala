@@ -107,7 +107,6 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
         None,
         None,
         Nil,
-        None,
         None
     )
     SelectQuery(params, tree)
@@ -158,16 +157,15 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     val withTree = SqlQuery.Set(
         baseQuery.tree,
         SqlSetOperator.Union(Some(SqlQuantifier.All)),
+        None,
         unionQuery.tree,
         Nil,
-        None,
         None
     )
     val tree = SqlQuery.With(
         true,
         (SqlWithItem(tableCte, columns, withTree) :: Nil).toNonEmptyList,
-        finalQuery.tree,
-        None
+        finalQuery.tree
     )
     Query(finalQuery.params, tree)
 

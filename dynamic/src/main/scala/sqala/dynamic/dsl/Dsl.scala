@@ -33,7 +33,7 @@ def subqueryTable(query: Query): SubqueryTable =
     SubqueryTable(query.tree, None, false)
 
 def from(tables: AnyTable*): SelectQuery =
-    SelectQuery(SqlQuery.Select(None, Nil, tables.toList.map(_.asSqlTable), None, None, None, Nil, None, None))
+    SelectQuery(SqlQuery.Select(None, Nil, tables.toList.map(_.asSqlTable), None, None, None, Nil, None))
 
 def from(tables: List[AnyTable]): SelectQuery =
     from(tables*)

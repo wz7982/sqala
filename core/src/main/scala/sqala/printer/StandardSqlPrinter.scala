@@ -146,7 +146,6 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             None,
             None,
             Nil,
-            None,
             None
         )
         push()
@@ -214,11 +213,6 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             case `with`: SqlQuery.With =>
                 printWithQuery(`with`)
 
-        for l <- query.lock do
-            sqlBuilder.append("\n")
-            printSpace()
-            printLock(l)
-
     /**
      * Prints a quantifier.
      */
@@ -285,12 +279,12 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
      */
     def printSetOperator(operator: SqlSetOperator): Unit =
         operator match
+            case SqlSetOperator.Intersect(_) =>
+                sqlBuilder.append("INTERSECT")
             case SqlSetOperator.Union(_) =>
                 sqlBuilder.append("UNION")
             case SqlSetOperator.Except(_) =>
                 sqlBuilder.append("EXCEPT")
-            case SqlSetOperator.Intersect(_) =>
-                sqlBuilder.append("INTERSECT")
 
         for q <- operator.quantifier do
             sqlBuilder.append(" ")
@@ -312,6 +306,12 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
 
         printSpace()
         printSetOperator(query.operator)
+        for c <- query.corresponding do
+            sqlBuilder.append("CORRESPONDING")
+            if c.columnNames.nonEmpty then
+                sqlBuilder.append(" BY (")
+                printList(c.columnNames.toList)(printIdent)
+                sqlBuilder.append(")")
         sqlBuilder.append("\n")
 
         printSpace()
@@ -341,6 +341,17 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
         printSpace()
         sqlBuilder.append("VALUES ")
         printList(query.values.toList.map(SqlExpr.Tuple(_)))(printExpr)
+
+        if query.orderBy.nonEmpty then
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("ORDER BY\n")
+            printList(query.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+
+        for l <- query.limit do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLimit(l)
 
     /**
      * Prints a common table expression item in a `WITH` clause.
@@ -2877,30 +2888,6 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             printFetch(f)
 
     /**
-     * Prints a lock wait mode keyword.
-     */
-    def printLockWaitMode(mode: SqlLockWaitMode): Unit =
-        mode match
-            case SqlLockWaitMode.NoWait =>
-                sqlBuilder.append("NOWAIT")
-            case SqlLockWaitMode.SkipLocked =>
-                sqlBuilder.append("SKIP LOCKED")
-
-    /**
-     * Prints a row-level lock clause.
-     */
-    def printLock(lock: SqlLock): Unit =
-        lock match
-            case SqlLock.Update(_) =>
-                sqlBuilder.append("FOR UPDATE")
-            case SqlLock.Share(_) =>
-                sqlBuilder.append("FOR SHARE")
-
-        for w <- lock.waitMode do
-            sqlBuilder.append(" ")
-            printLockWaitMode(w)
-
-    /**
      * Prints the recursive keyword for a common table expression.
      */
     def printCteRecursive(): Unit =
@@ -3088,30 +3075,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
         token match
             case SqlUnsafeCustomToken.Keyword(keyword) =>
                 for c <- keyword do
-                    if 
-                        (c >= 'A' && c <= 'Z') || 
-                        (c >= 'a' && c <= 'z') || 
-                        (c >= '0' && c <= '9') || 
-                        c == '_' || 
-                        c == '(' || 
-                        c == ')' ||
-                        c == '+' ||
-                        c == '-' ||
-                        c == '*' ||
-                        c == '/' ||
-                        c == '%' ||
-                        c == '>' ||
-                        c == '<' ||
-                        c == '=' ||
-                        c == '!' ||
-                        c == '~' ||
-                        c == '&' ||
-                        c == '|' ||
-                        c == ',' ||
-                        c == '#' ||
-                        c == '@'
-                    then
-                        sqlBuilder.append(c)
+                    sqlBuilder.append(c)
             case SqlUnsafeCustomToken.Expr(expr) =>
                 printExpr(expr)
 

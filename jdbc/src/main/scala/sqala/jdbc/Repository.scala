@@ -376,7 +376,6 @@ object Repository:
                                             None,
                                             None,
                                             sort,
-                                            None,
                                             None
                                         )
                                     val query = Query(null, baseTree)(using QueryContext(0))
