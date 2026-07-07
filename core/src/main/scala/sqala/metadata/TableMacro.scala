@@ -71,7 +71,7 @@ private[sqala] object TableMacroImpl:
                 case _ =>
 
             annotations.find:
-                case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNameAutoInc || name == annoNamePrimaryKey => true
+                case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNamePrimaryKey => true
                 case _ => false
             match
                 case Some(_) => primaryKeyFields.addOne(e.name)
