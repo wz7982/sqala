@@ -1,7 +1,7 @@
 package sqala.printer
 
 import sqala.ast.expr.*
-import sqala.ast.limit.SqlLimit
+import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
 import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
@@ -19,10 +19,19 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends Standard
     override val rightQuote: Char = '`'
 
     override def printLimit(limit: SqlLimit): Unit =
-        sqlBuilder.append("LIMIT ")
-        printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
-        sqlBuilder.append(", ")
-        printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
+        val standardMode = limit.fetch match
+            case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>
+                false
+            case _ =>
+                true
+
+        if standardMode then
+            super.printLimit(limit)
+        else
+            sqlBuilder.append("LIMIT ")
+            printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
+            sqlBuilder.append(", ")
+            printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
 
     override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
         sqlBuilder.append("INSERT INTO ")
@@ -104,24 +113,24 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends Standard
                 super.printType(`type`)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
-        sqlBuilder.append("GROUP_CONCAT(")
-        expr.quantifier.foreach: q =>
-            printQuantifier(q)
-            sqlBuilder.append(" ")
+        if expr.onOverflow.nonEmpty || expr.filter.nonEmpty then
+            super.printListAggFuncExpr(expr)
+        else
+            sqlBuilder.append("GROUP_CONCAT(")
+            expr.quantifier.foreach: q =>
+                printQuantifier(q)
+                sqlBuilder.append(" ")
 
-        printExpr(expr.expr)
+            printExpr(expr.expr)
 
-        if expr.withinGroup.nonEmpty then
-            sqlBuilder.append(" ORDER BY ")
-            printList(expr.withinGroup)(printOrderingItem)
+            if expr.withinGroup.nonEmpty then
+                sqlBuilder.append(" ORDER BY ")
+                printList(expr.withinGroup)(printOrderingItem)
 
-        sqlBuilder.append(" SEPARATOR ")
-        printExpr(expr.separator)
+            sqlBuilder.append(" SEPARATOR ")
+            printExpr(expr.separator)
 
-        sqlBuilder.append(")")
-
-        for f <- expr.filter do
-            printFuncFilter(f)
+            sqlBuilder.append(")")
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =

@@ -29,11 +29,14 @@ final class JdbcContext(
      * closes the connection outside of transactions.
      */
     private[sqala] def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
-        val conn = ec.fetchConnection(this)
-        val result = handler(conn)
-        if !ec.inTransaction then
-            conn.close()
-        result
+        var conn: Connection | Null = null
+        try 
+            conn = ec.fetchConnection(this)
+            val result = handler(conn)
+            result
+        finally
+            if !ec.inTransaction && conn != null then
+                conn.close()
 
     /**
      * Logs and executes a DML statement, returning the affected
@@ -504,9 +507,7 @@ final class JdbcContext(
     )(f: Cursor[r.R] => R): Unit =
         val sql = queryToString(query.tree, dialect, standardEscapeStrings)
         l.printLog(sql, Array.empty[Any])
-        val conn = dataSource.getConnection()
-        jdbcCursorQuery(conn, sql, Array.empty[Any], fetchSize, f)
-        conn.close()
+        execute(c => jdbcCursorQuery(c, sql, Array.empty[Any], fetchSize, f))
 
     /**
      * Executes a block of operations within a database transaction.

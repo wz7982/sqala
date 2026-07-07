@@ -62,15 +62,18 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends Stan
                 super.printType(`type`)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
-        val func = SqlExpr.GeneralFunc(
-            expr.quantifier,
-            "STRING_AGG",
-            expr.expr :: expr.separator :: Nil,
-            Nil,
-            expr.withinGroup,
-            expr.filter
-        )
-        printExpr(func)
+        if expr.onOverflow.nonEmpty || expr.filter.nonEmpty then
+            super.printListAggFuncExpr(expr)
+        else
+            val func = SqlExpr.GeneralFunc(
+                expr.quantifier,
+                "STRING_AGG",
+                expr.expr :: expr.separator :: Nil,
+                Nil,
+                expr.withinGroup,
+                None
+            )
+            printExpr(func)
 
     override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
         def printOrdering(ordering: SqlOrdering): Unit =
