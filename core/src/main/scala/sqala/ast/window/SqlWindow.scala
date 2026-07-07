@@ -43,42 +43,49 @@ enum SqlWindow:
  *
  * Defines the set of rows within a partition for window function calculation.
  */
-enum SqlWindowFrame:
+enum SqlWindowFrame(
+    val measures: List[SqlRowPatternMeasureItem],
+    val unit: SqlWindowFrameUnit,
+    val excludeMode: Option[SqlWindowFrameExcludeMode],
+    val rowPattern: Option[SqlRowPattern]
+):
     /**
      * A frame starting at `start` and extending to the current row.
      *
      * Renders as
-     * `[ROWS|RANGE|GROUPS]
+     * `[MEASURES measure_item [, ...]]
+     *  [ROWS|RANGE|GROUPS]
      *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
      *  [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]
      *  [row_pattern]`.
      */
     case Start(
-        measures: List[SqlRowPatternMeasureItem],
-        unit: SqlWindowFrameUnit,
+        override val measures: List[SqlRowPatternMeasureItem],
+        override val unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
-        excludeMode: Option[SqlWindowFrameExcludeMode],
-        rowPattern: Option[SqlRowPattern]
-    )
+        override val excludeMode: Option[SqlWindowFrameExcludeMode],
+        override val rowPattern: Option[SqlRowPattern]
+    ) extends SqlWindowFrame(measures, unit, excludeMode, rowPattern)
 
     /**
      * A frame between `start` and `end` bounds.
      *
      * Renders as
-     * `[ROWS|RANGE|GROUPS] BETWEEN
+     * `[MEASURES measure_item [, ...]]
+     *  [ROWS|RANGE|GROUPS] BETWEEN
      *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND
      *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
      *  [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]
      *  [row_pattern]`.
      */
     case Between(
-        measures: List[SqlRowPatternMeasureItem],
-        unit: SqlWindowFrameUnit,
+        override val measures: List[SqlRowPatternMeasureItem],
+        override val unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
         end: SqlWindowFrameBound,
-        excludeMode: Option[SqlWindowFrameExcludeMode],
-        rowPattern: Option[SqlRowPattern]
-    )
+        override val excludeMode: Option[SqlWindowFrameExcludeMode],
+        override val rowPattern: Option[SqlRowPattern]
+    ) extends SqlWindowFrame(measures, unit, excludeMode, rowPattern)
 
 /**
  * Window frame boundary.

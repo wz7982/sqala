@@ -1174,43 +1174,30 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
      * Prints a window frame specification.
      */
     def printWindowFrame(frame: SqlWindowFrame): Unit =
+        if frame.measures.nonEmpty then
+            sqlBuilder.append("MEASURES ")
+            printList(frame.measures)(printRowPatternMeasureItem)
+            sqlBuilder.append(" ")
+
+        printWindowFrameUnit(frame.unit)
+        sqlBuilder.append(" ")
+
         frame match
-            case SqlWindowFrame.Start(measures, unit, start, exclude, rowPattern) =>
-                if measures.nonEmpty then
-                    sqlBuilder.append("MEASURES ")
-                    printList(measures)(printRowPatternMeasureItem)
-                    sqlBuilder.append(" ")
-
-                printWindowFrameUnit(unit)
-                sqlBuilder.append(" ")
+            case SqlWindowFrame.Start(_, _, start, _, _) =>
                 printWindowFrameBound(start)
-
-                for e <- exclude do
-                    sqlBuilder.append(" EXCLUDE ")
-                    printWindowFrameExcludeMode(e)
-
-                for p <- rowPattern do
-                    sqlBuilder.append(" ")
-                    printRowPattern(p)
-            case SqlWindowFrame.Between(measures, unit, start, end, exclude, rowPattern) =>
-                if measures.nonEmpty then
-                    sqlBuilder.append("MEASURES ")
-                    printList(measures)(printRowPatternMeasureItem)
-                    sqlBuilder.append(" ")
-
-                printWindowFrameUnit(unit)
-                sqlBuilder.append(" BETWEEN ")
+            case SqlWindowFrame.Between(_, _, start, end, _, _) =>
+                sqlBuilder.append("BETWEEN ")
                 printWindowFrameBound(start)
                 sqlBuilder.append(" AND ")
                 printWindowFrameBound(end)
 
-                for e <- exclude do
-                    sqlBuilder.append(" EXCLUDE ")
-                    printWindowFrameExcludeMode(e)
+        for e <- frame.excludeMode do
+            sqlBuilder.append(" EXCLUDE ")
+            printWindowFrameExcludeMode(e)
 
-                for p <- rowPattern do
-                    sqlBuilder.append(" ")
-                    printRowPattern(p)
+        for p <- frame.rowPattern do
+            sqlBuilder.append(" ")
+            printRowPattern(p)
 
     /**
      * Prints a window specification.
