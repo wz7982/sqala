@@ -297,10 +297,15 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             case _ =>
                 def removeLimitAndOrderBy(tree: SqlQuery): SqlQuery =
                     tree match
-                        case s: SqlQuery.Select => s.copy(limit = None, orderBy = Nil)
-                        case s: SqlQuery.Set => s.copy(limit = None)
-                        case c: SqlQuery.With => c.copy(query = removeLimitAndOrderBy(c.query))
-                        case _ => tree
+                        case s: SqlQuery.Select =>
+                            s.copy(limit = None, orderBy = Nil)
+                        case s: SqlQuery.Set =>
+                            s.copy(limit = None, orderBy = Nil)
+                        case v: SqlQuery.Values =>
+                            v.copy(limit = None, orderBy = Nil)
+                        case c: SqlQuery.With =>
+                            c.copy(query = removeLimitAndOrderBy(c.query))
+
                 val outerQuery: SqlQuery.Select = SqlQuery.Select(
                     None,
                     SqlSelectItem.Expr(expr.asSqlExpr, None) :: Nil,
