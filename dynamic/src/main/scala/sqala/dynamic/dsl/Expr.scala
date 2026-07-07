@@ -3,6 +3,7 @@ package sqala.dynamic.dsl
 import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.SqlSelectItem
+import sqala.ast.window.{SqlWindow, SqlWindowFrameBound}
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.annotation.targetName
@@ -161,10 +162,10 @@ final case class Expr(private[sqala] val expr: SqlExpr):
         Expr(SqlExpr.Unary(SqlUnaryOperator.Not, asSqlExpr))
 
     def over(): Expr =
-        Expr(SqlExpr.Window(asSqlExpr, SqlWindow(Nil, Nil, None)))
+        Expr(SqlExpr.Window(asSqlExpr, SqlWindow.Inlined(None, Nil, Nil, None)))
 
     def over(over: Over): Expr =
-        Expr(SqlExpr.Window(asSqlExpr, SqlWindow(over.partitionBy, over.orderBy, over.frame)))
+        Expr(SqlExpr.Window(asSqlExpr, SqlWindow.Inlined(None, over.partitionBy, over.orderBy, over.frame)))
 
     def asc: Order =
         Order(SqlOrderingItem(asSqlExpr, Some(SqlOrdering.Asc), None))

@@ -1,17 +1,42 @@
-package sqala.ast.expr
+package sqala.ast.window
 
+import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrderingItem
+import sqala.ast.table.{SqlRowPattern, SqlRowPatternMeasureItem}
 
 /**
- * A window specification for window function `OVER` clause.
+ * A window item.
  *
- * Renders as `[PARTITION BY expr [, ...]] [ORDER BY ordering_item [, ...]] [ROWS|RANGE|GROUPS frame]`.
+ * Renders as `"name" AS window_specification`.
  */
-case class SqlWindow(
-    partitionBy: List[SqlExpr],
-    orderBy: List[SqlOrderingItem],
-    frame: Option[SqlWindowFrame]
-)
+case class SqlWindowItem(name: String, window: SqlWindow.Inlined)
+
+/**
+ * A window specification.
+ */
+enum SqlWindow:
+    /**
+     * A named window.
+     *
+     * Renders as `["name"]`.
+     */
+    case Named(name: String)
+
+    /**
+     * A inlined window specification.
+     *
+     * Renders as
+     * `["name"]
+     *  [PARTITION BY expr [, ...]]
+     *  [ORDER BY ordering_item [, ...]]
+     *  [frame]`.
+     */
+    case Inlined(
+        existingWindowName: Option[String],
+        partitionBy: List[SqlExpr],
+        orderBy: List[SqlOrderingItem],
+        frame: Option[SqlWindowFrame]
+    )
 
 /**
  * Window frame specification.
@@ -24,13 +49,16 @@ enum SqlWindowFrame:
      *
      * Renders as
      * `[ROWS|RANGE|GROUPS]
-     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
-     *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
+     *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
+     *  [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]
+     *  [row_pattern]`.
      */
     case Start(
+        measures: List[SqlRowPatternMeasureItem],
         unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
-        excludeMode: Option[SqlWindowFrameExcludeMode]
+        excludeMode: Option[SqlWindowFrameExcludeMode],
+        rowPattern: Option[SqlRowPattern]
     )
 
     /**
@@ -38,15 +66,18 @@ enum SqlWindowFrame:
      *
      * Renders as
      * `[ROWS|RANGE|GROUPS] BETWEEN
-     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND
-     *   CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
-     *   [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]`.
+     *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING AND
+     *  CURRENT ROW|UNBOUNDED PRECEDING|n PRECEDING|UNBOUNDED FOLLOWING|n FOLLOWING
+     *  [EXCLUDE CURRENT ROW|GROUP|TIES|NO OTHERS]
+     *  [row_pattern]`.
      */
     case Between(
+        measures: List[SqlRowPatternMeasureItem],
         unit: SqlWindowFrameUnit,
         start: SqlWindowFrameBound,
         end: SqlWindowFrameBound,
-        excludeMode: Option[SqlWindowFrameExcludeMode]
+        excludeMode: Option[SqlWindowFrameExcludeMode],
+        rowPattern: Option[SqlRowPattern]
     )
 
 /**

@@ -8,6 +8,7 @@ import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ast.table.*
 import sqala.ast.token.SqlUnsafeCustomToken
+import sqala.ast.window.*
 import sqala.util.|>
 
 /**
@@ -146,6 +147,9 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             None,
             None,
             Nil,
+            None,
+            Nil,
+            None,
             None
         )
         push()
@@ -262,6 +266,18 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             printSpace()
             sqlBuilder.append("HAVING\n")
             h |> printWithSpace(printExpr)
+
+        for w <- query.window do
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("WINDOW\n")
+            printList(query.window, ",\n")(printWindowItem |> printWithSpace)
+
+        for q <- query.qualify do
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("QUALIFY\n")
+            q |> printWithSpace(printExpr)
 
         if query.orderBy.nonEmpty then
             sqlBuilder.append("\n")
@@ -1159,7 +1175,12 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
      */
     def printWindowFrame(frame: SqlWindowFrame): Unit =
         frame match
-            case SqlWindowFrame.Start(unit, start, exclude) =>
+            case SqlWindowFrame.Start(measures, unit, start, exclude, rowPattern) =>
+                if measures.nonEmpty then
+                    sqlBuilder.append("MEASURES ")
+                    printList(measures)(printRowPatternMeasureItem)
+                    sqlBuilder.append(" ")
+
                 printWindowFrameUnit(unit)
                 sqlBuilder.append(" ")
                 printWindowFrameBound(start)
@@ -1167,7 +1188,16 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 for e <- exclude do
                     sqlBuilder.append(" EXCLUDE ")
                     printWindowFrameExcludeMode(e)
-            case SqlWindowFrame.Between(unit, start, end, exclude) =>
+
+                for p <- rowPattern do
+                    sqlBuilder.append(" ")
+                    printRowPattern(p)
+            case SqlWindowFrame.Between(measures, unit, start, end, exclude, rowPattern) =>
+                if measures.nonEmpty then
+                    sqlBuilder.append("MEASURES ")
+                    printList(measures)(printRowPatternMeasureItem)
+                    sqlBuilder.append(" ")
+
                 printWindowFrameUnit(unit)
                 sqlBuilder.append(" BETWEEN ")
                 printWindowFrameBound(start)
@@ -1178,28 +1208,48 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                     sqlBuilder.append(" EXCLUDE ")
                     printWindowFrameExcludeMode(e)
 
+                for p <- rowPattern do
+                    sqlBuilder.append(" ")
+                    printRowPattern(p)
+
     /**
      * Prints a window specification.
      */
     def printWindow(window: SqlWindow): Unit =
-        sqlBuilder.append("(")
+        window match
+            case SqlWindow.Named(name) =>
+                printIdent(name)
+            case window: SqlWindow.Inlined =>
+                sqlBuilder.append("(")
 
-        if window.partitionBy.nonEmpty then
-            sqlBuilder.append("PARTITION BY ")
-            printList(window.partitionBy)(printExpr)
+                for n <- window.existingWindowName do
+                    printIdent(n)
+                    sqlBuilder.append(" ")
 
-        if window.orderBy.nonEmpty then
-            if window.partitionBy.nonEmpty then
-                sqlBuilder.append(" ")
-            sqlBuilder.append("ORDER BY ")
-            printList(window.orderBy)(printOrderingItem)
+                if window.partitionBy.nonEmpty then
+                    sqlBuilder.append("PARTITION BY ")
+                    printList(window.partitionBy)(printExpr)
 
-        for f <- window.frame do
-            if window.partitionBy.nonEmpty || window.orderBy.nonEmpty then
-                sqlBuilder.append(" ")
-            printWindowFrame(f)
+                if window.orderBy.nonEmpty then
+                    if window.partitionBy.nonEmpty then
+                        sqlBuilder.append(" ")
+                    sqlBuilder.append("ORDER BY ")
+                    printList(window.orderBy)(printOrderingItem)
 
-        sqlBuilder.append(")")
+                for f <- window.frame do
+                    if window.partitionBy.nonEmpty || window.orderBy.nonEmpty then
+                        sqlBuilder.append(" ")
+                    printWindowFrame(f)
+
+                sqlBuilder.append(")")
+
+    /**
+     * Prints a window item.
+     */
+    def printWindowItem(item: SqlWindowItem): Unit =
+        printIdent(item.name)
+        sqlBuilder.append(" AS ")
+        printWindow(item.window)
 
     /**
      * Prints a subquery expression.
@@ -2668,9 +2718,9 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 printJoinTable(join)
 
     /**
-     * Prints a `MEASURES` item in `MATCH_RECOGNIZE`.
+     * Prints a row pattern `MEASURES` item.
      */
-    def printRecognizeMeasureItem(item: SqlRecognizeMeasureItem): Unit =
+    def printRowPatternMeasureItem(item: SqlRowPatternMeasureItem): Unit =
         printExpr(item.expr)
         sqlBuilder.append(" AS ")
         printIdent(item.alias)
@@ -2726,7 +2776,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append("\n")
             printSpace()
             sqlBuilder.append("MEASURES\n")
-            printList(matchRecognize.measures, ",\n")(printRecognizeMeasureItem |> printWithSpace)
+            printList(matchRecognize.measures, ",\n")(printRowPatternMeasureItem |> printWithSpace)
 
         for m <- matchRecognize.rowsMode do
             sqlBuilder.append("\n")
@@ -2886,6 +2936,33 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append(" ")
 
             printFetch(f)
+
+    /**
+     * Prints a lock wait mode keyword.
+     */
+    def printLockWaitMode(mode: SqlLockWaitMode): Unit =
+        mode match
+            case SqlLockWaitMode.NoWait =>
+                sqlBuilder.append("NOWAIT")
+            case SqlLockWaitMode.Wait(n) =>
+                sqlBuilder.append("WAIT ")
+                printExpr(n)
+            case SqlLockWaitMode.SkipLocked =>
+                sqlBuilder.append("SKIP LOCKED")
+
+    /**
+     * Prints a row-level lock clause.
+     */
+    def printLock(lock: SqlLock): Unit =
+        lock match
+            case SqlLock.Update(_) =>
+                sqlBuilder.append("FOR UPDATE")
+            case SqlLock.Share(_) =>
+                sqlBuilder.append("FOR SHARE")
+
+        for w <- lock.waitMode do
+            sqlBuilder.append(" ")
+            printLockWaitMode(w)
 
     /**
      * Prints the recursive keyword for a common table expression.

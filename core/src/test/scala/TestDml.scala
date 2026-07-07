@@ -8,7 +8,7 @@ class TestDml extends munit.FunSuite:
         val cases: List[(SqlInsertMode, String)] = List(
             SqlInsertMode.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil)) -> "VALUES (1)",
             SqlInsertMode.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), List(NonEmptyList(SqlExpr.NumberLiteral(2), Nil)))) -> "VALUES (1), (2)",
-            SqlInsertMode.Subquery(SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)) -> "VALUES (1)",
+            SqlInsertMode.Subquery(SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), Nil, None)) -> "VALUES (1)",
         )
         for (m, sql) <- cases do
             assertEquals(createSql(_.printInsertMode(m)), sql)

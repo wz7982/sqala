@@ -283,7 +283,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val countExpr = count()
         val expr = Expr[Long, Column[L]](countExpr.asSqlExpr)
         tree match
-            case s@SqlQuery.Select(p, _, _, _, None, _, _, _)
+            case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _, _, _)
                 if p != Some(SqlQuantifier.Distinct)
             =>
                 Query(
@@ -314,6 +314,9 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
                     None,
                     None,
                     Nil,
+                    None,
+                    Nil,
+                    None,
                     None
                 )
                 Query(expr, outerQuery)
@@ -332,6 +335,9 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             None,
             None,
             Nil,
+            None,
+            Nil,
+            None,
             None
         )
         Query(expr, outerQuery)
@@ -1242,6 +1248,9 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
             None,
             None,
             Nil,
+            None,
+            Nil,
+            None,
             None
         )
 )(using private[sqala] val qc: QueryContext[L]):

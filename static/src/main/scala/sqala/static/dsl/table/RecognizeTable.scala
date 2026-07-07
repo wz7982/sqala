@@ -250,7 +250,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val alias = qc.fetchAlias
         val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
         val measureItems = items.map: i =>
-            SqlRecognizeMeasureItem(i.expr, i.alias.get)
+            SqlRowPatternMeasureItem(i.expr, i.alias.get)
         val recognize =
             r.fetchRecognize(__table__)
         val newRecognize = recognize
