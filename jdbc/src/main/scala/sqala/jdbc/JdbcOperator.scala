@@ -33,8 +33,8 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
             result.addOne(decoder.decode(rs, 1))
         result.toList
     finally
-        if stmt != null then stmt.close()
         if rs != null then rs.close()
+        if stmt != null then stmt.close()
 
 /**
  * Streams a query result in cursor batches using a forward‑only
@@ -81,8 +81,8 @@ private[sqala] def jdbcCursorQuery[T, R](
         if result.nonEmpty then
             f(Cursor(batchNo, size, result.toList))
     finally
-        if stmt != null then stmt.close()
         if rs != null then rs.close()
+        if stmt != null then stmt.close()
 
 /**
  * Executes a query and decodes the result set into a list of
@@ -131,9 +131,9 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
                     case (BOOLEAN, false) => rs.getBoolean(i)
                     case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, true) => Option(rs.getString(i))
                     case (VARCHAR | CHAR | NVARCHAR | LONGVARCHAR | LONGNVARCHAR, false) => rs.getString(i)
-                    case (DATE, true) => rs.getTimestamp(i)
-                    case (DATE, false) => rs.getTimestamp(i).toInstant()
-                    case (TIMESTAMP, true) => rs.getTimestamp(i).toInstant()
+                    case (DATE, true) => Option(rs.getTimestamp(i))
+                    case (DATE, false) => rs.getTimestamp(i)
+                    case (TIMESTAMP, true) => Option(rs.getTimestamp(i).toInstant())
                     case (TIMESTAMP, false) => rs.getTimestamp(i).toInstant()
                     case (_, true) => Option(rs.getObject(i))
                     case (_, false) => rs.getObject(i)
@@ -141,8 +141,8 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
             result.addOne(map.toMap)
         result.toList
     finally
-        if stmt != null then stmt.close()
         if rs != null then rs.close()
+        if stmt != null then stmt.close()
 
 /**
  * Executes a DML statement and returns the affected row count.

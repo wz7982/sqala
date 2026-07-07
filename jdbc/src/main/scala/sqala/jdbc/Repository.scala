@@ -372,7 +372,11 @@ object Repository:
                                             if $distinctExpr then Some(SqlQuantifier.Distinct) else None,
                                             $columnExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
                                             table :: Nil,
-                                            Some(condBuffer.toList.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y))),
+                                            if condBuffer.nonEmpty then 
+                                                Some(condBuffer.toList.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
+                                            else
+                                                None
+                                            ,
                                             None,
                                             None,
                                             Nil,
