@@ -52,12 +52,15 @@ class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends Sta
             printIdent(u)
 
     override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
-        val func = SqlExpr.GeneralFunc(
-            expr.quantifier,
-            "STRING_AGG",
-            expr.expr :: expr.separator :: Nil,
-            expr.withinGroup,
-            Nil,
-            expr.filter
-        )
-        printExpr(func)
+        if expr.onOverflow.nonEmpty then
+            super.printListAggFuncExpr(expr)
+        else
+            val func = SqlExpr.GeneralFunc(
+                expr.quantifier,
+                "STRING_AGG",
+                expr.expr :: expr.separator :: Nil,
+                expr.withinGroup,
+                Nil,
+                expr.filter
+            )
+            printExpr(func)
