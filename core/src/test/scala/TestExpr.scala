@@ -3,6 +3,7 @@ import sqala.ast.order.*
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
 import sqala.ast.token.SqlUnsafeCustomToken
+import sqala.ast.window.*
 import sqala.util.NonEmptyList
 
 class TestExpr extends munit.FunSuite:
@@ -138,7 +139,7 @@ class TestExpr extends munit.FunSuite:
         val cases: List[(SqlInRightOperand, String)] = List(
             SqlInRightOperand.Values(NonEmptyList(SqlExpr.NumberLiteral(1), Nil)) -> "(1)",
             SqlInRightOperand.Values(NonEmptyList(SqlExpr.NumberLiteral(1), List(SqlExpr.NumberLiteral(2)))) -> "(1, 2)",
-            SqlInRightOperand.Subquery(SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)) -> "(VALUES (1))",
+            SqlInRightOperand.Subquery(SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), Nil, None)) -> "(VALUES (1))",
         )
         for (o, sql) <- cases do
             assertEquals(createSql(_.printInRightOperand(o)), sql)
@@ -396,24 +397,24 @@ class TestExpr extends munit.FunSuite:
 
     test("window frame"):
         val cases: List[(SqlWindowFrame, String)] = List(
-            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None) -> "ROWS CURRENT ROW",
-            SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, Some(SqlWindowFrameExcludeMode.CurrentRow)) -> "ROWS CURRENT ROW EXCLUDE CURRENT ROW",
-            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, None) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING",
-            SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, Some(SqlWindowFrameExcludeMode.Group)) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE GROUP",
+            SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None, None) -> "ROWS CURRENT ROW",
+            SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, Some(SqlWindowFrameExcludeMode.CurrentRow), None) -> "ROWS CURRENT ROW EXCLUDE CURRENT ROW",
+            SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, None, None) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING",
+            SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, SqlWindowFrameBound.UnboundedFollowing, Some(SqlWindowFrameExcludeMode.Group), None) -> "ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE GROUP",
         )
         for (f, sql) <- cases do
             assertEquals(createSql(_.printWindowFrame(f)), sql)
 
     test("window"):
-        val frame = SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None)
+        val frame = SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, SqlWindowFrameBound.CurrentRow, None, None)
         val item = SqlOrderingItem(SqlExpr.Column(None, "b"), None, None)
         val cases: List[(SqlWindow, String)] = List(
-            SqlWindow(Nil, Nil, None) -> "()",
-            SqlWindow(List(SqlExpr.Column(None, "a")), Nil, None) -> """(PARTITION BY "a")""",
-            SqlWindow(Nil, List(item), None) -> """(ORDER BY "b" ASC)""",
-            SqlWindow(List(SqlExpr.Column(None, "a")), List(item), None) -> """(PARTITION BY "a" ORDER BY "b" ASC)""",
-            SqlWindow(Nil, Nil, Some(frame)) -> "(ROWS CURRENT ROW)",
-            SqlWindow(List(SqlExpr.Column(None, "a")), List(item), Some(frame)) -> """(PARTITION BY "a" ORDER BY "b" ASC ROWS CURRENT ROW)""",
+            SqlWindow.Inlined(None, Nil, Nil, None) -> "()",
+            SqlWindow.Inlined(None, List(SqlExpr.Column(None, "a")), Nil, None) -> """(PARTITION BY "a")""",
+            SqlWindow.Inlined(None, Nil, List(item), None) -> """(ORDER BY "b" ASC)""",
+            SqlWindow.Inlined(None, List(SqlExpr.Column(None, "a")), List(item), None) -> """(PARTITION BY "a" ORDER BY "b" ASC)""",
+            SqlWindow.Inlined(None, Nil, Nil, Some(frame)) -> "(ROWS CURRENT ROW)",
+            SqlWindow.Inlined(None, List(SqlExpr.Column(None, "a")), List(item), Some(frame)) -> """(PARTITION BY "a" ORDER BY "b" ASC ROWS CURRENT ROW)""",
         )
         for (w, sql) <- cases do
             assertEquals(createSql(_.printWindow(w)), sql)
@@ -610,23 +611,23 @@ class TestExpr extends munit.FunSuite:
     test("window expr"):
         val col = SqlExpr.CountAsteriskFunc(None, None)
         val cases: List[(SqlExpr.Window, String)] = List(
-            SqlExpr.Window(col, SqlWindow(Nil, Nil, None)) -> """COUNT(*) OVER ()""",
-            SqlExpr.Window(col, SqlWindow(List(SqlExpr.Column(None, "y")), Nil, None)) -> """COUNT(*) OVER (PARTITION BY "y")""",
+            SqlExpr.Window(col, SqlWindow.Inlined(None, Nil, Nil, None)) -> """COUNT(*) OVER ()""",
+            SqlExpr.Window(col, SqlWindow.Inlined(None, List(SqlExpr.Column(None, "y")), Nil, None)) -> """COUNT(*) OVER (PARTITION BY "y")""",
         )
         for (w, sql) <- cases do
             assertEquals(createSql(_.printExpr(w)), sql)
 
     test("subquery"):
-        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), Nil, None)
         assertEquals(createSql(_.printExpr(SqlExpr.Subquery(q))), "(\n    VALUES (1)\n)")
 
     test("exists predicate"):
-        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), Nil, None)
         assertEquals(createSql(_.printExpr(SqlExpr.ExistsPredicate(q))), "EXISTS(\n    VALUES (1)\n)")
 
     test("quantified comparison predicate"):
         val col = SqlExpr.Column(None, "x")
-        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), None)
+        val q = SqlQuery.Values(NonEmptyList(NonEmptyList(SqlExpr.NumberLiteral(1), Nil), Nil), Nil, None)
         assertEquals(createSql(_.printExpr(SqlExpr.QuantifiedComparisonPredicate(col, SqlQuantifiedComparisonOperator.Equal, SqlSubqueryQuantifier.Any, q))), "\"x\" = ANY(\n    VALUES (1)\n)")
 
     test("grouping"):

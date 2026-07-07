@@ -5,6 +5,7 @@ import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator, SqlWithItem}
 import sqala.ast.table.*
 import sqala.ast.token.SqlUnsafeCustomToken
+import sqala.ast.window.{SqlWindow, SqlWindowFrameBound}
 import sqala.metadata.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
@@ -107,6 +108,9 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
         None,
         None,
         Nil,
+        None,
+        Nil,
+        None,
         None
     )
     SelectQuery(params, tree)
@@ -1277,7 +1281,8 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
         Expr(
             SqlExpr.Window(
                 x.asSqlExpr,
-                SqlWindow(
+                SqlWindow.Inlined(
+                    None,
                     Nil,
                     Nil,
                     None
@@ -1304,7 +1309,8 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
         Expr(
             SqlExpr.Window(
                 x.asSqlExpr,
-                SqlWindow(
+                SqlWindow.Inlined(
+                    None,
                     o.partitionBy.map(_.asSqlExpr),
                     o.sortBy.map(_.asSqlOrderingItem),
                     o.frame

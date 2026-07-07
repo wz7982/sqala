@@ -7,6 +7,7 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.table.SqlTable
 import sqala.util.NonEmptyList
+import sqala.ast.window.SqlWindowItem
 
 /**
  * Insert data source mode.
@@ -109,8 +110,11 @@ enum SqlQuery:
      *   [WHERE expr]
      *   [GROUP BY [DISTINCT|ALL] grouping_item [, ...]]
      *   [HAVING expr]
+     *   [WINDOW window_item [, ...]]
+     *   [QUALIFY expr]
      *   [ORDER BY ordering_item [, ...]]
-     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
+     *   [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]
+     *   [FOR UPDATE|SHARE]`.
      */
     case Select(
         quantifier: Option[SqlQuantifier],
@@ -119,8 +123,11 @@ enum SqlQuery:
         where: Option[SqlExpr],
         groupBy: Option[SqlGroup],
         having: Option[SqlExpr],
+        window: List[SqlWindowItem],
+        qualify: Option[SqlExpr],
         orderBy: List[SqlOrderingItem],
-        limit: Option[SqlLimit]
+        limit: Option[SqlLimit],
+        lock: Option[SqlLock]
     )
 
     /**

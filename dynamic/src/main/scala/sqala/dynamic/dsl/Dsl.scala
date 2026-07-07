@@ -2,6 +2,7 @@ package sqala.dynamic.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.statement.SqlQuery
+import sqala.ast.window.SqlWindowFrameBound
 import sqala.metadata.{AsSqlExpr, Interval}
 import sqala.util.NonEmptyList.toNonEmptyList
 
@@ -33,7 +34,7 @@ def subqueryTable(query: Query): SubqueryTable =
     SubqueryTable(query.tree, None, false)
 
 def from(tables: AnyTable*): SelectQuery =
-    SelectQuery(SqlQuery.Select(None, Nil, tables.toList.map(_.asSqlTable), None, None, None, Nil, None))
+    SelectQuery(SqlQuery.Select(None, Nil, tables.toList.map(_.asSqlTable), None, None, None, Nil, None, Nil, None, None))
 
 def from(tables: List[AnyTable]): SelectQuery =
     from(tables*)

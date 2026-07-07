@@ -2,6 +2,7 @@ package sqala.dynamic.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.order.SqlOrderingItem
+import sqala.ast.window.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
 
 final case class FrameBound(private[sqala] val bound: SqlWindowFrameBound)
 
@@ -24,22 +25,22 @@ final case class Over(
         orderBy(orders*)
 
     def rows(start: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, start.bound, None, None)))
 
     def rowsBetween(start: FrameBound, end: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, start.bound, end.bound, None, None)))
 
     def range(start: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Start(SqlWindowFrameUnit.Range, start.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Range, start.bound, None, None)))
 
     def rangeBetween(start: FrameBound, end: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Between(SqlWindowFrameUnit.Range, start.bound, end.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Range, start.bound, end.bound, None, None)))
 
     def groups(start: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Start(SqlWindowFrameUnit.Groups, start.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Groups, start.bound, None, None)))
 
     def groupsBetween(start: FrameBound, end: FrameBound): Over =
-        copy(frame = Some(SqlWindowFrame.Between(SqlWindowFrameUnit.Groups, start.bound, end.bound, None)))
+        copy(frame = Some(SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Groups, start.bound, end.bound, None, None)))
 
     def excludeCurrentRow: Over =
         copy(frame = setExclude(SqlWindowFrameExcludeMode.CurrentRow))

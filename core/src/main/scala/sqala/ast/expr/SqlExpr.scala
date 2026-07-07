@@ -4,6 +4,7 @@ import sqala.ast.order.SqlOrderingItem
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.SqlQuery
 import sqala.ast.token.SqlUnsafeCustomToken
+import sqala.ast.window.SqlWindow
 import sqala.util.NonEmptyList
 
 /**

@@ -1,6 +1,7 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlExpr, SqlWindow}
+import sqala.ast.expr.SqlExpr
+import sqala.ast.window.SqlWindow
 
 /**
  * An intermediate type produced by window functions (`rank`, `lag`,
@@ -21,7 +22,8 @@ final case class WindowFunc[T, KS <: Tuple](private[sqala] val expr: SqlExpr):
         Expr(
             SqlExpr.Window(
                 asSqlExpr,
-                SqlWindow(
+                SqlWindow.Inlined(
+                    None,
                     Nil,
                     Nil,
                     None
@@ -48,7 +50,8 @@ final case class WindowFunc[T, KS <: Tuple](private[sqala] val expr: SqlExpr):
         Expr(
             SqlExpr.Window(
                 asSqlExpr,
-                SqlWindow(
+                SqlWindow.Inlined(
+                    None,
                     o.partitionBy.map(_.asSqlExpr),
                     o.sortBy.map(_.asSqlOrderingItem),
                     o.frame

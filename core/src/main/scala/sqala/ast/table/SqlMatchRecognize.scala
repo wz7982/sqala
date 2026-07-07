@@ -23,18 +23,18 @@ import sqala.util.NonEmptyList
 case class SqlMatchRecognize(
     partitionBy: List[SqlExpr],
     orderBy: List[SqlOrderingItem],
-    measures: List[SqlRecognizeMeasureItem],
+    measures: List[SqlRowPatternMeasureItem],
     rowsMode: Option[SqlRecognizePatternRowsMode],
     rowPattern: SqlRowPattern,
     alias: Option[SqlTableAlias]
 )
 
 /**
- * A `MEASURES` item in `MATCH_RECOGNIZE`.
+ * A row pattern `MEASURES` item.
  *
  * Renders as `expr AS "alias"`.
  */
-case class SqlRecognizeMeasureItem(expr: SqlExpr, alias: String)
+case class SqlRowPatternMeasureItem(expr: SqlExpr, alias: String)
 
 /**
  * Rows-per-match mode for `MATCH_RECOGNIZE`.

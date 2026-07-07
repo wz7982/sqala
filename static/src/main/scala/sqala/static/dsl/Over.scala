@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
+import sqala.ast.window.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
 
 /**
  * A window frame bound, produced by `currentRow`,
@@ -64,7 +64,7 @@ final case class PartitionedOver[KS <: Tuple](
      * }}}
      */
     def rows[CL <: Int](start: FrameBound[Nothing])(using qc: QueryContext[CL]): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, start.bound, None, None))
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
@@ -74,7 +74,7 @@ final case class PartitionedOver[KS <: Tuple](
      * }}}
      */
     def rowsBetween[CL <: Int](start: FrameBound[Nothing], end: FrameBound[Nothing])(using qc: QueryContext[CL]): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, start.bound, end.bound, None, None))
 
 /**
  * A window specification after `sortBy`, supporting window frame
@@ -96,7 +96,7 @@ final case class SortedOver[T, KS <: Tuple](
         QueryContext[CL],
         CanInRowsOrGroupsFrame[S]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, start.bound, None, None))
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
@@ -110,7 +110,7 @@ final case class SortedOver[T, KS <: Tuple](
         CanInRowsOrGroupsFrame[S],
         CanInRowsOrGroupsFrame[E]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, start.bound, end.bound, None, None))
 
     /**
      * Sets the window frame to `RANGE start`. 
@@ -125,7 +125,7 @@ final case class SortedOver[T, KS <: Tuple](
         QueryContext[CL],
         CanInRangeFrame[T, S]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(SqlWindowFrameUnit.Range, start.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Range, start.bound, None, None))
 
     /**
      * Sets the window frame to `RANGE BETWEEN start AND end`.
@@ -141,7 +141,7 @@ final case class SortedOver[T, KS <: Tuple](
         CanInRangeFrame[T, S],
         CanInRangeFrame[T, E]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(SqlWindowFrameUnit.Range, start.bound, end.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Range, start.bound, end.bound, None, None))
 
     /**
      * Sets the window frame to `GROUPS start`.
@@ -154,7 +154,7 @@ final case class SortedOver[T, KS <: Tuple](
         QueryContext[CL],
         CanInRowsOrGroupsFrame[S]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(SqlWindowFrameUnit.Groups, start.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Groups, start.bound, None, None))
 
     /**
      * Sets the window frame to `GROUPS BETWEEN start AND end`.
@@ -168,7 +168,7 @@ final case class SortedOver[T, KS <: Tuple](
         CanInRowsOrGroupsFrame[S],
         CanInRowsOrGroupsFrame[E]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(SqlWindowFrameUnit.Groups, start.bound, end.bound, None))
+        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Groups, start.bound, end.bound, None, None))
 
 /**
  * A window specification after the frame has been set, supporting
