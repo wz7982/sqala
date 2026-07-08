@@ -1,17 +1,16 @@
 package sqala.jdbc
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
 import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, Dialect, TableMacroImpl}
 import sqala.static.dsl.QueryContext
-import sqala.static.dsl.statement.query.Query
+import sqala.static.dsl.statement.query.SelectQuery
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.quoted.{Expr, Quotes, Type}
-import sqala.ast.expr.SqlInRightOperand
 
 /**
  * A repository trait derived by a macro from the method name.
@@ -43,11 +42,11 @@ trait Repository[T, N <: String]:
         dialect: Dialect,
         standardEscapeStrings: Boolean,
         args: Args,
-        fetch: Query[?, ?, ?, ?] => List[T],
-        find: Query[?, ?, ?, ?] => Option[T],
-        page: (Query[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
-        count: Query[?, ?, ?, ?] => Long,
-        exists: Query[?, ?, ?, ?] => Boolean
+        fetch: SelectQuery[?, ?, ?, ?] => List[T],
+        find: SelectQuery[?, ?, ?, ?] => Option[T],
+        page: (SelectQuery[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
+        count: SelectQuery[?, ?, ?, ?] => Long,
+        exists: SelectQuery[?, ?, ?, ?] => Boolean
     )(using
         JdbcDecoder[T],
         Logger
@@ -275,11 +274,11 @@ object Repository:
                                     dialect: Dialect,
                                     standardEscapeStrings: Boolean,
                                     args: Args,
-                                    fetch: Query[?, ?, ?, ?] => List[T],
-                                    find: Query[?, ?, ?, ?] => Option[T],
-                                    page: (Query[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
-                                    count: Query[?, ?, ?, ?] => Long,
-                                    exists: Query[?, ?, ?, ?] => Boolean
+                                    fetch: SelectQuery[?, ?, ?, ?] => List[T],
+                                    find: SelectQuery[?, ?, ?, ?] => Option[T],
+                                    page: (SelectQuery[?, ?, ?, ?], Int, Int, Boolean) => Page[T],
+                                    count: SelectQuery[?, ?, ?, ?] => Long,
+                                    exists: SelectQuery[?, ?, ?, ?] => Boolean
                                 )(using
                                     d: JdbcDecoder[T],
                                     l: Logger
@@ -367,7 +366,7 @@ object Repository:
                                         s match
                                             case "asc" => SqlOrderingItem(SqlExpr.Column(None, n), Some(SqlOrdering.Asc), None)
                                             case "desc" => SqlOrderingItem(SqlExpr.Column(None, n), Some(SqlOrdering.Desc), None)
-                                    val baseTree =
+                                    val baseTree: SqlQuery.Select =
                                         SqlQuery.Select(
                                             if $distinctExpr then Some(SqlQuantifier.Distinct) else None,
                                             $columnExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
@@ -385,7 +384,7 @@ object Repository:
                                             None,
                                             None
                                         )
-                                    val query = Query(null, baseTree)(using QueryContext(0))
+                                    val query = SelectQuery(null, baseTree)(using QueryContext(0))
 
                                     val result = if $modeExpr.startsWith("find") then
                                         find(query)
