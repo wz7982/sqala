@@ -96,7 +96,7 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
 )(using
     at: AsTable[T, CL + 1],
     as: AsSelect[at.R]
-): SelectQuery[at.R, at.OKS, CL + 1] =
+): TableQuery[at.R, at.OKS, CL + 1] =
     given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
     val (params, fromTable) = at.asTable(tables)
     val selectItems = as.asSelectItems(params, 1)
@@ -113,7 +113,7 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
         None,
         None
     )
-    SelectQuery(params, tree)
+    TableQuery(params, tree)
 
 /**
  * Creates a recursive query using `WITH RECURSIVE`. Takes a base
