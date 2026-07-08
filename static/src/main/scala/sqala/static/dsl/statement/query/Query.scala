@@ -187,94 +187,6 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             )
         )
 
-    /**
-     * Skips the first `n` rows of the result. Maps to `OFFSET`.
-     *
-     * {{{
-     * from(User).drop(10).take(5)
-     * }}}
-     */
-    def drop(n: Int): Query[T, OKS, L, S] =
-        val sqlExpr = n.asExpr.asSqlExpr
-        val limit = tree match
-            case s: SqlQuery.Select => s.limit
-            case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
-            case _ => None
-        val sqlLimit = limit
-            .map(l => SqlLimit(Some(sqlExpr), l.fetch))
-            .orElse(Some(SqlLimit(Some(sqlExpr), None)))
-        val newTree = tree match
-            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-            case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case _ => tree
-        Query(params, newTree)
-
-    /**
-     * Alias of `drop`, provided for users familiar with `OFFSET`.
-     *
-     * {{{
-     * from(User).offset(10).limit(5)
-     * }}}
-     */
-    def offset(n: Int): Query[T, OKS, L, S] =
-        drop(n)
-
-    /**
-     * Internal implementation for `take` and `takeWithTies`.
-     * Handles merging an existing `OFFSET` with the new `LIMIT`/`FETCH`
-     * clause, and propagates the new fetch specification through
-     * `Select`, `Set`, and `With` query types.
-     */
-    private[sqala] def takeExpr[TS <: QuerySize](n: SqlExpr, unit: SqlFetchUnit, mode: SqlFetchMode): Query[T, OKS, L, TS] =
-        val limit = tree match
-            case s: SqlQuery.Select => s.limit
-            case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
-            case _ => None
-        val sqlLimit = limit
-            .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
-            .orElse(Some(SqlLimit(None, Some(SqlFetch(n, unit, mode)))))
-        val newTree = tree match
-            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-            case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case _ => tree
-        Query(params, newTree)
-
-    /**
-     * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
-     *
-     * {{{
-     * from(User).drop(10).take(5)
-     * }}}
-     */
-    def take(n: Int)(using
-        s: TakeSize[n.type]
-    ): Query[T, OKS, L, s.R] =
-        takeExpr[s.R](n.asExpr.asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)
-
-    /**
-     * Alias of `take`, provided for users familiar with `LIMIT`.
-     *
-     * {{{
-     * from(User).offset(10).limit(5)
-     * }}}
-     */
-    def limit(n: Int)(using
-        s: TakeSize[n.type]
-    ): Query[T, OKS, L, s.R] =
-        take(n)
-
      /**
      * Wraps the query as a `COUNT(*)` subquery, removing any existing
      * `LIMIT` and `ORDER BY` to produce a valid scalar subquery.
@@ -348,58 +260,162 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         Query(expr, outerQuery)
 
 /**
- * A query with an `ORDER BY` clause, enabling `takeWithTies`/`limitWithTies`
- * in addition to all `Query` operations.
+ * A `SELECT` query.
  */
-sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
+sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val params: T,
-    override private[sqala] val tree: SqlQuery
+    override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
 ) extends Query[T, OKS, L, S](params, tree):
-    override def drop(n: Int): SortedQuery[T, OKS, L, S] =
+    /**
+     * Skips the first `n` rows of the result. Maps to `OFFSET`.
+     *
+     * {{{
+     * from(User).drop(10).take(5)
+     * }}}
+     */
+    def drop(n: Int): SelectQuery[T, OKS, L, S] =
         val sqlExpr = n.asExpr.asSqlExpr
-        val limit = tree match
-            case s: SqlQuery.Select => s.limit
-            case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
-            case _ => None
+        val limit = tree.limit
         val sqlLimit = limit
             .map(l => SqlLimit(Some(sqlExpr), l.fetch))
             .orElse(Some(SqlLimit(Some(sqlExpr), None)))
-        val newTree = tree match
-            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-            case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case _ => tree
-        SortedQuery(params, newTree)
+        val newTree: SqlQuery.Select = tree.copy(limit = sqlLimit)
+        SelectQuery(params, newTree)
 
-    override def offset(n: Int): SortedQuery[T, OKS, L, S] =
+    /**
+     * Alias of `drop`, provided for users familiar with `OFFSET`.
+     *
+     * {{{
+     * from(User).offset(10).limit(5)
+     * }}}
+     */
+    def offset(n: Int): SelectQuery[T, OKS, L, S] =
         drop(n)
 
-    override private[sqala] def takeExpr[TS <: QuerySize](n: SqlExpr, unit: SqlFetchUnit, mode: SqlFetchMode): SortedQuery[T, OKS, L, TS] =
-        val limit = tree match
-            case s: SqlQuery.Select => s.limit
-            case s: SqlQuery.Set => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Select) => s.limit
-            case SqlQuery.With(_, _, s: SqlQuery.Set) => s.limit
-            case _ => None
+    /**
+     * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
+     *
+     * {{{
+     * from(User).drop(10).take(5)
+     * }}}
+     */
+    def take(n: Int)(using
+        s: TakeSize[n.type]
+    ): SelectQuery[T, OKS, L, s.R] =
+        val sqlExpr = n.asExpr.asSqlExpr
+        val limit = tree.limit
         val sqlLimit = limit
-            .map(l => SqlLimit(l.offset, Some(SqlFetch(n, unit, mode))))
-            .orElse(Some(SqlLimit(None, Some(SqlFetch(n, unit, mode)))))
-        val newTree = tree match
-            case s: SqlQuery.Select => s.copy(limit = sqlLimit)
-            case s: SqlQuery.Set => s.copy(limit = sqlLimit)
-            case SqlQuery.With(w, r, s: SqlQuery.Select) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case SqlQuery.With(w, r, s: SqlQuery.Set) =>
-                SqlQuery.With(w, r, s.copy(limit = sqlLimit))
-            case _ => tree
-        SortedQuery(params, newTree)
+            .map(l => SqlLimit(l.offset, Some(SqlFetch(sqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only))))
+            .orElse(Some(SqlLimit(None, Some(SqlFetch(sqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.Only)))))
+        val newTree: SqlQuery.Select = tree.copy(limit = sqlLimit)
+        SelectQuery(params, newTree)
+
+    /**
+     * Alias of `take`, provided for users familiar with `LIMIT`.
+     *
+     * {{{
+     * from(User).offset(10).limit(5)
+     * }}}
+     */
+    def limit(n: Int)(using
+        s: TakeSize[n.type]
+    ): SelectQuery[T, OKS, L, s.R] =
+        take(n)
+
+    /**
+     * Locks selected rows for update. Maps to `FOR UPDATE`.
+     *
+     * {{{
+     * from(User).forUpdate
+     * }}}
+     */
+    def forUpdate: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Update(None)))
+        Query(params, newTree)
+
+    /**
+     * Locks selected rows for update, failing immediately if rows are
+     * already locked. Maps to `FOR UPDATE NOWAIT`.
+     *
+     * {{{
+     * from(User).forUpdateNoWait
+     * }}}
+     */
+    def forUpdateNoWait: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.NoWait))))
+        Query(params, newTree)
+
+    /**
+     * Locks selected rows for update, skipping already locked rows.
+     * Maps to `FOR UPDATE SKIP LOCKED`.
+     *
+     * {{{
+     * from(User).forUpdateSkipLocked
+     * }}}
+     */
+    def forUpdateSkipLocked: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Update(Some(SqlLockWaitMode.SkipLocked))))
+        Query(params, newTree)
+
+    /**
+     * Locks selected rows in share mode, allowing other transactions to
+     * read but not update. Maps to `FOR SHARE`.
+     *
+     * {{{
+     * from(User).forShare
+     * }}}
+     */
+    def forShare: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Share(None)))
+        Query(params, newTree)
+
+    /**
+     * Locks selected rows in share mode, failing immediately if rows
+     * are already locked. Maps to `FOR SHARE NOWAIT`.
+     *
+     * {{{
+     * from(User).forShareNoWait
+     * }}}
+     */
+    def forShareNoWait: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.NoWait))))
+        Query(params, newTree)
+
+    /**
+     * Locks selected rows in share mode, skipping already locked rows.
+     * Maps to `FOR SHARE SKIP LOCKED`.
+     *
+     * {{{
+     * from(User).forShareSkipLocked
+     * }}}
+     */
+    def forShareSkipLocked: Query[T, OKS, L, S] =
+        val newTree: SqlQuery.Select = tree.copy(lock = Some(SqlLock.Share(Some(SqlLockWaitMode.SkipLocked))))
+        Query(params, newTree)
+
+/**
+ * A query with an `ORDER BY` clause, enabling `takeWithTies`/`limitWithTies`
+ * in addition to all `Query` operations.
+ */
+sealed class SortedSelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
+    override private[sqala] val params: T,
+    override private[sqala] val tree: SqlQuery.Select
+)(using
+    override private[sqala] val qc: QueryContext[L]
+) extends SelectQuery[T, OKS, L, S](params, tree):
+    override def drop(n: Int): SortedSelectQuery[T, OKS, L, S] =
+        val sqlExpr = n.asExpr.asSqlExpr
+        val limit = tree.limit
+        val sqlLimit = limit
+            .map(l => SqlLimit(Some(sqlExpr), l.fetch))
+            .orElse(Some(SqlLimit(Some(sqlExpr), None)))
+        val newTree: SqlQuery.Select = tree.copy(limit = sqlLimit)
+        SortedSelectQuery(params, newTree)
+
+    override def offset(n: Int): SortedSelectQuery[T, OKS, L, S] =
+        drop(n)
 
     /**
      * Limits the result to at most `n` rows, including rows tied with
@@ -412,8 +428,14 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def takeWithTies(n: Int)(using
         s: TakeSize[n.type]
-    ): SortedQuery[T, OKS, L, s.R] =
-        takeExpr[s.R](n.asExpr.asSqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)
+    ): SelectQuery[T, OKS, L, s.R] =
+        val sqlExpr = n.asExpr.asSqlExpr
+        val limit = tree.limit
+        val sqlLimit = limit
+            .map(l => SqlLimit(l.offset, Some(SqlFetch(sqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies))))
+            .orElse(Some(SqlLimit(None, Some(SqlFetch(sqlExpr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)))))
+        val newTree: SqlQuery.Select = tree.copy(limit = sqlLimit)
+        SelectQuery(params, newTree)
 
     /**
      * Alias of `takeWithTies`, provided for users familiar with `LIMIT`.
@@ -424,18 +446,18 @@ sealed class SortedQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def limitWithTies(n: Int)(using
         s: TakeSize[n.type]
-    ): SortedQuery[T, OKS, L, s.R] =
+    ): SelectQuery[T, OKS, L, s.R] =
         takeWithTies(n)
 
 /**
  * A `SELECT` query. Created by `from`.
  */
-final case class SelectQuery[T, OKS <: Tuple, L <: Int](
+final case class TableQuery[T, OKS <: Tuple, L <: Int](
     override private[sqala] val params: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[T, OKS, L, ManyRows](params, tree):
+) extends SelectQuery[T, OKS, L, ManyRows](params, tree):
     /**
      * Adds a `WHERE` clause to the query. The condition must be a valid
      * filter expression — aggregate functions and window functions are
@@ -452,9 +474,9 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SelectQuery[T, c.R, L] =
+    ): TableQuery[T, c.R, L] =
         val cond = a.asExpr(f(params))
-        SelectQuery(params, tree.addWhere(cond.asSqlExpr))
+        TableQuery(params, tree.addWhere(cond.asSqlExpr))
 
     /**
      * Alias of `filter`, provided for users familiar with `WHERE`.
@@ -470,7 +492,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SelectQuery[T, c.R, L] =
+    ): TableQuery[T, c.R, L] =
         filter(f)
 
     /**
@@ -490,8 +512,8 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SelectQuery[T, c.R, L] =
-        if test then filter(f) else this.asInstanceOf[SelectQuery[T, c.R, L]]
+    ): TableQuery[T, c.R, L] =
+        if test then filter(f) else this.asInstanceOf[TableQuery[T, c.R, L]]
 
     /**
      * Alias of `filterIf`, provided for users familiar with `WHERE`.
@@ -507,7 +529,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SelectQuery[T, c.R, L] =
+    ): TableQuery[T, c.R, L] =
         filterIf(test)(f)
 
     /**
@@ -525,7 +547,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SelectQuery[T, c.R, L] =
+    ): TableQuery[T, c.R, L] =
         filter(f)
 
     /**
@@ -540,9 +562,9 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SortedSelectQuery[T, c.R, L] =
+    ): SortedTableQuery[T, c.R, L] =
         val sort = a.asSorts(f(params))
-        SortedSelectQuery(
+        SortedTableQuery(
             params,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
@@ -558,7 +580,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SortedSelectQuery[T, c.R, L] =
+    ): SortedTableQuery[T, c.R, L] =
         sortBy(f)
 
     /**
@@ -582,10 +604,10 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSelectQuery[a.R, T, c.R, L, i.R] =
+    ): MappedQuery[a.R, T, c.R, L, i.R] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
-        MappedSelectQuery(
+        MappedQuery(
             a.transform(mapped),
             params,
             tree.copy(select = sqlSelect)
@@ -603,7 +625,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSelectQuery[a.R, T, c.R, L, i.R] =
+    ): MappedQuery[a.R, T, c.R, L, i.R] =
         map(f)
 
     /**
@@ -621,10 +643,10 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
         td: ToDistinct[M, L]
-    ): MappedDistinctSelectQuery[a.R, td.R, c.R, L, i.R] =
+    ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
-        MappedDistinctSelectQuery(
+        MappedDistinctQuery(
             a.transform(mapped),
             td.toDistinct(mapped),
             tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
@@ -643,7 +665,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
         td: ToDistinct[M, L]
-    ): MappedDistinctSelectQuery[a.R, td.R, c.R, L, i.R] =
+    ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
         mapDistinct(f)
 
     /**
@@ -720,7 +742,7 @@ final case class SelectQuery[T, OKS <: Tuple, L <: Int](
             )
         )
 
-object SelectQuery:
+object TableQuery:
     /**
      * Creates a hierarchical recursive query using `WITH RECURSIVE`
      * under the hood. The function receives the current and prior
@@ -733,7 +755,7 @@ object SelectQuery:
      *     .map(c => (id = c.id, content = c.content, level = level()))
      * }}}
      */
-    extension [T, OKS <: Tuple, L <: Int](query: SelectQuery[Table[T, Column, L], OKS, L])
+    extension [T, OKS <: Tuple, L <: Int](query: TableQuery[Table[T, Column, L], OKS, L])
         def connectBy[F](f: QueryContext[L] ?=> (Table[T, Column, L], Table[T, Column, L]) => F)(using
             a: AsExpr[F, L],
             b: SqlBoolean[a.R],
@@ -775,12 +797,12 @@ object SelectQuery:
 /**
  * A sorted `SELECT` query.
  */
-final case class SortedSelectQuery[T, OKS <: Tuple, L <: Int](
+final case class SortedTableQuery[T, OKS <: Tuple, L <: Int](
     override private[sqala] val params: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends SortedQuery[T, OKS, L, ManyRows](params, tree):
+) extends SortedSelectQuery[T, OKS, L, ManyRows](params, tree):
     /**
      * Adds an `ORDER BY` clause. Sort expressions default to `ASC` unless
      * `.desc` or other ordering is specified. Multiple calls accumulate.
@@ -793,9 +815,9 @@ final case class SortedSelectQuery[T, OKS <: Tuple, L <: Int](
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SortedSelectQuery[T, c.R, L] =
+    ): SortedTableQuery[T, c.R, L] =
         val sort = a.asSorts(f(params))
-        SortedSelectQuery(
+        SortedTableQuery(
             params,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
         )
@@ -811,19 +833,19 @@ final case class SortedSelectQuery[T, OKS <: Tuple, L <: Int](
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): SortedSelectQuery[T, c.R, L] =
+    ): SortedTableQuery[T, c.R, L] =
         sortBy(f)
 
 /**
  * A `SELECT` query after `map` projection.
  */
-final case class MappedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
+final case class MappedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val params: M,
     private[sqala] val tables: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[M, OKS, L, S](params, tree):
+) extends SelectQuery[M, OKS, L, S](params, tree):
     /**
      * Adds an `ORDER BY` clause. Sort expressions default to `ASC` unless
      * `.desc` or other ordering is specified. Multiple calls accumulate.
@@ -836,9 +858,9 @@ final case class MappedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSortedSelectQuery[M, T, c.R, L, S] =
+    ): MappedSortedQuery[M, T, c.R, L, S] =
         val sort = a.asSorts(f(tables))
-        MappedSortedSelectQuery(
+        MappedSortedQuery(
             params,
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
@@ -855,19 +877,19 @@ final case class MappedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSortedSelectQuery[M, T, c.R, L, S] =
+    ): MappedSortedQuery[M, T, c.R, L, S] =
         sortBy(f)
 
 /**
  * A `SELECT` query after `map` and `sortBy`.
  */
-final case class MappedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
+final case class MappedSortedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val params: M,
     private[sqala] val tables: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends SortedQuery[M, OKS, L, S](params, tree):
+) extends SortedSelectQuery[M, OKS, L, S](params, tree):
     /**
      * Adds an `ORDER BY` clause. Sort expressions default to `ASC` unless
      * `.desc` or other ordering is specified. Multiple calls accumulate.
@@ -880,9 +902,9 @@ final case class MappedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: Quer
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSortedSelectQuery[M, T, c.R, L, S] =
+    ): MappedSortedQuery[M, T, c.R, L, S] =
         val sort = a.asSorts(f(tables))
-        MappedSortedSelectQuery(
+        MappedSortedQuery(
             params,
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
@@ -899,19 +921,19 @@ final case class MappedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int, S <: Quer
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): MappedSortedSelectQuery[M, T, c.R, L, S] =
+    ): MappedSortedQuery[M, T, c.R, L, S] =
         sortBy(f)
 
 /**
  * A `SELECT DISTINCT` query after `mapDistinct` projection.
  */
-final case class MappedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySize](
+final case class MappedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val params: M,
     private[sqala] val distinctExprs: D,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[M, OKS, L, S](params, tree):
+) extends SelectQuery[M, OKS, L, S](params, tree):
     /**
      * Sorts by distinct-projected fields. The lambda parameter type represents the projected type,
      * ensuring only columns in the `DISTINCT` list appear in `ORDER BY`.
@@ -922,9 +944,9 @@ final case class MappedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S <: Qu
      */
     def sortBy[SS](f: D => SS)(using
         a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctSelectQuery[M, D, OKS, L, S] =
+    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         val sort = a.asSorts(f(distinctExprs))
-        MappedSortedDistinctSelectQuery(
+        MappedSortedDistinctQuery(
             params,
             distinctExprs,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
@@ -939,19 +961,19 @@ final case class MappedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S <: Qu
      */
     def orderBy[SS](f: D => SS)(using
         a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctSelectQuery[M, D, OKS, L, S] =
+    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         sortBy(f)
 
 /**
  * A sorted `SELECT DISTINCT` query after `mapDistinct` and `sortBy`.
  */
-final case class MappedSortedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySize](
+final case class MappedSortedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val params: M,
     private[sqala] val distinctExprs: D,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends SortedQuery[M, OKS, L, S](params, tree):
+) extends SortedSelectQuery[M, OKS, L, S](params, tree):
     /**
      * Sorts by distinct-projected fields. The lambda parameter type represents the projected type,
      * ensuring only columns in the `DISTINCT` list appear in `ORDER BY`.
@@ -962,9 +984,9 @@ final case class MappedSortedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S
      */
     def sortBy[SS](f: D => SS)(using
         a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctSelectQuery[M, D, OKS, L, S] =
+    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         val sort = a.asSorts(f(distinctExprs))
-        MappedSortedDistinctSelectQuery(
+        MappedSortedDistinctQuery(
             params,
             distinctExprs,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderBy))
@@ -979,7 +1001,7 @@ final case class MappedSortedDistinctSelectQuery[M, D, OKS <: Tuple, L <: Int, S
      */
     def orderBy[SS](f: D => SS)(using
         a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctSelectQuery[M, D, OKS, L, S] =
+    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         sortBy(f)
 
 /**
@@ -1043,10 +1065,10 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSelectQuery[a.R, T, c.R, L] =
+    ): GroupedQuery[a.R, T, c.R, L] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
-        GroupedSelectQuery(
+        GroupedQuery(
             a.transform(mapped),
             params,
             tree.copy(select = sqlSelect)
@@ -1065,19 +1087,19 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSelectQuery[a.R, T, c.R, L] =
+    ): GroupedQuery[a.R, T, c.R, L] =
         map(f)
 
 /**
  * A grouped `SELECT` query after `map` projection.
  */
-final case class GroupedSelectQuery[M, T, OKS <: Tuple, L <: Int](
+final case class GroupedQuery[M, T, OKS <: Tuple, L <: Int](
     override private[sqala] val params: M,
     private[sqala] val tables: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[M, OKS, L, ManyRows](params, tree):
+) extends SelectQuery[M, OKS, L, ManyRows](params, tree):
     given GroupingContext = GroupingContext()
 
     /**
@@ -1094,9 +1116,9 @@ final case class GroupedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSortedSelectQuery[M, T, c.R, L] =
+    ): GroupedSortedQuery[M, T, c.R, L] =
         val sort = a.asSorts(f(tables))
-        GroupedSortedSelectQuery(
+        GroupedSortedQuery(
             params,
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
@@ -1115,19 +1137,19 @@ final case class GroupedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSortedSelectQuery[M, T, c.R, L] =
+    ): GroupedSortedQuery[M, T, c.R, L] =
         sortBy(f)
 
 /**
  * A grouped and sorted `SELECT` query.
  */
-final case class GroupedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int](
+final case class GroupedSortedQuery[M, T, OKS <: Tuple, L <: Int](
     override private[sqala] val params: M,
     private[sqala] val tables: T,
     override private[sqala] val tree: SqlQuery.Select
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends SortedQuery[M, OKS, L, ManyRows](params, tree):
+) extends SortedSelectQuery[M, OKS, L, ManyRows](params, tree):
     given GroupingContext = GroupingContext()
 
     /**
@@ -1145,9 +1167,9 @@ final case class GroupedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSortedSelectQuery[M, T, c.R, L] =
+    ): GroupedSortedQuery[M, T, c.R, L] =
         val sort = a.asSorts(f(tables))
-        GroupedSortedSelectQuery(
+        GroupedSortedQuery(
             params,
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
@@ -1167,7 +1189,7 @@ final case class GroupedSortedSelectQuery[M, T, OKS <: Tuple, L <: Int](
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): GroupedSortedSelectQuery[M, T, c.R, L] =
+    ): GroupedSortedQuery[M, T, c.R, L] =
         sortBy(f)
 
 /**
@@ -1178,63 +1200,7 @@ final case class UnionQuery[T, OKS <: Tuple, L <: Int](
     override private[sqala] val tree: SqlQuery.Set
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[T, OKS, L, ManyRows](params, tree):
-    /**
-     * Sorts the union result using column-level sort expressions.
-     *
-     * {{{
-     * q1.unionAll(q2).sortBy(t => t.x.asc)
-     * }}}
-     */
-    def sortBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
-        val sort = s.asSorts(f(params))
-        SortedUnionQuery(
-            params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
-        )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * q1.unionAll(q2).orderBy(t => t.x.asc)
-     * }}}
-     */
-    def orderBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
-        sortBy(f)
-
-/**
- * A sorted union query.
- */
-final case class SortedUnionQuery[T, OKS <: Tuple, L <: Int](
-    override private[sqala] val params: T,
-    override private[sqala] val tree: SqlQuery.Set
-)(using
-    override private[sqala] val qc: QueryContext[L]
-) extends SortedQuery[T, OKS, L, ManyRows](params, tree):
-    /**
-     * Sorts the union result using column-level sort expressions.
-     *
-     * {{{
-     * q1.unionAll(q2).sortBy(t => t.x.asc).sortBy(t => t.y.desc)
-     * }}}
-     */
-    def sortBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
-        val sort = s.asSorts(f(params))
-        SortedUnionQuery(
-            params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asSqlOrderingItem))
-        )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * q1.unionAll(q2).orderBy(t => t.x.asc).orderBy(t => t.y.desc)
-     * }}}
-     */
-    def orderBy[S](f: T => S)(using s: AsColumnSort[S, L]): SortedUnionQuery[T, OKS, L] =
-        sortBy(f)
+) extends Query[T, OKS, L, ManyRows](params, tree)
 
 /**
  * A hierarchical recursive query created by `connectBy`. Converts to a
