@@ -576,6 +576,15 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             )
         )
 
+    /**
+     * Returns the first non-null value from two expressions.
+     * Maps to `COALESCE(expr1, expr2)`. Both arguments must be
+     * compatible types.
+     *
+     * {{{
+     * from(User).map(u => u.name.getOrElse(""))
+     * }}}
+     */
     def getOrElse[B](that: B)(using
         ab: AsExpr[B, CL],
         asa: AsSqlExpr[aa.R],
