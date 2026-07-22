@@ -4,6 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.*
 import sqala.util.NonEmptyList
+import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.annotation.targetName
 
@@ -572,6 +573,19 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
                 s"%$value%".asExpr.asSqlExpr,
                 None,
                 false
+            )
+        )
+
+    def getOrElse[B](that: B)(using
+        ab: AsExpr[B, CL],
+        asa: AsSqlExpr[aa.R],
+        asb: AsSqlExpr[ab.R],
+        r: Return[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            SqlExpr.Coalesce(
+                (aa.asExpr(self).asSqlExpr :: ab.asExpr(that).asSqlExpr :: Nil).toNonEmptyList
             )
         )
 
