@@ -319,6 +319,8 @@ object AsMap:
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
+        aeh: AsExpr[H, CL],
+        ash: AsSqlExpr[aeh.R],
         at: AsMap[T, CL],
         tt: ToTuple[at.R],
         c: CombineKindTuple[ah.KS, at.KS]
@@ -339,6 +341,8 @@ object AsMap:
 
     given tuple1[H, CL <: Int](using
         ah: AsMap[H, CL],
+        aeh: AsExpr[H, CL],
+        ash: AsSqlExpr[aeh.R],
         c: CombineKindTuple[ah.KS, EmptyTuple]
     ): Aux[H *: EmptyTuple, CL, ah.R *: EmptyTuple, c.R] =
         new AsMap[H *: EmptyTuple, CL]:
