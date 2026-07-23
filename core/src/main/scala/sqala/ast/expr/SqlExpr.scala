@@ -227,7 +227,7 @@ enum SqlExpr:
      *
      * Renders as `TRIM([[LEADING|TRAILING|BOTH] [expr] FROM] expr)`.
      */
-    case TrimFunc(expr: SqlExpr, trim: Option[SqlTrim])
+    case TrimFunc(trim: Option[SqlTrim], expr: SqlExpr)
 
     /**
      * An `OVERLAY` function.

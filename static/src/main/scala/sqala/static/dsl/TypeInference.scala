@@ -491,7 +491,7 @@ object Union:
     type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
         type R = O
 
-    given union[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
+    given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
         r: Return[A, B]
     ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
         new Union[Expr[A, AK], Expr[B, BK], CL]:
@@ -503,7 +503,7 @@ object Union:
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
                 Expr(SqlExpr.Column(None, s"c$cursor"))
 
-    given tupleUnion[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
+    given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
         t: Union[AT, BT, CL],
         tt: ToTuple[t.R]
@@ -518,7 +518,7 @@ object Union:
                 h.unionQueryItems(x.head, cursor) *:
                     tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset))
 
-    given tuple1Union[AH, BH, CL <: Int](using
+    given tuple1[AH, BH, CL <: Int](using
         h: Union[AH, BH, CL]
     ): Aux[AH *: EmptyTuple, BH *: EmptyTuple, CL, h.R *: EmptyTuple] =
         new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
@@ -530,7 +530,7 @@ object Union:
             def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
                 h.unionQueryItems(x.head, cursor) *: EmptyTuple
 
-    given namedTupleUnion[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
+    given namedTuple[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
         u: Union[AV, BV, CL],
         t: ToTuple[u.R]
     ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, t.R]] =
@@ -543,7 +543,7 @@ object Union:
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
 
-    given namedTupleUnionTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
+    given namedTupleAndTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
         u: Union[AV, BV, CL],
         t: ToTuple[u.R]
     ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, t.R]] =
