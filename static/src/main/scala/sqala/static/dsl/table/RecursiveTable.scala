@@ -23,10 +23,10 @@ final case class RecursiveTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object RecursiveTable:
-    def apply[N <: Tuple, V <: Tuple, H <: Int](alias: Option[String])(using
-        p: AsTableParam[V, H],
+    def apply[N <: Tuple, V <: Tuple, L <: Int](alias: Option[String])(using
+        p: AsTableParam[V, L],
         t: ToTuple[p.R]
-    ): RecursiveTable[N, t.R, H] =
+    ): RecursiveTable[N, t.R, L] =
         new RecursiveTable(
             alias,
             t.toTuple(p.asTableParam(alias, 1)),

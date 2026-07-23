@@ -6,8 +6,9 @@ import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.*
 import sqala.static.dsl.table.*
 
-import scala.NamedTuple.NamedTuple
+import scala.NamedTuple.{AnyNamedTuple, NamedTuple}
 import scala.compiletime.ops.int.>
+import scala.util.NotGiven
 
 /**
  * Generates `SELECT` items from table sources. Each table type
@@ -317,13 +318,31 @@ object AsMap:
             def asSelectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
                 SqlSelectItem.Expr(ao.asExpr(transform(x)).asSqlExpr, Some(s"c$cursor")) :: Nil
 
+    given table[T, L <: Int, CL <: Int](using
+        kt: KindToTuple[Column[L]]
+    ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
+        new AsMap[Table[T, Column, L], CL]:
+            type R = Table[T, Column, L]
+
+            type KS = kt.R
+
+            def transform(x: Table[T, Column, L]): R =
+                x
+
+            def offset(x: Table[T, Column, L]): Int =
+                x.__metaData__.columnNames.size
+
+            def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
+                x.__metaData__.columnNames.zipWithIndex.map: (n, i) =>
+                    SqlSelectItem.Expr(SqlExpr.Column(x.__aliasName__, n), Some(s"c${cursor + i}"))
+
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
-        aeh: AsExpr[H, CL],
-        ash: AsSqlExpr[aeh.R],
         at: AsMap[T, CL],
         tt: ToTuple[at.R],
-        c: CombineKindTuple[ah.KS, at.KS]
+        c: CombineKindTuple[ah.KS, at.KS],
+        nt: NotGiven[H <:< Tuple],
+        nnt: NotGiven[H <:< AnyNamedTuple]
     ): Aux[H *: T, CL, ah.R *: tt.R, c.R] =
         new AsMap[H *: T, CL]:
             type R = ah.R *: tt.R
@@ -341,9 +360,9 @@ object AsMap:
 
     given tuple1[H, CL <: Int](using
         ah: AsMap[H, CL],
-        aeh: AsExpr[H, CL],
-        ash: AsSqlExpr[aeh.R],
-        c: CombineKindTuple[ah.KS, EmptyTuple]
+        c: CombineKindTuple[ah.KS, EmptyTuple],
+        nt: NotGiven[H <:< Tuple],
+        nnt: NotGiven[H <:< AnyNamedTuple]
     ): Aux[H *: EmptyTuple, CL, ah.R *: EmptyTuple, c.R] =
         new AsMap[H *: EmptyTuple, CL]:
             type R = ah.R *: EmptyTuple
