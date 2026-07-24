@@ -336,6 +336,52 @@ object AsMap:
                 x.__metaData__.columnNames.zipWithIndex.map: (n, i) =>
                     SqlSelectItem.Expr(SqlExpr.Column(x.__aliasName__, n), Some(s"c${cursor + i}"))
 
+    given excludedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[ExcludedTable[N, V, L], CL, ExcludedTable[N, t.R, L], kt.R] =
+        new AsMap[ExcludedTable[N, V, L], CL]:
+            type R = ExcludedTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: ExcludedTable[N, V, L]): R =
+                ExcludedTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__.asInstanceOf[V])),
+                    x.__sqlTable__
+                )
+
+            def offset(x: ExcludedTable[N, V, L]): Int =
+                a.offset(x.__items__.asInstanceOf[V])
+
+            def asSelectItems(x: ExcludedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__.asInstanceOf[V], cursor)
+
+    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[SubqueryTable[N, V, L], CL, SubqueryTable[N, t.R, L], kt.R] =
+        new AsMap[SubqueryTable[N, V, L], CL]:
+            type R = SubqueryTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: SubqueryTable[N, V, L]): R =
+                SubqueryTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__sqlTable__
+                )
+
+            def offset(x: SubqueryTable[N, V, L]): Int =
+                a.offset(x.__items__)
+
+            def asSelectItems(x: SubqueryTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__, cursor)
+
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
         at: AsMap[T, CL],

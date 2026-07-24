@@ -2,8 +2,9 @@ package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.metadata.TableMacro
+import sqala.metadata.{TableMacro, TableMetaData}
 import sqala.static.dsl.*
+import sqala.static.dsl.statement.query.AsMap
 
 /**
  * Generates column expressions (as `c1`, `c2`, ...) for subquery
@@ -41,14 +42,20 @@ object AsTableParam:
                 Expr(SqlExpr.Column(queryAlias, s"c$cursor"))
 
     inline given table[T, L <: Int, CL <: Int]: Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
+        val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
+        createTableInstance[T, L, CL](metaData)
+
+    /**
+      * Creates a table instance for a given table metadata.
+      */
+    private def createTableInstance[T, L <: Int, CL <: Int](metaData: TableMetaData): Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
         new AsTableParam[Table[T, Column, L], CL]:
             type R = Table[T, Column, CL]
 
             def offset: Int =
-                TableMacro.tableMetaData[Unwrap[T, Option]].columnNames.size
+                metaData.columnNames.size
 
             def asTableParam(queryAlias: Option[String], cursor: Int): Table[T, Column, CL] =
-                val metaData = TableMacro.tableMetaData[Unwrap[T, Option]]
                 val sqlTable: SqlTable.Ident =
                     SqlTable.Ident(
                         metaData.tableName,
@@ -61,6 +68,32 @@ object AsTableParam:
                 Table(
                     queryAlias,
                     metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}")),
+                    sqlTable
+                )
+
+    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using 
+        a: AsTableParam[V, CL],
+        tt: ToTuple[a.R]
+    ): Aux[SubqueryTable[N, V, L], CL, ExcludedTable[N, tt.R, CL]] =
+        new AsTableParam[SubqueryTable[N, V, L], CL]:
+            type R = ExcludedTable[N, tt.R, CL]
+
+            def offset: Int =
+                a.offset
+
+            def asTableParam(queryAlias: Option[String], cursor: Int): R =
+                val sqlTable: SqlTable.Ident =
+                    SqlTable.Ident(
+                        queryAlias.get,
+                        queryAlias.map: a =>
+                            SqlTableAlias(a, Nil),
+                        None,
+                        None,
+                        None
+                    )
+                ExcludedTable(
+                    queryAlias,
+                    tt.toTuple(a.asTableParam(queryAlias, cursor)),
                     sqlTable
                 )
 
