@@ -13,7 +13,7 @@ import scala.compiletime.constValue
  * A JSON table source, constructed by `jsonTable`.
  */
 final case class FromJson[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
 ) extends AnyTable
@@ -22,7 +22,7 @@ object FromJson:
     def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
         expr: SqlExpr,
         path: SqlExpr,
-        alias: Option[String],
+        alias: String,
         columns: JsonColumns[N, V]
     )(using
         p: AsTableParam[JsonColumnFlatten[V, CL], CL],
@@ -57,7 +57,7 @@ object FromJson:
                 Nil,
                 sqlColumns,
                 None,
-                alias.map(SqlTableAlias(_, Nil)),
+                Some(SqlTableAlias(alias, Nil)),
                 None
             )
         )
@@ -67,7 +67,7 @@ object FromJson:
  * enabling typed column access via `selectDynamic`.
  */
 final case class JsonTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Json
 ) extends Selectable with AnyTable:

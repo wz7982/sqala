@@ -13,7 +13,7 @@ import scala.compiletime.constValue
  * subquery source, with typed column access via `selectDynamic`.
  */
 final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Subquery
 ) extends Selectable with AnyTable:
@@ -31,7 +31,7 @@ final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object SubqueryTable:
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, lateral: Boolean, alias: Option[String])(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, lateral: Boolean, alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): SubqueryTable[N, t.R, L] =
@@ -41,12 +41,12 @@ object SubqueryTable:
             SqlTable.Subquery(
                 lateral,
                 query,
-                alias.map(SqlTableAlias(_, Nil)),
+                Some(SqlTableAlias(alias, Nil)),
                 None
             )
         )
 
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: Option[String])(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): SubqueryTable[N, t.R, L] =

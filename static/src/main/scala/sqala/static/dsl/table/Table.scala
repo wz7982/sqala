@@ -13,7 +13,7 @@ import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
  * `Fields`.
  */
 final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable with AnyTable:
@@ -32,4 +32,4 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(__aliasName__, __metaData__.columnNames(index)))
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))

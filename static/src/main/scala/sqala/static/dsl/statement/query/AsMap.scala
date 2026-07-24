@@ -55,7 +55,7 @@ object AsSelect:
                     (column, index) <- x.__metaData__.columnNames.zipWithIndex
                 yield
                     SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
                     )
 
     given jsonTable[N <: Tuple, V <: Tuple, L <: Int](using
@@ -93,7 +93,7 @@ object AsSelect:
                     (column, index) <- x.__columnNames__.zipWithIndex
                 yield
                     SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
                     )
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int](using
@@ -334,7 +334,7 @@ object AsMap:
 
             def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
                 x.__metaData__.columnNames.zipWithIndex.map: (n, i) =>
-                    SqlSelectItem.Expr(SqlExpr.Column(x.__aliasName__, n), Some(s"c${cursor + i}"))
+                    SqlSelectItem.Expr(SqlExpr.Column(Some(x.__aliasName__), n), Some(s"c${cursor + i}"))
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsMap[V, L],

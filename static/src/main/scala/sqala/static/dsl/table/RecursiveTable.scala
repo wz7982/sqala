@@ -12,7 +12,7 @@ import scala.compiletime.constValue
  * as the parameter to the recursive step and final projection.
  */
 final case class RecursiveTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable with AnyTable:
@@ -23,7 +23,7 @@ final case class RecursiveTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object RecursiveTable:
-    def apply[N <: Tuple, V <: Tuple, L <: Int](alias: Option[String])(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): RecursiveTable[N, t.R, L] =
@@ -32,7 +32,7 @@ object RecursiveTable:
             t.toTuple(p.asTableParam(alias, 1)),
             SqlTable.Ident(
                 tableCte,
-                alias.map(SqlTableAlias(_, Nil)),
+                Some(SqlTableAlias(alias, Nil)),
                 None,
                 None,
                 None

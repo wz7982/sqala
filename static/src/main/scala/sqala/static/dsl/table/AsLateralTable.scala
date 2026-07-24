@@ -96,5 +96,5 @@ object AsLateralTable:
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val table = SubqueryTable[N, V, CL - 1](x, true, Some(alias))
+                val table = SubqueryTable[N, V, CL - 1](x, true, alias)
                 (table, table.__sqlTable__)

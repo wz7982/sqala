@@ -25,7 +25,7 @@ trait AsTableParam[T, CL <: Int]:
     /**
      * Produces the column expression at the given cursor position.
      */
-    def asTableParam(queryAlias: Option[String], cursor: Int): R
+    def asTableParam(queryAlias: String, cursor: Int): R
 
 object AsTableParam:
     type Aux[T, CL <: Int, O] = AsTableParam[T, CL]:
@@ -38,8 +38,8 @@ object AsTableParam:
             def offset: Int =
                 1
 
-            def asTableParam(queryAlias: Option[String], cursor: Int): Expr[T, Column[CL]] =
-                Expr(SqlExpr.Column(queryAlias, s"c$cursor"))
+            def asTableParam(queryAlias: String, cursor: Int): Expr[T, Column[CL]] =
+                Expr(SqlExpr.Column(Some(queryAlias), s"c$cursor"))
 
     inline given table[T, L <: Int, CL <: Int]: Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
         val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
@@ -55,12 +55,11 @@ object AsTableParam:
             def offset: Int =
                 metaData.columnNames.size
 
-            def asTableParam(queryAlias: Option[String], cursor: Int): Table[T, Column, CL] =
+            def asTableParam(queryAlias: String, cursor: Int): Table[T, Column, CL] =
                 val sqlTable: SqlTable.Ident =
                     SqlTable.Ident(
                         metaData.tableName,
-                        queryAlias.map: a =>
-                            SqlTableAlias(a, Nil),
+                        Some(SqlTableAlias(queryAlias, Nil)),
                         None,
                         None,
                         None
@@ -81,12 +80,11 @@ object AsTableParam:
             def offset: Int =
                 a.offset
 
-            def asTableParam(queryAlias: Option[String], cursor: Int): R =
+            def asTableParam(queryAlias: String, cursor: Int): R =
                 val sqlTable: SqlTable.Ident =
                     SqlTable.Ident(
-                        queryAlias.get,
-                        queryAlias.map: a =>
-                            SqlTableAlias(a, Nil),
+                        queryAlias,
+                        Some(SqlTableAlias(queryAlias, Nil)),
                         None,
                         None,
                         None
@@ -108,7 +106,7 @@ object AsTableParam:
             def offset: Int =
                 h.offset + t.offset
 
-            def asTableParam(queryAlias: Option[String], cursor: Int): R =
+            def asTableParam(queryAlias: String, cursor: Int): R =
                 h.asTableParam(queryAlias, cursor) *: 
                 tt.toTuple(t.asTableParam(queryAlias, cursor + h.offset))
 
@@ -119,5 +117,5 @@ object AsTableParam:
             def offset: Int =
                 h.offset
 
-            def asTableParam(queryAlias: Option[String], cursor: Int): R =
+            def asTableParam(queryAlias: String, cursor: Int): R =
                 h.asTableParam(queryAlias, cursor) *: EmptyTuple

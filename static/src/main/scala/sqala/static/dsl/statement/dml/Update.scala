@@ -118,7 +118,7 @@ object Update:
             None,
             None
         )
-        val table = Table[T, Column, 1](Some(alias), metaData, sqlTable)
+        val table = Table[T, Column, 1](alias, metaData, sqlTable)
         val tree = UpdateTree(sqlTable, Nil, None)
         new Update(table, tree)
 
@@ -141,7 +141,7 @@ object Update:
             None,
             None
         )
-        val table = Table[T, Column, 1](None, metaData, sqlTable)
+        val table = Table[T, Column, 1](metaData.tableName, metaData, sqlTable)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)

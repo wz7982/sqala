@@ -766,7 +766,7 @@ object TableQuery:
         ): ConnectBy[T, c.R, L] =
             given QueryContext[L] = query.qc
             val cond = a.asExpr(
-                f(query.params, query.params.copy(__aliasName__ = Some(tableCte)))
+                f(query.params, query.params.copy(__aliasName__ = tableCte))
             ).asSqlExpr
             val joinTree = query.tree
                 .copy(
@@ -1314,7 +1314,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
     ): Query[a.R, c.R, L, ManyRows] =
         val mapped = f(
             Table[T, Column, L](
-                Some(tableCte),
+                tableCte,
                 table.__metaData__,
                 table.__sqlTable__.copy(
                     alias = table.__sqlTable__.alias.map(_.copy(alias = tableCte))

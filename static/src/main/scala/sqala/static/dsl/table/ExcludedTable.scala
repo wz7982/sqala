@@ -13,7 +13,7 @@ import scala.compiletime.{constValue, constValueTuple}
  * method to omit specific fields from query projection.
  */
 final case class FromExcluded[N <: Tuple, V <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : Any,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends AnyTable
@@ -27,7 +27,7 @@ object FromExcluded:
             table.__metaData__.fieldNames.zip(table.__metaData__.columnNames).filter: (f, _) =>
                 !names.contains(f)
             .map: (_, c) =>
-                Expr(SqlExpr.Column(table.__aliasName__, c))
+                Expr(SqlExpr.Column(Some(table.__aliasName__), c))
         val tuple =
             Tuple.fromArray(items.toArray).asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]]
         FromExcluded(
@@ -41,7 +41,7 @@ object FromExcluded:
  * used to omit specific columns from query projection.
  */
 final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : Any,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable with AnyTable:

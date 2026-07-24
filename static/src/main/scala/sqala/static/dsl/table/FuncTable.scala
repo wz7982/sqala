@@ -11,7 +11,7 @@ import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
  * such as `unnest`.
  */
 final case class FromFunc[T, K[_ <: Int] <: ExprKind, OKS <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __fieldNames__ : List[String],
     private[sqala] val __columnNames__ : List[String],
     private[sqala] val __sqlTable__ : SqlTable.Func
@@ -22,7 +22,7 @@ final case class FromFunc[T, K[_ <: Int] <: ExprKind, OKS <: Tuple, CL <: Int](
  * enabling typed column access via `selectDynamic`.
  */
 final case class FuncTable[T, K[_ <: Int] <: ExprKind, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __fieldNames__ : List[String],
     private[sqala] val __columnNames__ : List[String],
     private[sqala] val __sqlTable__ : SqlTable.Func
@@ -42,4 +42,4 @@ final case class FuncTable[T, K[_ <: Int] <: ExprKind, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __fieldNames__.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(__aliasName__, __columnNames__(index)))
+        Expr(SqlExpr.Column(Some(__aliasName__), __columnNames__(index)))

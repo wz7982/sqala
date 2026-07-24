@@ -79,7 +79,7 @@ object AsRecognize:
 
         def alias(x: Table[T, K, L], name: String): Table[T, K, L] =
             x.copy(
-                __aliasName__ = Some(name)
+                __aliasName__ = name
             )
 
         def setPartitionBy(x: Table[T, K, L], items: List[SqlExpr]): Table[T, K, L] =
@@ -130,7 +130,7 @@ object AsRecognize:
 
         def alias(x: SubqueryTable[N, V, L], name: String): SubqueryTable[N, V, L] =
             x.copy(
-                __aliasName__ = Some(name)
+                __aliasName__ = name
             )
 
         def setPartitionBy(x: SubqueryTable[N, V, L], items: List[SqlExpr]): SubqueryTable[N, V, L] =

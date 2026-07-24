@@ -153,9 +153,9 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     m: AsMap[V, CL]
 ): Query[R, EmptyTuple, CL, ManyRows] =
     val alias = qc.fetchAlias
-    val withTable = RecursiveTable[N, V, CL](Some(alias))
+    val withTable = RecursiveTable[N, V, CL](alias)
     val unionQuery = f(withTable)
-    val finalTable = RecursiveTable[N, tu.R, CL](Some(tableCte))
+    val finalTable = RecursiveTable[N, tu.R, CL](tableCte)
     val finalQuery = g(finalTable)
     val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
     val withTree = SqlQuery.Set(
@@ -397,7 +397,7 @@ def unnest[T, CL <: Int](x: T)(using
         Some(SqlTableAlias(alias, "x" :: Nil)),
         None
     )
-    FromFunc(Some(alias), "x" :: Nil, "x" :: Nil, sqlTable)
+    FromFunc(alias, "x" :: Nil, "x" :: Nil, sqlTable)
 
 /**
  * An unnested table element with row number, used as the row shape
@@ -430,7 +430,7 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
         Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
         None
     )
-    FromFunc(Some(alias), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    FromFunc(alias, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
 
 /**
  * Creates a JSON table. Maps to `JSON_TABLE`. Columns are defined using
@@ -469,7 +469,7 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
 ): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
     given JsonContext = JsonContext()
     val alias = qc.fetchAlias
-    FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, Some(alias), columns)
+    FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, alias, columns)
 
 /**
  * Creates an ordinality column for `jsonTable`. Maps to
@@ -599,7 +599,7 @@ def columns[N <: Tuple, V <: Tuple, CL <: Int](c: JsonContext ?=> NamedTuple[N, 
  */
 inline def vertex[T](label: String): GraphVertexSchema[T] =
     val metaData = TableMacro.tableMetaData[T]
-    GraphVertexSchema(None, metaData.copy(tableName = label))
+    GraphVertexSchema(metaData.tableName, metaData.copy(tableName = label))
 
 /**
  * Creates an edge schema for a graph query. The type parameter is
@@ -614,7 +614,7 @@ inline def vertex[T](label: String): GraphVertexSchema[T] =
  */
 inline def edge[T](label: String): GraphEdgeSchema[T] =
     val metaData = TableMacro.tableMetaData[T]
-    GraphEdgeSchema(None, metaData.copy(tableName = label), None, None)
+    GraphEdgeSchema(metaData.tableName, metaData.copy(tableName = label), None, None)
 
 /**
  * Creates a graph schema combining vertices and edges, used as the
@@ -1606,7 +1606,7 @@ inline def createTableFunc[T, CL <: Int](
         Some(SqlTableAlias(alias, metaData.columnNames)),
         None
     )
-    FromFunc(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
+    FromFunc(alias, metaData.fieldNames, metaData.columnNames, sqlTable)
 
 /**
  * Creates a raw expression from a string interpolation, supporting
