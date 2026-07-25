@@ -13,6 +13,7 @@ import sqala.util.queryToString
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.compiletime.ops.int.-
+import scala.util.NotGiven
 
 /**
  * A typed SQL query, the base type for all query operations in the DSL.
@@ -561,7 +562,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
     def sortBy[S](f: QueryContext[L] ?=> T => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): SortedTableQuery[T, c.R, L] =
         val sort = a.asSorts(f(params))
         SortedTableQuery(
@@ -579,7 +582,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
     def orderBy[S](f: QueryContext[L] ?=> T => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): SortedTableQuery[T, c.R, L] =
         sortBy(f)
 
@@ -603,7 +608,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedQuery[a.R, T, c.R, L, i.R] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
@@ -624,7 +631,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedQuery[a.R, T, c.R, L, i.R] =
         map(f)
 
@@ -642,7 +651,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
-        td: ToDistinct[M, L]
+        td: ToDistinct[M, L],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
@@ -664,7 +675,9 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
-        td: ToDistinct[M, L]
+        td: ToDistinct[M, L],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
         mapDistinct(f)
 
@@ -814,7 +827,9 @@ final case class SortedTableQuery[T, OKS <: Tuple, L <: Int](
     def sortBy[S](f: QueryContext[L] ?=> T => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): SortedTableQuery[T, c.R, L] =
         val sort = a.asSorts(f(params))
         SortedTableQuery(
@@ -832,7 +847,9 @@ final case class SortedTableQuery[T, OKS <: Tuple, L <: Int](
     def orderBy[S](f: QueryContext[L] ?=> T => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): SortedTableQuery[T, c.R, L] =
         sortBy(f)
 
@@ -857,7 +874,9 @@ final case class MappedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def sortBy[SS](f: QueryContext[L] ?=> T => SS)(using
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedSortedQuery[M, T, c.R, L, S] =
         val sort = a.asSorts(f(tables))
         MappedSortedQuery(
@@ -876,7 +895,9 @@ final case class MappedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedSortedQuery[M, T, c.R, L, S] =
         sortBy(f)
 
@@ -901,7 +922,9 @@ final case class MappedSortedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
     def sortBy[SS](f: QueryContext[L] ?=> T => SS)(using
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedSortedQuery[M, T, c.R, L, S] =
         val sort = a.asSorts(f(tables))
         MappedSortedQuery(
@@ -920,7 +943,9 @@ final case class MappedSortedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
     def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
         a: AsSort[SS, S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): MappedSortedQuery[M, T, c.R, L, S] =
         sortBy(f)
 
@@ -1033,7 +1058,9 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         kt: KindToTuple[a.K],
         i: CanInHaving[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[kt.R],
+        nan: an.R =:= false
     ): Grouping[T, c.R, L] =
         val cond = a.asExpr(f(params))
         Grouping(params, tree.addHaving(cond.asSqlExpr))
@@ -1064,7 +1091,9 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedQuery[a.R, T, c.R, L] =
         val mapped = f(params)
         val sqlSelect = a.asSelectItems(mapped, 1)
@@ -1086,7 +1115,9 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedQuery[a.R, T, c.R, L] =
         map(f)
 
@@ -1115,7 +1146,9 @@ final case class GroupedQuery[M, T, OKS <: Tuple, L <: Int](
     def sortBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedSortedQuery[M, T, c.R, L] =
         val sort = a.asSorts(f(tables))
         GroupedSortedQuery(
@@ -1136,7 +1169,9 @@ final case class GroupedQuery[M, T, OKS <: Tuple, L <: Int](
     def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedSortedQuery[M, T, c.R, L] =
         sortBy(f)
 
@@ -1166,7 +1201,9 @@ final case class GroupedSortedQuery[M, T, OKS <: Tuple, L <: Int](
     def sortBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedSortedQuery[M, T, c.R, L] =
         val sort = a.asSorts(f(tables))
         GroupedSortedQuery(
@@ -1188,7 +1225,9 @@ final case class GroupedSortedQuery[M, T, OKS <: Tuple, L <: Int](
     def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
         a: AsGroupedSort[S, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): GroupedSortedQuery[M, T, c.R, L] =
         sortBy(f)
 
@@ -1277,7 +1316,8 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
     def sortSiblingsBy[S](f: QueryContext[L] ?=> ConnectByContext ?=> Table[T, Column, L] => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        ci: CanInSimpleClause[c.R]
     ): ConnectBy[T, c.R, L] =
         val sort = f(table)
         val sqlOrderBy = a.asSorts(sort).map(_.asSqlOrderingItem)
@@ -1291,7 +1331,8 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
     def orderSiblingsBy[S](f: QueryContext[L] ?=> ConnectByContext ?=> Table[T, Column, L] => S)(using
         a: AsSort[S, ManyRows, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        ci: CanInSimpleClause[c.R]
     ): ConnectBy[T, c.R, L] =
         sortSiblingsBy(f)
 
@@ -1310,7 +1351,9 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): Query[a.R, c.R, L, ManyRows] =
         val mapped = f(
             Table[T, Column, L](
@@ -1352,6 +1395,8 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         a: AsMap[M, L],
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R]
+        c: CombineKindTuple[OKS, e.R],
+        an: AggNested[a.KS],
+        nan: an.R =:= false
     ): Query[a.R, c.R, L, ManyRows] =
         map(f)

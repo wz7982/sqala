@@ -1268,7 +1268,7 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
-extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[CL], kt: KindToTuple[EK], co: CanCallOver[EK])
+extension [T, EKS <: Tuple, CL <: Int](x: Expr[T, Agg[EKS]])(using qc: QueryContext[CL])
     /**
      * Applies a window specification to the expression. Maps to
      * `OVER ()`.
@@ -1277,7 +1277,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
      * from(Post).map(p => rank().over())
      * }}}
      */
-    def over(): Expr[T, Window[kt.R]] =
+    def over(): Expr[T, Window[EKS]] =
         Expr(
             SqlExpr.Window(
                 x.asSqlExpr,
@@ -1302,7 +1302,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
      */
     def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
         i: CanInWindow[OKS],
-        c: CombineKindTuple[kt.R, OKS]
+        c: CombineKindTuple[EKS, OKS]
     ): Expr[T, Window[c.R]] =
         given OverContext = OverContext()
         val o = over

@@ -3,6 +3,7 @@ package sqala.static.dsl
 import scala.util.NotGiven
 import scala.compiletime.ops.boolean.{&&, ||}
 import scala.compiletime.ops.int.>
+import sqala.metadata.column
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -541,6 +542,70 @@ object AllIsKind:
             type R = h.R
 
 /**
+  * Validates that a kind tuple contains aggregate functions nested.
+  */
+trait AggNested[KS <: Tuple]:
+    /**
+      * `true` if the kind tuple contains aggregate functions nested.
+      */
+    type R <: Boolean
+
+object AggNested:
+    type Aux[KS <: Tuple, O <: Boolean] = AggNested[KS]:
+        type R = O
+
+    given valueHeadTuple[T <: Tuple](using
+        t: AggNested[T]
+    ): Aux[Value *: T, t.R] =
+        new AggNested[Value *: T]:
+            type R = t.R
+
+    given columnHeadTuple[L <: Int, T <: Tuple](using
+        t: AggNested[T]
+    ): Aux[Column[L] *: T, t.R] =
+        new AggNested[Column[L] *: T]:
+            type R = t.R
+
+    // TODO window之类的表达式里嵌套的agg
+    given aggHeadTuple[KS <: Tuple, T <: Tuple](using
+        h: HasKind[KS, Agg[?]],
+        t: AggNested[T]
+    ): Aux[Agg[KS] *: T, h.R || t.R] =
+        new AggNested[Agg[KS] *: T]:
+            type R = h.R || t.R
+
+    given windowHeadTuple[KS <: Tuple, T <: Tuple](using
+        h: AggNested[KS],
+        t: AggNested[T]
+    ): Aux[Window[KS] *: T, h.R || t.R] =
+        new AggNested[Window[KS] *: T]:
+            type R = h.R || t.R
+
+    given groupedHeadTuple[KS <: Tuple, T <: Tuple](using
+        h: AggNested[KS],
+        t: AggNested[T]
+    ): Aux[Grouped[KS] *: T, h.R || t.R] =
+        new AggNested[Grouped[KS] *: T]:
+            type R = h.R || t.R
+
+    given ungroupedColumnHeadTuple[L <: Int, T <: Tuple](using
+        t: AggNested[T]
+    ): Aux[UngroupedColumn[L] *: T, t.R] =
+        new AggNested[UngroupedColumn[L] *: T]:
+            type R = t.R
+
+    given compositeHeadTuple[KS <: Tuple, T <: Tuple](using
+        h: AggNested[KS],
+        t: AggNested[T]
+    ): Aux[Composite[KS] *: T, h.R || t.R] =
+        new AggNested[Composite[KS] *: T]:
+            type R = h.R || t.R
+            
+    given emptyTuple: Aux[EmptyTuple, false] =
+        new AggNested[EmptyTuple]:
+            type R = false
+
+/**
  * Validates that a kind tuple contains no column references
  * that would create variable capture issues.
  */
@@ -568,19 +633,9 @@ trait CanInAgg[KS <: Tuple]
 
 object CanInAgg:
     given validate[KS <: Tuple](using
-        ha: HasKind[KS, Agg[?]],
-        na: ha.R =:= false,
         hw: HasKind[KS, Window[?]],
         nw: hw.R =:= false
     ): CanInAgg[KS]()
-
-/**
- * Validates that an expression kind can be used with `over` clause.
- */
-trait CanCallOver[K <: ExprKind]
-
-object CanCallOver:
-    given agg[K <: Agg[?]]: CanCallOver[K]()
 
 /**
  * Validates that a kind tuple can appear inside a window

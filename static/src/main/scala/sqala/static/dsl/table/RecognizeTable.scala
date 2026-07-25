@@ -103,7 +103,9 @@ final case class Recognize[N <: Tuple, T, L <: Int](
     inline def define[V <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[N, V])(using
         a: AsExpr[V, L],
         kt: KindToTuple[a.K],
-        i: CanInRecognizeDefine[kt.R, L]
+        i: CanInRecognizeDefine[kt.R, L],
+        an: AggNested[kt.R],
+        nan: an.R =:= false
     ): Recognize[N, T, L] =
         val items = f(RecognizeDefine[N, T, L](__table__))
         val names = constValueTuple[N].toList.map(_.toString)
@@ -245,7 +247,9 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         t: ToTuple[p.R],
         i: CanInGroupedMap[m.KS],
         e: ExcludeCurrentLevelColumn[m.KS, L],
-        refl: e.R =:= EmptyTuple
+        refl: e.R =:= EmptyTuple,
+        an: AggNested[m.KS],
+        nan: an.R =:= false
     ): RecognizeMeasures[MN, t.R, L] =
         val alias = qc.fetchAlias
         val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
