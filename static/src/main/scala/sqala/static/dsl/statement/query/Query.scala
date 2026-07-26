@@ -13,7 +13,6 @@ import sqala.util.queryToString
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.compiletime.ops.int.-
-import scala.util.NotGiven
 
 /**
  * A typed SQL query, the base type for all query operations in the DSL.

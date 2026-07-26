@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import java.time.*
+import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.any.ToString
 import scala.compiletime.ops.boolean.{!, ||}
 import scala.compiletime.ops.int.S
@@ -65,6 +66,18 @@ type Index[T <: Tuple, X, N <: Int] <: Int =
     T match
         case X *: xs => N
         case x *: xs => Index[xs, X, S[N]]
+
+/** 
+ * The names of a named tuple, represented as a tuple of literal string values. 
+ */
+type Names[T] <: Tuple = T match
+    case NamedTuple[n, _] => n
+
+/** 
+ * The value types of a named tuple represented as a regular tuple. 
+ */
+type DropNames[T] <: Tuple = T match
+    case NamedTuple[_, x] => x
 
 /**
  * Tests whether a type is `Option`.

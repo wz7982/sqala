@@ -333,8 +333,12 @@ object AsMap:
                 x.__metaData__.columnNames.size
 
             def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
-                x.__metaData__.columnNames.zipWithIndex.map: (n, i) =>
-                    SqlSelectItem.Expr(SqlExpr.Column(Some(x.__aliasName__), n), Some(s"c${cursor + i}"))
+                for
+                    (column, index) <- x.__metaData__.columnNames.zipWithIndex
+                yield
+                    SqlSelectItem.Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
+                    )
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsMap[V, L],
@@ -380,6 +384,97 @@ object AsMap:
                 a.offset(x.__items__)
 
             def asSelectItems(x: SubqueryTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__, cursor)
+
+    given jsonTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[JsonTable[N, V, L], CL, JsonTable[N, t.R, L], kt.R] =
+        new AsMap[JsonTable[N, V, L], CL]:
+            type R = JsonTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: JsonTable[N, V, L]): R =
+                JsonTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__sqlTable__
+                )
+
+            def offset(x: JsonTable[N, V, L]): Int =
+                a.offset(x.__items__)
+
+            def asSelectItems(x: JsonTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__, cursor)
+
+    given funcTable[T, L <: Int, CL <: Int](using
+        kt: KindToTuple[Column[L]]
+    ): Aux[FuncTable[T, Column, L], CL, FuncTable[T, Column, L], kt.R] =
+        new AsMap[FuncTable[T, Column, L], CL]:
+            type R = FuncTable[T, Column, L]
+
+            type KS = kt.R
+
+            def transform(x: FuncTable[T, Column, L]): R =
+                x
+
+            def offset(x: FuncTable[T, Column, L]): Int =
+                x.__fieldNames__.size
+
+            def asSelectItems(x: FuncTable[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
+                for
+                    (column, index) <- x.__columnNames__.zipWithIndex
+                yield
+                    SqlSelectItem.Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
+                    )
+
+    given graphTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[GraphTable[N, V, L], CL, GraphTable[N, t.R, L], kt.R] =
+        new AsMap[GraphTable[N, V, L], CL]:
+            type R = GraphTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: GraphTable[N, V, L]): R =
+                GraphTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__sqlTable__
+                )
+
+            def offset(x: GraphTable[N, V, L]): Int =
+                a.offset(x.__items__)
+
+            def asSelectItems(x: GraphTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__, cursor)
+
+    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[RecognizeTable[N, V, L], CL, RecognizeTable[N, t.R, L], kt.R] =
+        new AsMap[RecognizeTable[N, V, L], CL]:
+            type R = RecognizeTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: RecognizeTable[N, V, L]): R =
+                RecognizeTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__sqlTable__
+                )
+
+            def offset(x: RecognizeTable[N, V, L]): Int =
+                a.offset(x.__items__)
+
+            def asSelectItems(x: RecognizeTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
                 a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple, CL <: Int](using

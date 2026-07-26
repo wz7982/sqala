@@ -3,7 +3,6 @@ package sqala.static.dsl
 import scala.util.NotGiven
 import scala.compiletime.ops.boolean.{&&, ||}
 import scala.compiletime.ops.int.>
-import sqala.metadata.column
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -566,7 +565,6 @@ object AggNested:
         new AggNested[Column[L] *: T]:
             type R = t.R
 
-    // TODO window之类的表达式里嵌套的agg
     given aggHeadTuple[KS <: Tuple, T <: Tuple](using
         h: HasKind[KS, Agg[?]],
         t: AggNested[T]
@@ -600,7 +598,7 @@ object AggNested:
     ): Aux[Composite[KS] *: T, h.R || t.R] =
         new AggNested[Composite[KS] *: T]:
             type R = h.R || t.R
-            
+
     given emptyTuple: Aux[EmptyTuple, false] =
         new AggNested[EmptyTuple]:
             type R = false
