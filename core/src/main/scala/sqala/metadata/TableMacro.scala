@@ -50,7 +50,7 @@ private[sqala] object TableMacroImpl:
     def tableMetaDataMacro[T](using q: Quotes, t: Type[T]): TableMetaData =
         import q.reflect.*
 
-        val sym = TypeTree.of[T].symbol
+        val sym = TypeRepr.of[T].typeSymbol
         val eles = sym.declaredFields
         val tableName = tableNameMacro[T]
         val columnNames = ListBuffer[String]()

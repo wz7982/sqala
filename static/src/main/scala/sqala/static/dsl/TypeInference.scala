@@ -506,19 +506,19 @@ object Union:
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
                 Expr(SqlExpr.Column(None, s"c$cursor"))
 
-    // given table[A, B, CL <: Int](using
-    //     ua: TableUnion[A, CL],
-    //     ub: TableUnion[B, CL],
-    //     u: Union[ua.R, ub.R, CL]
-    // ): Aux[A, B, CL, ExcludedTable[Names[ua.R], DropNames[u.R], CL]] =
-    //     new Union[A, B, CL]:
-    //         type R = ExcludedTable[Names[ua.R], DropNames[u.R], CL]
+    given table[A, B, CL <: Int](using
+        ua: TableUnion[A, CL],
+        ub: TableUnion[B, CL],
+        u: Union[ua.R, ub.R, CL]
+    ): Aux[A, B, CL, ExcludedTable[Names[ua.R], DropNames[u.R], CL]] =
+        new Union[A, B, CL]:
+            type R = ExcludedTable[Names[ua.R], DropNames[u.R], CL]
 
-    //         def offset: Int =
-    //             ua.offset
+            def offset: Int =
+                ua.offset
 
-    //         def unionQueryItems(x: A, cursor: Int): R =
-    //             ExcludedTable(ua.alias(x), u.unionQueryItems(ua.items(x), cursor), ua.fetchSqlTable(x))
+            def unionQueryItems(x: A, cursor: Int): R =
+                ExcludedTable(ua.alias(x), u.unionQueryItems(ua.items(x), cursor).asInstanceOf[DropNames[u.R]], ua.fetchSqlTable(x))
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
