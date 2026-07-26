@@ -57,7 +57,7 @@ final class Insert[T, S <: InsertState](
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
-        val table = Table[T, Column, 1](None, metaData, sqlTable)
+        val table = Table[T, Column, 1](tableName, metaData, sqlTable)
         val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match

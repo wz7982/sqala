@@ -650,8 +650,8 @@ class TestExpr extends munit.FunSuite:
     test("trim func"):
         val col = SqlExpr.Column(None, "x")
         val cases: List[(SqlExpr.TrimFunc, String)] = List(
-            SqlExpr.TrimFunc(col, None) -> """TRIM("x")""",
-            SqlExpr.TrimFunc(col, Some(SqlTrim(None, Some(SqlExpr.Column(None, "y"))))) -> """TRIM("y" FROM "x")""",
+            SqlExpr.TrimFunc(None, col) -> """TRIM("x")""",
+            SqlExpr.TrimFunc(Some(SqlTrim(None, Some(SqlExpr.Column(None, "y")))), col) -> """TRIM("y" FROM "x")""",
         )
         for (t, sql) <- cases do
             assertEquals(createSql(_.printExpr(t)), sql)

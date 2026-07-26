@@ -1,12 +1,15 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
+import sqala.ast.table.SqlTable
 import sqala.metadata.*
+import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import java.time.{OffsetDateTime, OffsetTime}
-import scala.NamedTuple.NamedTuple
+import scala.NamedTuple.{AnyNamedTuple, NamedTuple}
 import scala.compiletime.ops.boolean.||
+import scala.deriving.Mirror
 
 /**
  * Determines whether two types are compatible for comparison
@@ -491,7 +494,7 @@ object Union:
     type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
         type R = O
 
-    given union[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
+    given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
         r: Return[A, B]
     ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
         new Union[Expr[A, AK], Expr[B, BK], CL]:
@@ -503,7 +506,21 @@ object Union:
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
                 Expr(SqlExpr.Column(None, s"c$cursor"))
 
-    given tupleUnion[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
+    given table[A, B, CL <: Int](using
+        ua: TableUnion[A, CL],
+        ub: TableUnion[B, CL],
+        u: Union[ua.R, ub.R, CL]
+    ): Aux[A, B, CL, ExcludedTable[Names[ua.R], DropNames[u.R], CL]] =
+        new Union[A, B, CL]:
+            type R = ExcludedTable[Names[ua.R], DropNames[u.R], CL]
+
+            def offset: Int =
+                ua.offset
+
+            def unionQueryItems(x: A, cursor: Int): R =
+                ExcludedTable(ua.alias(x), u.unionQueryItems(ua.items(x), cursor), ua.fetchSqlTable(x))
+
+    given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
         t: Union[AT, BT, CL],
         tt: ToTuple[t.R]
@@ -518,7 +535,7 @@ object Union:
                 h.unionQueryItems(x.head, cursor) *:
                     tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset))
 
-    given tuple1Union[AH, BH, CL <: Int](using
+    given tuple1[AH, BH, CL <: Int](using
         h: Union[AH, BH, CL]
     ): Aux[AH *: EmptyTuple, BH *: EmptyTuple, CL, h.R *: EmptyTuple] =
         new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
@@ -530,7 +547,7 @@ object Union:
             def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
                 h.unionQueryItems(x.head, cursor) *: EmptyTuple
 
-    given namedTupleUnion[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
+    given namedTuple[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
         u: Union[AV, BV, CL],
         t: ToTuple[u.R]
     ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, t.R]] =
@@ -543,7 +560,7 @@ object Union:
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
 
-    given namedTupleUnionTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
+    given namedTupleAndTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
         u: Union[AV, BV, CL],
         t: ToTuple[u.R]
     ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, t.R]] =
@@ -555,3 +572,107 @@ object Union:
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+
+/**
+  * Maps table union items, producing column expressions
+  * for `union`, `unionAll`, etc. `CL` is the query context level.
+  */
+trait TableUnion[T, CL <: Int]:
+    /**
+     * The result type.
+     */
+    type R <: AnyNamedTuple
+
+    /**
+     * The number of expressions consumed by each query item.
+     */
+    def offset: Int
+
+    /**
+     * Produces the alias for the given query item.
+     */
+    def alias(x: T): String
+
+    /**
+     * Produces the SQL table for the given query item.
+     */
+    def fetchSqlTable(x: T): SqlTable.Ident
+
+    /**
+     * Produces the column expressions for the given query item.
+     */
+    def items(x: T): R
+
+object TableUnion:
+    type Aux[T, CL <: Int, O <: AnyNamedTuple] = TableUnion[T, CL]:
+        type R = O
+
+    inline given table[T, L <: Int, CL <: Int](using 
+        p: Mirror.ProductOf[T]
+    ): Aux[Table[T, Column, L], CL, NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[x, Column[CL]]]]] =
+        val metaData = TableMacro.tableMetaData[T]
+        createTableInstance[T, L, CL](metaData)
+
+    /**
+      * Creates a table instance for a given table metadata.
+      */
+    private def createTableInstance[T, L <: Int, CL <: Int](metaData: TableMetaData)(using 
+        p: Mirror.ProductOf[T]
+    ): Aux[Table[T, Column, L], CL, NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[x, Column[CL]]]]] =
+        new TableUnion[Table[T, Column, L], CL]:
+            type R = NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[x, Column[CL]]]]
+
+            def offset: Int = 
+                metaData.columnNames.size
+
+            def alias(x: Table[T, Column, L]): String =
+                x.__aliasName__
+
+            def fetchSqlTable(x: Table[T, Column, L]): SqlTable.Ident =
+                x.__sqlTable__
+
+            def items(x: Table[T, Column, L]): NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[x, Column[CL]]]] =
+                val exprs = for
+                    (column, index) <- x.__metaData__.columnNames.zipWithIndex
+                yield
+                    Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), column)
+                    )
+                NamedTuple(
+                    Tuple.fromArray(exprs.toArray).asInstanceOf[Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[x, Column[CL]]]]
+                )
+
+    inline given optionTable[T, L <: Int, CL <: Int](using 
+        p: Mirror.ProductOf[T]
+    ): Aux[Table[Option[T], Column, L], CL, NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[Wrap[x, Option], Column[CL]]]]] =
+        val metaData = TableMacro.tableMetaData[Unwrap[T, Option]]
+        createOptionTableInstance[T, L, CL](metaData)
+
+    /**
+      * Creates a table instance for a given table metadata.
+      */
+    private def createOptionTableInstance[T, L <: Int, CL <: Int](metaData: TableMetaData)(using 
+        p: Mirror.ProductOf[T]
+    ): Aux[Table[Option[T], Column, L], CL, NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[Wrap[x, Option], Column[CL]]]]] =
+        new TableUnion[Table[Option[T], Column, L], CL]:
+            type R = NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[Wrap[x, Option], Column[CL]]]]
+
+            def offset: Int = 
+                metaData.columnNames.size
+
+            def alias(x: Table[Option[T], Column, L]): String =
+                x.__aliasName__
+
+            def fetchSqlTable(x: Table[Option[T], Column, L]): SqlTable.Ident =
+                x.__sqlTable__
+
+            def items(x: Table[Option[T], Column, L]): NamedTuple[p.MirroredElemLabels, Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[Wrap[x, Option], Column[CL]]]] =
+                val exprs = for
+                    (column, index) <- metaData.columnNames.zipWithIndex
+                yield
+                    Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), column)
+                    )
+                NamedTuple(
+                    Tuple.fromArray(exprs.toArray).asInstanceOf[Tuple.Map[p.MirroredElemTypes, [x] =>> Expr[Wrap[x, Option], Column[CL]]]]
+                )

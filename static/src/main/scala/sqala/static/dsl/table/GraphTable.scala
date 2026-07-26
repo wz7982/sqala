@@ -24,7 +24,7 @@ final case class GraphSchema[N <: Tuple, V <: Tuple](
  * A vertex schema created by `vertex[T]`.
  */
 final case class GraphVertexSchema[T](
-    private[sqala] val __alias__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData
 )
 
@@ -32,7 +32,7 @@ final case class GraphVertexSchema[T](
  * An edge schema created by `edge[T]`.
  */
 final case class GraphEdgeSchema[T](
-    private[sqala] val __alias__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __where__ : Option[SqlExpr],
     private[sqala] val __quantifier__ : Option[SqlGraphQuantifier]
@@ -62,14 +62,14 @@ object TransformGraphSchema:
             type R = GraphVertex[T, CL]
 
             def transform(x: GraphVertexSchema[T])(using qc: QueryContext[CL]): R =
-                GraphVertex(x.__alias__, x.__metaData__)
+                GraphVertex(x.__aliasName__, x.__metaData__)
 
     given edge[T, CL <: Int]: Aux[GraphEdgeSchema[T], CL, GraphEdge[T, EmptyTuple, CL]] = new
         TransformGraphSchema[GraphEdgeSchema[T], CL]:
             type R = GraphEdge[T, EmptyTuple, CL]
 
             def transform(x: GraphEdgeSchema[T])(using qc: QueryContext[CL]): R =
-                GraphEdge(x.__alias__, x.__metaData__, x.__where__, x.__quantifier__)
+                GraphEdge(x.__aliasName__, x.__metaData__, x.__where__, x.__quantifier__)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         sh: TransformGraphSchema[H, CL],
@@ -112,9 +112,9 @@ final case class Graph[N <: Tuple, V <: Tuple, L <: Int](
         val node = __items__.toList(index)
         node match
             case GraphVertex(_, metaData) =>
-                GraphVertex(Some(alias), metaData)
+                GraphVertex(alias, metaData)
             case GraphEdge(_, metaData, where, quantifier) =>
-                GraphEdge(Some(alias), metaData, where, quantifier)
+                GraphEdge(alias, metaData, where, quantifier)
 
     /**
      * Starts a graph pattern match. The pattern is built from
@@ -149,7 +149,7 @@ sealed trait GraphPatternTerm[V, OKS <: Tuple, L <: Int]:
  * accessed via the `is` method in `matching` blocks.
  */
 final case class GraphVertex[T, L <: Int](
-    private[sqala] val __alias__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData
 )(using private[sqala] val qc: QueryContext[L]) extends Selectable with GraphPatternTerm[T, EmptyTuple, L]:
     /**
@@ -168,7 +168,7 @@ final case class GraphVertex[T, L <: Int](
      */
     override private[sqala] def asTerm: SqlGraphPatternTerm =
         SqlGraphPatternTerm.Vertex(
-            __alias__,
+            Some(__aliasName__),
             Some(SqlGraphLabel.Label(__metaData__.tableName)),
             None
         )
@@ -178,14 +178,14 @@ final case class GraphVertex[T, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(__alias__, __metaData__.columnNames(index)))
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
 
 /**
  * An edge in a graph pattern. Created by `edge[T]` and accessed
  * via the `is` method in `matching` blocks.
  */
 final case class GraphEdge[T, OKS <: Tuple, L <: Int](
-    private[sqala] val __alias__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __metaData__ : TableMetaData,
     private[sqala] val __where__ : Option[SqlExpr],
     private[sqala] val __quantifier__ : Option[SqlGraphQuantifier]
@@ -210,7 +210,7 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
             SqlGraphPatternTerm.Quantified(
                 SqlGraphPatternTerm.Edge(
                     SqlGraphSymbol.Dash,
-                    __alias__,
+                    Some(__aliasName__),
                     Some(SqlGraphLabel.Label(__metaData__.tableName)),
                     __where__,
                     SqlGraphSymbol.Dash
@@ -220,7 +220,7 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
         .getOrElse:
             SqlGraphPatternTerm.Edge(
                 SqlGraphSymbol.Dash,
-                __alias__,
+                Some(__aliasName__),
                 Some(SqlGraphLabel.Label(__metaData__.tableName)),
                 __where__,
                 SqlGraphSymbol.Dash
@@ -231,7 +231,7 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(__alias__, __metaData__.columnNames(index)))
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
 
     /**
      * Adds a `WHERE` condition to the edge. Maps to the `WHERE`
@@ -251,9 +251,9 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
         c: CombineKindTuple[OKS, e.R]
     ): GraphEdge[T, c.R, L] =
         val table = Table[T, Column, L](
-            __alias__,
+            __aliasName__,
             __metaData__,
-            SqlTable.Ident(__alias__.get, None, None, None, None)
+            SqlTable.Ident(__aliasName__, None, None, None, None)
         )
         val cond = a.asExpr(f(table)).asSqlExpr
         copy(__where__ = __where__.map(SqlExpr.Binary(_, SqlBinaryOperator.And, cond)).orElse(Some(cond)))
@@ -669,10 +669,10 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
             ) :: Nil,
             __where__,
             __rows__,
-            tt.toTuple(p.asTableParam(Some(alias), 1)),
+            tt.toTuple(p.asTableParam(alias, 1)),
             columnItems,
             false,
-            Some(alias)
+            alias
         )
 
     /**
@@ -723,7 +723,7 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
  * to `from`.
  */
 final case class FromGraph[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Graph
 ) extends AnyTable
@@ -737,7 +737,7 @@ object FromGraph:
         items: V,
         columns: List[SqlSelectItem],
         lateral: Boolean,
-        alias: Option[String]
+        alias: String
     ): FromGraph[N, V, OKS, CL] =
         new FromGraph(
             alias,
@@ -751,7 +751,7 @@ object FromGraph:
                 rows,
                 columns.toNonEmptyList,
                 None,
-                alias.map(SqlTableAlias(_, Nil)),
+                Some(SqlTableAlias(alias, Nil)),
                 None
             )
         )
@@ -761,7 +761,7 @@ object FromGraph:
  * passed, enabling typed column access via `selectDynamic`.
  */
 final case class GraphTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Graph
 ) extends Selectable with AnyTable:

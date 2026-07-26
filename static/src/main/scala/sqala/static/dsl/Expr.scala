@@ -37,6 +37,23 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
         )
 
     /**
+     * Type-safe equality comparison with `None`. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NULL`.
+     *
+     * {{{
+     * from(User).filter(u => u.id == None)
+     * }}}
+     */
+    @targetName("equal")
+    def ==[CL <: Int](that: None.type)(using
+        qc: QueryContext[CL],
+        kt: KindToTuple[K]
+    ): Expr[Boolean, Composite[kt.R]] =
+        Expr(
+            SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral)
+        )
+
+    /**
      * Type-safe inequality comparison. Typically used in `filter`, `on`, and `having`
      * clause. Maps to SQL `<>`. The right-hand side can be a value, another
      * expression, or a subquery.
@@ -61,6 +78,23 @@ final case class Expr[T, K <: ExprKind](private[sqala] val expr: SqlExpr):
     ): Expr[r.R, ck.R] =
         Expr(
             ar.asSqlExpr(asSqlExpr, ComparisonOperator.NotEqual, that)
+        )
+
+    /**
+     * Type-safe inequality comparison with `None`. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NOT NULL`.
+     *
+     * {{{
+     * from(User).filter(u => u.id != None)
+     * }}}
+     */
+    @targetName("notEqual")
+    def !=[CL <: Int](that: None.type)(using
+        qc: QueryContext[CL],
+        kt: KindToTuple[K]
+    ): Expr[Boolean, Composite[kt.R]] =
+        Expr(
+            SqlExpr.Binary(asSqlExpr, SqlBinaryOperator.Is(true), SqlExpr.NullLiteral)
         )
 
     /**

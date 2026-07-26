@@ -59,7 +59,7 @@ object AsPivot:
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
                 val table = Table[fc.R, Column, CL](
-                    Some(alias),
+                    alias,
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
@@ -103,7 +103,7 @@ object AsPivot:
 
             def asPivot(x: Q)(using qc: QueryContext[CL]): R =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, false, Some(alias))
+                val subquery = SubqueryTable[N, V, CL](x, false, alias)
                 val selectItems = as.asSelectItems(subquery, 1)
                 val tree: SqlQuery.Select = SqlQuery.Select(
                     None,

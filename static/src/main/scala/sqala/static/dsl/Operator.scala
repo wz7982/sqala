@@ -40,6 +40,22 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         )
 
     /**
+     * Type-safe equality comparison with `None`. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NULL`.
+     *
+     * {{{
+     * from(User).filter(u => u.id === None)
+     * }}}
+     */
+    @targetName("equal")
+    def ===(that: None.type)(using
+        kt: KindToTuple[aa.K]
+    ): Expr[Boolean, Composite[kt.R]] =
+        Expr(
+            SqlExpr.Binary(aa.asExpr(self).asSqlExpr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral)
+        )
+
+    /**
      * Type-safe inequality comparison. Typically used in `filter`, `on`, and
      * `having` clause. Maps to SQL `<>`. Unlike raw `!=` on `Expr`, this
      * operates on any object that can be lifted to an expression. Subqueries
@@ -70,20 +86,19 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         )
 
     /**
-     * `IS NULL` test. Typically used in `filter`, `on`, and `having`
-     * clause.
+     * Type-safe inequality comparison with `None`. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NOT NULL`.
      *
      * {{{
-     * from(User).filter(u => u.email.isNull)
+     * from(User).filter(u => u.id <> None)
      * }}}
      */
-    def isNull(using t: KindToTuple[aa.K]): Expr[Boolean, Composite[t.R]] =
+    @targetName("notEqual")
+    def <>(that: None.type)(using
+        kt: KindToTuple[aa.K]
+    ): Expr[Boolean, Composite[kt.R]] =
         Expr(
-            SqlExpr.Binary(
-                aa.asExpr(self).asSqlExpr,
-                SqlBinaryOperator.Is(false),
-                SqlExpr.NullLiteral
-            )
+            SqlExpr.Binary(aa.asExpr(self).asSqlExpr, SqlBinaryOperator.Is(true), SqlExpr.NullLiteral)
         )
 
     /**
@@ -313,6 +328,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("plus")
     def +[B](that: B)(using
         ab: AsExpr[B, CL],
+        na: SqlNumber[aa.R],
+        nb: SqlNumber[ab.R],
         r: Plus[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -647,6 +664,116 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
                 false
             )
         )
+
+    /**
+     * Type-safe string case conversion. Typically used in `map`, `select`,
+     * and `groupBy` clause. Maps to SQL `LOWER(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.toLowerCase)
+     * }}}
+     */
+    def toLowerCase(using
+        s: SqlString[aa.R],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "LOWER",
+                aa.asExpr(self).asSqlExpr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string case conversion. Typically used in `map`, `select`,
+     * and `groupBy` clause. Maps to SQL `UPPER(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.toUpperCase)
+     * }}}
+     */
+    def toUpperCase(using
+        s: SqlString[aa.R],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "UPPER",
+                aa.asExpr(self).asSqlExpr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string trim. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `TRIM(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.trim)
+     * }}}
+     */
+    def trim(using
+        s: SqlString[aa.R],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "TRIM",
+                aa.asExpr(self).asSqlExpr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string length. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `CHAR_LENGTH(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.charLength)
+     * }}}
+     */
+    def length(using
+        s: SqlString[aa.R],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            SqlExpr.GeneralFunc(
+                None,
+                "CHAR_LENGTH",
+                aa.asExpr(self).asSqlExpr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string concatenation. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `||`.
+     *
+     * {{{
+     * from(User).map(u => u.firstName ++ " " ++ u.lastName)
+     * }}}
+     */
+    @targetName("concat")
+    def ++[B](that: B)(using
+        ab: AsExpr[B, CL],
+        sa: SqlString[aa.R],
+        sb: SqlString[ab.R],
+        r: Plus[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(r.plus(aa.asExpr(self).asSqlExpr, ab.asExpr(that).asSqlExpr))
 
     /**
      * `IS JSON` predicate. Typically used in `filter`, `on`, and

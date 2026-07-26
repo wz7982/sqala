@@ -44,6 +44,6 @@ object Delete:
             None,
             None
         )
-        val table = Table[T, Column, 1](Some(alias), metaData, sqlTable)
+        val table = Table[T, Column, 1](alias, metaData, sqlTable)
         val tree: SqlStatement.Delete = SqlStatement.Delete(sqlTable, None)
         new Delete(table, tree)

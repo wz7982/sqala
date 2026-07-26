@@ -103,7 +103,9 @@ final case class Recognize[N <: Tuple, T, L <: Int](
     inline def define[V <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[N, V])(using
         a: AsExpr[V, L],
         kt: KindToTuple[a.K],
-        i: CanInRecognizeDefine[kt.R, L]
+        i: CanInRecognizeDefine[kt.R, L],
+        an: AggNested[kt.R],
+        nan: an.R =:= false
     ): Recognize[N, T, L] =
         val items = f(RecognizeDefine[N, T, L](__table__))
         val names = constValueTuple[N].toList.map(_.toString)
@@ -245,7 +247,9 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         t: ToTuple[p.R],
         i: CanInGroupedMap[m.KS],
         e: ExcludeCurrentLevelColumn[m.KS, L],
-        refl: e.R =:= EmptyTuple
+        refl: e.R =:= EmptyTuple,
+        an: AggNested[m.KS],
+        nan: an.R =:= false
     ): RecognizeMeasures[MN, t.R, L] =
         val alias = qc.fetchAlias
         val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
@@ -259,8 +263,8 @@ final case class Recognize[N <: Tuple, T, L <: Int](
                 alias = Some(SqlTableAlias(alias, Nil))
             )
         RecognizeMeasures[MN, t.R, L](
-            Some(alias),
-            t.toTuple(p.asTableParam(Some(alias), 1)),
+            alias,
+            t.toTuple(p.asTableParam(alias, 1)),
             r.fetchSqlTable(r.setRecognize(__table__, newRecognize))
         )
 
@@ -496,7 +500,7 @@ final case class RecognizePatternTerm[L <: Int](private[sqala] val pattern: SqlR
  * Ready to be passed to `from` as a table source.
  */
 final case class RecognizeMeasures[N <: Tuple, V <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable
 ) extends AnyTable
@@ -505,7 +509,7 @@ final case class RecognizeMeasures[N <: Tuple, V <: Tuple, CL <: Int](
  * A `matchRecognize` table source produced by `measures`.
  */
 final case class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable
 ) extends AnyTable
@@ -515,7 +519,7 @@ final case class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
  * is passed, enabling typed column access via `selectDynamic`.
  */
 final case class RecognizeTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable
 ) extends Selectable with AnyTable:

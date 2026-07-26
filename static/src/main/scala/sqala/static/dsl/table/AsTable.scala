@@ -55,7 +55,7 @@ object AsTable:
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
                 val table = Table[fc.R, Column, CL](
-                    Some(alias),
+                    alias,
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
@@ -115,7 +115,7 @@ object AsTable:
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, false, Some(alias))
+                val subquery = SubqueryTable[N, V, CL](x, false, alias)
                 (subquery, subquery.__sqlTable__)
 
     given recognizeTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromRecognize[N, V, TOKS, CL], CL, RecognizeTable[N, V, CL], TOKS] =
@@ -165,7 +165,7 @@ object AsTable:
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](
-                    Some(alias),
+                    alias,
                     metaData,
                     SqlTable.Ident(
                         metaData.tableName,
