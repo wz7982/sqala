@@ -74,7 +74,7 @@ final case class RecognizePredefine[T, L <: Int](
      */
     def predefine[N <: Tuple](using
         t: TransformTableKind[T, [l <: Int] =>> Grouped[Column[l] *: EmptyTuple]],
-        rr: AsRecognize[t.R],
+        rr: AsRecognize[t.R]
     ): Recognize[N, t.R, L] =
         Recognize(t.transform(__table__))
 

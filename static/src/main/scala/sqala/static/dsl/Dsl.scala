@@ -743,7 +743,7 @@ def finalized[T, CL <: Int](x: T)(using
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
-): Expr[a.R, Agg[kt.R]] =
+): Expr[a.R, Composite[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
 
 /**
@@ -761,7 +761,7 @@ def running[T, CL <: Int](x: T)(using
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
-): Expr[a.R, Agg[kt.R]] =
+): Expr[a.R, Composite[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
 
 extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL], r: AsRecognize[t.R])
