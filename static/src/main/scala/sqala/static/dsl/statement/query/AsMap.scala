@@ -106,15 +106,15 @@ object AsSelect:
             def transform(x: ExcludedTable[N, V, L]): R =
                 ExcludedTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__.asInstanceOf[V])),
+                    t.toTuple(a.transform(x.__items__)),
                     x.__sqlTable__
                 )
 
             def offset(x: ExcludedTable[N, V, L]): Int =
-                a.offset(x.__items__.asInstanceOf[V])
+                a.offset(x.__items__)
 
             def asSelectItems(x: ExcludedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__.asInstanceOf[V], cursor)
+                a.asSelectItems(x.__items__, cursor)
 
     given graphTable[N <: Tuple, V <: Tuple, L <: Int](using
         a: AsMap[V, L],
@@ -353,15 +353,15 @@ object AsMap:
             def transform(x: ExcludedTable[N, V, L]): R =
                 ExcludedTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__.asInstanceOf[V])),
+                    t.toTuple(a.transform(x.__items__)),
                     x.__sqlTable__
                 )
 
             def offset(x: ExcludedTable[N, V, L]): Int =
-                a.offset(x.__items__.asInstanceOf[V])
+                a.offset(x.__items__)
 
             def asSelectItems(x: ExcludedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__.asInstanceOf[V], cursor)
+                a.asSelectItems(x.__items__, cursor)
 
     given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsMap[V, L],

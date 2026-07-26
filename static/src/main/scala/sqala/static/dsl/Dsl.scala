@@ -711,8 +711,8 @@ def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatter
  * .pattern(d => permute(d.a, d.b, d.c))
  * }}}
  */
-def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using 
-    QueryContext[CL], 
+def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using
+    QueryContext[CL],
     MatchRecognizeContext
 ): RecognizePatternTerm[CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Permute((term.pattern :: terms.toList.map(_.pattern)).toNonEmptyList, None))
@@ -893,8 +893,8 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
  *     .map((g, p) => (author = p.authorId, count = count(), groupingAuthorId = grouping(p.authorId)))
  * }}}
  */
-def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using 
-    QueryContext[CL], 
+def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using
+    QueryContext[CL],
     GroupingContext
 ): Expr[Int, Agg[K *: EmptyTuple]] =
     Expr(
@@ -1484,12 +1484,12 @@ def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T,
 
 /**
   * Creates a `CUBE` clause. Maps to `CUBE(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => cube(g.id, g.title)).map((g, p) => count())
   * }}}
   */
-def cube[T, CL <: Int](x: T)(using 
+def cube[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
@@ -1500,12 +1500,12 @@ def cube[T, CL <: Int](x: T)(using
 
 /**
   * Creates a `ROLLUP` clause. Maps to `ROLLUP(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => rollup(g.id, g.title)).map((g, p) => count())
   * }}}
   */
-def rollup[T, CL <: Int](x: T)(using 
+def rollup[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
@@ -1516,12 +1516,12 @@ def rollup[T, CL <: Int](x: T)(using
 
 /**
   * Creates a `GROUPING SETS` clause. Maps to `GROUPING SETS(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => groupingSets(g.id, g.title, ())).map((g, p) => count())
   * }}}
   */
-def groupingSets[T, CL <: Int](x: T)(using 
+def groupingSets[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsMultidimensionalGrouping[T]
 ): GroupingSets =

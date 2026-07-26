@@ -43,7 +43,7 @@ object TransformTableKind:
             type R = ExcludedTable[N, tt.R, L]
 
             def transform(x: ExcludedTable[N, V, L]): R =
-                ExcludedTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__.asInstanceOf[V])), x.__sqlTable__)
+                ExcludedTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
 
     given jsonTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],

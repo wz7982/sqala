@@ -51,7 +51,7 @@ object ToOption:
             type R = ExcludedTable[N, tt.R, L]
 
             def toOption(x: ExcludedTable[N, V, L]): R =
-                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__.asInstanceOf[V])))
+                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
     given funcTable[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[FuncTable[T, K, L], FuncTable[Wrap[T, Option], K, L]] =
         new ToOption[FuncTable[T, K, L]]:

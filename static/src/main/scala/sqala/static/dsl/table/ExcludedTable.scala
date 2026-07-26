@@ -14,7 +14,7 @@ import scala.compiletime.{constValue, constValueTuple}
  */
 final case class FromExcluded[N <: Tuple, V <: Tuple, CL <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : Any,
+    private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends AnyTable
 
@@ -29,10 +29,10 @@ object FromExcluded:
             .map: (_, c) =>
                 Expr(SqlExpr.Column(Some(table.__aliasName__), c))
         val tuple =
-            Tuple.fromArray(items.toArray).asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]]
+            Tuple.fromArray(items.toArray)
         FromExcluded(
             table.__aliasName__,
-            tuple,
+            tuple.asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]],
             table.__sqlTable__
         )
 
@@ -42,7 +42,7 @@ object FromExcluded:
  */
 final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : Any,
+    private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends Selectable with AnyTable:
     /**
@@ -56,4 +56,4 @@ final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
      */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[N, name.type, 0]]
-        __items__.asInstanceOf[V].toList(index)
+        __items__.toList(index)
