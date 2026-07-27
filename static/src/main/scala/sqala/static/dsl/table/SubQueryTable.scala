@@ -1,9 +1,6 @@
 package sqala.static.dsl.table
 
-import sqala.ast.statement.SqlQuery
-import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.{Index, ToTuple}
-import sqala.static.dsl.statement.query.Query
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
@@ -30,7 +27,7 @@ final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object SubqueryTable:
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, alias: String)(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): SubqueryTable[N, t.R, L] =
@@ -38,9 +35,3 @@ object SubqueryTable:
             alias,
             t.toTuple(p.asTableParam(alias, 1))
         )
-
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], alias: String)(using
-        p: AsTableParam[V, L],
-        t: ToTuple[p.R]
-    ): SubqueryTable[N, t.R, L] =
-        apply(query.tree, alias)

@@ -116,7 +116,7 @@ object AsTable:
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, alias)
+                val subquery = SubqueryTable[N, V, CL](alias)
                 val sqlTable =
                     SqlTable.Subquery(
                         false,

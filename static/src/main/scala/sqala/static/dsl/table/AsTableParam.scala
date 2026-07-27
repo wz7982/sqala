@@ -1,12 +1,8 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.table.*
-import sqala.ast.statement.SqlSelectItem
 import sqala.metadata.{TableMacro, TableMetaData}
 import sqala.static.dsl.*
-import sqala.ast.statement.SqlQuery
-import sqala.util.NonEmptyList
 
 /**
  * Generates column expressions (as `c1`, `c2`, ...) for subquery
@@ -58,14 +54,6 @@ object AsTableParam:
                 metaData.columnNames.size
 
             def asTableParam(queryAlias: String, cursor: Int): Table[T, Column, CL] =
-                val sqlTable: SqlTable.Ident =
-                    SqlTable.Ident(
-                        metaData.tableName,
-                        Some(SqlTableAlias(queryAlias, Nil)),
-                        None,
-                        None,
-                        None
-                    )
                 Table(
                     queryAlias,
                     metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}"))
@@ -82,10 +70,7 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                SubqueryTable[N, V, CL](
-                    SqlQuery.Select(None, Nil, Nil, None, None, None, Nil, None, Nil, None, None),
-                    queryAlias
-                )
+                SubqueryTable[N, V, CL](queryAlias)
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
@@ -98,14 +83,6 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                val sqlTable: SqlTable.Ident =
-                    SqlTable.Ident(
-                        queryAlias,
-                        Some(SqlTableAlias(queryAlias, Nil)),
-                        None,
-                        None,
-                        None
-                    )
                 ExcludedTable(
                     queryAlias,
                     tt.toTuple(a.asTableParam(queryAlias, cursor))
@@ -122,18 +99,6 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                val sqlTable: SqlTable.Json =
-                    SqlTable.Json(
-                        false,
-                        SqlExpr.NullLiteral,
-                        SqlExpr.NullLiteral,
-                        None,
-                        Nil,
-                        NonEmptyList(SqlJsonColumn.Ordinality(""), Nil),
-                        None,
-                        None,
-                        None
-                    )
                 JsonTable(
                     queryAlias,
                     tt.toTuple(a.asTableParam(queryAlias, cursor))
@@ -154,15 +119,6 @@ object AsTableParam:
                 metaData.columnNames.size
 
             def asTableParam(queryAlias: String, cursor: Int): FuncTable[T, Column, CL] =
-                val sqlTable: SqlTable.Func =
-                    SqlTable.Func(
-                        false,
-                        "",
-                        Nil,
-                        false,
-                        None,
-                        None
-                    )
                 FuncTable(
                     queryAlias,
                     metaData.fieldNames,
@@ -180,19 +136,6 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                val sqlTable: SqlTable.Graph =
-                    SqlTable.Graph(
-                        false,
-                        "",
-                        None,
-                        NonEmptyList(SqlGraphPattern(None, SqlGraphPatternTerm.Vertex(None, None, None)), Nil),
-                        None,
-                        None,
-                        NonEmptyList(SqlSelectItem.Asterisk(None), Nil),
-                        None,
-                        None,
-                        None
-                    )
                 GraphTable(
                     queryAlias,
                     tt.toTuple(a.asTableParam(queryAlias, cursor))
@@ -209,14 +152,6 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                val sqlTable: SqlTable.Ident =
-                    SqlTable.Ident(
-                        queryAlias,
-                        Some(SqlTableAlias(queryAlias, Nil)),
-                        None,
-                        None,
-                        None
-                    )
                 RecognizeTable(
                     queryAlias,
                     tt.toTuple(a.asTableParam(queryAlias, cursor))

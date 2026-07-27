@@ -106,7 +106,7 @@ object AsRecognize:
                         Some(SqlTableAlias(alias, Nil)),
                         None
                     )
-                val table = SubqueryTable[N, V, CL](x, alias)
+                val table = SubqueryTable[N, V, CL](alias)
                 (table, sqlTable)
 
 /**

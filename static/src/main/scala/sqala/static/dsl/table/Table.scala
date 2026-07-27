@@ -1,7 +1,6 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.table.SqlTable
 import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
 

@@ -1,15 +1,12 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
-import sqala.ast.table.SqlTable
 import sqala.metadata.*
-import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import java.time.{OffsetDateTime, OffsetTime}
-import scala.NamedTuple.{AnyNamedTuple, NamedTuple}
+import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.boolean.||
-import scala.deriving.Mirror
 
 /**
  * Determines whether two types are compatible for comparison

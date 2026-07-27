@@ -104,7 +104,7 @@ object AsPivot:
 
             def asPivot(x: Q)(using qc: QueryContext[CL]): R =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, alias)
+                val subquery = SubqueryTable[N, V, CL](alias)
                 val selectItems = as.asSelectItems(subquery, 1)
                 val sqlTable =
                     SqlTable.Subquery(
