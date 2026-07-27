@@ -754,24 +754,3 @@ object FromGraph:
                 None
             )
         )
-
-/**
- * A table reference produced by `from` when a `FromGraph` is
- * passed, enabling typed column access via `selectDynamic`.
- */
-final case class GraphTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V
-) extends Selectable with AnyTable:
-    /**
-     * The structural type declaring available columns as a named tuple.
-     * Required by `Selectable`.
-     */
-    type Fields = NamedTuple[N, V]
-
-    /**
-     * Runtime column accessor. Required by `Selectable`.
-     */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
-        __items__.toList(index)

@@ -94,7 +94,7 @@ object AsPivot:
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         ap: AsTableParam[V, CL],
         tt: ToTuple[ap.R],
-        as: AsSelect[SubqueryTable[N, tt.R, CL]],
+        as: AsSelect[MappedTable[N, tt.R, CL]],
         refl: L > CL =:= true
     ): Aux[Q, CL, Pivot[N, tt.R, TOKS, CL], TOKS] =
         new AsPivot[Q, CL]:
@@ -104,8 +104,8 @@ object AsPivot:
 
             def asPivot(x: Q)(using qc: QueryContext[CL]): R =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](alias)
-                val selectItems = as.asSelectItems(subquery, 1)
+                val table = MappedTable[N, V, CL](alias)
+                val selectItems = as.asSelectItems(table, 1)
                 val sqlTable =
                     SqlTable.Subquery(
                         false,
@@ -126,4 +126,4 @@ object AsPivot:
                     None,
                     None
                 )
-                Pivot(subquery.__items__, tree)
+                Pivot(table.__items__, tree)

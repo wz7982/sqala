@@ -389,15 +389,17 @@ def unnest[T, CL <: Int](x: T)(using
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[Unnest[r.R], Column, e.R, CL] =
     val alias = qc.fetchAlias
-    val sqlTable: SqlTable.Func = SqlTable.Func(
-        false,
-        "UNNEST",
-        a.asExpr(x).asSqlExpr :: Nil,
-        false,
-        Some(SqlTableAlias(alias, "x" :: Nil)),
-        None
-    )
-    FromFunc(alias, "x" :: Nil, "x" :: Nil, sqlTable)
+    val metaData = TableMetaData(alias, Nil, None, "x" :: Nil, "x" :: Nil)
+    val sqlTable: SqlTable.Func =
+        SqlTable.Func(
+            false,
+            "UNNEST",
+            a.asExpr(x).asSqlExpr :: Nil,
+            false,
+            Some(SqlTableAlias(alias, metaData.columnNames)),
+            None
+        )
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * An unnested table element with row number, used as the row shape
@@ -422,15 +424,17 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[UnnestWithOrdinal[r.R], Column, e.R, CL] =
     val alias = qc.fetchAlias
-    val sqlTable: SqlTable.Func = SqlTable.Func(
-        false,
-        "UNNEST",
-        a.asExpr(x).asSqlExpr :: Nil,
-        true,
-        Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
-        None
-    )
-    FromFunc(alias, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    val metaData = TableMetaData(alias, Nil, None, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil)
+    val sqlTable: SqlTable.Func =
+        SqlTable.Func(
+            false,
+            "UNNEST",
+            a.asExpr(x).asSqlExpr :: Nil,
+            true,
+            Some(SqlTableAlias(alias, metaData.columnNames)),
+            None
+        )
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * Creates a JSON table. Maps to `JSON_TABLE`. Columns are defined using
@@ -1607,7 +1611,7 @@ inline def createTableFunc[T, CL <: Int](
         Some(SqlTableAlias(alias, metaData.columnNames)),
         None
     )
-    FromFunc(alias, metaData.fieldNames, metaData.columnNames, sqlTable)
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * Creates a raw expression from a string interpolation, supporting

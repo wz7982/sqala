@@ -5,8 +5,8 @@ import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
 
-import scala.NamedTuple.{DropNames, NamedTuple, Names}
-import scala.compiletime.{constValue, constValueTuple}
+import scala.NamedTuple.{DropNames, Names}
+import scala.compiletime.constValueTuple
 
 /**
  * A table reference with certain columns excluded, used by the `exclude`
@@ -43,24 +43,3 @@ object FromExcluded:
             tuple.asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]],
             sqlTable
         )
-
-/**
- * A table reference produced by wrapping `FromExcluded` with `from`,
- * used to omit specific columns from query projection.
- */
-final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V
-) extends Selectable with AnyTable:
-    /**
-     * The structural type declaring available columns as a named tuple.
-     * Required by `Selectable`.
-     */
-    type Fields = NamedTuple[N, V]
-
-    /**
-     * Runtime column accessor. Required by `Selectable`.
-     */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
-        __items__.toList(index)

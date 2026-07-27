@@ -38,47 +38,47 @@ object AsLateralTable:
 
     given func[T, TOKS <: Tuple, CL <: Int](using
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): Aux[FromFunc[T, Column, TOKS, CL], CL, FuncTable[T, Column, CL - 1], e.R] =
+    ): Aux[FromFunc[T, Column, TOKS, CL], CL, Table[T, Column, CL - 1], e.R] =
         new AsLateralTable[FromFunc[T, Column, TOKS, CL], CL]:
-            type R = FuncTable[T, Column, CL - 1]
+            type R = Table[T, Column, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: FromFunc[T, Column, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Func = x.__sqlTable__.copy(withLateral = true)
                 val table =
-                    FuncTable[T, Column, CL - 1](x.__aliasName__, x.__fieldNames__, x.__columnNames__)
+                    Table[T, Column, CL - 1](x.__aliasName__, x.__metaData__)
                 (table, sqlTable)
 
     given json[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         a: AsTableParam[V, CL - 1],
         tt: ToTuple[a.R],
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): Aux[FromJson[N, V, TOKS, CL], CL, JsonTable[N, tt.R, CL - 1], e.R] =
+    ): Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, tt.R, CL - 1], e.R] =
         new AsLateralTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = JsonTable[N, tt.R, CL - 1]
+            type R = MappedTable[N, tt.R, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Json = x.__sqlTable__.copy(withLateral = true)
                 val table =
-                    JsonTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
+                    MappedTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
                 (table, sqlTable)
 
     given graph[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         a: AsTableParam[V, CL - 1],
         tt: ToTuple[a.R],
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): Aux[FromGraph[N, V, TOKS, CL], CL, GraphTable[N, tt.R, CL - 1], e.R] =
+    ): Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, tt.R, CL - 1], e.R] =
         new AsLateralTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = GraphTable[N, tt.R, CL - 1]
+            type R = MappedTable[N, tt.R, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: FromGraph[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Graph = x.__sqlTable__.copy(withLateral = true)
-                val table = GraphTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
+                val table = MappedTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
                 (table, sqlTable)
 
     given subquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](using
@@ -88,15 +88,15 @@ object AsLateralTable:
         i: IncludeCurrentLevelColumn[QOKS, CL - 1],
         c: CanInSimpleClause[i.R],
         refl: L > CL =:= true
-    ): Aux[Q, CL, SubqueryTable[N, tt.R, CL - 1], e.R] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, CL - 1], e.R] =
         new AsLateralTable[Q, CL]:
-            type R = SubqueryTable[N, tt.R, CL - 1]
+            type R = MappedTable[N, tt.R, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val table = SubqueryTable[N, V, CL - 1](alias)
+                val table = MappedTable[N, V, CL - 1](alias)
                 val sqlTable =
                     SqlTable.Subquery(
                         true,

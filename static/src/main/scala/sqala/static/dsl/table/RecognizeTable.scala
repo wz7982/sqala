@@ -7,7 +7,7 @@ import sqala.static.dsl.statement.query.AsMap
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.{constValue, constValueTuple}
+import scala.compiletime.constValueTuple
 import scala.language.dynamics
 
 /**
@@ -514,24 +514,3 @@ final case class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable
 ) extends AnyTable
-
-/**
- * A table reference produced by `from` when a `FromRecognize`
- * is passed, enabling typed column access via `selectDynamic`.
- */
-final case class RecognizeTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V
-) extends Selectable with AnyTable:
-    /**
-     * The structural type declaring available columns as a named tuple.
-     * Required by `Selectable`.
-     */
-    type Fields = NamedTuple[N, V]
-
-    /**
-     * Runtime column accessor. Required by `Selectable`.
-     */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
-        __items__.toList(index)

@@ -73,6 +73,10 @@ object AsRecognize:
             def asRecognizeTable(x: O)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
+                val table = Table[fc.R, Column, CL](
+                    alias,
+                    metaData
+                )
                 val sqlTable: SqlTable.Ident =
                     SqlTable.Ident(
                         metaData.tableName,
@@ -81,24 +85,21 @@ object AsRecognize:
                         Some(createEmptyRecognize),
                         None
                     )
-                val table = Table[fc.R, Column, CL](
-                    alias,
-                    metaData
-                )
                 (table, sqlTable)
 
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         refl: L > CL =:= true
-    ): Aux[Q, CL, SubqueryTable[N, tt.R, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
         new AsRecognize[Q, CL]:
-            type R = SubqueryTable[N, tt.R, CL]
+            type R = MappedTable[N, tt.R, CL]
 
             type OKS = TOKS
 
             def asRecognizeTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
+                val table = MappedTable[N, V, CL](alias)
                 val sqlTable: SqlTable.Subquery =
                     SqlTable.Subquery(
                         false,
@@ -106,7 +107,6 @@ object AsRecognize:
                         Some(SqlTableAlias(alias, Nil)),
                         None
                     )
-                val table = SubqueryTable[N, V, CL](alias)
                 (table, sqlTable)
 
 /**
@@ -169,7 +169,7 @@ object SetRecognizeProperty:
         def fetchRecognize(table: SqlTable): SqlMatchRecognize =
             table.asInstanceOf[SqlTable.Ident].matchRecognize.get
 
-    given subquery[N <: Tuple, V <: Tuple, L <: Int]: SetRecognizeProperty[SubqueryTable[N, V, L]] with
+    given subquery[N <: Tuple, V <: Tuple, L <: Int]: SetRecognizeProperty[MappedTable[N, V, L]] with
         def setPartitionBy(table: SqlTable, items: List[SqlExpr]): SqlTable =
             table.asInstanceOf[SqlTable.Subquery].copy(
                 matchRecognize =
@@ -215,8 +215,8 @@ object AliasRecognize:
                 __aliasName__ = name
             )
 
-    given subquery[N <: Tuple, V <: Tuple, L <: Int]: AliasRecognize[SubqueryTable[N, V, L]] with
-        def alias(x: SubqueryTable[N, V, L], name: String): SubqueryTable[N, V, L] =
+    given subquery[N <: Tuple, V <: Tuple, L <: Int]: AliasRecognize[MappedTable[N, V, L]] with
+        def alias(x: MappedTable[N, V, L], name: String): MappedTable[N, V, L] =
             x.copy(
                 __aliasName__ = name
             )

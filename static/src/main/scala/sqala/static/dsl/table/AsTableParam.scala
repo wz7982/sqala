@@ -59,103 +59,18 @@ object AsTableParam:
                     metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}"))
                 )
 
-    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]
-    ): Aux[SubqueryTable[N, V, L], CL, SubqueryTable[N, tt.R, CL]] =
-        new AsTableParam[SubqueryTable[N, V, L], CL]:
-            type R = SubqueryTable[N, tt.R, CL]
+    ): Aux[MappedTable[N, V, L], CL, MappedTable[N, tt.R, CL]] =
+        new AsTableParam[MappedTable[N, V, L], CL]:
+            type R = MappedTable[N, tt.R, CL]
 
             def offset: Int =
                 a.offset
 
             def asTableParam(queryAlias: String, cursor: Int): R =
-                SubqueryTable[N, V, CL](queryAlias)
-
-    given excludedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[ExcludedTable[N, V, L], CL, ExcludedTable[N, tt.R, CL]] =
-        new AsTableParam[ExcludedTable[N, V, L], CL]:
-            type R = ExcludedTable[N, tt.R, CL]
-
-            def offset: Int =
-                a.offset
-
-            def asTableParam(queryAlias: String, cursor: Int): R =
-                ExcludedTable(
-                    queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor))
-                )
-
-    given jsonTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[JsonTable[N, V, L], CL, JsonTable[N, tt.R, CL]] =
-        new AsTableParam[JsonTable[N, V, L], CL]:
-            type R = JsonTable[N, tt.R, CL]
-
-            def offset: Int =
-                a.offset
-
-            def asTableParam(queryAlias: String, cursor: Int): R =
-                JsonTable(
-                    queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor))
-                )
-
-    inline given funcTable[T, L <: Int, CL <: Int]: Aux[FuncTable[T, Column, L], CL, FuncTable[T, Column, CL]] =
-        val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
-        createFuncTableInstance[T, L, CL](metaData)
-
-    /**
-      * Creates a function table instance for a given table metadata.
-      */
-    private def createFuncTableInstance[T, L <: Int, CL <: Int](metaData: TableMetaData): Aux[FuncTable[T, Column, L], CL, FuncTable[T, Column, CL]] =
-        new AsTableParam[FuncTable[T, Column, L], CL]:
-            type R = FuncTable[T, Column, CL]
-
-            def offset: Int =
-                metaData.columnNames.size
-
-            def asTableParam(queryAlias: String, cursor: Int): FuncTable[T, Column, CL] =
-                FuncTable(
-                    queryAlias,
-                    metaData.fieldNames,
-                    metaData.columnNames.indices.toList.map(i => s"c${cursor + i}")
-                )
-
-    given graphTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[GraphTable[N, V, L], CL, GraphTable[N, tt.R, CL]] =
-        new AsTableParam[GraphTable[N, V, L], CL]:
-            type R = GraphTable[N, tt.R, CL]
-
-            def offset: Int =
-                a.offset
-
-            def asTableParam(queryAlias: String, cursor: Int): R =
-                GraphTable(
-                    queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor))
-                )
-
-    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[RecognizeTable[N, V, L], CL, RecognizeTable[N, tt.R, CL]] =
-        new AsTableParam[RecognizeTable[N, V, L], CL]:
-            type R = RecognizeTable[N, tt.R, CL]
-
-            def offset: Int =
-                a.offset
-
-            def asTableParam(queryAlias: String, cursor: Int): R =
-                RecognizeTable(
-                    queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor))
-                )
+                MappedTable[N, V, CL](queryAlias)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsTableParam[H, CL],
