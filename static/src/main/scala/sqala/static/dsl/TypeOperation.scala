@@ -3,7 +3,6 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import java.time.*
-import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.any.ToString
 import scala.compiletime.ops.boolean.{!, ||}
 import scala.compiletime.ops.int.S
@@ -12,7 +11,7 @@ import scala.compiletime.ops.string.{+, Length, Substring}
 /**
  * Wraps a type with constructor if not already wrapped.
  */
-type Wrap[T, F[_]] = 
+type Wrap[T, F[_]] =
     T match
         case F[t] => T
         case _ => F[T]
@@ -20,7 +19,7 @@ type Wrap[T, F[_]] =
 /**
  * Conditionally wraps a type constructor.
  */
-type WrapIf[T, C <: Boolean, F[_]] = 
+type WrapIf[T, C <: Boolean, F[_]] =
     C match
         case true => Wrap[T, F]
         case _ => T
@@ -28,7 +27,7 @@ type WrapIf[T, C <: Boolean, F[_]] =
 /**
  * Unwraps nested type constructor.
  */
-type Unwrap[T, F[_]] = 
+type Unwrap[T, F[_]] =
     T match
         case F[t] => Unwrap[t, F]
         case _ => T
@@ -44,7 +43,7 @@ type TupleMap[T <: Tuple, F[_]] <: Tuple =
 /**
  * Flattens nested `Option` and `Array` wrappers for `unnest`.
  */
-type FlattenUnnest[T] = 
+type FlattenUnnest[T] =
     T match
         case Option[t] => FlattenUnnest[t]
         case Array[t] => FlattenUnnest[t]
@@ -54,7 +53,7 @@ type FlattenUnnest[T] =
  * Maps an entity field to its expression type, wrapping with
  * `Option` when the entity field is optional.
  */
-type MapField[X, T, K[_ <: Int] <: ExprKind, L <: Int] = 
+type MapField[X, T, K[_ <: Int] <: ExprKind, L <: Int] =
     T match
         case Option[_] => Expr[Wrap[X, Option], K[L]]
         case _ => Expr[X, K[L]]
@@ -62,27 +61,15 @@ type MapField[X, T, K[_ <: Int] <: ExprKind, L <: Int] =
 /**
  * Finds the index of a type in a tuple.
  */
-type Index[T <: Tuple, X, N <: Int] <: Int = 
+type Index[T <: Tuple, X, N <: Int] <: Int =
     T match
         case X *: xs => N
         case x *: xs => Index[xs, X, S[N]]
 
-/** 
- * The names of a named tuple, represented as a tuple of literal string values. 
- */
-type Names[T] <: Tuple = T match
-    case NamedTuple[n, _] => n
-
-/** 
- * The value types of a named tuple represented as a regular tuple. 
- */
-type DropNames[T] <: Tuple = T match
-    case NamedTuple[_, x] => x
-
 /**
  * Tests whether a type is `Option`.
  */
-type IsOption[T] <: Boolean = 
+type IsOption[T] <: Boolean =
     T match
         case Option[t] => true
         case _ => false
@@ -90,7 +77,7 @@ type IsOption[T] <: Boolean =
 /**
  * Removes duplicate types from a tuple.
  */
-type TupleDistinct[T <: Tuple] <: Tuple = 
+type TupleDistinct[T <: Tuple] <: Tuple =
     T match
         case x *: xs => x *: TupleDistinct[TupleFilterNot[x, xs]]
         case EmptyTuple => EmptyTuple
@@ -98,7 +85,7 @@ type TupleDistinct[T <: Tuple] <: Tuple =
 /**
  * Filters out all occurrences of a type from a tuple.
  */
-type TupleFilterNot[H, T <: Tuple] <: Tuple = 
+type TupleFilterNot[H, T <: Tuple] <: Tuple =
     T match
         case H *: xs => TupleFilterNot[H, xs]
         case x *: xs => x *: TupleFilterNot[H, xs]
@@ -108,7 +95,7 @@ type TupleFilterNot[H, T <: Tuple] <: Tuple =
  * Computes the wider numeric result type, wrapping with `Option`
  * if either input is optional.
  */
-type NumericResult[A, B] = 
+type NumericResult[A, B] =
     (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
         case (BigDecimal, _, true) => Option[BigDecimal]
         case (BigDecimal, _, false) => BigDecimal
@@ -135,7 +122,7 @@ type NumericResult[A, B] =
  * Computes the wider datetime result type, wrapping with `Option`
  * if either input is optional.
  */
-type DateTimeResult[A, B] = 
+type DateTimeResult[A, B] =
     (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
         case (OffsetDateTime, _, true) => Option[OffsetDateTime]
         case (OffsetDateTime, _, false) => OffsetDateTime
@@ -154,7 +141,7 @@ type DateTimeResult[A, B] =
  * Computes the wider time result type, wrapping with `Option` if
  * either input is optional.
  */
-type TimeResult[A, B] = 
+type TimeResult[A, B] =
     (Unwrap[A, Option], Unwrap[B, Option], IsOption[A] || IsOption[B]) match
         case (OffsetTime, _, true) => Option[OffsetTime]
         case (OffsetTime, _, false) => OffsetTime
@@ -168,7 +155,7 @@ type TimeResult[A, B] =
 /**
  * Flattens nested JSON column names into a flat tuple.
  */
-type JsonColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple = 
+type JsonColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple =
     (N, V) match
         case (hn *: tn, hv *: tv) =>
             hv match
@@ -181,7 +168,7 @@ type JsonColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple =
 /**
  * Flattens nested JSON column types into flat column expressions.
  */
-type JsonColumnFlatten[V <: Tuple, L <: Int] <: Tuple = 
+type JsonColumnFlatten[V <: Tuple, L <: Int] <: Tuple =
     V match
         case h *: t =>
             h match
