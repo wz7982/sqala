@@ -15,11 +15,12 @@ import scala.language.dynamics
  * `matchRecognize`.
  */
 final case class RecognizePredefine[T, L <: Int](
-    private[sqala] val __table__ : T
+    private[sqala] val __table__ : T,
+    private[sqala] val __sqlTable__ : SqlTable
 )(using
     private[sqala] val qc: QueryContext[L],
     private[sqala] val mc: MatchRecognizeContext,
-    private[sqala] val r: AsRecognize[T]
+    private[sqala] val s: SetRecognizeProperty[T]
 ):
     /**
      * Specifies `ORDER BY` for `matchRecognize`. The sort
@@ -31,7 +32,7 @@ final case class RecognizePredefine[T, L <: Int](
      */
     def sortBy[S](sortValue: S)(using a: AsColumnSort[S, L]): RecognizePredefine[T, L] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
-        RecognizePredefine(r.setOrderBy(__table__, sort))
+        RecognizePredefine(__table__, s.setOrderBy(__sqlTable__, sort))
 
     /**
      * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
@@ -51,7 +52,7 @@ final case class RecognizePredefine[T, L <: Int](
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, L] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsMode.OneRow))
+        RecognizePredefine(__table__, s.setPerMatch(__sqlTable__, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -61,7 +62,7 @@ final case class RecognizePredefine[T, L <: Int](
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, L] =
-        RecognizePredefine(r.setPerMatch(__table__, SqlRecognizePatternRowsMode.AllRows(None)))
+        RecognizePredefine(__table__, s.setPerMatch(__sqlTable__, SqlRecognizePatternRowsMode.AllRows(None)))
 
     /**
      * Pre-defines pattern variable labels as a literal type tuple.
@@ -74,20 +75,21 @@ final case class RecognizePredefine[T, L <: Int](
      */
     def predefine[N <: Tuple](using
         t: TransformTableKind[T, [l <: Int] =>> Grouped[Column[l] *: EmptyTuple]],
-        rr: AsRecognize[t.R]
+        st: SetRecognizeProperty[t.R]
     ): Recognize[N, t.R, L] =
-        Recognize(t.transform(__table__))
+        Recognize(t.transform(__table__), __sqlTable__)
 
 /**
  * Main builder for `matchRecognize` pattern definition. After
  * `predefine`.
  */
 final case class Recognize[N <: Tuple, T, L <: Int](
-    private[sqala] val __table__ : T
+    private[sqala] val __table__ : T,
+    private[sqala] val __sqlTable__ : SqlTable
 )(using
     private[sqala] val qc: QueryContext[L],
     private[sqala] val mc: MatchRecognizeContext,
-    private[sqala] val r: AsRecognize[T]
+    private[sqala] val s: SetRecognizeProperty[T]
 ):
     /**
      * Defines the conditions for each pattern variable.
@@ -102,6 +104,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     inline def define[V <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[N, V])(using
         a: AsExpr[V, L],
+        ar: AliasRecognize[T],
         kt: KindToTuple[a.K],
         i: CanInRecognizeDefine[kt.R, L],
         an: AggNested[kt.R],
@@ -113,10 +116,10 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val defines = names.zip(exprs).map: (n, e) =>
             SqlRowPatternDefineItem(n, e.asSqlExpr)
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(rowPattern = recognize.rowPattern.copy(define = defines.toNonEmptyList))
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Defines the row pattern expression using the pattern variable
@@ -129,10 +132,10 @@ final case class Recognize[N <: Tuple, T, L <: Int](
     def pattern(f: RecognizePattern[N, T, L] => RecognizePatternTerm[L]): Recognize[N, T, L] =
         val p = f(RecognizePattern[N, T, L](__table__))
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(rowPattern = recognize.rowPattern.copy(pattern = p.pattern))
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Resumes pattern matching at the next row after a match.
@@ -140,14 +143,14 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def afterMatchSkipToNextRow: Recognize[N, T, L] =
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatchMode = Some(SqlRowPatternSkipMode.ToNextRow)
                 )
             )
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Resumes pattern matching after the last row of the match.
@@ -155,14 +158,14 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def afterMatchSkipPastLastRow: Recognize[N, T, L] =
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
                     afterMatchMode = Some(SqlRowPatternSkipMode.PastLastRow)
                 )
             )
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Resumes pattern matching at the first occurrence of a
@@ -174,7 +177,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def afterMatchSkipToFirst(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
@@ -183,7 +186,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
                     )
                 )
             )
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Resumes pattern matching at the last occurrence of a
@@ -195,7 +198,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def afterMatchSkipToLast(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
@@ -204,7 +207,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
                     )
                 )
             )
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Resumes pattern matching at a pattern variable.
@@ -216,7 +219,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def afterMatchSkipTo(f: RecognizePatternName[N, T, L] => String): Recognize[N, T, L] =
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 rowPattern = recognize.rowPattern.copy(
@@ -225,7 +228,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
                     )
                 )
             )
-        Recognize(r.setRecognize(__table__, newRecognize))
+        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
 
     /**
      * Defines the output measures (columns) of the
@@ -243,6 +246,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
      */
     def measures[MN <: Tuple, MV <: Tuple](f: RecognizeDefine[N, T, L] => NamedTuple[MN, MV])(using
         m: AsMap[MV, L],
+        ar: AliasRecognize[T],
         p: AsTableParam[m.R, L],
         t: ToTuple[p.R],
         i: CanInGroupedMap[m.KS],
@@ -256,7 +260,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         val measureItems = items.map: i =>
             SqlRowPatternMeasureItem(i.expr, i.alias.get)
         val recognize =
-            r.fetchRecognize(__table__)
+            s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
             .copy(
                 measures = measureItems,
@@ -265,7 +269,7 @@ final case class Recognize[N <: Tuple, T, L <: Int](
         RecognizeMeasures[MN, t.R, L](
             alias,
             t.toTuple(p.asTableParam(alias, 1)),
-            r.fetchSqlTable(r.setRecognize(__table__, newRecognize))
+            s.setRecognize(__sqlTable__, newRecognize)
         )
 
 /**
@@ -274,10 +278,10 @@ final case class Recognize[N <: Tuple, T, L <: Int](
 final case class RecognizeDefine[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
 )(using
-    private[sqala] val r: AsRecognize[T]
+    private[sqala] val __ar__ : AliasRecognize[T]
 ) extends Dynamic:
     def selectDynamic(name: String): T =
-        r.alias(__table__, name)
+        __ar__.alias(__table__, name)
 
 /**
  * Dynamic context for `pattern` clauses.
@@ -285,9 +289,8 @@ final case class RecognizeDefine[N <: Tuple, T, L <: Int](
 final class RecognizePattern[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
 )(using
-    private[sqala] val qc: QueryContext[L],
-    private[sqala] val mc: MatchRecognizeContext,
-    private[sqala] val r: AsRecognize[T]
+    private[sqala] val __qc__ : QueryContext[L],
+    private[sqala] val __mc__ : MatchRecognizeContext
 ) extends Dynamic:
     def selectDynamic(name: String): RecognizePatternTerm[L] =
         RecognizePatternTerm(SqlRowPatternTerm.Pattern(name, None))
@@ -297,8 +300,6 @@ final class RecognizePattern[N <: Tuple, T, L <: Int](
  */
 final case class RecognizePatternName[N <: Tuple, T, L <: Int](
     private[sqala] val __table__ : T
-)(using
-    private[sqala] val r: AsRecognize[T]
 ) extends Dynamic:
     def selectDynamic(name: String): String =
         name

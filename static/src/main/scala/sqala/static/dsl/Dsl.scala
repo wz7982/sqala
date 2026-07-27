@@ -764,7 +764,7 @@ def running[T, CL <: Int](x: T)(using
 ): Expr[a.R, Composite[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
 
-extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL], r: AsRecognize[t.R])
+extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], r: AsRecognize[T, CL])
     /**
      * Starts a pattern recognition block on a table. Maps to
      * `MATCH_RECOGNIZE(...)`. Supports `partitionBy`, `sortBy`,
@@ -790,17 +790,18 @@ extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL]
      * }}}
      */
     def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> t.R => RecognizeMeasures[N, V, CL]
-    ): FromRecognize[N, V, t.OKS, CL] =
-        given MatchRecognizeContext = MatchRecognizeContext()
-        val initialTable = r.asRecognizeTable(t.asTable(table)._1)
+        f: MatchRecognizeContext ?=> r.R => RecognizeMeasures[N, V, CL]
+    ): FromRecognize[N, V, r.OKS, CL] =
+        given mc: MatchRecognizeContext = MatchRecognizeContext(None)
+        val (initialTable, sqlTable) = r.asRecognizeTable(table)
+        mc.sqlTable = Some(sqlTable)
         val measures = f(initialTable)
         FromRecognize(measures.__aliasName__, measures.__items__, measures.__sqlTable__)
 
 extension [T, CL <: Int](table: T)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
-    r: AsRecognize[T]
+    s: SetRecognizeProperty[T]
 )
     /**
      * Specifies `PARTITION BY` for `matchRecognize`.
@@ -812,7 +813,7 @@ extension [T, CL <: Int](table: T)(using
     def partitionBy[P](partitionValue: P)(using
         a: AsRecognizePartition[P, CL]
     ): RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPartitionBy(table, a.asExprs(partitionValue).map(_.asSqlExpr)))
+        RecognizePredefine(table, s.setPartitionBy(mc.sqlTable.get, a.asExprs(partitionValue).map(_.asSqlExpr)))
 
     /**
      * Specifies `ORDER BY` for `matchRecognize`.
@@ -825,7 +826,7 @@ extension [T, CL <: Int](table: T)(using
         a: AsColumnSort[S, CL]
     ): RecognizePredefine[T, CL] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
-        RecognizePredefine(r.setOrderBy(table, sort))
+        RecognizePredefine(table, s.setOrderBy(mc.sqlTable.get, sort))
 
     /**
      * Alias of `sortBy` for `matchRecognize`, provided for users familiar with `ORDER BY`.
@@ -847,7 +848,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.OneRow))
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -857,7 +858,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.AllRows(None)))
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.AllRows(None)))
 
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
     /**
