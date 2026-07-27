@@ -252,8 +252,7 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
     ): GraphEdge[T, c.R, L] =
         val table = Table[T, Column, L](
             __aliasName__,
-            __metaData__,
-            SqlTable.Ident(__aliasName__, None, None, None, None)
+            __metaData__
         )
         val cond = a.asExpr(f(table)).asSqlExpr
         copy(__where__ = __where__.map(SqlExpr.Binary(_, SqlBinaryOperator.And, cond)).orElse(Some(cond)))
@@ -762,8 +761,7 @@ object FromGraph:
  */
 final case class GraphTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.Graph
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.

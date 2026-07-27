@@ -14,8 +14,7 @@ import scala.compiletime.constValue
  */
 final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.Subquery
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.
@@ -31,23 +30,17 @@ final case class SubqueryTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object SubqueryTable:
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, lateral: Boolean, alias: String)(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: SqlQuery, alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): SubqueryTable[N, t.R, L] =
         new SubqueryTable(
             alias,
-            t.toTuple(p.asTableParam(alias, 1)),
-            SqlTable.Subquery(
-                lateral,
-                query,
-                Some(SqlTableAlias(alias, Nil)),
-                None
-            )
+            t.toTuple(p.asTableParam(alias, 1))
         )
 
-    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: String)(using
+    def apply[N <: Tuple, V <: Tuple, L <: Int](query: Query[?, ?, ?, ?], alias: String)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): SubqueryTable[N, t.R, L] =
-        apply(query.tree, lateral, alias)
+        apply(query.tree, alias)

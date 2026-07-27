@@ -1357,10 +1357,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         val mapped = f(
             Table[T, Column, L](
                 tableCte,
-                table.__metaData__,
-                table.__sqlTable__.copy(
-                    alias = table.__sqlTable__.alias.map(_.copy(alias = tableCte))
-                )
+                table.__metaData__
             )
         )
         val sqlSelect = a.asSelectItems(mapped, 1)

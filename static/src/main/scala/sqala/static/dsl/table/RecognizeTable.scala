@@ -521,8 +521,7 @@ final case class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
  */
 final case class RecognizeTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.

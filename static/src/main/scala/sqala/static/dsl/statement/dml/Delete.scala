@@ -37,13 +37,14 @@ object Delete:
         given qc: QueryContext[1] = QueryContext(0)
         val metaData = TableMacro.tableMetaData[T]
         val alias = qc.fetchAlias
-        val sqlTable: SqlTable.Ident = SqlTable.Ident(
-            metaData.tableName,
-            Some(SqlTableAlias(alias, Nil)),
-            None,
-            None,
-            None
-        )
-        val table = Table[T, Column, 1](alias, metaData, sqlTable)
+        val sqlTable: SqlTable.Ident =
+            SqlTable.Ident(
+                metaData.tableName,
+                Some(SqlTableAlias(alias, Nil)),
+                None,
+                None,
+                None
+            )
+        val table = Table[T, Column, 1](alias, metaData)
         val tree: SqlStatement.Delete = SqlStatement.Delete(sqlTable, None)
         new Delete(table, tree)

@@ -68,8 +68,7 @@ object FromJson:
  */
 final case class JsonTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.Json
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.

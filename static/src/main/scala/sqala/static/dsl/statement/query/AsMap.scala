@@ -68,8 +68,7 @@ object AsSelect:
             def transform(x: JsonTable[N, V, L]): R =
                 JsonTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: JsonTable[N, V, L]): Int =
@@ -106,8 +105,7 @@ object AsSelect:
             def transform(x: ExcludedTable[N, V, L]): R =
                 ExcludedTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: ExcludedTable[N, V, L]): Int =
@@ -126,8 +124,7 @@ object AsSelect:
             def transform(x: GraphTable[N, V, L]): R =
                 GraphTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: GraphTable[N, V, L]): Int =
@@ -166,8 +163,7 @@ object AsSelect:
             def transform(x: RecognizeTable[N, V, L]): R =
                 RecognizeTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: RecognizeTable[N, V, L]): Int =
@@ -186,8 +182,7 @@ object AsSelect:
             def transform(x: SubqueryTable[N, V, L]): R =
                 SubqueryTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: SubqueryTable[N, V, L]): Int =
@@ -353,8 +348,7 @@ object AsMap:
             def transform(x: ExcludedTable[N, V, L]): R =
                 ExcludedTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: ExcludedTable[N, V, L]): Int =
@@ -376,8 +370,7 @@ object AsMap:
             def transform(x: SubqueryTable[N, V, L]): R =
                 SubqueryTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: SubqueryTable[N, V, L]): Int =
@@ -399,8 +392,7 @@ object AsMap:
             def transform(x: JsonTable[N, V, L]): R =
                 JsonTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: JsonTable[N, V, L]): Int =
@@ -444,8 +436,7 @@ object AsMap:
             def transform(x: GraphTable[N, V, L]): R =
                 GraphTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: GraphTable[N, V, L]): Int =
@@ -467,8 +458,7 @@ object AsMap:
             def transform(x: RecognizeTable[N, V, L]): R =
                 RecognizeTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: RecognizeTable[N, V, L]): Int =

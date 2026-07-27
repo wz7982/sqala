@@ -14,8 +14,7 @@ import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
  */
 final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __metaData__ : TableMetaData,
-    private[sqala] val __sqlTable__ : SqlTable.Ident
+    private[sqala] val __metaData__ : TableMetaData
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.

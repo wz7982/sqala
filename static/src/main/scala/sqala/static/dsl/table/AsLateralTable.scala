@@ -1,6 +1,6 @@
 package sqala.static.dsl.table
 
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.*
 
@@ -47,7 +47,7 @@ object AsLateralTable:
             def asTable(x: FromFunc[T, Column, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Func = x.__sqlTable__.copy(withLateral = true)
                 val table =
-                    FuncTable[T, Column, CL - 1](x.__aliasName__, x.__fieldNames__, x.__columnNames__, sqlTable)
+                    FuncTable[T, Column, CL - 1](x.__aliasName__, x.__fieldNames__, x.__columnNames__)
                 (table, sqlTable)
 
     given json[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
@@ -63,7 +63,7 @@ object AsLateralTable:
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Json = x.__sqlTable__.copy(withLateral = true)
                 val table =
-                    JsonTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)), sqlTable)
+                    JsonTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
                 (table, sqlTable)
 
     given graph[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
@@ -78,7 +78,7 @@ object AsLateralTable:
 
             def asTable(x: FromGraph[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 val sqlTable: SqlTable.Graph = x.__sqlTable__.copy(withLateral = true)
-                val table = GraphTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)), sqlTable)
+                val table = GraphTable[N, tt.R, CL - 1](x.__aliasName__, tt.toTuple(a.asTableParam(x.__aliasName__, 1)))
                 (table, sqlTable)
 
     given subquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](using
@@ -96,5 +96,12 @@ object AsLateralTable:
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val table = SubqueryTable[N, V, CL - 1](x, true, alias)
-                (table, table.__sqlTable__)
+                val table = SubqueryTable[N, V, CL - 1](x, alias)
+                val sqlTable =
+                    SqlTable.Subquery(
+                        true,
+                        x.tree,
+                        Some(SqlTableAlias(alias, Nil)),
+                        None
+                    )
+                (table, sqlTable)

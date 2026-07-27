@@ -34,7 +34,7 @@ type InsertQuery = InsertState.Query.type
  * Represents an `INSERT` statement.
  */
 final case class InsertTree(
-    private[sqala] val table: SqlTable.Ident, 
+    private[sqala] val table: SqlTable.Ident,
     private[sqala] val columns: List[String],
     private[sqala] val values: List[List[SqlExpr]],
     private[sqala] val query: Option[SqlQuery]
@@ -57,7 +57,7 @@ final class Insert[T, S <: InsertState](
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
-        val table = Table[T, Column, 1](tableName, metaData, sqlTable)
+        val table = Table[T, Column, 1](tableName, metaData)
         val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match
@@ -108,8 +108,8 @@ final class Insert[T, S <: InsertState](
      * insert[User](u => (u.id, u.name)).query(from(User).filter(u => u.id == 1).map(u => (u.id, u.name)))
      * }}}
       */
-    def query[QT](query: Query[QT, ?, ?, ?])(using 
-        r: Result[QT], 
+    def query[QT](query: Query[QT, ?, ?, ?])(using
+        r: Result[QT],
         rs: r.R =:= T,
         refl: S =:= InsertTable
     ): Insert[T, InsertQuery] =
@@ -126,8 +126,8 @@ final class Insert[T, S <: InsertState](
                 SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
 
         SqlStatement.Insert(
-            tree.table, 
-            tree.columns, 
+            tree.table,
+            tree.columns,
             insertData
         )
 
@@ -164,8 +164,8 @@ object Insert:
                 instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
         new Insert(
             InsertTree(
-                SqlTable.Ident(tableName, None, None, None, None), 
-                columns, 
+                SqlTable.Ident(tableName, None, None, None, None),
+                columns,
                 values.toList,
                 None
             )

@@ -26,14 +26,14 @@ object TransformTableKind:
             type R = Table[T, K, L]
 
             def transform(x: Table[T, TK, L]): R =
-                Table(x.__aliasName__, x.__metaData__, x.__sqlTable__)
+                Table(x.__aliasName__, x.__metaData__)
 
     given funcTable[T, TK[_ <: Int] <: ExprKind, L <: Int, K[_ <: Int] <: ExprKind]: Aux[FuncTable[T, TK, L], K, FuncTable[T, K, L]] =
         new TransformTableKind[FuncTable[T, TK, L], K]:
             type R = FuncTable[T, K, L]
 
             def transform(x: FuncTable[T, TK, L]): R =
-                FuncTable(x.__aliasName__, x.__fieldNames__, x.__columnNames__, x.__sqlTable__)
+                FuncTable(x.__aliasName__, x.__fieldNames__, x.__columnNames__)
 
     given excludedTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
@@ -43,7 +43,7 @@ object TransformTableKind:
             type R = ExcludedTable[N, tt.R, L]
 
             def transform(x: ExcludedTable[N, V, L]): R =
-                ExcludedTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+                ExcludedTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)))
 
     given jsonTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
@@ -53,7 +53,7 @@ object TransformTableKind:
             type R = JsonTable[N, tt.R, L]
 
             def transform(x: JsonTable[N, V, L]): R =
-                JsonTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+                JsonTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)))
 
     given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
@@ -63,7 +63,7 @@ object TransformTableKind:
             type R = SubqueryTable[N, tt.R, L]
 
             def transform(x: SubqueryTable[N, V, L]): R =
-                SubqueryTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+                SubqueryTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)))
 
     given recognizeTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
@@ -73,7 +73,7 @@ object TransformTableKind:
             type R = RecognizeTable[N, tt.R, L]
 
             def transform(x: RecognizeTable[N, V, L]): R =
-                RecognizeTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+                RecognizeTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)))
 
     given graphTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
@@ -83,7 +83,7 @@ object TransformTableKind:
             type R = GraphTable[N, tt.R, L]
 
             def transform(x: GraphTable[N, V, L]): R =
-                GraphTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)), x.__sqlTable__)
+                GraphTable(x.__aliasName__, tt.toTuple(tv.transform(x.__items__)))
 
     given tuple[H, T <: Tuple, K[_ <: Int] <: ExprKind](using
         ah: TransformTableKind[H, K],

@@ -1,7 +1,7 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
 
@@ -30,10 +30,18 @@ object FromExcluded:
                 Expr(SqlExpr.Column(Some(table.__aliasName__), c))
         val tuple =
             Tuple.fromArray(items.toArray)
+        val sqlTable: SqlTable.Ident =
+            SqlTable.Ident(
+                table.__metaData__.tableName,
+                Some(SqlTableAlias(table.__aliasName__, Nil)),
+                None,
+                None,
+                None
+            )
         FromExcluded(
             table.__aliasName__,
             tuple.asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]],
-            table.__sqlTable__
+            sqlTable
         )
 
 /**
@@ -42,8 +50,7 @@ object FromExcluded:
  */
 final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __aliasName__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __sqlTable__ : SqlTable.Ident
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.

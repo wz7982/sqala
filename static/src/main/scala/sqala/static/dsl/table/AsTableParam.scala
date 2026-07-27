@@ -68,8 +68,7 @@ object AsTableParam:
                     )
                 Table(
                     queryAlias,
-                    metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}")),
-                    sqlTable
+                    metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}"))
                 )
 
     given subqueryTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
@@ -85,7 +84,6 @@ object AsTableParam:
             def asTableParam(queryAlias: String, cursor: Int): R =
                 SubqueryTable[N, V, CL](
                     SqlQuery.Select(None, Nil, Nil, None, None, None, Nil, None, Nil, None, None),
-                    false,
                     queryAlias
                 )
 
@@ -110,8 +108,7 @@ object AsTableParam:
                     )
                 ExcludedTable(
                     queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor)),
-                    sqlTable
+                    tt.toTuple(a.asTableParam(queryAlias, cursor))
                 )
 
     given jsonTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
@@ -139,8 +136,7 @@ object AsTableParam:
                     )
                 JsonTable(
                     queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor)),
-                    sqlTable
+                    tt.toTuple(a.asTableParam(queryAlias, cursor))
                 )
 
     inline given funcTable[T, L <: Int, CL <: Int]: Aux[FuncTable[T, Column, L], CL, FuncTable[T, Column, CL]] =
@@ -170,8 +166,7 @@ object AsTableParam:
                 FuncTable(
                     queryAlias,
                     metaData.fieldNames,
-                    metaData.columnNames.indices.toList.map(i => s"c${cursor + i}"),
-                    sqlTable
+                    metaData.columnNames.indices.toList.map(i => s"c${cursor + i}")
                 )
 
     given graphTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
@@ -200,8 +195,7 @@ object AsTableParam:
                     )
                 GraphTable(
                     queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor)),
-                    sqlTable
+                    tt.toTuple(a.asTableParam(queryAlias, cursor))
                 )
 
     given recognizeTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
@@ -225,8 +219,7 @@ object AsTableParam:
                     )
                 RecognizeTable(
                     queryAlias,
-                    tt.toTuple(a.asTableParam(queryAlias, cursor)),
-                    sqlTable
+                    tt.toTuple(a.asTableParam(queryAlias, cursor))
                 )
 
     given tuple[H, T <: Tuple, CL <: Int](using

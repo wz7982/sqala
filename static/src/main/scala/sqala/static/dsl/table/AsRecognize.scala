@@ -83,8 +83,7 @@ object AsRecognize:
                     )
                 val table = Table[fc.R, Column, CL](
                     alias,
-                    metaData,
-                    sqlTable
+                    metaData
                 )
                 (table, sqlTable)
 
@@ -107,7 +106,7 @@ object AsRecognize:
                         Some(SqlTableAlias(alias, Nil)),
                         None
                     )
-                val table = SubqueryTable[N, V, CL](x, false, alias)
+                val table = SubqueryTable[N, V, CL](x, alias)
                 (table, sqlTable)
 
 /**

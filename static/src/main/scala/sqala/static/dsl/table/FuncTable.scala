@@ -24,8 +24,7 @@ final case class FromFunc[T, K[_ <: Int] <: ExprKind, OKS <: Tuple, CL <: Int](
 final case class FuncTable[T, K[_ <: Int] <: ExprKind, L <: Int](
     private[sqala] val __aliasName__ : String,
     private[sqala] val __fieldNames__ : List[String],
-    private[sqala] val __columnNames__ : List[String],
-    private[sqala] val __sqlTable__ : SqlTable.Func
+    private[sqala] val __columnNames__ : List[String]
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.
