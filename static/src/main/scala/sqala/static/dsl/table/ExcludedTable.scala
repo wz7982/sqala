@@ -1,20 +1,20 @@
 package sqala.static.dsl.table
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.table.SqlTable
+import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
 
-import scala.NamedTuple.{DropNames, NamedTuple, Names}
-import scala.compiletime.{constValue, constValueTuple}
+import scala.NamedTuple.{DropNames, Names}
+import scala.compiletime.constValueTuple
 
 /**
  * A table reference with certain columns excluded, used by the `exclude`
  * method to omit specific fields from query projection.
  */
 final case class FromExcluded[N <: Tuple, V <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
-    private[sqala] val __items__ : Any,
+    private[sqala] val __aliasName__ : String,
+    private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Ident
 ) extends AnyTable
 
@@ -27,33 +27,19 @@ object FromExcluded:
             table.__metaData__.fieldNames.zip(table.__metaData__.columnNames).filter: (f, _) =>
                 !names.contains(f)
             .map: (_, c) =>
-                Expr(SqlExpr.Column(table.__aliasName__, c))
+                Expr(SqlExpr.Column(Some(table.__aliasName__), c))
         val tuple =
-            Tuple.fromArray(items.toArray).asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]]
+            Tuple.fromArray(items.toArray)
+        val sqlTable: SqlTable.Ident =
+            SqlTable.Ident(
+                table.__metaData__.tableName,
+                Some(SqlTableAlias(table.__aliasName__, Nil)),
+                None,
+                None,
+                None
+            )
         FromExcluded(
             table.__aliasName__,
-            tuple,
-            table.__sqlTable__
+            tuple.asInstanceOf[ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]]],
+            sqlTable
         )
-
-/**
- * A table reference produced by wrapping `FromExcluded` with `from`,
- * used to omit specific columns from query projection.
- */
-final case class ExcludedTable[N <: Tuple, V <: Tuple, L <: Int](
-    private[sqala] val __aliasName__ : Option[String],
-    private[sqala] val __items__ : Any,
-    private[sqala] val __sqlTable__ : SqlTable.Ident
-) extends Selectable with AnyTable:
-    /**
-     * The structural type declaring available columns as a named tuple.
-     * Required by `Selectable`.
-     */
-    type Fields = NamedTuple[N, V]
-
-    /**
-     * Runtime column accessor. Required by `Selectable`.
-     */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
-        __items__.asInstanceOf[V].toList(index)

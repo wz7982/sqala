@@ -153,9 +153,9 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     m: AsMap[V, CL]
 ): Query[R, EmptyTuple, CL, ManyRows] =
     val alias = qc.fetchAlias
-    val withTable = RecursiveTable[N, V, CL](Some(alias))
+    val withTable = RecursiveTable[N, V, CL](alias)
     val unionQuery = f(withTable)
-    val finalTable = RecursiveTable[N, tu.R, CL](Some(tableCte))
+    val finalTable = RecursiveTable[N, tu.R, CL](tableCte)
     val finalQuery = g(finalTable)
     val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
     val withTree = SqlQuery.Set(
@@ -389,15 +389,17 @@ def unnest[T, CL <: Int](x: T)(using
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[Unnest[r.R], Column, e.R, CL] =
     val alias = qc.fetchAlias
-    val sqlTable: SqlTable.Func = SqlTable.Func(
-        false,
-        "UNNEST",
-        a.asExpr(x).asSqlExpr :: Nil,
-        false,
-        Some(SqlTableAlias(alias, "x" :: Nil)),
-        None
-    )
-    FromFunc(Some(alias), "x" :: Nil, "x" :: Nil, sqlTable)
+    val metaData = TableMetaData(alias, Nil, None, "x" :: Nil, "x" :: Nil)
+    val sqlTable: SqlTable.Func =
+        SqlTable.Func(
+            false,
+            "UNNEST",
+            a.asExpr(x).asSqlExpr :: Nil,
+            false,
+            Some(SqlTableAlias(alias, metaData.columnNames)),
+            None
+        )
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * An unnested table element with row number, used as the row shape
@@ -422,15 +424,17 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[UnnestWithOrdinal[r.R], Column, e.R, CL] =
     val alias = qc.fetchAlias
-    val sqlTable: SqlTable.Func = SqlTable.Func(
-        false,
-        "UNNEST",
-        a.asExpr(x).asSqlExpr :: Nil,
-        true,
-        Some(SqlTableAlias(alias, "x" :: "ordinal" :: Nil)),
-        None
-    )
-    FromFunc(Some(alias), "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil, sqlTable)
+    val metaData = TableMetaData(alias, Nil, None, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil)
+    val sqlTable: SqlTable.Func =
+        SqlTable.Func(
+            false,
+            "UNNEST",
+            a.asExpr(x).asSqlExpr :: Nil,
+            true,
+            Some(SqlTableAlias(alias, metaData.columnNames)),
+            None
+        )
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * Creates a JSON table. Maps to `JSON_TABLE`. Columns are defined using
@@ -469,7 +473,7 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
 ): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
     given JsonContext = JsonContext()
     val alias = qc.fetchAlias
-    FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, Some(alias), columns)
+    FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, alias, columns)
 
 /**
  * Creates an ordinality column for `jsonTable`. Maps to
@@ -599,7 +603,7 @@ def columns[N <: Tuple, V <: Tuple, CL <: Int](c: JsonContext ?=> NamedTuple[N, 
  */
 inline def vertex[T](label: String): GraphVertexSchema[T] =
     val metaData = TableMacro.tableMetaData[T]
-    GraphVertexSchema(None, metaData.copy(tableName = label))
+    GraphVertexSchema(metaData.tableName, metaData.copy(tableName = label))
 
 /**
  * Creates an edge schema for a graph query. The type parameter is
@@ -614,7 +618,7 @@ inline def vertex[T](label: String): GraphVertexSchema[T] =
  */
 inline def edge[T](label: String): GraphEdgeSchema[T] =
     val metaData = TableMacro.tableMetaData[T]
-    GraphEdgeSchema(None, metaData.copy(tableName = label), None, None)
+    GraphEdgeSchema(metaData.tableName, metaData.copy(tableName = label), None, None)
 
 /**
  * Creates a graph schema combining vertices and edges, used as the
@@ -711,8 +715,8 @@ def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatter
  * .pattern(d => permute(d.a, d.b, d.c))
  * }}}
  */
-def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using 
-    QueryContext[CL], 
+def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using
+    QueryContext[CL],
     MatchRecognizeContext
 ): RecognizePatternTerm[CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Permute((term.pattern :: terms.toList.map(_.pattern)).toNonEmptyList, None))
@@ -743,7 +747,7 @@ def finalized[T, CL <: Int](x: T)(using
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
-): Expr[a.R, Agg[kt.R]] =
+): Expr[a.R, Composite[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Final, a.asExpr(x).asSqlExpr))
 
 /**
@@ -761,10 +765,10 @@ def running[T, CL <: Int](x: T)(using
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
     i: CanInGroupedMap[kt.R]
-): Expr[a.R, Agg[kt.R]] =
+): Expr[a.R, Composite[kt.R]] =
     Expr(SqlExpr.MatchPhase(SqlMatchPhase.Running, a.asExpr(x).asSqlExpr))
 
-extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL], r: AsRecognize[t.R])
+extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], r: AsRecognize[T, CL])
     /**
      * Starts a pattern recognition block on a table. Maps to
      * `MATCH_RECOGNIZE(...)`. Supports `partitionBy`, `sortBy`,
@@ -790,17 +794,18 @@ extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], t: AsTable[T, CL]
      * }}}
      */
     def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> t.R => RecognizeMeasures[N, V, CL]
-    ): FromRecognize[N, V, t.OKS, CL] =
-        given MatchRecognizeContext = MatchRecognizeContext()
-        val initialTable = r.asRecognizeTable(t.asTable(table)._1)
+        f: MatchRecognizeContext ?=> r.R => RecognizeMeasures[N, V, CL]
+    ): FromRecognize[N, V, r.OKS, CL] =
+        given mc: MatchRecognizeContext = MatchRecognizeContext(None)
+        val (initialTable, sqlTable) = r.asRecognizeTable(table)
+        mc.sqlTable = Some(sqlTable)
         val measures = f(initialTable)
         FromRecognize(measures.__aliasName__, measures.__items__, measures.__sqlTable__)
 
 extension [T, CL <: Int](table: T)(using
     qc: QueryContext[CL],
     mc: MatchRecognizeContext,
-    r: AsRecognize[T]
+    s: SetRecognizeProperty[T]
 )
     /**
      * Specifies `PARTITION BY` for `matchRecognize`.
@@ -812,7 +817,7 @@ extension [T, CL <: Int](table: T)(using
     def partitionBy[P](partitionValue: P)(using
         a: AsRecognizePartition[P, CL]
     ): RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPartitionBy(table, a.asExprs(partitionValue).map(_.asSqlExpr)))
+        RecognizePredefine(table, s.setPartitionBy(mc.sqlTable.get, a.asExprs(partitionValue).map(_.asSqlExpr)))
 
     /**
      * Specifies `ORDER BY` for `matchRecognize`.
@@ -825,7 +830,7 @@ extension [T, CL <: Int](table: T)(using
         a: AsColumnSort[S, CL]
     ): RecognizePredefine[T, CL] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
-        RecognizePredefine(r.setOrderBy(table, sort))
+        RecognizePredefine(table, s.setOrderBy(mc.sqlTable.get, sort))
 
     /**
      * Alias of `sortBy` for `matchRecognize`, provided for users familiar with `ORDER BY`.
@@ -847,7 +852,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.OneRow))
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -857,7 +862,7 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(r.setPerMatch(table, SqlRecognizePatternRowsMode.AllRows(None)))
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.AllRows(None)))
 
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
     /**
@@ -893,8 +898,8 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
  *     .map((g, p) => (author = p.authorId, count = count(), groupingAuthorId = grouping(p.authorId)))
  * }}}
  */
-def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using 
-    QueryContext[CL], 
+def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using
+    QueryContext[CL],
     GroupingContext
 ): Expr[Int, Agg[K *: EmptyTuple]] =
     Expr(
@@ -1268,7 +1273,7 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
-extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[CL], kt: KindToTuple[EK], co: CanCallOver[EK])
+extension [T, EKS <: Tuple, CL <: Int](x: Expr[T, Agg[EKS]])(using qc: QueryContext[CL])
     /**
      * Applies a window specification to the expression. Maps to
      * `OVER ()`.
@@ -1277,7 +1282,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
      * from(Post).map(p => rank().over())
      * }}}
      */
-    def over(): Expr[T, Window[kt.R]] =
+    def over(): Expr[T, Window[EKS]] =
         Expr(
             SqlExpr.Window(
                 x.asSqlExpr,
@@ -1302,7 +1307,7 @@ extension [T, EK <: ExprKind, CL <: Int](x: Expr[T, EK])(using qc: QueryContext[
      */
     def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
         i: CanInWindow[OKS],
-        c: CombineKindTuple[kt.R, OKS]
+        c: CombineKindTuple[EKS, OKS]
     ): Expr[T, Window[c.R]] =
         given OverContext = OverContext()
         val o = over
@@ -1484,12 +1489,12 @@ def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T,
 
 /**
   * Creates a `CUBE` clause. Maps to `CUBE(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => cube(g.id, g.title)).map((g, p) => count())
   * }}}
   */
-def cube[T, CL <: Int](x: T)(using 
+def cube[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
@@ -1500,12 +1505,12 @@ def cube[T, CL <: Int](x: T)(using
 
 /**
   * Creates a `ROLLUP` clause. Maps to `ROLLUP(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => rollup(g.id, g.title)).map((g, p) => count())
   * }}}
   */
-def rollup[T, CL <: Int](x: T)(using 
+def rollup[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
@@ -1516,12 +1521,12 @@ def rollup[T, CL <: Int](x: T)(using
 
 /**
   * Creates a `GROUPING SETS` clause. Maps to `GROUPING SETS(exprs)`.
-  * 
+  *
   * {{{
   * from(Post).groupBy(p => (id = p.id, title = p.title))(g => groupingSets(g.id, g.title, ())).map((g, p) => count())
   * }}}
   */
-def groupingSets[T, CL <: Int](x: T)(using 
+def groupingSets[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsMultidimensionalGrouping[T]
 ): GroupingSets =
@@ -1606,7 +1611,7 @@ inline def createTableFunc[T, CL <: Int](
         Some(SqlTableAlias(alias, metaData.columnNames)),
         None
     )
-    FromFunc(Some(alias), metaData.fieldNames, metaData.columnNames, sqlTable)
+    FromFunc(alias, metaData, sqlTable)
 
 /**
  * Creates a raw expression from a string interpolation, supporting

@@ -1,5 +1,7 @@
 package sqala.static.dsl
 
+import sqala.ast.table.SqlTable
+
 /**
  * Provides a query context, managing automatic table alias generation.
  */
@@ -39,7 +41,7 @@ final class PivotContext
 /**
  * Provides a match-recognize context.
  */
-final class MatchRecognizeContext
+final case class MatchRecognizeContext(private[sqala] var sqlTable: Option[SqlTable])
 
 /**
  * Provides a JSON table context.

@@ -742,7 +742,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * from(User).map(u => u.nickname.charLength)
      * }}}
      */
-    def charLength(using
+    def length(using
         s: SqlString[aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =

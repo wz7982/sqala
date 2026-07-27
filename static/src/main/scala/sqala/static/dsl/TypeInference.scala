@@ -102,7 +102,7 @@ object CanCompare:
     ): CanCompare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
 
 /**
- * Lifts values, tuples, sequences, and arrays into `in` operands, 
+ * Lifts values, tuples, sequences, and arrays into `in` operands,
  * computing the result type and kind tuple. `CL` is the
  * current query context level.
  */
@@ -136,8 +136,8 @@ trait In[A, B, CL <: Int]:
                 SqlExpr.In(expr, SqlInRightOperand.Subquery(query), false)
             case _ =>
                 SqlExpr.In(
-                    expr, 
-                    SqlInRightOperand.Values(exprList.map(_.asSqlExpr).toNonEmptyList), 
+                    expr,
+                    SqlInRightOperand.Values(exprList.map(_.asSqlExpr).toNonEmptyList),
                     false
                 )
 
@@ -311,7 +311,7 @@ object Relation:
     type Aux[A, B, O] = Relation[A, B]:
         type R = O
 
-    given relation[A, B](using 
+    given relation[A, B](using
         CanCompare[A, B]
     ): Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
         new Relation[A, B]:
@@ -424,7 +424,7 @@ object Return:
         new Return[A, B]:
             type R = TimeResult[A, B]
 
-    given custom[T, R](using 
+    given custom[T, R](using
         CustomField[T, R]
     ): Aux[T, T, T] =
         new Return[T, T]:
@@ -497,7 +497,7 @@ object Union:
         new Union[Expr[A, AK], Expr[B, BK], CL]:
             type R = Expr[r.R, Column[CL]]
 
-            def offset: Int = 
+            def offset: Int =
                 1
 
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
@@ -511,7 +511,7 @@ object Union:
         new Union[AH *: AT, BH *: BT, CL]:
             type R = h.R *: tt.R
 
-            def offset: Int = 
+            def offset: Int =
                 h.offset + t.offset
 
             def unionQueryItems(x: AH *: AT, cursor: Int): R =
@@ -524,7 +524,7 @@ object Union:
         new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
             type R = h.R *: EmptyTuple
 
-            def offset: Int = 
+            def offset: Int =
                 h.offset
 
             def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
@@ -537,7 +537,7 @@ object Union:
         new Union[NamedTuple[AN, AV], NamedTuple[BN, BV], CL]:
             type R = NamedTuple[AN, t.R]
 
-            def offset: Int = 
+            def offset: Int =
                 u.offset
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
@@ -550,7 +550,7 @@ object Union:
         new Union[NamedTuple[AN, AV], BV, CL]:
             type R = NamedTuple[AN, t.R]
 
-            def offset: Int = 
+            def offset: Int =
                 u.offset
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =

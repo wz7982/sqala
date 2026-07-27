@@ -59,8 +59,10 @@ object AsPivot:
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
                 val table = Table[fc.R, Column, CL](
-                    Some(alias),
-                    metaData,
+                    alias,
+                    metaData
+                )
+                val sqlTable =
                     SqlTable.Ident(
                         metaData.tableName,
                         Some(SqlTableAlias(alias, Nil)),
@@ -68,12 +70,11 @@ object AsPivot:
                         None,
                         None
                     )
-                )
                 val selectItems = as.asSelectItems(table, 1)
                 val tree: SqlQuery.Select = SqlQuery.Select(
                     None,
                     selectItems,
-                    table.__sqlTable__ :: Nil,
+                    sqlTable :: Nil,
                     None,
                     None,
                     None,
@@ -93,7 +94,7 @@ object AsPivot:
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         ap: AsTableParam[V, CL],
         tt: ToTuple[ap.R],
-        as: AsSelect[SubqueryTable[N, tt.R, CL]],
+        as: AsSelect[MappedTable[N, tt.R, CL]],
         refl: L > CL =:= true
     ): Aux[Q, CL, Pivot[N, tt.R, TOKS, CL], TOKS] =
         new AsPivot[Q, CL]:
@@ -103,12 +104,19 @@ object AsPivot:
 
             def asPivot(x: Q)(using qc: QueryContext[CL]): R =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, false, Some(alias))
-                val selectItems = as.asSelectItems(subquery, 1)
+                val table = MappedTable[N, V, CL](alias)
+                val selectItems = as.asSelectItems(table, 1)
+                val sqlTable =
+                    SqlTable.Subquery(
+                        false,
+                        x.tree,
+                        Some(SqlTableAlias(alias, Nil)),
+                        None
+                    )
                 val tree: SqlQuery.Select = SqlQuery.Select(
                     None,
                     selectItems,
-                    subquery.__sqlTable__ :: Nil,
+                    sqlTable :: Nil,
                     None,
                     None,
                     None,
@@ -118,4 +126,4 @@ object AsPivot:
                     None,
                     None
                 )
-                Pivot(subquery.__items__, tree)
+                Pivot(table.__items__, tree)

@@ -71,7 +71,7 @@ final class Update[T, S <: UpdateState](
         val pair = f(table)
         val updateExpr = pair.updateExpr
         new Update(
-            table, 
+            table,
             tree.copy(setPairs = (tree.setPairs :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
         )
 
@@ -100,8 +100,8 @@ final class Update[T, S <: UpdateState](
      */
     private[sqala] def toSqlStatement: SqlStatement.Update =
         SqlStatement.Update(
-            tree.table, 
-            tree.setPairs.toNonEmptyList, 
+            tree.table,
+            tree.setPairs.toNonEmptyList,
             tree.where
         )
 
@@ -118,7 +118,7 @@ object Update:
             None,
             None
         )
-        val table = Table[T, Column, 1](Some(alias), metaData, sqlTable)
+        val table = Table[T, Column, 1](alias, metaData)
         val tree = UpdateTree(sqlTable, Nil, None)
         new Update(table, tree)
 
@@ -134,14 +134,15 @@ object Update:
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
         val metaData = TableMacro.tableMetaData[T]
-        val sqlTable: SqlTable.Ident = SqlTable.Ident(
-            metaData.tableName,
-            None,
-            None,
-            None,
-            None
-        )
-        val table = Table[T, Column, 1](None, metaData, sqlTable)
+        val sqlTable: SqlTable.Ident =
+            SqlTable.Ident(
+                metaData.tableName,
+                None,
+                None,
+                None,
+                None
+            )
+        val table = Table[T, Column, 1](metaData.tableName, metaData)
         val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)

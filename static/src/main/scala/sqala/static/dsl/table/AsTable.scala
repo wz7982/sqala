@@ -55,8 +55,10 @@ object AsTable:
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
                 val table = Table[fc.R, Column, CL](
-                    Some(alias),
-                    metaData,
+                    alias,
+                    metaData
+                )
+                val sqlTable =
                     SqlTable.Ident(
                         metaData.tableName,
                         Some(SqlTableAlias(alias, Nil)),
@@ -64,77 +66,83 @@ object AsTable:
                         None,
                         None
                     )
-                )
-                (table, table.__sqlTable__)
+                (table, sqlTable)
 
-    given excludedTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[FromExcluded[N, V, CL], CL, ExcludedTable[N, V, CL], EmptyTuple] =
+    given excludedTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[FromExcluded[N, V, CL], CL, MappedTable[N, V, CL], EmptyTuple] =
         new AsTable[FromExcluded[N, V, CL], CL]:
-            type R = ExcludedTable[N, V, CL]
+            type R = MappedTable[N, V, CL]
 
             type OKS = EmptyTuple
 
             def asTable(x: FromExcluded[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (ExcludedTable(x.__aliasName__, x.__items__, x.__sqlTable__), x.__sqlTable__)
+                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
-    given funcTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromFunc[T, Column, TOKS, CL], CL, FuncTable[T, Column, CL], TOKS] =
+    given funcTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromFunc[T, Column, TOKS, CL], CL, Table[T, Column, CL], TOKS] =
         new AsTable[FromFunc[T, Column, TOKS, CL], CL]:
-            type R = FuncTable[T, Column, CL]
+            type R = Table[T, Column, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromFunc[T, Column, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (FuncTable(x.__aliasName__, x.__fieldNames__, x.__columnNames__, x.__sqlTable__), x.__sqlTable__)
+                (Table(x.__aliasName__, x.__metaData__), x.__sqlTable__)
 
-    given jsonTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromJson[N, V, TOKS, CL], CL, JsonTable[N, V, CL], TOKS] =
+    given jsonTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
         new AsTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = JsonTable[N, V, CL]
+            type R = MappedTable[N, V, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (JsonTable(x.__aliasName__, x.__items__, x.__sqlTable__), x.__sqlTable__)
+                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
-    given pivotTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromPivot[N, V, TOKS, CL], CL, SubqueryTable[N, V, CL], TOKS] =
+    given pivotTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromPivot[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
         new AsTable[FromPivot[N, V, TOKS, CL], CL]:
-            type R = SubqueryTable[N, V, CL]
+            type R = MappedTable[N, V, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromPivot[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (SubqueryTable(x.__aliasName__, x.__items__, x.__sqlTable__), x.__sqlTable__)
+                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         refl: L > CL =:= true
-    ): Aux[Q, CL, SubqueryTable[N, tt.R, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
         new AsTable[Q, CL]:
-            type R = SubqueryTable[N, tt.R, CL]
+            type R = MappedTable[N, tt.R, CL]
 
             type OKS = TOKS
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val alias = qc.fetchAlias
-                val subquery = SubqueryTable[N, V, CL](x, false, Some(alias))
-                (subquery, subquery.__sqlTable__)
+                val subquery = MappedTable[N, V, CL](alias)
+                val sqlTable =
+                    SqlTable.Subquery(
+                        false,
+                        x.tree,
+                        Some(SqlTableAlias(alias, Nil)),
+                        None
+                    )
+                (subquery, sqlTable)
 
-    given recognizeTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromRecognize[N, V, TOKS, CL], CL, RecognizeTable[N, V, CL], TOKS] =
+    given recognizeTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromRecognize[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
         new AsTable[FromRecognize[N, V, TOKS, CL], CL]:
-            type R = RecognizeTable[N, V, CL]
+            type R = MappedTable[N, V, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromRecognize[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (RecognizeTable(x.__aliasName__, x.__items__, x.__sqlTable__), x.__sqlTable__)
+                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
-    given graphTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromGraph[N, V, TOKS, CL], CL, GraphTable[N, V, CL], TOKS] =
+    given graphTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
         new AsTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = GraphTable[N, V, CL]
+            type R = MappedTable[N, V, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromGraph[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (GraphTable(x.__aliasName__, x.__items__, x.__sqlTable__), x.__sqlTable__)
+                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
     given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =
         new AsTable[RecursiveTable[N, V, CL], CL]:
@@ -165,15 +173,8 @@ object AsTable:
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](
-                    Some(alias),
-                    metaData,
-                    SqlTable.Ident(
-                        metaData.tableName,
-                        Some(tableAlias),
-                        None,
-                        None,
-                        None
-                    )
+                    alias,
+                    metaData
                 )
                 val exprList = x.toList.map: datum =>
                     instances.zip(datum.productIterator).map: (i, v) =>

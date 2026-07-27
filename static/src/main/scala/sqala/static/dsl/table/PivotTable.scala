@@ -213,7 +213,7 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
                 )
         val newQuery = __sqlQuery__.copy(select = selectItems)
         val alias = qc.fetchAlias
-        FromPivot(newQuery, false, Some(alias))
+        FromPivot(newQuery, false, alias)
 
     /**
      * Specifies the within-condition for a single pivot column.
@@ -250,7 +250,7 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
                 )
         val newQuery = __sqlQuery__.copy(select = selectItems)
         val alias = qc.fetchAlias
-        FromPivot(newQuery, false, Some(alias))
+        FromPivot(newQuery, false, alias)
 
 /**
  * Computes the result column names and types of a pivot.
@@ -309,13 +309,13 @@ object PivotFor:
  * `from`.
  */
 final case class FromPivot[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
-    private[sqala] val __aliasName__ : Option[String],
+    private[sqala] val __aliasName__ : String,
     private[sqala] val __items__ : V,
     private[sqala] val __sqlTable__ : SqlTable.Subquery
 ) extends AnyTable
 
 object FromPivot:
-    def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](query: SqlQuery, lateral: Boolean, alias: Option[String])(using
+    def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](query: SqlQuery, lateral: Boolean, alias: String)(using
         p: AsTableParam[V, CL],
         t: ToTuple[p.R]
     ): FromPivot[N, t.R, OKS, CL] =
@@ -325,12 +325,12 @@ object FromPivot:
             SqlTable.Subquery(
                 lateral,
                 query,
-                alias.map(SqlTableAlias(_, Nil)),
+                Some(SqlTableAlias(alias, Nil)),
                 None
             )
         )
 
-    def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: Option[String])(using
+    def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](query: Query[?, ?, ?, ?], lateral: Boolean, alias: String)(using
         p: AsTableParam[V, CL],
         t: ToTuple[p.R]
     ): FromPivot[N, t.R, OKS, CL] =

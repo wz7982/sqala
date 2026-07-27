@@ -6,8 +6,9 @@ import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.*
 import sqala.static.dsl.table.*
 
-import scala.NamedTuple.NamedTuple
+import scala.NamedTuple.{AnyNamedTuple, NamedTuple}
 import scala.compiletime.ops.int.>
+import scala.util.NotGiven
 
 /**
  * Generates `SELECT` items from table sources. Each table type
@@ -54,86 +55,8 @@ object AsSelect:
                     (column, index) <- x.__metaData__.columnNames.zipWithIndex
                 yield
                     SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
                     )
-
-    given jsonTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[JsonTable[N, V, L], JsonTable[N, t.R, L]] =
-        new AsSelect[JsonTable[N, V, L]]:
-            type R = JsonTable[N, t.R, L]
-
-            def transform(x: JsonTable[N, V, L]): R =
-                JsonTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
-                )
-
-            def offset(x: JsonTable[N, V, L]): Int =
-                a.offset(x.__items__)
-
-            def asSelectItems(x: JsonTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
-
-    given funcTable[T, L <: Int]: Aux[FuncTable[T, Column, L], FuncTable[T, Column, L]] =
-        new AsSelect[FuncTable[T, Column, L]]:
-            type R = FuncTable[T, Column, L]
-
-            def transform(x: FuncTable[T, Column, L]): R =
-                x
-
-            def offset(x: FuncTable[T, Column, L]): Int =
-                x.__fieldNames__.size
-
-            def asSelectItems(x: FuncTable[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
-                for
-                    (column, index) <- x.__columnNames__.zipWithIndex
-                yield
-                    SqlSelectItem.Expr(
-                        SqlExpr.Column(x.__aliasName__, column), Some(s"c${cursor + index}")
-                    )
-
-    given excludedTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[ExcludedTable[N, V, L], ExcludedTable[N, t.R, L]] =
-        new AsSelect[ExcludedTable[N, V, L]]:
-            type R = ExcludedTable[N, t.R, L]
-
-            def transform(x: ExcludedTable[N, V, L]): R =
-                ExcludedTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__.asInstanceOf[V])),
-                    x.__sqlTable__
-                )
-
-            def offset(x: ExcludedTable[N, V, L]): Int =
-                a.offset(x.__items__.asInstanceOf[V])
-
-            def asSelectItems(x: ExcludedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__.asInstanceOf[V], cursor)
-
-    given graphTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[GraphTable[N, V, L], GraphTable[N, t.R, L]] =
-        new AsSelect[GraphTable[N, V, L]]:
-            type R = GraphTable[N, t.R, L]
-
-            def transform(x: GraphTable[N, V, L]): R =
-                GraphTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
-                )
-
-            def offset(x: GraphTable[N, V, L]): Int =
-                a.offset(x.__items__)
-
-            def asSelectItems(x: GraphTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
 
     given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
         a: AsMap[V, L],
@@ -155,44 +78,23 @@ object AsSelect:
             def asSelectItems(x: RecursiveTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
                 a.asSelectItems(x.__items__, cursor)
 
-    given recognizeTable[N <: Tuple, V <: Tuple, L <: Int](using
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
         a: AsMap[V, L],
         t: ToTuple[a.R]
-    ): Aux[RecognizeTable[N, V, L], RecognizeTable[N, t.R, L]] =
-        new AsSelect[RecognizeTable[N, V, L]]:
-            type R = RecognizeTable[N, t.R, L]
+    ): Aux[MappedTable[N, V, L], MappedTable[N, t.R, L]] =
+        new AsSelect[MappedTable[N, V, L]]:
+            type R = MappedTable[N, t.R, L]
 
-            def transform(x: RecognizeTable[N, V, L]): R =
-                RecognizeTable(
+            def transform(x: MappedTable[N, V, L]): R =
+                MappedTable(
                     x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
+                    t.toTuple(a.transform(x.__items__))
                 )
 
-            def offset(x: RecognizeTable[N, V, L]): Int =
+            def offset(x: MappedTable[N, V, L]): Int =
                 a.offset(x.__items__)
 
-            def asSelectItems(x: RecognizeTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
-
-    given subqueryTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[SubqueryTable[N, V, L], SubqueryTable[N, t.R, L]] =
-        new AsSelect[SubqueryTable[N, V, L]]:
-            type R = SubqueryTable[N, t.R, L]
-
-            def transform(x: SubqueryTable[N, V, L]): R =
-                SubqueryTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
-                )
-
-            def offset(x: SubqueryTable[N, V, L]): Int =
-                a.offset(x.__items__)
-
-            def asSelectItems(x: SubqueryTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
                 a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using
@@ -317,13 +219,57 @@ object AsMap:
             def asSelectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
                 SqlSelectItem.Expr(ao.asExpr(transform(x)).asSqlExpr, Some(s"c$cursor")) :: Nil
 
+    given table[T, L <: Int, CL <: Int](using
+        kt: KindToTuple[Column[L]]
+    ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
+        new AsMap[Table[T, Column, L], CL]:
+            type R = Table[T, Column, L]
+
+            type KS = kt.R
+
+            def transform(x: Table[T, Column, L]): R =
+                x
+
+            def offset(x: Table[T, Column, L]): Int =
+                x.__metaData__.columnNames.size
+
+            def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
+                for
+                    (column, index) <- x.__metaData__.columnNames.zipWithIndex
+                yield
+                    SqlSelectItem.Expr(
+                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
+                    )
+
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[MappedTable[N, V, L], CL, MappedTable[N, t.R, L], kt.R] =
+        new AsMap[MappedTable[N, V, L], CL]:
+            type R = MappedTable[N, t.R, L]
+
+            type KS = kt.R
+
+            def transform(x: MappedTable[N, V, L]): R =
+                MappedTable(
+                    x.__aliasName__,
+                    t.toTuple(a.transform(x.__items__))
+                )
+
+            def offset(x: MappedTable[N, V, L]): Int =
+                a.offset(x.__items__)
+
+            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
+                a.asSelectItems(x.__items__, cursor)
+
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
-        aeh: AsExpr[H, CL],
-        ash: AsSqlExpr[aeh.R],
         at: AsMap[T, CL],
         tt: ToTuple[at.R],
-        c: CombineKindTuple[ah.KS, at.KS]
+        c: CombineKindTuple[ah.KS, at.KS],
+        nt: NotGiven[H <:< Tuple],
+        nnt: NotGiven[H <:< AnyNamedTuple]
     ): Aux[H *: T, CL, ah.R *: tt.R, c.R] =
         new AsMap[H *: T, CL]:
             type R = ah.R *: tt.R
@@ -341,9 +287,9 @@ object AsMap:
 
     given tuple1[H, CL <: Int](using
         ah: AsMap[H, CL],
-        aeh: AsExpr[H, CL],
-        ash: AsSqlExpr[aeh.R],
-        c: CombineKindTuple[ah.KS, EmptyTuple]
+        c: CombineKindTuple[ah.KS, EmptyTuple],
+        nt: NotGiven[H <:< Tuple],
+        nnt: NotGiven[H <:< AnyNamedTuple]
     ): Aux[H *: EmptyTuple, CL, ah.R *: EmptyTuple, c.R] =
         new AsMap[H *: EmptyTuple, CL]:
             type R = ah.R *: EmptyTuple
