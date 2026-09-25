@@ -157,7 +157,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     val unionQuery = f(withTable)
     val finalTable = RecursiveTable[N, tu.R, CL](tableCte)
     val finalQuery = g(finalTable)
-    val columns = m.asSelectItems(baseQuery.params.toTuple, 1).map(_.alias.get)
+    val columns = m.asSelectItems(baseQuery.params.toTuple, 1).flatMap(_.alias)
     val withTree = SqlQuery.Set(
         baseQuery.tree,
         SqlSetOperator.Union(Some(SqlQuantifier.All)),

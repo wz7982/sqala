@@ -147,7 +147,7 @@ trait SetRecognizeProperty[T, ST <: SqlTable]:
     /**
      * Fetches the `matchRecognize` configuration.
      */
-    def fetchRecognize(table: ST): SqlMatchRecognize
+    def fetchRecognize(table: ST): Option[SqlMatchRecognize]
 
 object SetRecognizeProperty:
     given table[T, K[_ <: Int] <: ExprKind, L <: Int]: SetRecognizeProperty[Table[T, K, L], SqlTable.Ident] with
@@ -177,8 +177,8 @@ object SetRecognizeProperty:
                 matchRecognize = Some(recognize)
             )
 
-        def fetchRecognize(table: SqlTable.Ident): SqlMatchRecognize =
-            table.matchRecognize.get
+        def fetchRecognize(table: SqlTable.Ident): Option[SqlMatchRecognize] =
+            table.matchRecognize
 
     given subquery[N <: Tuple, V <: Tuple, L <: Int]: SetRecognizeProperty[MappedTable[N, V, L], SqlTable.Subquery] with
         def setPartitionBy(table: SqlTable.Subquery, items: List[SqlExpr]): SqlTable.Subquery =
@@ -207,8 +207,8 @@ object SetRecognizeProperty:
                 matchRecognize = Some(recognize)
             )
 
-        def fetchRecognize(table: SqlTable.Subquery): SqlMatchRecognize =
-            table.matchRecognize.get
+        def fetchRecognize(table: SqlTable.Subquery): Option[SqlMatchRecognize] =
+            table.matchRecognize
 
 /**
  * Sets the table alias.

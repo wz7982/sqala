@@ -117,9 +117,13 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
             SqlRowPatternDefineItem(n, e.asSqlExpr)
         val recognize =
             s.fetchRecognize(__sqlTable__)
-        val newRecognize = recognize
-            .copy(rowPattern = recognize.rowPattern.copy(define = defines.toNonEmptyList))
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newRecognize = recognize.map: r =>
+            r.copy(rowPattern = r.rowPattern.copy(define = defines.toNonEmptyList))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Defines the row pattern expression using the pattern variable
@@ -133,9 +137,13 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         val p = f(RecognizePattern[N, T, ST, L](__table__))
         val recognize =
             s.fetchRecognize(__sqlTable__)
-        val newRecognize = recognize
-            .copy(rowPattern = recognize.rowPattern.copy(pattern = p.pattern))
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newRecognize = recognize.map: r =>
+            r.copy(rowPattern = r.rowPattern.copy(pattern = p.pattern))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Resumes pattern matching at the next row after a match.
@@ -144,13 +152,17 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
     def afterMatchSkipToNextRow: Recognize[N, T, ST, L] =
         val recognize =
             s.fetchRecognize(__sqlTable__)
-        val newRecognize = recognize
-            .copy(
-                rowPattern = recognize.rowPattern.copy(
+        val newRecognize = recognize.map: r =>
+            r.copy(
+                rowPattern = r.rowPattern.copy(
                     afterMatchMode = Some(SqlRowPatternSkipMode.ToNextRow)
                 )
             )
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Resumes pattern matching after the last row of the match.
@@ -159,13 +171,17 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
     def afterMatchSkipPastLastRow: Recognize[N, T, ST, L] =
         val recognize =
             s.fetchRecognize(__sqlTable__)
-        val newRecognize = recognize
-            .copy(
-                rowPattern = recognize.rowPattern.copy(
+        val newRecognize = recognize.map: r =>
+            r.copy(
+                rowPattern = r.rowPattern.copy(
                     afterMatchMode = Some(SqlRowPatternSkipMode.PastLastRow)
                 )
             )
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Resumes pattern matching at the first occurrence of a
@@ -179,14 +195,19 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         val recognize =
             s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
-            .copy(
-                rowPattern = recognize.rowPattern.copy(
-                    afterMatchMode = Some(
-                        SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T, ST, L](__table__)))
+            .map: r =>
+                r.copy(
+                    rowPattern = r.rowPattern.copy(
+                        afterMatchMode = Some(
+                            SqlRowPatternSkipMode.ToFirst(f(RecognizePatternName[N, T, ST, L](__table__)))
+                        )
                     )
                 )
-            )
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Resumes pattern matching at the last occurrence of a
@@ -200,14 +221,19 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         val recognize =
             s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
-            .copy(
-                rowPattern = recognize.rowPattern.copy(
-                    afterMatchMode = Some(
-                        SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T, ST, L](__table__)))
+            .map: r =>
+                r.copy(
+                    rowPattern = r.rowPattern.copy(
+                        afterMatchMode = Some(
+                            SqlRowPatternSkipMode.ToLast(f(RecognizePatternName[N, T, ST, L](__table__)))
+                        )
                     )
                 )
-            )
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Resumes pattern matching at a pattern variable.
@@ -221,14 +247,19 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         val recognize =
             s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
-            .copy(
-                rowPattern = recognize.rowPattern.copy(
-                    afterMatchMode = Some(
-                        SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T, ST, L](__table__)))
+            .map: r =>
+                r.copy(
+                    rowPattern = r.rowPattern.copy(
+                        afterMatchMode = Some(
+                            SqlRowPatternSkipMode.To(f(RecognizePatternName[N, T, ST, L](__table__)))
+                        )
                     )
                 )
-            )
-        Recognize(__table__, s.setRecognize(__sqlTable__, newRecognize))
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
+        Recognize(__table__, newTable)
 
     /**
      * Defines the output measures (columns) of the
@@ -257,19 +288,28 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
     ): RecognizeMeasures[MN, t.R, L] =
         val alias = qc.fetchAlias
         val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
-        val measureItems = items.map: i =>
-            SqlRowPatternMeasureItem(i.expr, i.alias.get)
+        val measureItems =
+            for
+                i <- items
+                alias <- i.alias
+            yield
+                SqlRowPatternMeasureItem(i.expr, alias)
         val recognize =
             s.fetchRecognize(__sqlTable__)
         val newRecognize = recognize
-            .copy(
-                measures = measureItems,
-                alias = Some(SqlTableAlias(alias, Nil))
-            )
+            .map: r =>
+                r.copy(
+                    measures = measureItems,
+                    alias = Some(SqlTableAlias(alias, Nil))
+                )
+        val newTable =
+            newRecognize.map: r =>
+                s.setRecognize(__sqlTable__, r)
+            .getOrElse(__sqlTable__)
         RecognizeMeasures[MN, t.R, L](
             alias,
             t.toTuple(p.asTableParam(alias, 1)),
-            s.setRecognize(__sqlTable__, newRecognize)
+            newTable
         )
 
 /**
