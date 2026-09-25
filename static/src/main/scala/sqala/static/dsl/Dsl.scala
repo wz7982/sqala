@@ -27,7 +27,7 @@ import scala.compiletime.ops.int.{+, >}
  * }}}
  */
 def query[T](q: QueryContext[0] ?=> T): T =
-    given QueryContext[0] = QueryContext(0)
+    given QueryContext[0] = QueryContext(TableIndexRef(0))
     q
 
 /**
@@ -91,13 +91,13 @@ private[sqala] val columnPseudoLevel = "__pseudo__level__"
  *     .filter((c, p) => c.id == p.channelId)
  * }}}
  */
-def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](0))(
+def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0](TableIndexRef(0)))(
     tables: QueryContext[CL + 1] ?=> T
 )(using
     at: AsTable[T, CL + 1],
     as: AsSelect[at.R]
 ): TableQuery[at.R, at.OKS, CL + 1] =
-    given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+    given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
     val (params, fromTable) = at.asTable(tables)
     val selectItems = as.asSelectItems(params, 1)
     val tree: SqlQuery.Select = SqlQuery.Select(
@@ -236,7 +236,7 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
     ): JoinPart[j.R, c.R, CL] =
-        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
         val (leftTable, leftSqlTable) = ta.asTable(a)
         val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
@@ -280,7 +280,7 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
     ): FromJoin[j.R, c.R, CL + 1] =
-        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
         val (leftTable, leftSqlTable) = ta.asTable(a)
         val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
@@ -326,7 +326,7 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
     ): JoinPart[j.R, c.R, CL + 1] =
-        given QueryContext[CL + 1] = qc.asInstanceOf[QueryContext[CL + 1]]
+        given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
         val (leftTable, leftSqlTable) = ta.asTable(a)
         val (rightTable, rightSqlTable) = tb.asTable(f(leftTable))
         val params = j.join(leftTable, rightTable)
@@ -694,7 +694,7 @@ def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, 
  * .pattern(d => ^ ~ d.down.+ ~ d.up.+)
  * }}}
  */
-def ^[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+def ^[ST <: SqlTable, CL <: Int](using QueryContext[CL], MatchRecognizeContext[ST]): RecognizePatternTerm[ST, CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Circumflex(None))
 
 /**
@@ -704,7 +704,7 @@ def ^[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatter
  * .pattern(d => d.down.+ ~ d.up.+ ~ $)
  * }}}
  */
-def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+def $[ST <: SqlTable, CL <: Int](using QueryContext[CL], MatchRecognizeContext[ST]): RecognizePatternTerm[ST, CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Dollar(None))
 
 /**
@@ -715,10 +715,10 @@ def $[CL <: Int](using QueryContext[CL], MatchRecognizeContext): RecognizePatter
  * .pattern(d => permute(d.a, d.b, d.c))
  * }}}
  */
-def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTerm[CL]*)(using
+def permute[ST <: SqlTable, CL <: Int](term: RecognizePatternTerm[ST, CL], terms: RecognizePatternTerm[ST, CL]*)(using
     QueryContext[CL],
-    MatchRecognizeContext
-): RecognizePatternTerm[CL] =
+    MatchRecognizeContext[ST]
+): RecognizePatternTerm[ST, CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Permute((term.pattern :: terms.toList.map(_.pattern)).toNonEmptyList, None))
 
 /**
@@ -729,7 +729,10 @@ def permute[CL <: Int](term: RecognizePatternTerm[CL], terms: RecognizePatternTe
  * .pattern(d => exclusion(d.a))
  * }}}
  */
-def exclusion[CL <: Int](term: RecognizePatternTerm[CL])(using QueryContext[CL], MatchRecognizeContext): RecognizePatternTerm[CL] =
+def exclusion[ST <: SqlTable, CL <: Int](term: RecognizePatternTerm[ST, CL])(using
+    QueryContext[CL],
+    MatchRecognizeContext[ST]
+): RecognizePatternTerm[ST, CL] =
     RecognizePatternTerm(SqlRowPatternTerm.Exclusion(term.pattern, None))
 
 /**
@@ -740,9 +743,9 @@ def exclusion[CL <: Int](term: RecognizePatternTerm[CL])(using QueryContext[CL],
  * .measures(d => (endTime = finalized(last(d.up.tradeTime))))
  * }}}
  */
-def finalized[T, CL <: Int](x: T)(using
+def finalized[T, ST <: SqlTable, CL <: Int](x: T)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[T, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -758,9 +761,9 @@ def finalized[T, CL <: Int](x: T)(using
  * .measures(d => (runningTotal = running(sum(d.price))))
  * }}}
  */
-def running[T, CL <: Int](x: T)(using
+def running[T, ST <: SqlTable, CL <: Int](x: T)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[T, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -794,18 +797,18 @@ extension [T, CL <: Int](table: T)(using qc: QueryContext[CL], r: AsRecognize[T,
      * }}}
      */
     def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> r.R => RecognizeMeasures[N, V, CL]
+        f: EmptyMatchRecognizeContext ?=> MatchRecognizeContext[r.ST] ?=> r.R => RecognizeMeasures[N, V, CL]
     ): FromRecognize[N, V, r.OKS, CL] =
-        given mc: MatchRecognizeContext = MatchRecognizeContext(None)
+        given mc: EmptyMatchRecognizeContext = EmptyMatchRecognizeContext()
         val (initialTable, sqlTable) = r.asRecognizeTable(table)
-        mc.sqlTable = Some(sqlTable)
+        given MatchRecognizeContext[r.ST] = MatchRecognizeContext(sqlTable)
         val measures = f(initialTable)
         FromRecognize(measures.__aliasName__, measures.__items__, measures.__sqlTable__)
 
-extension [T, CL <: Int](table: T)(using
+extension [T, ST <: SqlTable, CL <: Int](table: T)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
-    s: SetRecognizeProperty[T]
+    mc: MatchRecognizeContext[ST],
+    s: SetRecognizeProperty[T, ST]
 )
     /**
      * Specifies `PARTITION BY` for `matchRecognize`.
@@ -816,8 +819,8 @@ extension [T, CL <: Int](table: T)(using
      */
     def partitionBy[P](partitionValue: P)(using
         a: AsRecognizePartition[P, CL]
-    ): RecognizePredefine[T, CL] =
-        RecognizePredefine(table, s.setPartitionBy(mc.sqlTable.get, a.asExprs(partitionValue).map(_.asSqlExpr)))
+    ): RecognizePredefine[T, ST, CL] =
+        RecognizePredefine(table, s.setPartitionBy(mc.sqlTable, a.asExprs(partitionValue).map(_.asSqlExpr)))
 
     /**
      * Specifies `ORDER BY` for `matchRecognize`.
@@ -828,9 +831,9 @@ extension [T, CL <: Int](table: T)(using
      */
     def sortBy[S](sortValue: S)(using
         a: AsColumnSort[S, CL]
-    ): RecognizePredefine[T, CL] =
+    ): RecognizePredefine[T, ST, CL] =
         val sort = a.asSorts(sortValue).map(_.asSqlOrderingItem)
-        RecognizePredefine(table, s.setOrderBy(mc.sqlTable.get, sort))
+        RecognizePredefine(table, s.setOrderBy(mc.sqlTable, sort))
 
     /**
      * Alias of `sortBy` for `matchRecognize`, provided for users familiar with `ORDER BY`.
@@ -841,7 +844,7 @@ extension [T, CL <: Int](table: T)(using
      */
     def orderBy[S](sortValue: S)(using
         a: AsColumnSort[S, CL]
-    ): RecognizePredefine[T, CL] =
+    ): RecognizePredefine[T, ST, CL] =
         sortBy(sortValue)
 
     /**
@@ -851,8 +854,8 @@ extension [T, CL <: Int](table: T)(using
      * s.oneRowPerMatch
      * }}}
      */
-    def oneRowPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.OneRow))
+    def oneRowPerMatch: RecognizePredefine[T, ST, CL] =
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable, SqlRecognizePatternRowsMode.OneRow))
 
     /**
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
@@ -861,8 +864,8 @@ extension [T, CL <: Int](table: T)(using
      * s.allRowsPerMatch
      * }}}
      */
-    def allRowsPerMatch: RecognizePredefine[T, CL] =
-        RecognizePredefine(table, s.setPerMatch(mc.sqlTable.get, SqlRecognizePatternRowsMode.AllRows(None)))
+    def allRowsPerMatch: RecognizePredefine[T, ST, CL] =
+        RecognizePredefine(table, s.setPerMatch(mc.sqlTable, SqlRecognizePatternRowsMode.AllRows(None)))
 
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
     /**

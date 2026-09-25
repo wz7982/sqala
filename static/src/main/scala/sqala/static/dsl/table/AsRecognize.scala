@@ -24,6 +24,11 @@ trait AsRecognize[T, CL <: Int]:
     type R
 
     /**
+      * The table reference type.
+      */
+    type ST <: SqlTable
+
+    /**
      * The kind tuple of the outer query.
      */
     type OKS <: Tuple
@@ -31,11 +36,13 @@ trait AsRecognize[T, CL <: Int]:
     /**
      * Initializes the `matchRecognize` clause on the table.
      */
-    def asRecognizeTable(x: T)(using QueryContext[CL]): (R, SqlTable)
+    def asRecognizeTable(x: T)(using QueryContext[CL]): (R, ST)
 
 object AsRecognize:
-    type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsRecognize[T, CL]:
+    type Aux[T, CL <: Int, O, OST <: SqlTable, OOKS <: Tuple] = AsRecognize[T, CL]:
         type R = O
+
+        type ST = OST
 
         type OKS = OOKS
 
@@ -64,13 +71,15 @@ object AsRecognize:
         nq: NotGiven[O <:< Query[?, ?, ?, ?]],
         ns: NotGiven[O <:< Seq[?]],
         fc: FetchCompanion[O]
-    ): Aux[O, CL, Table[fc.R, Column, CL], EmptyTuple] =
+    ): Aux[O, CL, Table[fc.R, Column, CL], SqlTable.Ident, EmptyTuple] =
         new AsRecognize[O, CL]:
             type R = Table[fc.R, Column, CL]
 
+            type ST = SqlTable.Ident
+
             type OKS = EmptyTuple
 
-            def asRecognizeTable(x: O)(using qc: QueryContext[CL]): (R, SqlTable) =
+            def asRecognizeTable(x: O)(using qc: QueryContext[CL]): (R, ST) =
                 val metaData = fc.metaData
                 val alias = qc.fetchAlias
                 val table = Table[fc.R, Column, CL](
@@ -91,13 +100,15 @@ object AsRecognize:
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         refl: L > CL =:= true
-    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, CL], SqlTable.Subquery, TOKS] =
         new AsRecognize[Q, CL]:
             type R = MappedTable[N, tt.R, CL]
 
+            type ST = SqlTable.Subquery
+
             type OKS = TOKS
 
-            def asRecognizeTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
+            def asRecognizeTable(x: Q)(using qc: QueryContext[CL]): (R, ST) =
                 val alias = qc.fetchAlias
                 val table = MappedTable[N, V, CL](alias)
                 val sqlTable: SqlTable.Subquery =
@@ -110,94 +121,94 @@ object AsRecognize:
                 (table, sqlTable)
 
 /**
-  * Sets the `matchRecognize` configuration.
+  * Sets the `matchRecognize` configuration. ST is the SQL table type.
   */
-trait SetRecognizeProperty[T]:
+trait SetRecognizeProperty[T, ST <: SqlTable]:
     /**
      * Sets the `partitionBy` expressions.
      */
-    def setPartitionBy(table: SqlTable, items: List[SqlExpr]): SqlTable
+    def setPartitionBy(table: ST, items: List[SqlExpr]): ST
 
     /**
      * Appends `orderBy` items.
      */
-    def setOrderBy(table: SqlTable, items: List[SqlOrderingItem]): SqlTable
+    def setOrderBy(table: ST, items: List[SqlOrderingItem]): ST
 
     /**
      * Sets the rows-per-match mode.
      */
-    def setPerMatch(table: SqlTable, perMatch: SqlRecognizePatternRowsMode): SqlTable
+    def setPerMatch(table: ST, perMatch: SqlRecognizePatternRowsMode): ST
 
     /**
      * Sets the full `matchRecognize` configuration.
      */
-    def setRecognize(table: SqlTable, recognize: SqlMatchRecognize): SqlTable
+    def setRecognize(table: ST, recognize: SqlMatchRecognize): ST
 
     /**
      * Fetches the `matchRecognize` configuration.
      */
-    def fetchRecognize(table: SqlTable): SqlMatchRecognize
+    def fetchRecognize(table: ST): SqlMatchRecognize
 
 object SetRecognizeProperty:
-    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: SetRecognizeProperty[Table[T, K, L]] with
-        def setPartitionBy(table: SqlTable, items: List[SqlExpr]): SqlTable =
-            table.asInstanceOf[SqlTable.Ident].copy(
+    given table[T, K[_ <: Int] <: ExprKind, L <: Int]: SetRecognizeProperty[Table[T, K, L], SqlTable.Ident] with
+        def setPartitionBy(table: SqlTable.Ident, items: List[SqlExpr]): SqlTable.Ident =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Ident].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(partitionBy = items)
             )
 
-        def setOrderBy(table: SqlTable, items: List[SqlOrderingItem]): SqlTable =
-            table.asInstanceOf[SqlTable.Ident].copy(
+        def setOrderBy(table: SqlTable.Ident, items: List[SqlOrderingItem]): SqlTable.Ident =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Ident].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(orderBy = m.orderBy ++ items)
             )
 
-        def setPerMatch(table: SqlTable, perMatch: SqlRecognizePatternRowsMode): SqlTable =
-            table.asInstanceOf[SqlTable.Ident].copy(
+        def setPerMatch(table: SqlTable.Ident, perMatch: SqlRecognizePatternRowsMode): SqlTable.Ident =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Ident].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(rowsMode = Some(perMatch))
             )
 
-        def setRecognize(table: SqlTable, recognize: SqlMatchRecognize): SqlTable =
-            table.asInstanceOf[SqlTable.Ident].copy(
+        def setRecognize(table: SqlTable.Ident, recognize: SqlMatchRecognize): SqlTable.Ident =
+            table.copy(
                 matchRecognize = Some(recognize)
             )
 
-        def fetchRecognize(table: SqlTable): SqlMatchRecognize =
-            table.asInstanceOf[SqlTable.Ident].matchRecognize.get
+        def fetchRecognize(table: SqlTable.Ident): SqlMatchRecognize =
+            table.matchRecognize.get
 
-    given subquery[N <: Tuple, V <: Tuple, L <: Int]: SetRecognizeProperty[MappedTable[N, V, L]] with
-        def setPartitionBy(table: SqlTable, items: List[SqlExpr]): SqlTable =
-            table.asInstanceOf[SqlTable.Subquery].copy(
+    given subquery[N <: Tuple, V <: Tuple, L <: Int]: SetRecognizeProperty[MappedTable[N, V, L], SqlTable.Subquery] with
+        def setPartitionBy(table: SqlTable.Subquery, items: List[SqlExpr]): SqlTable.Subquery =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Subquery].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(partitionBy = items)
             )
 
-        def setOrderBy(table: SqlTable, items: List[SqlOrderingItem]): SqlTable =
-            table.asInstanceOf[SqlTable.Subquery].copy(
+        def setOrderBy(table: SqlTable.Subquery, items: List[SqlOrderingItem]): SqlTable.Subquery =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Subquery].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(orderBy = m.orderBy ++ items)
             )
 
-        def setPerMatch(table: SqlTable, perMatch: SqlRecognizePatternRowsMode): SqlTable =
-            table.asInstanceOf[SqlTable.Subquery].copy(
+        def setPerMatch(table: SqlTable.Subquery, perMatch: SqlRecognizePatternRowsMode): SqlTable.Subquery =
+            table.copy(
                 matchRecognize =
-                    table.asInstanceOf[SqlTable.Subquery].matchRecognize.map: m =>
+                    table.matchRecognize.map: m =>
                         m.copy(rowsMode = Some(perMatch))
             )
 
-        def setRecognize(table: SqlTable, recognize: SqlMatchRecognize): SqlTable =
-            table.asInstanceOf[SqlTable.Subquery].copy(
+        def setRecognize(table: SqlTable.Subquery, recognize: SqlMatchRecognize): SqlTable.Subquery =
+            table.copy(
                 matchRecognize = Some(recognize)
             )
 
-        def fetchRecognize(table: SqlTable): SqlMatchRecognize =
-            table.asInstanceOf[SqlTable.Subquery].matchRecognize.get
+        def fetchRecognize(table: SqlTable.Subquery): SqlMatchRecognize =
+            table.matchRecognize.get
 
 /**
  * Sets the table alias.

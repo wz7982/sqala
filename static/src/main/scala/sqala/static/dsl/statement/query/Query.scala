@@ -49,7 +49,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -74,7 +74,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -99,7 +99,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -124,7 +124,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -149,7 +149,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -174,7 +174,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(

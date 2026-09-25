@@ -2,6 +2,7 @@ package sqala.static.dsl
 
 import sqala.ast.expr.*
 import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.table.SqlTable
 import sqala.metadata.*
 
 import java.time.*
@@ -961,7 +962,7 @@ def jsonArrayAgg[A, CL <: Int](x: A)(using
  * Returns the matched pattern name in `matchRecognize`. Maps to
  * `CLASSIFIER()`.
  */
-def classifier[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[String, Agg[EmptyTuple]] =
+def classifier[ST <: SqlTable, CL <: Int]()(using QueryContext[CL], MatchRecognizeContext[ST]): Expr[String, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
@@ -977,11 +978,11 @@ def classifier[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr
  * Returns the sequential match number in `matchRecognize`. Maps to
  * `MATCH_NUMBER()`.
  */
-def matchNumber[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Expr[Int, Agg[EmptyTuple]] =
+def matchNumber[ST <: SqlTable, CL <: Int]()(using QueryContext[CL], MatchRecognizeContext[ST]): Expr[Int, Agg[EmptyTuple]] =
     Expr(
         SqlExpr.GeneralFunc(
             None,
-            "MATCL_NUMBER",
+            "MATCH_NUMBER",
             Nil,
             Nil,
             Nil,
@@ -997,9 +998,9 @@ def matchNumber[CL <: Int]()(using QueryContext[CL], MatchRecognizeContext): Exp
  * first(expr)
  * }}}
  */
-def first[A, CL <: Int](x: A)(using
+def first[A, ST <: SqlTable, CL <: Int](x: A)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[A, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -1027,9 +1028,9 @@ def first[A, CL <: Int](x: A)(using
  * first(expr, n)
  * }}}
  */
-def first[A, N, CL <: Int](x: A, n: N)(using
+def first[A, N, ST <: SqlTable, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
     asa: AsSqlExpr[aa.R],
@@ -1062,9 +1063,9 @@ def first[A, N, CL <: Int](x: A, n: N)(using
  * last(expr)
  * }}}
  */
-def last[A, CL <: Int](x: A)(using
+def last[A, ST <: SqlTable, CL <: Int](x: A)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[A, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -1092,9 +1093,9 @@ def last[A, CL <: Int](x: A)(using
  * last(expr, n)
  * }}}
  */
-def last[A, N, CL <: Int](x: A, n: N)(using
+def last[A, N, ST <: SqlTable, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
     asa: AsSqlExpr[aa.R],
@@ -1127,9 +1128,9 @@ def last[A, N, CL <: Int](x: A, n: N)(using
  * prev(expr)
  * }}}
  */
-def prev[A, CL <: Int](x: A)(using
+def prev[A, ST <: SqlTable, CL <: Int](x: A)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[A, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -1157,9 +1158,9 @@ def prev[A, CL <: Int](x: A)(using
  * prev(expr, n)
  * }}}
  */
-def prev[A, N, CL <: Int](x: A, n: N)(using
+def prev[A, N, ST <: SqlTable, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
     asa: AsSqlExpr[aa.R],
@@ -1192,9 +1193,9 @@ def prev[A, N, CL <: Int](x: A, n: N)(using
  * next(expr)
  * }}}
  */
-def next[A, CL <: Int](x: A)(using
+def next[A, ST <: SqlTable, CL <: Int](x: A)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     a: AsExpr[A, CL],
     as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K],
@@ -1222,9 +1223,9 @@ def next[A, CL <: Int](x: A)(using
  * next(expr, n)
  * }}}
  */
-def next[A, N, CL <: Int](x: A, n: N)(using
+def next[A, N, ST <: SqlTable, CL <: Int](x: A, n: N)(using
     qc: QueryContext[CL],
-    mc: MatchRecognizeContext,
+    mc: MatchRecognizeContext[ST],
     aa: AsExpr[A, CL],
     an: AsExpr[N, CL],
     asa: AsSqlExpr[aa.R],

@@ -106,7 +106,7 @@ final class Update[T, S <: UpdateState](
         )
 
 object Update:
-    given qc: QueryContext[1] = QueryContext(0)
+    given qc: QueryContext[1] = QueryContext(TableIndexRef(0))
 
     inline def apply[T <: Product]: Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]

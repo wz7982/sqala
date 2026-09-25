@@ -34,7 +34,7 @@ final class Delete[T](
 
 object Delete:
     inline def apply[T <: Product]: Delete[T] =
-        given qc: QueryContext[1] = QueryContext(0)
+        given qc: QueryContext[1] = QueryContext(TableIndexRef(0))
         val metaData = TableMacro.tableMetaData[T]
         val alias = qc.fetchAlias
         val sqlTable: SqlTable.Ident =
