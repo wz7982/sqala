@@ -6,7 +6,7 @@ import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.SqlTable
 import sqala.metadata.{AsSqlExpr, Dialect, TableMacroImpl}
-import sqala.static.dsl.QueryContext
+import sqala.static.dsl.{QueryContext, TableIndexRef}
 import sqala.static.dsl.statement.query.SelectQuery
 import sqala.util.NonEmptyList.toNonEmptyList
 
@@ -371,7 +371,7 @@ object Repository:
                                             if $distinctExpr then Some(SqlQuantifier.Distinct) else None,
                                             $columnExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
                                             table :: Nil,
-                                            if condBuffer.nonEmpty then 
+                                            if condBuffer.nonEmpty then
                                                 Some(condBuffer.toList.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
                                             else
                                                 None
@@ -384,7 +384,7 @@ object Repository:
                                             None,
                                             None
                                         )
-                                    val query = SelectQuery(null, baseTree)(using QueryContext(0))
+                                    val query = SelectQuery(null, baseTree)(using QueryContext(TableIndexRef(0)))
 
                                     val result = if $modeExpr.startsWith("find") then
                                         find(query)

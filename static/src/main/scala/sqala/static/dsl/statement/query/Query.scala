@@ -10,7 +10,7 @@ import sqala.metadata.{Dialect, SqlBoolean}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.{Table, TransformTableKind}
 import sqala.util.queryToString
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 import scala.compiletime.ops.int.-
 
@@ -49,7 +49,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -74,7 +74,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -99,7 +99,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -124,7 +124,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -149,7 +149,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -174,7 +174,7 @@ sealed class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
     ): UnionQuery[u.R, c.R, L] =
-        given QueryContext[L - 1] = qc.asInstanceOf[QueryContext[L - 1]]
+        given QueryContext[L - 1] = QueryContext(qc.tableIndex)
         UnionQuery(
             u.unionQueryItems(params, 1),
             SqlQuery.Set(
@@ -713,7 +713,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
             a.asGroup(group) *: tt.toTuple(tu.transform(params)),
             tree.copy(
                 groupBy = Some(
-                    SqlGroup(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)).toNonEmptyList)
+                    SqlGroup(None, groupExprs.map(g => SqlGroupingItem.Expr(g.asSqlExpr)))
                 )
             )
         )
@@ -749,7 +749,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
             to.toOption(group) *: tt.toTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
-                    SqlGroup(None, groupingItems.toNonEmptyList)
+                    SqlGroup(None, groupingItems)
                 )
             )
         )
@@ -1375,7 +1375,7 @@ final case class ConnectBy[T, OKS <: Tuple, L <: Int](
         )
         val cteTree: SqlQuery.With = SqlQuery.With(
             true,
-            (withItem :: Nil).toNonEmptyList,
+            NonEmptyList(withItem, Nil),
             mapTree.copy(select = sqlSelect)
         )
         Query(a.transform(mapped), cteTree)

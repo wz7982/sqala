@@ -6,7 +6,7 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.{AsMap, Query}
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValue
@@ -15,7 +15,7 @@ import scala.compiletime.constValue
  * A within-item for `pivot`, specifying a column and its matching
  * conditions.
  */
-final case class PivotWithin[N](private[sqala] val expr: SqlExpr, private[sqala] val conditions: List[SqlExpr])
+final case class PivotWithin[N](private[sqala] val expr: SqlExpr, private[sqala] val conditions: NonEmptyList[SqlExpr])
 
 /**
  * A pivot table source constructed by `pivot`, supporting optional
@@ -57,10 +57,10 @@ final case class Pivot[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
         val newQuery =
             __sqlQuery__.copy(
                 groupBy = Some(
-                    SqlGroup(None, group.map(g => SqlGroupingItem.Expr(g)).toNonEmptyList)
+                    SqlGroup(None, group.map(g => SqlGroupingItem.Expr(g)))
                 )
             )
-        PivotGroupBy[N, V, GN, GV, OKS, L](__items__, group, newQuery)
+        PivotGroupBy[N, V, GN, GV, OKS, L](__items__, group.toList, newQuery)
 
     /**
      * Adds aggregations to the pivot.
@@ -199,11 +199,11 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
         val withinList = items.toList.map(_.asInstanceOf[PivotWithin[?]])
         val conditions = combineAll:
             withinList.map: i =>
-                i.conditions.map(c => SqlExpr.Binary(i.expr, SqlBinaryOperator.Equal, c))
+                i.conditions.map(c => SqlExpr.Binary(i.expr, SqlBinaryOperator.Equal, c)).toList
         val selectAggregations =
             for
                 agg <- __aggregations__
-                c <- conditions
+                c <- conditions.toList
             yield
                 addFilter(agg, c)
         val selectItems =
@@ -240,7 +240,7 @@ final case class PivotAgg[N <: Tuple, V <: Tuple, GN <: Tuple, GV <: Tuple, AN <
         val selectAggregations =
             for
                 agg <- __aggregations__
-                c <- conditions
+                c <- conditions.toList
             yield
                 addFilter(agg, c)
         val selectItems =

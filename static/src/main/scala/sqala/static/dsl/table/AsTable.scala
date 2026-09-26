@@ -170,6 +170,7 @@ object AsTable:
             type OKS = EmptyTuple
 
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
+                require(x.nonEmpty, "values table must have at least one row")
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](

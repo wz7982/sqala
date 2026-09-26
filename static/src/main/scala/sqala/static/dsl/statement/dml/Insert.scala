@@ -64,7 +64,7 @@ final class Insert[T, S <: InsertState](
                 case Expr(SqlExpr.Column(_, c)) => c
                 case _ => throw MatchError(i)
         val tree =
-            InsertTree(sqlTable, columns, Nil, None)
+            InsertTree(sqlTable, columns.toList, Nil, None)
         new Insert(tree)
 
     /**
@@ -124,7 +124,6 @@ final class Insert[T, S <: InsertState](
                 SqlInsertMode.Subquery(tree.query.get)
             else
                 SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
-
         SqlStatement.Insert(
             tree.table,
             tree.columns,

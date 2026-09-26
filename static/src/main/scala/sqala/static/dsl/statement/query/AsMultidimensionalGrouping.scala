@@ -2,7 +2,7 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.group.SqlGroupingItem
 import sqala.static.dsl.*
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 /**
   * Represents a single grouping item.
@@ -29,15 +29,15 @@ object AsGroupingItem:
 
     given cube: AsGroupingItem[Cube] with
         def asSqlGroupingItem(x: Cube): SqlGroupingItem =
-            SqlGroupingItem.Cube(x.exprs.toNonEmptyList)
+            SqlGroupingItem.Cube(x.exprs)
 
     given rollup: AsGroupingItem[Rollup] with
         def asSqlGroupingItem(x: Rollup): SqlGroupingItem =
-            SqlGroupingItem.Rollup(x.exprs.toNonEmptyList)
+            SqlGroupingItem.Rollup(x.exprs)
 
     given groupingSets: AsGroupingItem[GroupingSets] with
         def asSqlGroupingItem(x: GroupingSets): SqlGroupingItem =
-            SqlGroupingItem.GroupingSets(x.items.toNonEmptyList)
+            SqlGroupingItem.GroupingSets(x.items)
 
 
 /**
@@ -47,7 +47,7 @@ trait AsMultidimensionalGrouping[T]:
     /**
      * Converts the grouping items to a list of SQL grouping items.
      */
-    def asSqlGroupingItems(x: T): List[SqlGroupingItem]
+    def asSqlGroupingItems(x: T): NonEmptyList[SqlGroupingItem]
 
 object AsMultidimensionalGrouping:
     given expr[T, CL <: Int](using
@@ -56,34 +56,34 @@ object AsMultidimensionalGrouping:
         ak: AllIsKind[kt.R, Grouped[?]],
         refl: ak.R =:= true
     ): AsMultidimensionalGrouping[T] with
-        def asSqlGroupingItems(x: T): List[SqlGroupingItem] =
-            SqlGroupingItem.Expr(a.asExpr(x).asSqlExpr) :: Nil
+        def asSqlGroupingItems(x: T): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(SqlGroupingItem.Expr(a.asExpr(x).asSqlExpr), Nil)
 
     given unit: AsMultidimensionalGrouping[Unit] with
-        def asSqlGroupingItems(x: Unit): List[SqlGroupingItem] =
-            SqlGroupingItem.EmptyGroup :: Nil
+        def asSqlGroupingItems(x: Unit): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(SqlGroupingItem.EmptyGroup, Nil)
 
     given cube: AsMultidimensionalGrouping[Cube] with
-        def asSqlGroupingItems(x: Cube): List[SqlGroupingItem] =
-            SqlGroupingItem.Cube(x.exprs.toNonEmptyList) :: Nil
+        def asSqlGroupingItems(x: Cube): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(SqlGroupingItem.Cube(x.exprs), Nil)
 
     given rollup: AsMultidimensionalGrouping[Rollup] with
-        def asSqlGroupingItems(x: Rollup): List[SqlGroupingItem] =
-            SqlGroupingItem.Rollup(x.exprs.toNonEmptyList) :: Nil
+        def asSqlGroupingItems(x: Rollup): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(SqlGroupingItem.Rollup(x.exprs), Nil)
 
     given groupingSets: AsMultidimensionalGrouping[GroupingSets] with
-        def asSqlGroupingItems(x: GroupingSets): List[SqlGroupingItem] =
-            SqlGroupingItem.GroupingSets(x.items.toNonEmptyList) :: Nil
+        def asSqlGroupingItems(x: GroupingSets): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(SqlGroupingItem.GroupingSets(x.items), Nil)
 
     given tuple[H, T <: Tuple](using
         h: AsGroupingItem[H],
         t: AsMultidimensionalGrouping[T]
     ): AsMultidimensionalGrouping[H *: T] with
-        def asSqlGroupingItems(x: H *: T): List[SqlGroupingItem] =
-            h.asSqlGroupingItem(x.head) :: t.asSqlGroupingItems(x.tail)
+        def asSqlGroupingItems(x: H *: T): NonEmptyList[SqlGroupingItem] =
+            NonEmptyList(h.asSqlGroupingItem(x.head), t.asSqlGroupingItems(x.tail))
 
     given tuple1[H](using
         h: AsMultidimensionalGrouping[H]
     ): AsMultidimensionalGrouping[H *: EmptyTuple] with
-        def asSqlGroupingItems(x: H *: EmptyTuple): List[SqlGroupingItem] =
+        def asSqlGroupingItems(x: H *: EmptyTuple): NonEmptyList[SqlGroupingItem] =
             h.asSqlGroupingItems(x.head)

@@ -6,6 +6,7 @@ import sqala.ast.table.*
 import sqala.metadata.{SqlBoolean, SqlNumber, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.AsMap
+import sqala.util.NonEmptyList
 import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
@@ -662,14 +663,17 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
         val columnItems = m.asSelectItems(columnsValue, 1)
         FromGraph(
             __name__,
-            SqlGraphPattern(
-                None,
-                __patterns__.reduce((x, y) => SqlGraphPatternTerm.And(x, y))
-            ) :: Nil,
+            NonEmptyList(
+                SqlGraphPattern(
+                    None,
+                    __patterns__.reduce((x, y) => SqlGraphPatternTerm.And(x, y))
+                ),
+                Nil
+            ),
             __where__,
             __rows__,
             tt.toTuple(p.asTableParam(alias, 1)),
-            columnItems,
+            columnItems.toNonEmptyList,
             false,
             alias
         )
@@ -730,11 +734,11 @@ final case class FromGraph[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
 object FromGraph:
     def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
         name: String,
-        patterns: List[SqlGraphPattern],
+        patterns: NonEmptyList[SqlGraphPattern],
         where: Option[SqlExpr],
         rows: Option[SqlGraphRowsMode],
         items: V,
-        columns: List[SqlSelectItem],
+        columns: NonEmptyList[SqlSelectItem],
         lateral: Boolean,
         alias: String
     ): FromGraph[N, V, OKS, CL] =
@@ -745,10 +749,10 @@ object FromGraph:
                 lateral,
                 name,
                 None,
-                patterns.toNonEmptyList,
+                patterns,
                 where,
                 rows,
-                columns.toNonEmptyList,
+                columns,
                 None,
                 Some(SqlTableAlias(alias, Nil)),
                 None
