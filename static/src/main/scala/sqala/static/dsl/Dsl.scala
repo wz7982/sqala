@@ -10,7 +10,7 @@ import sqala.metadata.*
 import sqala.static.dsl.statement.dml.*
 import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
 import scala.annotation.targetName
@@ -168,7 +168,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
     )
     val tree = SqlQuery.With(
         true,
-        (SqlWithItem(tableCte, columns, withTree) :: Nil).toNonEmptyList,
+        NonEmptyList(SqlWithItem(tableCte, columns, withTree), Nil),
         finalQuery.tree
     )
     Query(finalQuery.params, tree)
@@ -719,7 +719,7 @@ def permute[ST <: SqlTable, CL <: Int](term: RecognizePatternTerm[ST, CL], terms
     QueryContext[CL],
     MatchRecognizeContext[ST]
 ): RecognizePatternTerm[ST, CL] =
-    RecognizePatternTerm(SqlRowPatternTerm.Permute((term.pattern :: terms.toList.map(_.pattern)).toNonEmptyList, None))
+    RecognizePatternTerm(SqlRowPatternTerm.Permute(NonEmptyList(term.pattern, terms.toList.map(_.pattern)), None))
 
 /**
  * Excludes a pattern from the output in `matchRecognize`. Maps to
@@ -907,7 +907,7 @@ def grouping[T: AsSqlExpr, K <: Grouped[?], CL <: Int](x: Expr[T, K])(using
 ): Expr[Int, Agg[K *: EmptyTuple]] =
     Expr(
         SqlExpr.Grouping(
-            (x.asSqlExpr :: Nil).toNonEmptyList
+            NonEmptyList(x.asSqlExpr, Nil)
         )
     )
 
@@ -1144,7 +1144,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
  * An intermediate builder for `CASE WHEN` chains. Use `caseWhen`
  * to start, add branches with `when`, and finish with `otherwise`.
  */
-final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?, ?]]):
+final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: NonEmptyList[Expr[?, ?]]):
     /**
      * Adds a `WHEN condition THEN result` branch.
      *
@@ -1180,10 +1180,10 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: List[Expr[?,
         c: CombineKindTuple[KS, kt.R]
     ): Expr[r.R, Composite[c.R]] =
         val caseBranches =
-            exprs.grouped(2).toList.map(i => (i(0), i(1))).map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr))
+            exprs.grouped(2).map(i => (i.toList(0), i.toList(1))).map((w, t) => SqlCaseBranch(w.asSqlExpr, t.asSqlExpr))
         Expr(
             SqlExpr.Case(
-                caseBranches.toNonEmptyList,
+                caseBranches,
                 Some(a.asExpr(result).asSqlExpr)
             )
         )
@@ -1205,7 +1205,7 @@ def caseWhen[C, R, CL <: Int](cond: C)(result: R)(using
     ktr: KindToTuple[ar.K],
     c: CombineKindTuple[ktc.R, ktr.R]
 ): CaseWhen[ar.R, c.R] =
-    CaseWhen(ac.asExpr(cond) :: ar.asExpr(result) :: Nil)
+    CaseWhen(NonEmptyList(ac.asExpr(cond), ar.asExpr(result) :: Nil))
 
 /**
  * Returns the first non-null value from two expressions.
@@ -1227,7 +1227,7 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
 ): Expr[r.R, c.R] =
     Expr(
         SqlExpr.Coalesce(
-            (aa.asExpr(x).asSqlExpr :: ab.asExpr(y).asSqlExpr :: Nil).toNonEmptyList
+            NonEmptyList(aa.asExpr(x).asSqlExpr, ab.asExpr(y).asSqlExpr :: Nil)
         )
     )
 

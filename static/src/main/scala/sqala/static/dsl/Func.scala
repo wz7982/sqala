@@ -2519,7 +2519,7 @@ def jsonArray[A, CL <: Int](items: A)(using
 ): Expr[Option[Json], Composite[kt.R]] =
     Expr(
         SqlExpr.JsonArrayFunc(
-            a.asExprs(items).map(i => SqlJsonArrayItem(i.asSqlExpr, None)),
+            a.asExprs(items).map(i => SqlJsonArrayItem(i.asSqlExpr, None)).toList,
             None,
             None
         )

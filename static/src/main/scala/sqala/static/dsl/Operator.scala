@@ -4,7 +4,6 @@ import sqala.ast.expr.*
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
 import sqala.metadata.*
 import sqala.util.NonEmptyList
-import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.annotation.targetName
 
@@ -611,7 +610,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             SqlExpr.Coalesce(
-                (aa.asExpr(self).asSqlExpr :: ab.asExpr(that).asSqlExpr :: Nil).toNonEmptyList
+                NonEmptyList(aa.asExpr(self).asSqlExpr, ab.asExpr(that).asSqlExpr :: Nil)
             )
         )
 

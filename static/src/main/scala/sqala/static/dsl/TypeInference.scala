@@ -3,7 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
 import sqala.metadata.*
 import sqala.static.dsl.table.{AsTableParam, MappedTable, Table}
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 import java.time.{OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple
@@ -136,10 +136,10 @@ trait In[A, B, CL <: Int]:
                 SqlExpr.BooleanLiteral(false)
             case Expr(SqlExpr.Subquery(query)) :: Nil =>
                 SqlExpr.In(expr, SqlInRightOperand.Subquery(query), false)
-            case _ =>
+            case e :: es =>
                 SqlExpr.In(
                     expr,
-                    SqlInRightOperand.Values(exprList.map(_.asSqlExpr).toNonEmptyList),
+                    SqlInRightOperand.Values(NonEmptyList(e.asSqlExpr, es.map(_.asSqlExpr))),
                     false
                 )
 

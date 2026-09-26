@@ -113,7 +113,7 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         val items = f(RecognizeDefine[N, T, L](__table__))
         val names = constValueTuple[N].toList.map(_.toString)
         val exprs = a.asExprs(items.toTuple)
-        val defines = names.zip(exprs).map: (n, e) =>
+        val defines = names.zip(exprs.toList).map: (n, e) =>
             SqlRowPatternDefineItem(n, e.asSqlExpr)
         val recognize =
             s.fetchRecognize(__sqlTable__)

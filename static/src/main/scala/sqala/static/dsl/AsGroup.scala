@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>
@@ -31,7 +32,7 @@ trait AsGroupItem[T, CL <: Int]:
     /**
      * Converts the value to a list of expressions.
      */
-    def asExprs(x: T): List[Expr[?, ?]]
+    def asExprs(x: T): NonEmptyList[Expr[?, ?]]
 
 object AsGroupItem:
     type Aux[T, CL <: Int, O, OKS <: Tuple] = AsGroupItem[T, CL]:
@@ -53,8 +54,8 @@ object AsGroupItem:
             def asGroup(x: Expr[T, EK]): R =
                 Expr(x.asSqlExpr)
 
-            def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
-                x :: Nil
+            def asExprs(x: Expr[T, EK]): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(x, Nil)
 
     given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], S <: QuerySize, CL <: Int](using
         a: AsExpr[T, CL],
@@ -70,8 +71,8 @@ object AsGroupItem:
             def asGroup(x: Q): R =
                 Expr(SqlExpr.Subquery(x.tree))
 
-            def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.Subquery(x.tree)) :: Nil
+            def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(Expr(SqlExpr.Subquery(x.tree)), Nil)
 
 /**
  * Lifts expressions, subqueries, tuples, and named tuples into grouping
@@ -96,7 +97,7 @@ trait AsGroup[T, CL <: Int]:
     /**
      * Converts the value to a list of expressions.
      */
-    def asExprs(x: T): List[Expr[?, ?]]
+    def asExprs(x: T): NonEmptyList[Expr[?, ?]]
 
 object AsGroup:
     type Aux[T, CL <: Int, O, OKS <: Tuple] = AsGroup[T, CL]:
@@ -115,7 +116,7 @@ object AsGroup:
             def asGroup(x: T): R =
                 a.asGroup(x)
 
-            def asExprs(x: T): List[Expr[?, ?]] =
+            def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
                 a.asExprs(x)
 
     given tuple[H, T <: Tuple, CL <: Int](using
@@ -132,7 +133,7 @@ object AsGroup:
             def asGroup(x: H *: T): R =
                 h.asGroup(x.head) *: tt.toTuple(t.asGroup(x.tail))
 
-            def asExprs(x: H *: T): List[Expr[?, ?]] =
+            def asExprs(x: H *: T): NonEmptyList[Expr[?, ?]] =
                 h.asExprs(x.head) ++ t.asExprs(x.tail)
 
     given tuple1[H, CL <: Int](using
@@ -147,7 +148,7 @@ object AsGroup:
             def asGroup(x: H *: EmptyTuple): R =
                 h.asGroup(x.head) *: EmptyTuple
 
-            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
+            def asExprs(x: H *: EmptyTuple): NonEmptyList[Expr[?, ?]] =
                 h.asExprs(x.head)
 
     given namedTuple[N <: Tuple, V <: Tuple, CL <: Int](using
@@ -162,5 +163,5 @@ object AsGroup:
             def asGroup(x: NamedTuple[N, V]): R =
                 NamedTuple(tt.toTuple(a.asGroup(x.toTuple)))
 
-            def asExprs(x: NamedTuple[N, V]): List[Expr[?, ?]] =
+            def asExprs(x: NamedTuple[N, V]): NonEmptyList[Expr[?, ?]] =
                 a.asExprs(x.toTuple)

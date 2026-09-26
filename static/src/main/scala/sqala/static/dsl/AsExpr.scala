@@ -3,7 +3,7 @@ package sqala.static.dsl
 import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.NonEmptyList
 
 import scala.compiletime.ops.int.>
 
@@ -26,7 +26,7 @@ trait AsExpr[T, CL <: Int]:
     /**
      * Converts the value to a list of expressions.
      */
-    def asExprs(x: T): List[Expr[?, ?]]
+    def asExprs(x: T): NonEmptyList[Expr[?, ?]]
 
     /**
      * Converts the value to a single expression, wrapping multiple
@@ -38,7 +38,7 @@ trait AsExpr[T, CL <: Int]:
             Expr(exprList.head.asSqlExpr)
         else
             val exprs = exprList.map(_.asSqlExpr)
-            Expr(SqlExpr.Tuple(exprs.toNonEmptyList))
+            Expr(SqlExpr.Tuple(exprs))
 
 object AsExpr:
     type Aux[T, CL <: Int, O, OK <: ExprKind] = AsExpr[T, CL]:
@@ -52,8 +52,8 @@ object AsExpr:
 
             type K = Value
 
-            def asExprs(x: T): List[Expr[?, ?]] =
-                Expr(a.asSqlExpr(x)) :: Nil
+            def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(Expr(a.asSqlExpr(x)), Nil)
 
     given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, T, EK] =
         new AsExpr[Expr[T, EK], CL]:
@@ -61,8 +61,8 @@ object AsExpr:
 
             type K = EK
 
-            def asExprs(x: Expr[T, EK]): List[Expr[?, ?]] =
-                x :: Nil
+            def asExprs(x: Expr[T, EK]): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(x, Nil)
 
     given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
         a: AsExpr[T, CL],
@@ -75,8 +75,8 @@ object AsExpr:
 
             type K = Composite[OKS]
 
-            def asExprs(x: Q): List[Expr[?, ?]] =
-                Expr(SqlExpr.Subquery(x.tree)) :: Nil
+            def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(Expr(SqlExpr.Subquery(x.tree)), Nil)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsExpr[H, CL],
@@ -89,7 +89,7 @@ object AsExpr:
 
             type K = ck.R
 
-            def asExprs(x: H *: T): List[Expr[?, ?]] =
+            def asExprs(x: H *: T): NonEmptyList[Expr[?, ?]] =
                 ah.asExpr(x.head) :: at.asExprs(x.tail)
 
     given tuple1[H, CL <: Int](using
@@ -101,5 +101,5 @@ object AsExpr:
 
             type K = Composite[kt.R]
 
-            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
-                h.asExpr(x.head) :: Nil
+            def asExprs(x: H *: EmptyTuple): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(h.asExpr(x.head), Nil)
