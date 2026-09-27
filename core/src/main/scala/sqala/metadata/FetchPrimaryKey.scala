@@ -48,11 +48,6 @@ private[sqala] object FetchPrimaryKey:
                 .filter((f, _) => pkFields.contains(f))
                 .map((_, c) => c)
         val pkEles = eles.filter(e => pkFields.contains(e.name))
-        val instances = pkEles.map: e =>
-            val tpe = e.termRef.typeSymbol.typeRef.asType
-            tpe match
-                case '[t] =>
-                    Expr.summon[AsSqlExpr[t]].get
         val types = pkEles.map: e =>
             e.termRef.typeSymbol.typeRef
 
@@ -74,24 +69,27 @@ private[sqala] object FetchPrimaryKey:
                 typesToTupleType(types).asType
 
         val pkColumNamesExpr = Expr.ofList(pkColumnNames.map(Expr(_)))
-        val instancesExpr = Expr.ofList(instances)
         val tableNameExpr = Expr(metaData.tableName)
         val columnNamesExpr = Expr.ofList(metaData.columnNames.map(Expr(_)))
 
+        val converter = tpe match
+            case '[type t <: Tuple; t] =>
+                val instance = Expr.summon[AsSqlExprs[t]].get
+                '{ (x: t) => $instance.asSqlExprs(x) }
+            case '[t] =>
+                val instance = Expr.summon[AsSqlExpr[t]].get
+                '{ (x: t) => List($instance.asSqlExpr(x)) }
+
         tpe match
             case '[t] =>
+                val typedConverter = converter.asExprOf[t => List[SqlExpr]]
                 '{
                     val pk = new FetchPrimaryKey[T]:
                         type Args = t
 
                         def createInfo(x: Seq[Args]): (SqlExpr, SqlTable.Ident) =
                             val sqlConditions = x.map: p =>
-                                val values = p match
-                                    case t: Tuple => t.toArray.toList
-                                    case _ => List[Any](p)
-                                val instances = $instancesExpr.map(_.asInstanceOf[AsSqlExpr[Any]])
-                                val sqlValues = instances.zip(values).map: (i, v) =>
-                                    i.asSqlExpr(v)
+                                val sqlValues = $typedConverter(p)
                                 val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
                                     SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
                                 sqlConditions
@@ -126,5 +124,5 @@ private[sqala] object FetchPrimaryKey:
                                 Some(sqlCondition)
                             )
 
-                    pk.asInstanceOf[Aux[T, t]]
-                }
+                    pk
+                }.asExprOf[Aux[T, t]]

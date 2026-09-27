@@ -1,13 +1,15 @@
 package sqala
 
 import sqala.static.dsl.*
-import sqala.metadata.PostgresqlDialect
+import sqala.metadata.*
 
 import java.time.LocalDateTime
+import sqala.ast.statement.SqlQuery
 
 
 case class StockPrice(
-    stockSymbol: String,
+    @primaryKey id: Int,
+    @primaryKey stockSymbol: String,
     tradeTime: LocalDateTime,
     price: BigDecimal
 )
@@ -15,9 +17,13 @@ case class StockPrice(
 
 object Test:
     def main(args: Array[String]): Unit =
-        val q1 = from(StockPrice).filter(s => s.stockSymbol == "abc")
+        val q1 = from(StockPrice).filter(s => s.stockSymbol == "DEF")
 
+        def f[T: FetchPrimaryKey as pk](args: pk.Args): SqlQuery =
+            pk.createQueryTree(Seq(args))
 
+        val sq = f[StockPrice](1, "DEF")
+        println(sq)
 
         val q =
             from:
