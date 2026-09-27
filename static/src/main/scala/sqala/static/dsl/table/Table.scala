@@ -29,8 +29,8 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     /**
      * Runtime column accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __metaData__.fieldNames.indexWhere(f => f == name)
+    inline def selectDynamic(name: String): Any =
+        val index = constValue[Index[Names[From[Unwrap[T, Option]]], name.type, 0]]
         Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
 
 /**

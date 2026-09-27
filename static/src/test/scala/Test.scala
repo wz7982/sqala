@@ -15,9 +15,9 @@ case class StockPrice(
 
 object Test:
     def main(args: Array[String]): Unit =
-        val q1 = from(StockPrice).filter(s => rawExpr"MATCH(${s.stockSymbol}) AGAINST(${s.price})".as[Boolean])
+        val q1 = from(StockPrice).filter(s => s.stockSymbol == "abc")
 
-        
+
 
         val q =
             from:

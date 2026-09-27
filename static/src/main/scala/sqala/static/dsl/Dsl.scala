@@ -1586,7 +1586,7 @@ inline def createTableFunc[T, CL <: Int](
 extension (s: StringContext)
     inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
         val sqlExprs = RawMacro.asSqlExprs[CL](args)
-        RawExpr(s.parts.toList.map(_.trim), sqlExprs, args.toList)
+        RawExpr(s.parts.toList.map(_.trim), sqlExprs)
 
 extension [T](expr: Expr[T, Column[1]])
     /**
