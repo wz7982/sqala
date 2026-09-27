@@ -28,7 +28,7 @@ private[sqala] object FetchCompanion:
         import q.reflect.*
 
         val typeSymbol = TypeTree.of[T].symbol
-        if !typeSymbol.flags.is(Flags.Module) then report.error(s"Object ${typeSymbol.name} is not a companion object")
+        if !typeSymbol.flags.is(Flags.Module) then report.error(s"Object ${typeSymbol.name} is not a companion object.")
         val tpe = typeSymbol.companionClass.typeRef.asType
 
         tpe match

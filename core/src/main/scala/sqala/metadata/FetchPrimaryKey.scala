@@ -41,7 +41,7 @@ private[sqala] object FetchPrimaryKey:
         val metaData = TableMacroImpl.tableMetaDataMacro[T]
         val pkFields = metaData.primaryKeyFields
         if pkFields.isEmpty then
-            report.error("The entity does not have a primary key field")
+            report.error("The entity does not have a primary key field.")
         val pkColumnNames =
             metaData.fieldNames
                 .zip(metaData.columnNames)

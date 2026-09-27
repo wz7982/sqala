@@ -17,13 +17,21 @@ case class StockPrice(
 
 object Test:
     def main(args: Array[String]): Unit =
-        val q1 = from(StockPrice).filter(s => s.stockSymbol == "DEF")
+        // val q1 = from(StockPrice).filter(s => s.stockSymbol == "DEF")
 
-        def f[T: FetchPrimaryKey as pk](args: pk.Args): SqlQuery =
-            pk.createQueryTree(Seq(args))
+        // def f[T: FetchPrimaryKey as pk](args: pk.Args): SqlQuery =
+        //     pk.createQueryTree(Seq(args))
 
-        val sq = f[StockPrice](1, "DEF")
-        println(sq)
+        // val sq = f[StockPrice](1, "DEF")
+        // println(sq)
+
+
+
+
+
+        val q1 = from(StockPrice)
+            // .filter(s => rank().over() > 1)
+            .map(s => rank().over(partitionBy(count())))
 
         val q =
             from:

@@ -12,7 +12,7 @@ import sqala.static.dsl.statement.query.*
 import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList
 
-import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
+import scala.NamedTuple.NamedTuple
 import scala.annotation.targetName
 import scala.compiletime.ops.int.{+, >}
 
@@ -172,31 +172,6 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
         finalQuery.tree
     )
     Query(finalQuery.params, tree)
-
-extension [T, AT, CL <: Int](x: T)(using qc: QueryContext[CL], t: AsTable[T, CL], refl: t.R <:< Table[AT, Column, CL])
-    /**
-     * Excludes specific columns from query projection. Excluded
-     * columns are removed from the output type at compile time.
-     *
-     * {{{
-     * from(Post.exclude[("title", "createTime")])
-     * }}}
-     */
-    inline def exclude[N <: Tuple]: FromExcluded[
-        ExcludeName[
-            N,
-            Names[From[Unwrap[AT, Option]]]
-        ],
-        ExcludeValue[
-            N,
-            Names[From[Unwrap[AT, Option]]],
-            Tuple.Map[DropNames[From[Unwrap[AT, Option]]], [x] =>> MapField[x, AT, Column, CL]]
-        ],
-        CL
-    ] =
-        val (table, _) = t.asTable(x)
-        val newTable = Table[AT, Column, CL](table.__aliasName__, table.__metaData__)
-        FromExcluded[AT, N, CL](newTable)
 
 extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
     /**

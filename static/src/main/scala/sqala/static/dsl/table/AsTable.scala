@@ -70,15 +70,6 @@ object AsTable:
                     )
                 (table, sqlTable)
 
-    given excludedTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[FromExcluded[N, V, CL], CL, MappedTable[N, V, CL], EmptyTuple] =
-        new AsTable[FromExcluded[N, V, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = EmptyTuple
-
-            def asTable(x: FromExcluded[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
     given funcTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromFunc[T, Column, TOKS, CL], CL, Table[T, Column, CL], TOKS] =
         new AsTable[FromFunc[T, Column, TOKS, CL], CL]:
             type R = Table[T, Column, CL]
@@ -162,7 +153,7 @@ object AsTable:
             type R = Table[T, Column, CL]
             type OKS = EmptyTuple
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
-                require(x.nonEmpty, "Values table must have at least one row")
+                require(x.nonEmpty, "Values table must have at least one row.")
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](alias, metaData)
