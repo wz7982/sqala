@@ -3,14 +3,14 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.{SqlInsertMode, SqlQuery, SqlStatement}
 import sqala.ast.table.SqlTable
-import sqala.metadata.{AsSqlExpr, TableMacro}
-import sqala.static.dsl.{AsExpr, Column, Expr}
+import sqala.metadata.{AsSqlExprs, TableMacro}
+import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.table.Table
 import sqala.util.NonEmptyList.toNonEmptyList
 
+import scala.compiletime.summonInline
 import scala.deriving.Mirror
-import sqala.static.dsl.Result
 
 /**
  * Tracks the state of an `INSERT` builder, restricting which
@@ -76,15 +76,11 @@ final class Insert[T, S <: InsertState](
      * }}}
      */
     inline def values(rows: Seq[T])(using
-        S =:= InsertTable
+        t: ToTuple[T],
+        refl: S =:= InsertTable
     ): Insert[T, InsertValues] =
-        val instances = AsSqlExpr.summonInstances[T]
         val insertValues = rows.toList.map: row =>
-            val data: List[Any] = inline row match
-                case t: Tuple => t.toList
-                case x => x :: Nil
-            data.zip(instances).map: (datum, instance) =>
-                instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
+            summonInline[AsSqlExprs[t.R]].asSqlExprs(t.toTuple(row))
         new Insert(tree.copy(values = insertValues))
 
     /**
@@ -152,15 +148,12 @@ object Insert:
             .zip(metaData.fieldNames)
             .filterNot((_, field) => metaData.incrementField.contains(field))
             .map((c, _) => c)
-        val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
         val values = entities.map: entity =>
-            val data = entity.productIterator.toList
-                .zip(instances)
-                .zip(metaData.fieldNames)
-                .filterNot((_, field) => metaData.incrementField.contains(field))
-                .map(_._1)
-            data.map: (datum, instance) =>
-                instance.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(datum)
+            val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
+            val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
+            metaData.fieldNames.zip(sqlExprs)
+                .filterNot((field, _) => metaData.incrementField.contains(field))
+                .map((_, expr) => expr)
         new Insert(
             InsertTree(
                 SqlTable.Ident(tableName, None, None, None, None),

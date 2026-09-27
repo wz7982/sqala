@@ -195,7 +195,8 @@ extension [T, AT, CL <: Int](x: T)(using qc: QueryContext[CL], t: AsTable[T, CL]
         CL
     ] =
         val (table, _) = t.asTable(x)
-        FromExcluded[AT, N, CL](table.asInstanceOf[Table[AT, Column, CL]])
+        val newTable = Table[AT, Column, CL](table.__aliasName__, table.__metaData__)
+        FromExcluded[AT, N, CL](newTable)
 
 extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
     /**

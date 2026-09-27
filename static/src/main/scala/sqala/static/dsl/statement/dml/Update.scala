@@ -3,11 +3,12 @@ package sqala.static.dsl.statement.dml
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.{SqlStatement, SqlUpdateSetPair}
 import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.metadata.{AsSqlExpr, SqlBoolean, TableMacro}
+import sqala.metadata.{AsSqlExprs, SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
 import sqala.util.NonEmptyList.toNonEmptyList
 
+import scala.compiletime.summonInline
 import scala.deriving.Mirror
 
 /**
@@ -143,24 +144,24 @@ object Update:
                 None
             )
         val table = Table[T, Column, 1](metaData.tableName, metaData)
-        val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
+        val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
+        val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
         val updateMetaData = metaData.fieldNames
             .zip(metaData.columnNames)
-            .zip(instances.map(_.asInstanceOf[AsSqlExpr[Any]]))
-            .zip(entity.productIterator.toList)
-            .map(i => (i._1._1._1, i._1._1._2, i._1._2, i._2))
+            .zip(sqlExprs)
+            .map(i => (i._1._1, i._1._2, i._2))
         val updateColumns = updateMetaData
-            .filterNot((c, _, _, _) => metaData.primaryKeyFields.contains(c))
-            .filter: (_, _, _, field) =>
-                (field, skipNone) match
-                    case (None, true) => false
+            .filterNot((f, _, _) => metaData.primaryKeyFields.contains(f))
+            .filter: (_, _, expr) =>
+                (expr, skipNone) match
+                    case (SqlExpr.Cast(SqlExpr.NullLiteral, _), true) => false
                     case _ => true
-            .map: (_, column, instance, field) =>
-                SqlUpdateSetPair(column, instance.asSqlExpr(field))
+            .map: (_, column, expr) =>
+                SqlUpdateSetPair(column, expr)
         val conditions = updateMetaData
-            .filter((c, _, _, _) => metaData.primaryKeyFields.contains(c))
-            .map: (_, column, instance, field) =>
-                SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, instance.asSqlExpr(field))
+            .filter((f, _, _) => metaData.primaryKeyFields.contains(f))
+            .map: (_, column, expr) =>
+                SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, expr)
         val condition =
             if conditions.isEmpty then None
             else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))

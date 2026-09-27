@@ -513,7 +513,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
-        if test then filter(f) else this.asInstanceOf[TableQuery[T, c.R, L]]
+        if test then filter(f) else TableQuery(params, tree)
 
     /**
      * Alias of `filterIf`, provided for users familiar with `WHERE`.

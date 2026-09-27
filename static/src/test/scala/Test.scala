@@ -1,3 +1,5 @@
+package sqala
+
 import sqala.static.dsl.*
 import sqala.metadata.PostgresqlDialect
 
@@ -13,10 +15,6 @@ case class StockPrice(
 
 object Test:
     def main(args: Array[String]): Unit =
-
-
-
-    
         val q =
             from:
                 StockPrice.matchRecognize: s =>

@@ -4,7 +4,6 @@ import sqala.ast.expr.*
 
 import java.time.*
 import java.time.format.DateTimeFormatter
-import scala.compiletime.{erasedValue, summonInline}
 
 /**
  * Type class that converts a value into a `SqlExpr` literal.
@@ -23,15 +22,6 @@ trait AsSqlExpr[T]:
     def asSqlExpr(x: T): SqlExpr
 
 object AsSqlExpr:
-    /**
-     * Recursively summons `AsSqlExpr` instances for each element in a tuple type.
-     */
-    inline def summonInstances[T]: List[AsSqlExpr[?]] =
-        inline erasedValue[T] match
-            case _: EmptyTuple => Nil
-            case _: (t *: ts) => summonInline[AsSqlExpr[t]] :: summonInstances[ts]
-            case _ => summonInline[AsSqlExpr[T]] :: Nil
-
     given int: AsSqlExpr[Int] with
         def sqlType: SqlType =
             SqlType.Int
@@ -207,3 +197,20 @@ object AsSqlExpr:
         def asSqlExpr(x: Array[T]): SqlExpr =
             if x.isEmpty then SqlExpr.Cast(SqlExpr.Array(Nil), sqlType)
             else SqlExpr.Array(x.toList.map(i => a.asSqlExpr(i)))
+
+/**
+ * Type class that converts a tuple of values into a list of `SqlExpr` literals.
+ */
+trait AsSqlExprs[T <: Tuple]:
+    /**
+     * Converts the given tuple of values to a list of `SqlExpr` literal nodes.
+     */
+    def asSqlExprs(values: T): List[SqlExpr]
+
+object AsSqlExprs:
+    given tuple[H, T <: Tuple](using h: AsSqlExpr[H], t: AsSqlExprs[T]): AsSqlExprs[H *: T] with
+        def asSqlExprs(values: H *: T): List[SqlExpr] =
+            h.asSqlExpr(values.head) :: t.asSqlExprs(values.tail)
+
+    given emptyTuple: AsSqlExprs[EmptyTuple] with
+        def asSqlExprs(values: EmptyTuple): List[SqlExpr] = Nil
