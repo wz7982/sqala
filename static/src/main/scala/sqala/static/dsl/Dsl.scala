@@ -868,29 +868,6 @@ extension [T, ST <: SqlTable, CL <: Int](table: T)(using
     def allRowsPerMatch: RecognizePredefine[T, ST, CL] =
         RecognizePredefine(table, s.setPerMatch(mc.sqlTable, SqlRecognizePatternRowsMode.AllRows(None)))
 
-extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], p: AsPivot[T, CL])
-    /**
-     * Creates a pivot table, transforming rows into columns. `agg`
-     * specifies the aggregations, and `by` defines the within-conditions
-     * whose values are combined as a Cartesian product to generate
-     * column names.
-     *
-     * {{{
-     * from(
-     *     City.pivot(c =>
-     *         c.agg(sum = sum(c.population), count = count())
-     *         .by(
-     *             c.country.within(cn = "CN", us = "US"),
-     *             c.year.within(`2024` = 2024, `2025` = 2025)
-     *         )
-     *     )
-     * )
-     * }}}
-     */
-    def pivot[N <: Tuple, V <: Tuple](f: PivotContext ?=> p.R => FromPivot[N, V, p.OKS, CL]): FromPivot[N, V, p.OKS, CL] =
-        given PivotContext = PivotContext()
-        f(p.asPivot(x))
-
 /**
  * Returns 1 if the column is not part of the current grouping set
  * (aggregated), 0 if it is. Maps to `GROUPING(expr)`. Used after
@@ -935,26 +912,6 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
      */
     def as[R](using c: Cast[a.R, R], kt: KindToTuple[a.K]): Expr[Option[R], Composite[kt.R]] =
         Expr(SqlExpr.Cast(a.asExpr(x).asSqlExpr, c.castType))
-
-    /**
-     * Defines the value mappings for a pivot column. Each named
-     * argument pairs a column name with a filter value, and the
-     * names are used to generate the output column names.
-     *
-     * {{{
-     * c.country.within(cn = "CN", us = "US")
-     * }}}
-     */
-    def within[N <: Tuple, V <: Tuple](items: NamedTuple[N, V])(using
-        pc: PivotContext,
-        av: AsExpr[V, CL],
-        as: AsSqlExpr[a.R],
-        i: In[T, V, CL],
-        ia: CanInAgg[i.KS],
-        e: ExcludeCurrentLevelColumn[i.KS, CL],
-        refl: e.R =:= EmptyTuple
-    ): PivotWithin[N] =
-        PivotWithin[N](a.asExpr(x).asSqlExpr, av.asExprs(items.toTuple).map(_.asSqlExpr))
 
 /**
  * Returns the hierarchical level in a `connectBy` recursive query,
@@ -1628,8 +1585,8 @@ inline def createTableFunc[T, CL <: Int](
  */
 extension (s: StringContext)
     inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
-        val instances = RawMacro.asExprInstances[CL](args)
-        RawExpr(s.parts.toList.map(_.trim), instances, args.toList)
+        val sqlExprs = RawMacro.asSqlExprs[CL](args)
+        RawExpr(s.parts.toList.map(_.trim), sqlExprs, args.toList)
 
 extension [T](expr: Expr[T, Column[1]])
     /**

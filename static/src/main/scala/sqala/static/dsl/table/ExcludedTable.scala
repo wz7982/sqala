@@ -22,7 +22,7 @@ object FromExcluded:
     inline def apply[T, EN <: Tuple, CL <: Int](
         table: Table[T, Column, CL]
     ): FromExcluded[ExcludeName[EN, Names[table.Fields]], ExcludeValue[EN, Names[table.Fields], DropNames[table.Fields]], CL] =
-        val names = constValueTuple[EN].toList.map(_.asInstanceOf[String])
+        val names = constValueTuple[EN].toList.map(_.toString)
         val items =
             table.__metaData__.fieldNames.zip(table.__metaData__.columnNames).filter: (f, _) =>
                 !names.contains(f)

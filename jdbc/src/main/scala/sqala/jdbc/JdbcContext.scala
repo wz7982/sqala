@@ -10,7 +10,6 @@ import sqala.util.{queryToString, statementToString}
 import java.sql.Connection
 import javax.sql.DataSource
 import scala.deriving.Mirror
-import scala.language.dynamics
 import scala.util.NotGiven
 
 /**
@@ -23,14 +22,14 @@ final class JdbcContext(
     private[sqala] val dataSource: DataSource,
     private[sqala] val dialect: Dialect,
     private[sqala] val standardEscapeStrings: Boolean
-) extends Dynamic:
+):
     /**
      * Obtains a connection and executes a handler. Automatically
      * closes the connection outside of transactions.
      */
     private[sqala] def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
         var conn: Connection | Null = null
-        try 
+        try
             conn = ec.fetchConnection(this)
             val result = handler(conn)
             result
@@ -445,34 +444,6 @@ final class JdbcContext(
     def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using ExecuteContext, Logger): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
-
-    /**
-     * Resolves a repository method by name. Called automatically
-     * when accessing a method on a `Repository` instance through
-     * the `JdbcContext`. The method name is parsed into a query
-     * operation (`fetchBy`, `findBy`, `countBy`, etc.) at compile
-     * time.
-     *
-     * {{{
-     * db.fetchByName[User]("Alice")
-     * }}}
-     */
-    def applyDynamic[T](name: String)(using
-        ec: ExecuteContext,
-        r: Repository[T, name.type],
-        d: JdbcDecoder[T],
-        l: Logger
-    )(args: r.Args): r.R =
-        r.createQuery(
-            dialect,
-            standardEscapeStrings,
-            args,
-            q => fetchTo[T](q),
-            q => findTo[T](q),
-            (q, ps, pn, rc) => pageTo[T](q, ps, pn, rc),
-            q => fetchCount(q),
-            q => fetchExists(q)
-        )
 
     /**
      * Generates the SQL string for a query without executing it.

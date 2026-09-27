@@ -15,6 +15,10 @@ case class StockPrice(
 
 object Test:
     def main(args: Array[String]): Unit =
+        val q1 = from(StockPrice).filter(s => rawExpr"MATCH(${s.stockSymbol}) AGAINST(${s.price})".as[Boolean])
+
+        
+
         val q =
             from:
                 StockPrice.matchRecognize: s =>
@@ -59,4 +63,4 @@ object Test:
                         )
 
 
-        println(q.sql(PostgresqlDialect, true))
+        println(q1.sql(PostgresqlDialect, true))

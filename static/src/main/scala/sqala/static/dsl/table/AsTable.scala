@@ -97,15 +97,6 @@ object AsTable:
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
-    given pivotTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromPivot[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
-        new AsTable[FromPivot[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = TOKS
-
-            def asTable(x: FromPivot[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
@@ -171,7 +162,7 @@ object AsTable:
             type R = Table[T, Column, CL]
             type OKS = EmptyTuple
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
-                require(x.nonEmpty, "values table must have at least one row")
+                require(x.nonEmpty, "Values table must have at least one row")
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](alias, metaData)
