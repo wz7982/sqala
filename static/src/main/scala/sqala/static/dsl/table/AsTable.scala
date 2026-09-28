@@ -1,8 +1,9 @@
 package sqala.static.dsl.table
 
+import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlQuery
 import sqala.ast.table.{SqlJoinType, SqlTable, SqlTableAlias}
-import sqala.metadata.{AsSqlExpr, FetchCompanion, TableMacro, TableMetaData}
+import sqala.metadata.{AsSqlExprs, FetchCompanion, TableMacro, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList.toNonEmptyList
@@ -10,6 +11,7 @@ import sqala.util.NonEmptyList.toNonEmptyList
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
 import scala.util.NotGiven
+import scala.compiletime.summonInline
 import scala.compiletime.ops.int.>
 
 /**
@@ -68,15 +70,6 @@ object AsTable:
                     )
                 (table, sqlTable)
 
-    given excludedTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[FromExcluded[N, V, CL], CL, MappedTable[N, V, CL], EmptyTuple] =
-        new AsTable[FromExcluded[N, V, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = EmptyTuple
-
-            def asTable(x: FromExcluded[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
     given funcTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromFunc[T, Column, TOKS, CL], CL, Table[T, Column, CL], TOKS] =
         new AsTable[FromFunc[T, Column, TOKS, CL], CL]:
             type R = Table[T, Column, CL]
@@ -93,15 +86,6 @@ object AsTable:
             type OKS = TOKS
 
             def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
-    given pivotTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromPivot[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
-        new AsTable[FromPivot[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = TOKS
-
-            def asTable(x: FromPivot[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
                 (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
 
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
@@ -153,35 +137,28 @@ object AsTable:
             def asTable(x: RecursiveTable[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
                 (x, x.__sqlTable__)
 
-    inline given values[T <: Product, S <: Seq[T], CL <: Int](using
-        p: Mirror.ProductOf[T]
-    ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+    inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
         val metaData = TableMacro.tableMetaData[T]
-        val instances = AsSqlExpr.summonInstances[p.MirroredElemTypes]
-        createValues[T, S, CL](metaData, instances)
+        val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+        createValues[T, S, CL](
+            metaData,
+            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
+        )
 
-    private[sqala] def createValues[T <: Product, S <: Seq[T], CL <: Int](
+    private def createValues[T <: Product, S <: Seq[T], CL <: Int](
         metaData: TableMetaData,
-        instances: List[AsSqlExpr[?]]
+        asExprs: T => List[SqlExpr]
     ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
         new AsTable[S, CL]:
             type R = Table[T, Column, CL]
-
             type OKS = EmptyTuple
-
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
-                require(x.nonEmpty, "values table must have at least one row")
+                require(x.nonEmpty, "Values table must have at least one row.")
                 val alias = qc.fetchAlias
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
-                val table = Table[T, Column, CL](
-                    alias,
-                    metaData
-                )
+                val table = Table[T, Column, CL](alias, metaData)
                 val exprList = x.toList.map: datum =>
-                    instances.zip(datum.productIterator).map: (i, v) =>
-                        i.asInstanceOf[AsSqlExpr[Any]].asSqlExpr(v)
-                .map: i =>
-                    i.toNonEmptyList
+                    asExprs(datum).toNonEmptyList
                 val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
                 (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 

@@ -79,8 +79,9 @@ private[sqala] object ViewMapping:
                         val indexExpr = Expr(index)
                         tp.typeArgs(1).asType match
                             case '[type t <: Tuple; t] =>
+                                val tupleDatum = datum.asExprOf[t]
                                 '{
-                                    $datum.asInstanceOf[t].apply($indexExpr)
+                                    $tupleDatum.apply($indexExpr)
                                 }
                     else
                         Select.unique(datum.asTerm, keyWithPrefix).asExpr
@@ -192,8 +193,9 @@ private[sqala] object ViewMapping:
                                             val indexExpr = Expr(index)
                                             tp.typeArgs(1).asType match
                                                 case '[type t <: Tuple; t] =>
+                                                    val tupleDatum = data.asExprOf[List[t]]
                                                     '{
-                                                        $data.head.asInstanceOf[t].apply($indexExpr)
+                                                        $tupleDatum.head.apply($indexExpr)
                                                     }.asTerm
                                         else
                                             Select.unique('{$data.head}.asTerm, eleNameWithPrefix)
@@ -225,7 +227,7 @@ private[sqala] object ViewMapping:
                                         fieldType match
                                             case '[r] =>
                                                 val sourceExpr = fieldInfo._1.asExpr
-                                                '{ ${derivedMapper.asExpr}.asInstanceOf[Function[Any, r]].apply($sourceExpr) }.asTerm
+                                                '{ ${ derivedMapper.asExprOf[Function[Any, r]] }.apply($sourceExpr) }.asTerm
                                         ,
                                         fieldInfo._2
                                     )

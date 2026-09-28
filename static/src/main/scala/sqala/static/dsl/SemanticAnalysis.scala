@@ -497,7 +497,8 @@ object HasKind:
 
     given windowHeadTuple[KS <: Tuple, T <: Tuple, TK <: ExprKind](using
         h: HasKind[KS, TK],
-        t: HasKind[T, TK]
+        t: HasKind[T, TK],
+        refl: NotGiven[TK <:< Window[?]]
     ): Aux[Window[KS] *: T, TK, h.R || t.R] =
         new HasKind[Window[KS] *: T, TK]:
             type R = h.R || t.R

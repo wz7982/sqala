@@ -22,11 +22,10 @@ final case class RawExpr[L <: Int](private val tokens: List[SqlUnsafeCustomToken
         Expr(SqlExpr.UnsafeCustom(tokens))
 
 object RawExpr:
-    def apply[L <: Int](words: List[String], instances: List[AsExpr[?, ?]], args: List[Any]): RawExpr[L] =
-        val exprs = instances.zip(args).map((i, e) => i.asInstanceOf[AsExpr[Any, ?]].asExpr(e).asSqlExpr)
+    def apply[L <: Int](words: List[String], sqlExprs: List[SqlExpr]): RawExpr[L] =
         val tokens = new mutable.ListBuffer[SqlUnsafeCustomToken]
         val wordIterator = words.iterator
-        val exprIterator = exprs.iterator
+        val exprIterator = sqlExprs.iterator
         val firstWord = wordIterator.next().trim
         firstWord.split(" ").filter(_.nonEmpty).foreach(w => tokens.append(SqlUnsafeCustomToken.Keyword(w)))
         while wordIterator.hasNext do

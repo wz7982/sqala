@@ -41,5 +41,5 @@ private[sqala] object FetchCompanion:
                         def metaData: TableMetaData =
                             $metaDataExpr
 
-                    comp.asInstanceOf[Aux[T, t]]
-                }
+                    comp
+                }.asExprOf[Aux[T, t]]

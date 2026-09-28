@@ -3,10 +3,8 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import java.time.*
-import scala.compiletime.ops.any.ToString
-import scala.compiletime.ops.boolean.{!, ||}
+import scala.compiletime.ops.boolean.||
 import scala.compiletime.ops.int.S
-import scala.compiletime.ops.string.{+, Length, Substring}
 
 /**
  * Wraps a type with constructor if not already wrapped.
@@ -31,14 +29,6 @@ type Unwrap[T, F[_]] =
     T match
         case F[t] => Unwrap[t, F]
         case _ => T
-
-/**
- * Maps a type constructor over a tuple.
- */
-type TupleMap[T <: Tuple, F[_]] <: Tuple =
-    T match
-        case x *: xs => F[x] *: TupleMap[xs, F]
-        case EmptyTuple => EmptyTuple
 
 /**
  * Flattens nested `Option` and `Array` wrappers for `unnest`.
@@ -181,123 +171,3 @@ type JsonColumnFlatten[V <: Tuple, L <: Int] <: Tuple =
                 case JsonExistsColumn =>
                     Expr[Option[Boolean], Column[L]] *: JsonColumnFlatten[t, L]
         case EmptyTuple => EmptyTuple
-
-/**
- * Converts a lowercase character to uppercase at the type level.
- */
-type UpperCase[S <: String] =
-    S match
-        case "a" => "A"
-        case "b" => "B"
-        case "c" => "C"
-        case "d" => "D"
-        case "e" => "E"
-        case "f" => "F"
-        case "g" => "G"
-        case "h" => "H"
-        case "i" => "I"
-        case "j" => "J"
-        case "k" => "K"
-        case "l" => "L"
-        case "m" => "M"
-        case "n" => "N"
-        case "o" => "O"
-        case "p" => "P"
-        case "q" => "Q"
-        case "r" => "R"
-        case "s" => "S"
-        case "t" => "T"
-        case "u" => "U"
-        case "v" => "V"
-        case "w" => "W"
-        case "x" => "X"
-        case "y" => "Y"
-        case "z" => "Z"
-        case _ => S
-
-/**
- * Computes the Cartesian product of aggregation names and
- * `within` value names for pivot column names.
- */
-type CombinePivotNames[A <: Tuple, F <: Tuple] =
-    Tuple.FlatMap[
-        A,
-        [i] =>> Tuple.Map[
-            CombinePivotForNames[F],
-            [ii] =>> ToString[i] + UpperCase[Substring[ToString[ii], 0, 1]] + Substring[ToString[ii], 1, Length[ToString[ii]]]
-        ]
-    ]
-
-/**
- * Computes the Cartesian product of aggregation types and
- * `within` value types for pivot column types.
- */
-type CombinePivotTypes[T <: Tuple, F <: Tuple] =
-    Tuple.FlatMap[
-        T,
-        [i] =>> Tuple.Map[
-            CombinePivotForNames[F],
-            [ii] =>> i
-        ]
-    ]
-
-/**
- * Produces the `within` value names for Cartesian product
- * combination.
- */
-type CombinePivotForNames[F <: Tuple] <: Tuple =
-    F match
-        case EmptyTuple => EmptyTuple
-        case (x *: xs) *: EmptyTuple => x *: xs
-        case x *: xs =>
-            Tuple.FlatMap[
-                x,
-                [i] =>> Tuple.Map[
-                    CombinePivotForNames[xs],
-                    [ii] =>> i + UpperCase[Substring[ii, 0, 1]] + Substring[ii, 1, Length[ii]]
-                ]
-            ]
-
-/**
- * Tests whether a type is an element of a tuple.
- */
-type InTuple[X, T <: Tuple] <: Boolean =
-    T match
-        case X *: xs => true
-        case x *: xs => InTuple[X, xs]
-        case EmptyTuple => false
-
-/**
- * Filters a name tuple by a predicate.
- */
-type NameFilter[N <: Tuple, P[_] <: Boolean] <: Tuple =
-    N match
-        case n *: ns =>
-            P[n] match
-                case true => n *: NameFilter[ns, P]
-                case false => NameFilter[ns, P]
-        case EmptyTuple => EmptyTuple
-
-/**
- * Filters a value tuple by a predicate on the corresponding names.
- */
-type ValueFilter[N <: Tuple, V <: Tuple, P[_] <: Boolean] <: Tuple =
-    (N, V) match
-        case (n *: ns, v *: vs) =>
-            P[n] match
-                case true => v *: ValueFilter[ns, vs, P]
-                case false => ValueFilter[ns, vs, P]
-        case (EmptyTuple, EmptyTuple) => EmptyTuple
-
-/**
- * Excludes specific names from a name tuple.
- */
-type ExcludeName[EN <: Tuple, N <: Tuple] =
-    NameFilter[N, [x] =>> ![InTuple[x, EN]]]
-
-/**
- * Excludes values corresponding to excluded names from a value
- * tuple.
- */
-type ExcludeValue[EN <: Tuple, N <: Tuple, V <: Tuple] =
-    ValueFilter[N, V, [x] =>> ![InTuple[x, EN]]]

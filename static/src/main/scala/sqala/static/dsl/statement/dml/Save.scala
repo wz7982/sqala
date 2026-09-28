@@ -2,9 +2,10 @@ package sqala.static.dsl.statement.dml
 
 import sqala.ast.statement.SqlStatement
 import sqala.ast.table.SqlTable
-import sqala.metadata.{AsSqlExpr, TableMacro}
+import sqala.metadata.{AsSqlExprs, TableMacro}
 import sqala.util.NonEmptyList.toNonEmptyList
 
+import scala.compiletime.summonInline
 import scala.deriving.Mirror
 
 /**
@@ -21,9 +22,8 @@ object Save:
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val columns = metaData.columnNames
-        val instances =
-            AsSqlExpr.summonInstances[m.MirroredElemTypes].map(_.asInstanceOf[AsSqlExpr[Any]])
-        val values = entity.productIterator.toList.zip(instances).map((f, i) => i.asSqlExpr(f))
+        val data: m.MirroredElemTypes = Tuple.fromProductTyped(entity)
+        val values = summonInline[AsSqlExprs[m.MirroredElemTypes]].asSqlExprs(data)
         val primaryKeys = metaData.columnNames
             .zip(metaData.fieldNames)
             .filter((_, f) => metaData.primaryKeyFields.contains(f))
@@ -34,10 +34,10 @@ object Save:
             .map((c, _) => c)
         val tree: SqlStatement.Upsert =
             SqlStatement.Upsert(
-                SqlTable.Ident(tableName, None, None, None, None), 
-                columns.toNonEmptyList, 
-                values.toNonEmptyList, 
-                primaryKeys.toNonEmptyList, 
+                SqlTable.Ident(tableName, None, None, None, None),
+                columns.toNonEmptyList,
+                values.toNonEmptyList,
+                primaryKeys.toNonEmptyList,
                 updateColumns.toNonEmptyList
             )
         new Save(tree)

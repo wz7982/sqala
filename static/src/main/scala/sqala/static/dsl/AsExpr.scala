@@ -40,6 +40,12 @@ trait AsExpr[T, CL <: Int]:
             val exprs = exprList.map(_.asSqlExpr)
             Expr(SqlExpr.Tuple(exprs))
 
+    /**
+     * Converts the value to a single expression, erasing the type.
+     */
+    def asErasedExpr(x: T): Expr[?, ?] =
+        asExpr(x)
+
 object AsExpr:
     type Aux[T, CL <: Int, O, OK <: ExprKind] = AsExpr[T, CL]:
         type R = O

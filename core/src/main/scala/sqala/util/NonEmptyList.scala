@@ -1,5 +1,7 @@
 package sqala.util
 
+import scala.compiletime.ops.int.>
+
 /**
  * A non-empty list of elements.
  *
@@ -28,8 +30,7 @@ case class NonEmptyList[+A](head: A, tail: List[A]):
     /**
      * Group the elements into sublists of size `n`.
      */
-    def grouped(n: Int): NonEmptyList[NonEmptyList[A]] =
-        require(n > 0, "n must be greater than 0")
+    def grouped(n: Int)(using n.type > 0 =:= true): NonEmptyList[NonEmptyList[A]] =
         def loop(remaining: List[A],
            current: List[A],
            acc: List[NonEmptyList[A]]
