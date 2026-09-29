@@ -111,7 +111,7 @@ object Update:
 
     inline def apply[T <: Product]: Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]
-        val alias = qc.fetchAlias
+        val alias = qc.fetchAlias()
         val sqlTable: SqlTable.Ident = SqlTable.Ident(
             metaData.tableName,
             Some(SqlTableAlias(alias, Nil)),

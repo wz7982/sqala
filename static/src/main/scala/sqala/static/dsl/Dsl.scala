@@ -152,7 +152,7 @@ def withRecursive[N <: Tuple, V <: Tuple, S <: QuerySize, UN <: Tuple, UV <: Tup
 )(using
     m: AsMap[V, CL]
 ): Query[R, EmptyTuple, CL, ManyRows] =
-    val alias = qc.fetchAlias
+    val alias = qc.fetchAlias()
     val withTable = RecursiveTable[N, V, CL](alias)
     val unionQuery = f(withTable)
     val finalTable = RecursiveTable[N, tu.R, CL](tableCte)
@@ -364,7 +364,7 @@ def unnest[T, CL <: Int](x: T)(using
     i: CanInSimpleClause[kt.R],
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[Unnest[r.R], Column, e.R, CL] =
-    val alias = qc.fetchAlias
+    val alias = qc.fetchAlias()
     val metaData = TableMetaData(alias, Nil, None, "x" :: Nil, "x" :: Nil)
     val sqlTable: SqlTable.Func =
         SqlTable.Func(
@@ -399,7 +399,7 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
     i: CanInSimpleClause[kt.R],
     e: ExcludeCurrentLevelColumn[kt.R, CL]
 ): FromFunc[UnnestWithOrdinal[r.R], Column, e.R, CL] =
-    val alias = qc.fetchAlias
+    val alias = qc.fetchAlias()
     val metaData = TableMetaData(alias, Nil, None, "x" :: "ordinal" :: Nil, "x" :: "ordinal" :: Nil)
     val sqlTable: SqlTable.Func =
         SqlTable.Func(
@@ -448,7 +448,7 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     c: CombineKindTuple[EmptyTuple, e.R]
 ): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
     given JsonContext = JsonContext()
-    val alias = qc.fetchAlias
+    val alias = qc.fetchAlias()
     FromJson(a.asExpr(expr).asSqlExpr, path.asExpr.asSqlExpr, alias, columns)
 
 /**
@@ -1538,7 +1538,7 @@ inline def createTableFunc[T, CL <: Int](
     qc: QueryContext[CL]
 ): FromFunc[T, Column, EmptyTuple, CL] =
     val metaData = TableMacro.tableMetaData[T]
-    val alias = qc.fetchAlias
+    val alias = qc.fetchAlias()
     val sqlTable: SqlTable.Func = SqlTable.Func(
         false,
         name,

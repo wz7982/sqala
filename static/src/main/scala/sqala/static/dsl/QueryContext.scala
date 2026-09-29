@@ -9,7 +9,7 @@ final case class QueryContext[L <: Int](private[sqala] val tableIndex: TableInde
     /**
      * Returns the next available table alias (`t1`, `t2`, ...).
      */
-    private[sqala] def fetchAlias: String =
+    private[sqala] def fetchAlias(): String =
         tableIndex.index += 1
         s"t${tableIndex.index}"
 

@@ -108,7 +108,7 @@ final case class Graph[N <: Tuple, V <: Tuple, L <: Int](
      * alias for use in the graph pattern. Required by `Selectable`.
      */
     inline def selectDynamic(name: String): Any =
-        val alias = qc.fetchAlias
+        val alias = qc.fetchAlias()
         val index = constValue[Index[N, name.type, 0]]
         val node = __items__.toList(index)
         node match
@@ -658,7 +658,7 @@ final case class GraphMatch[T, OKS <: Tuple, L <: Int](
         e: ExcludeCurrentLevelColumn[m.KS, L],
         c: CombineKindTuple[OKS, e.R]
     ): FromGraph[MN, tt.R, c.R, L] =
-        val alias = qc.fetchAlias
+        val alias = qc.fetchAlias()
         val columnsValue = f(__pattern__).toTuple
         val columnItems = m.asSelectItems(columnsValue, 1)
         FromGraph(
