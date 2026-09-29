@@ -48,11 +48,11 @@ object AsSelect:
                 x
 
             def offset(x: Table[T, Column, L]): Int =
-                x.__metaData__.fieldNames.size
+                x.__metaData__.fields.size
 
             def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
                 for
-                    (column, index) <- x.__metaData__.columnNames.zipWithIndex
+                    (column, index) <- x.__metaData__.columns.zipWithIndex
                 yield
                     SqlSelectItem.Expr(
                         SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
@@ -231,11 +231,11 @@ object AsMap:
                 x
 
             def offset(x: Table[T, Column, L]): Int =
-                x.__metaData__.columnNames.size
+                x.__metaData__.columns.size
 
             def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
                 for
-                    (column, index) <- x.__metaData__.columnNames.zipWithIndex
+                    (column, index) <- x.__metaData__.columns.zipWithIndex
                 yield
                     SqlSelectItem.Expr(
                         SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")

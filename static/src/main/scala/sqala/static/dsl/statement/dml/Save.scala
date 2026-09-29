@@ -21,15 +21,15 @@ object Save:
     inline def saveByEntity[T <: Product](entity: T)(using m: Mirror.ProductOf[T]): Save =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val columns = metaData.columnNames
+        val columns = metaData.columns
         val data: m.MirroredElemTypes = Tuple.fromProductTyped(entity)
         val values = summonInline[AsSqlExprs[m.MirroredElemTypes]].asSqlExprs(data)
-        val primaryKeys = metaData.columnNames
-            .zip(metaData.fieldNames)
+        val primaryKeys = metaData.columns
+            .zip(metaData.fields)
             .filter((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => c)
-        val updateColumns = metaData.columnNames
-            .zip(metaData.fieldNames)
+        val updateColumns = metaData.columns
+            .zip(metaData.fields)
             .filterNot((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => c)
         val tree: SqlStatement.Upsert =

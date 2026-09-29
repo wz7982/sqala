@@ -155,7 +155,7 @@ object AsTable:
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
                 require(x.nonEmpty, "Values table must have at least one row.")
                 val alias = qc.fetchAlias()
-                val tableAlias = SqlTableAlias(alias, metaData.columnNames)
+                val tableAlias = SqlTableAlias(alias, metaData.columns)
                 val table = Table[T, Column, CL](alias, metaData)
                 val exprList = x.toList.map: datum =>
                     asExprs(datum).toNonEmptyList

@@ -144,14 +144,14 @@ object Insert:
     ): Insert[T, InsertEntity] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val columns = metaData.columnNames
-            .zip(metaData.fieldNames)
+        val columns = metaData.columns
+            .zip(metaData.fields)
             .filterNot((_, field) => metaData.incrementField.contains(field))
             .map((c, _) => c)
         val values = entities.map: entity =>
             val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
             val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
-            metaData.fieldNames.zip(sqlExprs)
+            metaData.fields.zip(sqlExprs)
                 .filterNot((field, _) => metaData.incrementField.contains(field))
                 .map((_, expr) => expr)
         new Insert(

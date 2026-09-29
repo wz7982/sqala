@@ -372,7 +372,7 @@ def unnest[T, CL <: Int](x: T)(using
             "UNNEST",
             a.asExpr(x).asSqlExpr :: Nil,
             false,
-            Some(SqlTableAlias(alias, metaData.columnNames)),
+            Some(SqlTableAlias(alias, metaData.columns)),
             None
         )
     FromFunc(alias, metaData, sqlTable)
@@ -407,7 +407,7 @@ def unnestWithOrdinal[T, CL <: Int](x: T)(using
             "UNNEST",
             a.asExpr(x).asSqlExpr :: Nil,
             true,
-            Some(SqlTableAlias(alias, metaData.columnNames)),
+            Some(SqlTableAlias(alias, metaData.columns)),
             None
         )
     FromFunc(alias, metaData, sqlTable)
@@ -1544,7 +1544,7 @@ inline def createTableFunc[T, CL <: Int](
         name,
         args.map(_.asSqlExpr),
         withOrdinal,
-        Some(SqlTableAlias(alias, metaData.columnNames)),
+        Some(SqlTableAlias(alias, metaData.columns)),
         None
     )
     FromFunc(alias, metaData, sqlTable)

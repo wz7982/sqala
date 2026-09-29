@@ -35,6 +35,8 @@ private[sqala] object InsertMacroImpl:
                         id.asTerm
                     case '[Int] =>
                         '{ $id.toInt }.asTerm
+                    case _ =>
+                        report.errorAndAbort("An @autoInc field must be of type Long or Int.")
             else
                 Select.unique(entity.asTerm, f.name)
 

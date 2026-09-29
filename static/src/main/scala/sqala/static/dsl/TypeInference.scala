@@ -514,7 +514,7 @@ object Union:
             type R = Table[A, Column, CL]
 
             def offset(x: Table[A, Column, AL]): Int =
-                x.__metaData__.columnNames.size
+                x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
                 Table(x.__aliasName__, x.__metaData__)
@@ -528,7 +528,7 @@ object Union:
             type R = Table[Option[A], Column, CL]
 
             def offset(x: Table[A, Column, AL]): Int =
-                x.__metaData__.columnNames.size
+                x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
                 Table(x.__aliasName__, x.__metaData__)
@@ -542,7 +542,7 @@ object Union:
             type R = Table[Option[A], Column, CL]
 
             def offset(x: Table[Option[A], Column, AL]): Int =
-                x.__metaData__.columnNames.size
+                x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
                 Table(x.__aliasName__, x.__metaData__)
@@ -556,7 +556,7 @@ object Union:
             type R = Table[Option[A], Column, CL]
 
             def offset(x: Table[Option[A], Column, AL]): Int =
-                x.__metaData__.columnNames.size
+                x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
                 Table(x.__aliasName__, x.__metaData__)

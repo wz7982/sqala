@@ -146,8 +146,8 @@ object Update:
         val table = Table[T, Column, 1](metaData.tableName, metaData)
         val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
         val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
-        val updateMetaData = metaData.fieldNames
-            .zip(metaData.columnNames)
+        val updateMetaData = metaData.fields
+            .zip(metaData.columns)
             .zip(sqlExprs)
             .map(i => (i._1._1, i._1._2, i._2))
         val updateColumns = updateMetaData
