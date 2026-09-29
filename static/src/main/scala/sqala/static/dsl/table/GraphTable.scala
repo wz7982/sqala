@@ -178,8 +178,8 @@ final case class GraphVertex[T, L <: Int](
      * Runtime column accessor. Required by `Selectable`.
      */
     def selectDynamic(name: String): Any =
-        val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
+        val index = __metaData__.fields.indexWhere(f => f == name)
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columns(index)))
 
 /**
  * An edge in a graph pattern. Created by `edge[T]` and accessed
@@ -231,8 +231,8 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
      * Runtime column accessor. Required by `Selectable`.
      */
     def selectDynamic(name: String): Any =
-        val index = __metaData__.fieldNames.indexWhere(f => f == name)
-        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
+        val index = __metaData__.fields.indexWhere(f => f == name)
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columns(index)))
 
     /**
      * Adds a `WHERE` condition to the edge. Maps to the `WHERE`

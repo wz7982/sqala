@@ -51,12 +51,12 @@ object AsTableParam:
             type R = Table[T, Column, CL]
 
             def offset: Int =
-                metaData.columnNames.size
+                metaData.columns.size
 
             def asTableParam(queryAlias: String, cursor: Int): Table[T, Column, CL] =
                 Table(
                     queryAlias,
-                    metaData.copy(columnNames = metaData.columnNames.indices.toList.map(i => s"c${cursor + i}"))
+                    metaData.copy(columns = metaData.columns.indices.toList.map(i => s"c${cursor + i}"))
                 )
 
     given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using

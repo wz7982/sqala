@@ -43,8 +43,8 @@ private[sqala] object FetchPrimaryKey:
         if pkFields.isEmpty then
             report.error("The entity does not have a primary key field.")
         val pkColumnNames =
-            metaData.fieldNames
-                .zip(metaData.columnNames)
+            metaData.fields
+                .zip(metaData.columns)
                 .filter((f, _) => pkFields.contains(f))
                 .map((_, c) => c)
         val pkEles = eles.filter(e => pkFields.contains(e.name))
@@ -70,7 +70,7 @@ private[sqala] object FetchPrimaryKey:
 
         val pkColumNamesExpr = Expr.ofList(pkColumnNames.map(Expr(_)))
         val tableNameExpr = Expr(metaData.tableName)
-        val columnNamesExpr = Expr.ofList(metaData.columnNames.map(Expr(_)))
+        val columnsExpr = Expr.ofList(metaData.columns.map(Expr(_)))
 
         val converter = tpe match
             case '[type t <: Tuple; t] =>
@@ -105,7 +105,7 @@ private[sqala] object FetchPrimaryKey:
                             val (sqlCondition, table) = createInfo(x)
                             SqlQuery.Select(
                                 None,
-                                $columnNamesExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
+                                $columnsExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
                                 table :: Nil,
                                 Some(sqlCondition),
                                 None,

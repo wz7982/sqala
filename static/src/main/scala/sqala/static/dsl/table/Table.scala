@@ -31,7 +31,7 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
      */
     inline def selectDynamic(name: String): Any =
         val index = constValue[Index[Names[From[Unwrap[T, Option]]], name.type, 0]]
-        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columnNames(index)))
+        Expr(SqlExpr.Column(Some(__aliasName__), __metaData__.columns(index)))
 
 /**
   * A table reference produced by `from` when a `MappedTable` is passed,

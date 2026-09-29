@@ -53,15 +53,15 @@ private[sqala] object TableMacroImpl:
         val sym = TypeRepr.of[T].typeSymbol
         val eles = sym.declaredFields
         val tableName = tableNameMacro[T]
-        val columnNames = ListBuffer[String]()
-        val columnFields = ListBuffer[String]()
+        val columns = ListBuffer[String]()
+        val fields = ListBuffer[String]()
         val primaryKeyFields = ListBuffer[String]()
         val incrementKeyFields = ListBuffer[String]()
 
         eles.foreach: e =>
             val annotations = e.annotations
 
-            columnFields.addOne(e.name)
+            fields.addOne(e.name)
 
             annotations.find:
                 case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNameAutoInc => true
@@ -82,15 +82,21 @@ private[sqala] object TableMacroImpl:
                 case _ => false
             match
                 case Some(Apply(Select(New(TypeIdent(_)), _), Literal(name) :: Nil)) =>
-                    columnNames.addOne(name.value.toString)
-                case _ => columnNames.addOne(camelToSnake(e.name))
+                    columns.addOne(name.value.toString)
+                case _ => columns.addOne(camelToSnake(e.name))
+
+        if fields.isEmpty then
+            report.error("Entity class must have at least one field.")
+
+        if incrementKeyFields.size > 1 then
+            report.error("Entity class cannot have more than one auto-increment field.")
 
         TableMetaData(
             tableName,
             primaryKeyFields.toList,
             incrementKeyFields.headOption,
-            columnNames.toList,
-            columnFields.toList
+            columns.toList,
+            fields.toList
         )
 
     def tableMetaData[T](using q: Quotes, t: Type[T]): Expr[TableMetaData] =
@@ -101,8 +107,8 @@ private[sqala] object TableMacroImpl:
         val incrementExpr = metaData.incrementField match
             case None => Expr(Option.empty[String])
             case Some(e) => Expr(Some(e))
-        val columnsExpr = Expr.ofList(metaData.columnNames.map(Expr(_)))
-        val fieldsExpr = Expr.ofList(metaData.fieldNames.map(Expr(_)))
+        val columnsExpr = Expr.ofList(metaData.columns.map(Expr(_)))
+        val fieldsExpr = Expr.ofList(metaData.fields.map(Expr(_)))
 
         '{
             TableMetaData(
