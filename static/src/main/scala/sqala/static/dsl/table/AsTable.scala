@@ -55,7 +55,7 @@ object AsTable:
 
             def asTable(x: O)(using qc: QueryContext[CL]): (R, SqlTable) =
                 val metaData = fc.metaData
-                val alias = qc.fetchAlias
+                val alias = qc.fetchAlias()
                 val table = Table[fc.R, Column, CL](
                     alias,
                     metaData
@@ -99,7 +99,7 @@ object AsTable:
             type OKS = TOKS
 
             def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
-                val alias = qc.fetchAlias
+                val alias = qc.fetchAlias()
                 val subquery = MappedTable[N, V, CL](alias)
                 val sqlTable =
                     SqlTable.Subquery(
@@ -154,7 +154,7 @@ object AsTable:
             type OKS = EmptyTuple
             def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
                 require(x.nonEmpty, "Values table must have at least one row.")
-                val alias = qc.fetchAlias
+                val alias = qc.fetchAlias()
                 val tableAlias = SqlTableAlias(alias, metaData.columnNames)
                 val table = Table[T, Column, CL](alias, metaData)
                 val exprList = x.toList.map: datum =>

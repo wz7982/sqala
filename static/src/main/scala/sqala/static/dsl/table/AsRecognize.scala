@@ -81,7 +81,7 @@ object AsRecognize:
 
             def asRecognizeTable(x: O)(using qc: QueryContext[CL]): (R, ST) =
                 val metaData = fc.metaData
-                val alias = qc.fetchAlias
+                val alias = qc.fetchAlias()
                 val table = Table[fc.R, Column, CL](
                     alias,
                     metaData
@@ -109,7 +109,7 @@ object AsRecognize:
             type OKS = TOKS
 
             def asRecognizeTable(x: Q)(using qc: QueryContext[CL]): (R, ST) =
-                val alias = qc.fetchAlias
+                val alias = qc.fetchAlias()
                 val table = MappedTable[N, V, CL](alias)
                 val sqlTable: SqlTable.Subquery =
                     SqlTable.Subquery(

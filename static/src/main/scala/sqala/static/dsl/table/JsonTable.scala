@@ -27,17 +27,21 @@ object FromJson:
     ): FromJson[JsonColumnNameFlatten[N, V], t.R, OKS, CL] =
         var index = 0
 
+        def next(): String =
+            index += 1
+            s"c$index"
+
         def toSqlColumns(columns: List[JsonColumn]): NonEmptyList[SqlJsonColumn] =
             columns.map:
                 case p: JsonPathColumn[?] =>
                     index += 1
-                    SqlJsonColumn.Column(s"c$index", p.`type`, None, Some(p.path), None, None, None, None)
+                    SqlJsonColumn.Column(next(), p.`type`, None, Some(p.path), None, None, None, None)
                 case o: JsonOrdinalColumn =>
                     index += 1
-                    SqlJsonColumn.Ordinality(s"c$index")
+                    SqlJsonColumn.Ordinality(next())
                 case e: JsonExistsColumn =>
                     index += 1
-                    SqlJsonColumn.Exists(s"c$index", SqlType.Boolean, Some(e.path), None)
+                    SqlJsonColumn.Exists(next(), SqlType.Boolean, Some(e.path), None)
                 case n: JsonNestedColumns[?, ?] =>
                     SqlJsonColumn.Nested(n.path, None, toSqlColumns(n.columns))
             .toNonEmptyList

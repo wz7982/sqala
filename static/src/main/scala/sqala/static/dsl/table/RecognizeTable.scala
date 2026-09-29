@@ -286,7 +286,7 @@ final case class Recognize[N <: Tuple, T, ST <: SqlTable, L <: Int](
         an: AggNested[m.KS],
         nan: an.R =:= false
     ): RecognizeMeasures[MN, t.R, L] =
-        val alias = qc.fetchAlias
+        val alias = qc.fetchAlias()
         val items = m.asSelectItems(f(RecognizeDefine[N, T, L](__table__)), 1)
         val measureItems =
             for
