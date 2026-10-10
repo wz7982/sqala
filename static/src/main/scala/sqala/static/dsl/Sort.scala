@@ -1,6 +1,7 @@
 package sqala.static.dsl
 
 import sqala.ast.order.{SqlNullsOrdering, SqlOrdering, SqlOrderingItem}
+import sqala.ir.IrOrderingItem
 
 /**
  * An intermediate sort specification used by `sortBy`,
@@ -15,5 +16,5 @@ final case class Sort[T, K <: ExprKind](
     /**
      * Converts this sort specification to a `SqlOrderingItem` AST node.
      */
-    private[sqala] def asSqlOrderingItem: SqlOrderingItem =
-        SqlOrderingItem(expr.asSqlExpr, Some(ordering), nullsOrdering)
+    private[sqala] def asIrOrderingItem: IrOrderingItem =
+        IrOrderingItem(expr.asIrExpr, ordering, nullsOrdering)

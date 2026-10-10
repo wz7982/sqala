@@ -141,7 +141,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("\n")
         val query = SqlQuery.Select(
             None,
-            statement.values.toList.zip(statement.columns.toList).map((v, c) => SqlSelectItem.Expr(v, Some(c))),
+            statement.values.zip(statement.columns).map((v, c) => SqlSelectItem.Expr(v, Some(c))),
             Nil,
             None,
             None,
@@ -240,9 +240,8 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
             sqlBuilder.append(" ")
             printQuantifier(q)
 
-        if query.select.nonEmpty then
-            sqlBuilder.append("\n")
-            printList(query.select, ",\n")(printSelectItem |> printWithSpace)
+        sqlBuilder.append("\n")
+        printList(query.select.toList, ",\n")(printSelectItem |> printWithSpace)
 
         if query.from.nonEmpty then
             sqlBuilder.append("\n")
@@ -1266,15 +1265,15 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 sqlBuilder.append("=")
             case SqlQuantifiedComparisonOperator.NotEqual =>
                 sqlBuilder.append("<>")
-            case SqlQuantifiedComparisonOperator.GreaterThan => 
+            case SqlQuantifiedComparisonOperator.GreaterThan =>
                 sqlBuilder.append(">")
-            case SqlQuantifiedComparisonOperator.GreaterThanEqual => 
+            case SqlQuantifiedComparisonOperator.GreaterThanEqual =>
                 sqlBuilder.append(">=")
-            case SqlQuantifiedComparisonOperator.LessThan => 
+            case SqlQuantifiedComparisonOperator.LessThan =>
                 sqlBuilder.append("<")
-            case SqlQuantifiedComparisonOperator.LessThanEqual => 
+            case SqlQuantifiedComparisonOperator.LessThanEqual =>
                 sqlBuilder.append("<=")
-            case SqlQuantifiedComparisonOperator.UnsafeCustom(tokens) => 
+            case SqlQuantifiedComparisonOperator.UnsafeCustom(tokens) =>
                 printList(tokens)(printUnsafeCustomToken)
 
     /**
@@ -2817,7 +2816,7 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
      */
     def printGroupingItem(item: SqlGroupingItem): Unit =
         item match
-            case SqlGroupingItem.EmptyGroup => 
+            case SqlGroupingItem.EmptyGroup =>
                 sqlBuilder.append("()")
             case SqlGroupingItem.Expr(item) =>
                 printExpr(item)

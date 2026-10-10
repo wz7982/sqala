@@ -3,6 +3,9 @@ package sqala.static.dsl
 import scala.util.NotGiven
 import scala.compiletime.ops.boolean.{&&, ||}
 import scala.compiletime.ops.int.>
+import scala.compiletime.error
+import sqala.metadata.SqlBoolean
+import sqala.metadata.AsSqlExpr
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -94,7 +97,7 @@ object TransformExprKind:
             type R = Expr[T, K]
 
             def transform(x: Expr[T, EK]): R =
-                Expr(x.asSqlExpr)
+                Expr(x.asIrExpr)
 
     given tuple[H, T <: Tuple, K <: ExprKind](using
         h: TransformExprKind[H, K],
@@ -230,12 +233,12 @@ object ToUngrouped:
     type Aux[T, CL <: Int, O] = ToUngrouped[T, CL]:
         type R = O
 
-    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, Expr[T, UngroupedColumn[CL]]] =
-        new ToUngrouped[Expr[T, EK], CL]:
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], CL <: Int]: Aux[E, CL, Expr[T, UngroupedColumn[CL]]] =
+        new ToUngrouped[E, CL]:
             type R = Expr[T, UngroupedColumn[CL]]
 
-            def toUngrouped(x: Expr[T, EK]): R =
-                Expr(x.asSqlExpr)
+            def toUngrouped(x: E): R =
+                Expr(x.asIrExpr)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: ToUngrouped[H, CL],
@@ -605,6 +608,22 @@ object AggNested:
             type R = false
 
 /**
+  * Validates that a kind tuple contains no aggregate functions nested.
+  */
+trait AggNotNested[KS <: Tuple]
+
+object AggNotNested:
+    given validate[KS <: Tuple](using
+        an: AggNested[KS],
+        ra: an.R =:= false
+    ): AggNotNested[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[AggNotNested[KS]]
+    ): AggNotNested[KS] =
+        error("Aggregate function calls cannot be nested.")
+
+/**
  * Validates that a kind tuple contains no column references
  * that would create variable capture issues.
  */
@@ -624,6 +643,11 @@ object IsNotVariable:
         nu: hu.R =:= false
     ): IsNotVariable[KS]()
 
+    inline given fallback[KS <: Tuple](using
+        NotGiven[IsNotVariable[KS]]
+    ): IsNotVariable[KS] =
+        error("Argument must not contain variables.")
+
 /**
  * Validates that a kind tuple can legally appear inside an
  * aggregate function.
@@ -636,6 +660,28 @@ object CanInAgg:
         nw: hw.R =:= false
     ): CanInAgg[KS]()
 
+    inline given fallback[KS <: Tuple](using
+        NotGiven[CanInAgg[KS]]
+    ): CanInAgg[KS] =
+        error("Aggregate function calls cannot contain window function calls.")
+
+/**
+  * Validates that a kind tuple contains no window functions nested.
+  */
+trait WindowNotNested[KS <: Tuple]
+
+object WindowNotNested:
+    given validate[KS <: Tuple](using
+        hw: HasKind[KS, Window[?]],
+        nw: hw.R =:= false
+    ): WindowNotNested[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[WindowNotNested[KS]]
+    ): WindowNotNested[KS] =
+        error("Window function calls cannot be nested.")
+
+// TODO 测一下window嵌套的错能不能正常报出来
 /**
  * Validates that a kind tuple can appear inside a window
  * specification.
@@ -644,12 +690,17 @@ trait CanInWindow[KS <: Tuple]
 
 object CanInWindow:
     given validate[KS <: Tuple](using
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
+        wn: WindowNotNested[KS],
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
     ): CanInWindow[KS]()
 
+    inline given fallback[KS <: Tuple](using
+        NotGiven[CanInWindow[KS]]
+    ): CanInWindow[KS] =
+        error("Window function calls cannot contain ungrouped column references.")
+
+// TODO 后面的报错还要细化
 /**
  * Validates that a kind tuple contains no aggregate or window
  * functions, allowing it to appear in a simple clause.
@@ -667,20 +718,70 @@ object CanInSimpleClause:
     ): CanInSimpleClause[KS]()
 
 /**
- * Validates that a kind tuple can appear in a `filter` clause.
- * No aggregate, window, or ungrouped column references are allowed.
- */
-trait CanInFilter[KS <: Tuple]
+  * Validates that a kind tuple contains no aggregate functions, allowing it to appear in a filter clause.
+  */
+trait FilterNotAllowedAgg[KS <: Tuple]
 
-object CanInFilter:
+object FilterNotAllowedAgg:
     given validate[KS <: Tuple](using
         ha: HasKind[KS, Agg[?]],
-        na: ha.R =:= false,
+        na: ha.R =:= false
+    ): FilterNotAllowedAgg[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[FilterNotAllowedAgg[KS]]
+    ): FilterNotAllowedAgg[KS] =
+        error("Aggregate functions are not allowed in WHERE/ON.")
+
+/**
+  * Validates that a kind tuple contains no window functions, allowing it to appear in a filter clause.
+  */
+trait FilterNotAllowedWindow[KS <: Tuple]
+
+object FilterNotAllowedWindow:
+    given validate[KS <: Tuple](using
         hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
+        nw: hw.R =:= false
+    ): FilterNotAllowedWindow[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[FilterNotAllowedWindow[KS]]
+    ): FilterNotAllowedWindow[KS] =
+        error("Window functions are not allowed in WHERE/ON.")
+
+/**
+  * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a filter clause.
+  */
+trait FilterNotAllowedUngroupedColumn[KS <: Tuple]
+
+object FilterNotAllowedUngroupedColumn:
+    given validate[KS <: Tuple](using
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): CanInFilter[KS]()
+    ): FilterNotAllowedUngroupedColumn[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[FilterNotAllowedUngroupedColumn[KS]]
+    ): FilterNotAllowedUngroupedColumn[KS] =
+        error("Ungrouped column references are not allowed in WHERE/ON.")
+
+/**
+ * Validates that a kind tuple can appear in a `filter` clause.
+ */
+trait CanInFilter[T, KS <: Tuple]
+
+object CanInFilter:
+    given validate[T, KS <: Tuple](using
+        FilterNotAllowedAgg[KS],
+        FilterNotAllowedWindow[KS],
+        FilterNotAllowedUngroupedColumn[KS],
+        SqlBoolean[T]
+    ): CanInFilter[T, KS]()
+
+    inline given fallback[T, KS <: Tuple](using
+        NotGiven[CanInFilter[T, KS]]
+    ): CanInFilter[T, KS] =
+        error("Argument of WHERE/ON must be type Boolean.")
 
 /**
  * Validates that a kind tuple can appear in a `map` clause.
@@ -812,6 +913,43 @@ object CanInRecognizeDefine:
         oks: ExcludeCurrentLevelColumn[KS, CL],
         e: oks.R =:= EmptyTuple
     ): CanInRecognizeDefine[KS, CL]()
+
+/**
+  * Validates that a subquery used as an expression returns most one row.
+  */
+trait ValidateSubqueryExprSize[S <: QuerySize]
+
+object ValidateSubqueryExprSize:
+    given oneRow: ValidateSubqueryExprSize[OneRow]()
+
+    inline given manyRows: ValidateSubqueryExprSize[ManyRows] =
+        error("More than one row returned by a subquery used as an expression.")
+
+/**
+  * Validates that a scalar subquery returns one column.
+  */
+trait ValidateScalarSubqueryColumnSize[T]
+
+object ValidateScalarSubqueryColumnSize:
+    given validate[T: AsSqlExpr]: ValidateScalarSubqueryColumnSize[T]()
+
+    inline given fallback[T](using
+        NotGiven[ValidateScalarSubqueryColumnSize[T]]
+    ): ValidateScalarSubqueryColumnSize[T] =
+        error("Subquery must return only one column.")
+
+// TODO 注释和错误文案
+trait ValidateSubqueryScope[L <: Int, CL <: Int]
+
+object ValidateSubqueryScope:
+    given validate[L <: Int, CL <: Int](using
+        L > CL =:= true
+    ): ValidateSubqueryScope[L, CL]()
+
+    inline given fallback[L <: Int, CL <: Int](using
+        L > CL =:= false
+    ): ValidateSubqueryScope[L, CL] =
+        error("Subqueries are not allowed to be called across scopes.")
 
 /**
  * Determines the query size after a `take` clause.

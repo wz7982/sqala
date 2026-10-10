@@ -4,6 +4,9 @@ import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
 import sqala.metadata.*
 
 import java.time.{LocalDateTime, OffsetDateTime}
+import scala.util.NotGiven
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 /**
  * Provides the target type for a `as` method.
@@ -50,3 +53,14 @@ object Cast:
     given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
         def castType: SqlType = 
             SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Cannot convert type $aType to type $bType.")

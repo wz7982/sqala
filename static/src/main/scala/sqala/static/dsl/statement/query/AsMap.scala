@@ -2,13 +2,21 @@ package sqala.static.dsl.statement.query
 
 import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.SqlSelectItem
-import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.*
 import sqala.static.dsl.table.*
 
 import scala.NamedTuple.{AnyNamedTuple, NamedTuple}
 import scala.compiletime.ops.int.>
 import scala.util.NotGiven
+import sqala.ir.IrSelectItem
+import sqala.util.NonEmptyList
+import sqala.ir.IrExpr
+import sqala.metadata.AsSqlExpr
+import sqala.static.dsl.statement.query.Query
+import scala.quoted.Type
+import scala.quoted.Quotes
+import scala.compiletime.error
+import scala.NamedTuple.AnyNamedTuple
 
 /**
  * Generates `SELECT` items from table sources. Each table type
@@ -34,7 +42,7 @@ trait AsSelect[T]:
     /**
      * Produces `SELECT` items with auto-incremented column aliases.
      */
-    def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
+    def asSelectItems(x: T, cursor: Int): NonEmptyList[IrSelectItem]
 
 object AsSelect:
     type Aux[T, O] = AsSelect[T]:
@@ -50,52 +58,55 @@ object AsSelect:
             def offset(x: Table[T, Column, L]): Int =
                 x.__metaData__.fields.size
 
-            def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: Table[T, Column, L], cursor: Int): NonEmptyList[IrSelectItem] =
                 for
                     (column, index) <- x.__metaData__.columns.zipWithIndex
                 yield
-                    SqlSelectItem.Expr(
-                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
+                    IrSelectItem(
+                        IrExpr.Column(x.__table__, column),
+                        s"c${cursor + index}"
                     )
 
-    given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[RecursiveTable[N, V, L], RecursiveTable[N, t.R, L]] =
-        new AsSelect[RecursiveTable[N, V, L]]:
-            type R = RecursiveTable[N, t.R, L]
+    // TODO
+    // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
+    //     a: AsMap[V, L],
+    //     t: ToTuple[a.R]
+    // ): Aux[RecursiveTable[N, V, L], RecursiveTable[N, t.R, L]] =
+    //     new AsSelect[RecursiveTable[N, V, L]]:
+    //         type R = RecursiveTable[N, t.R, L]
 
-            def transform(x: RecursiveTable[N, V, L]): R =
-                RecursiveTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__sqlTable__
-                )
+    //         def transform(x: RecursiveTable[N, V, L]): R =
+    //             RecursiveTable(
+    //                 x.__aliasName__,
+    //                 t.toTuple(a.transform(x.__items__)),
+    //                 x.__sqlTable__
+    //             )
 
-            def offset(x: RecursiveTable[N, V, L]): Int =
-                a.offset(x.__items__)
+    //         def offset(x: RecursiveTable[N, V, L]): Int =
+    //             a.offset(x.__items__)
 
-            def asSelectItems(x: RecursiveTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
+    //         def asSelectItems(x: RecursiveTable[N, V, L], cursor: Int): List[IrSelectItem] =
+    //             a.asSelectItems(x.__items__, cursor)
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R]
-    ): Aux[MappedTable[N, V, L], MappedTable[N, t.R, L]] =
-        new AsSelect[MappedTable[N, V, L]]:
-            type R = MappedTable[N, t.R, L]
+    // TODO
+    // given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
+    //     a: AsMap[V, L],
+    //     t: ToTuple[a.R]
+    // ): Aux[MappedTable[N, V, L], MappedTable[N, t.R, L]] =
+    //     new AsSelect[MappedTable[N, V, L]]:
+    //         type R = MappedTable[N, t.R, L]
 
-            def transform(x: MappedTable[N, V, L]): R =
-                MappedTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__))
-                )
+    //         def transform(x: MappedTable[N, V, L]): R =
+    //             MappedTable(
+    //                 x.__aliasName__,
+    //                 t.toTuple(a.transform(x.__items__))
+    //             )
 
-            def offset(x: MappedTable[N, V, L]): Int =
-                a.offset(x.__items__)
+    //         def offset(x: MappedTable[N, V, L]): Int =
+    //             a.offset(x.__items__)
 
-            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
+    //         def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
+    //             a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using
         ah: AsSelect[H],
@@ -111,7 +122,7 @@ object AsSelect:
             def offset(x: H *: T): Int =
                 ah.offset(x.head) + at.offset(x.tail)
 
-            def asSelectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: H *: T, cursor: Int): NonEmptyList[IrSelectItem] =
                 ah.asSelectItems(x.head, cursor) ++ at.asSelectItems(x.tail, cursor + ah.offset(x.head))
 
     given tuple1[TH](using
@@ -126,8 +137,20 @@ object AsSelect:
             def offset(x: TH *: EmptyTuple): Int =
                 ah.offset(x.head)
 
-            def asSelectItems(x: TH *: EmptyTuple, cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: TH *: EmptyTuple, cursor: Int): NonEmptyList[IrSelectItem] =
                 ah.asSelectItems(x.head, cursor)
+
+    inline given fallback[T](using
+        NotGiven[AsSelect[T]]
+    ): Aux[T, T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t for the SQL SELECT list.")
 
 /**
  * Generates `SELECT` items from `map` clause expressions. Lifts
@@ -158,7 +181,7 @@ trait AsMap[T, CL <: Int]:
     /**
      * Produces `SELECT` items with auto-incremented column aliases.
      */
-    def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr]
+    def asSelectItems(x: T, cursor: Int): NonEmptyList[IrSelectItem]
 
 object AsMap:
     type Aux[T, CL <: Int, O, OKS <: Tuple] = AsMap[T, CL]:
@@ -166,22 +189,22 @@ object AsMap:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, K <: ExprKind, CL <: Int](using
+    given expr[T: AsSqlExpr, K <: ExprKind, E <: Expr[T, K], CL <: Int](using
         kt: KindToTuple[K]
-    ): Aux[Expr[T, K], CL, Expr[T, Column[CL]], kt.R] =
-        new AsMap[Expr[T, K], CL]:
+    ): Aux[E, CL, Expr[T, Column[CL]], kt.R] =
+        new AsMap[E, CL]:
             type R = Expr[T, Column[CL]]
 
             type KS = kt.R
 
-            def transform(x: Expr[T, K]): R =
-                Expr(x.asSqlExpr)
+            def transform(x: E): R =
+                Expr(x.asIrExpr)
 
-            def offset(x: Expr[T, K]): Int =
+            def offset(x: E): Int =
                 1
 
-            def asSelectItems(x: Expr[T, K], cursor: Int): List[SqlSelectItem.Expr] =
-                SqlSelectItem.Expr(x.asSqlExpr, Some(s"c$cursor")) :: Nil
+            def asSelectItems(x: E, cursor: Int): NonEmptyList[IrSelectItem] =
+                NonEmptyList(IrSelectItem(x.asIrExpr, s"c$cursor"), Nil)
 
     given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, Expr[T, Column[CL]], Value *: EmptyTuple] =
         new AsMap[T, CL]:
@@ -190,20 +213,21 @@ object AsMap:
             type KS = Value *: EmptyTuple
 
             def transform(x: T): R =
-                Expr(a.asSqlExpr(x))
+                Expr(IrExpr.Native(a.asSqlExpr(x)))
 
             def offset(x: T): Int =
                 1
 
-            def asSelectItems(x: T, cursor: Int): List[SqlSelectItem.Expr] =
-                SqlSelectItem.Expr(transform(x).asSqlExpr, Some(s"c$cursor")) :: Nil
+            def asSelectItems(x: T, cursor: Int): NonEmptyList[IrSelectItem] =
+                NonEmptyList(IrSelectItem(transform(x).asIrExpr, s"c$cursor"), Nil)
 
-    given scalarQuery[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
+    given scalarQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
         a: AsExpr[T, CL],
-        as: AsSqlExpr[a.R],
+        vc: ValidateScalarSubqueryColumnSize[a.R],
         to: ToOption[Expr[a.R, Column[CL]]],
         ao: AsExpr[to.R, CL],
-        refl: L > CL =:= true
+        vs: ValidateSubqueryExprSize[S],
+        vss: ValidateSubqueryScope[L, CL]
     ): Aux[Q, CL, to.R, OKS] =
         new AsMap[Q, CL]:
             type R = to.R
@@ -211,57 +235,61 @@ object AsMap:
             type KS = OKS
 
             def transform(x: Q): R =
-                to.toOption(Expr(SqlExpr.Subquery(x.tree)))
+                to.toOption(Expr(IrExpr.Subquery(x.tree)))
 
             def offset(x: Q): Int =
                 1
 
-            def asSelectItems(x: Q, cursor: Int): List[SqlSelectItem.Expr] =
-                SqlSelectItem.Expr(ao.asExpr(transform(x)).asSqlExpr, Some(s"c$cursor")) :: Nil
+            def asSelectItems(x: Q, cursor: Int): NonEmptyList[IrSelectItem] =
+                NonEmptyList(IrSelectItem(ao.asExpr(transform(x)).asIrExpr, s"c$cursor"), Nil)
 
-    given table[T, L <: Int, CL <: Int](using
-        kt: KindToTuple[Column[L]]
-    ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
-        new AsMap[Table[T, Column, L], CL]:
-            type R = Table[T, Column, L]
+    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], KS] =
+        error("Window function requires an OVER clause.")
 
-            type KS = kt.R
+    // TODO
+    // given table[T, L <: Int, CL <: Int](using
+    //     kt: KindToTuple[Column[L]]
+    // ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
+    //     new AsMap[Table[T, Column, L], CL]:
+    //         type R = Table[T, Column, L]
 
-            def transform(x: Table[T, Column, L]): R =
-                x
+    //         type KS = kt.R
 
-            def offset(x: Table[T, Column, L]): Int =
-                x.__metaData__.columns.size
+    //         def transform(x: Table[T, Column, L]): R =
+    //             x
 
-            def asSelectItems(x: Table[T, Column, L], cursor: Int): List[SqlSelectItem.Expr] =
-                for
-                    (column, index) <- x.__metaData__.columns.zipWithIndex
-                yield
-                    SqlSelectItem.Expr(
-                        SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
-                    )
+    //         def offset(x: Table[T, Column, L]): Int =
+    //             x.__metaData__.columns.size
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-        a: AsMap[V, L],
-        t: ToTuple[a.R],
-        kt: KindToTuple[Column[L]]
-    ): Aux[MappedTable[N, V, L], CL, MappedTable[N, t.R, L], kt.R] =
-        new AsMap[MappedTable[N, V, L], CL]:
-            type R = MappedTable[N, t.R, L]
+    //         def asSelectItems(x: Table[T, Column, L], cursor: Int): NonEmptyList[IrSelectItem] =
+    //             for
+    //                 (column, index) <- x.__metaData__.columns.zipWithIndex
+    //             yield
+    //                 IrSelectItem(
+    //                     SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
+    //                 )
 
-            type KS = kt.R
+    // given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+    //     a: AsMap[V, L],
+    //     t: ToTuple[a.R],
+    //     kt: KindToTuple[Column[L]]
+    // ): Aux[MappedTable[N, V, L], CL, MappedTable[N, t.R, L], kt.R] =
+    //     new AsMap[MappedTable[N, V, L], CL]:
+    //         type R = MappedTable[N, t.R, L]
 
-            def transform(x: MappedTable[N, V, L]): R =
-                MappedTable(
-                    x.__aliasName__,
-                    t.toTuple(a.transform(x.__items__))
-                )
+    //         type KS = kt.R
 
-            def offset(x: MappedTable[N, V, L]): Int =
-                a.offset(x.__items__)
+    //         def transform(x: MappedTable[N, V, L]): R =
+    //             MappedTable(
+    //                 x.__aliasName__,
+    //                 t.toTuple(a.transform(x.__items__))
+    //             )
 
-            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): List[SqlSelectItem.Expr] =
-                a.asSelectItems(x.__items__, cursor)
+    //         def offset(x: MappedTable[N, V, L]): Int =
+    //             a.offset(x.__items__)
+
+    //         def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
+    //             a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
@@ -282,7 +310,7 @@ object AsMap:
             def offset(x: H *: T): Int =
                 ah.offset(x.head) + at.offset(x.tail)
 
-            def asSelectItems(x: H *: T, cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: H *: T, cursor: Int): NonEmptyList[IrSelectItem] =
                 ah.asSelectItems(x.head, cursor) ++ at.asSelectItems(x.tail, cursor + ah.offset(x.head))
 
     given tuple1[H, CL <: Int](using
@@ -302,7 +330,7 @@ object AsMap:
             def offset(x: H *: EmptyTuple): Int =
                 ah.offset(x.head)
 
-            def asSelectItems(x: H *: EmptyTuple, cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: H *: EmptyTuple, cursor: Int): NonEmptyList[IrSelectItem] =
                 ah.asSelectItems(x.head, cursor)
 
     given namedTuple[N <: Tuple, V <: Tuple, CL <: Int](using
@@ -320,5 +348,17 @@ object AsMap:
             def offset(x: NamedTuple[N, V]): Int =
                 a.offset(x.toTuple)
 
-            def asSelectItems(x: NamedTuple[N, V], cursor: Int): List[SqlSelectItem.Expr] =
+            def asSelectItems(x: NamedTuple[N, V], cursor: Int): NonEmptyList[IrSelectItem] =
                 a.asSelectItems(x.toTuple, cursor)
+
+    inline given fallback[T, CL <: Int](using
+        NotGiven[AsMap[T, CL]]
+    ): Aux[T, CL, T, EmptyTuple] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t for the SQL SELECT list.")

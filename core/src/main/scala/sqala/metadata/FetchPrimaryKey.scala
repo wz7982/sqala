@@ -3,6 +3,7 @@ package sqala.metadata
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
 import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement}
 import sqala.ast.table.SqlTable
+import sqala.util.NonEmptyList
 
 import scala.quoted.{Expr, Quotes, Type}
 
@@ -40,14 +41,18 @@ private[sqala] object FetchPrimaryKey:
         val eles = sym.declaredFields
         val metaData = TableMacroImpl.tableMetaDataMacro[T]
         val pkFields = metaData.primaryKeyFields
+
         if pkFields.isEmpty then
             report.error("The entity does not have a primary key field.")
+
         val pkColumnNames =
-            metaData.fields
-                .zip(metaData.columns)
+            metaData.fields.toList
+                .zip(metaData.columns.toList)
                 .filter((f, _) => pkFields.contains(f))
                 .map((_, c) => c)
+
         val pkEles = eles.filter(e => pkFields.contains(e.name))
+
         val types = pkEles.map: e =>
             e.termRef.typeSymbol.typeRef
 
@@ -70,7 +75,7 @@ private[sqala] object FetchPrimaryKey:
 
         val pkColumNamesExpr = Expr.ofList(pkColumnNames.map(Expr(_)))
         val tableNameExpr = Expr(metaData.tableName)
-        val columnsExpr = Expr.ofList(metaData.columns.map(Expr(_)))
+        val columnsExpr = Expr.ofList(metaData.columns.toList.map(Expr(_)))
 
         val converter = tpe match
             case '[type t <: Tuple; t] =>
@@ -103,9 +108,10 @@ private[sqala] object FetchPrimaryKey:
 
                         def createQueryTree(x: Seq[Args]): SqlQuery =
                             val (sqlCondition, table) = createInfo(x)
+                            val columns = $columnsExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None))
                             SqlQuery.Select(
                                 None,
-                                $columnsExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None)),
+                                NonEmptyList(columns.head, columns.tail),
                                 table :: Nil,
                                 Some(sqlCondition),
                                 None,

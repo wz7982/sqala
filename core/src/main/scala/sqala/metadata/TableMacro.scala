@@ -1,6 +1,6 @@
 package sqala.metadata
 
-import sqala.util.camelToSnake
+import sqala.util.{camelToSnake, NonEmptyList}
 
 import scala.collection.mutable.ListBuffer
 import scala.quoted.{Expr, Quotes, Type}
@@ -91,12 +91,15 @@ private[sqala] object TableMacroImpl:
         if incrementKeyFields.size > 1 then
             report.error("Entity class cannot have more than one auto-increment field.")
 
+        val columnsList = columns.toList
+        val fieldsList = fields.toList
+
         TableMetaData(
             tableName,
             primaryKeyFields.toList,
             incrementKeyFields.headOption,
-            columns.toList,
-            fields.toList
+            NonEmptyList(columnsList.head, columnsList.tail),
+            NonEmptyList(fieldsList.head, fieldsList.tail)
         )
 
     def tableMetaData[T](using q: Quotes, t: Type[T]): Expr[TableMetaData] =
@@ -107,15 +110,15 @@ private[sqala] object TableMacroImpl:
         val incrementExpr = metaData.incrementField match
             case None => Expr(Option.empty[String])
             case Some(e) => Expr(Some(e))
-        val columnsExpr = Expr.ofList(metaData.columns.map(Expr(_)))
-        val fieldsExpr = Expr.ofList(metaData.fields.map(Expr(_)))
+        val columnsExpr = Expr.ofList(metaData.columns.toList.map(Expr(_)))
+        val fieldsExpr = Expr.ofList(metaData.fields.toList.map(Expr(_)))
 
         '{
             TableMetaData(
                 $tableNameExpr,
                 $primaryKeyExpr,
                 $incrementExpr,
-                $columnsExpr,
-                $fieldsExpr
+                NonEmptyList($columnsExpr.head, $columnsExpr.tail),
+                NonEmptyList($fieldsExpr.head, $fieldsExpr.tail)
             )
         }

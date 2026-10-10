@@ -1,11 +1,15 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
+import sqala.ir.IrExpr
 import sqala.metadata.AsSqlExpr
-import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList
 
 import scala.compiletime.ops.int.>
+import sqala.static.dsl.statement.query.Query
+import scala.compiletime.error
+import scala.util.NotGiven
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 /**
  * Lifts values, expressions, subqueries, and tuples into the expression
@@ -35,10 +39,10 @@ trait AsExpr[T, CL <: Int]:
     def asExpr(x: T): Expr[R, K] =
         val exprList = asExprs(x)
         if exprList.size == 1 then
-            Expr(exprList.head.asSqlExpr)
+            Expr(exprList.head.asIrExpr)
         else
-            val exprs = exprList.map(_.asSqlExpr)
-            Expr(SqlExpr.Tuple(exprs))
+            val exprs = exprList.map(_.asIrExpr)
+            Expr(IrExpr.Tuple(exprs))
 
     /**
      * Converts the value to a single expression, erasing the type.
@@ -52,6 +56,15 @@ object AsExpr:
 
         type K = OK
 
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], CL <: Int]: Aux[E, CL, T, EK] =
+        new AsExpr[E, CL]:
+            type R = T
+
+            type K = EK
+
+            def asExprs(x: E): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(x, Nil)
+
     given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, T, Value] =
         new AsExpr[T, CL]:
             type R = T
@@ -59,22 +72,14 @@ object AsExpr:
             type K = Value
 
             def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(Expr(a.asSqlExpr(x)), Nil)
+                NonEmptyList(Expr(IrExpr.Native(a.asSqlExpr(x))), Nil)
 
-    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, T, EK] =
-        new AsExpr[Expr[T, EK], CL]:
-            type R = T
-
-            type K = EK
-
-            def asExprs(x: Expr[T, EK]): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(x, Nil)
-
-    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
+    given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
         a: AsExpr[T, CL],
         to: ToOption[Expr[a.R, Column[CL]]],
         ao: AsExpr[to.R, CL],
-        refl: L > CL =:= true
+        vs: ValidateSubqueryExprSize[S],
+        vss: ValidateSubqueryScope[L, CL]
     ): Aux[Q, CL, ao.R, Composite[OKS]] =
         new AsExpr[Q, CL]:
             type R = ao.R
@@ -82,7 +87,10 @@ object AsExpr:
             type K = Composite[OKS]
 
             def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(Expr(SqlExpr.Subquery(x.tree)), Nil)
+                NonEmptyList(Expr(IrExpr.Subquery(x.tree)), Nil)
+
+    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], Window[KS]] =
+        error("Window function requires an OVER clause.")
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsExpr[H, CL],
@@ -109,3 +117,15 @@ object AsExpr:
 
             def asExprs(x: H *: EmptyTuple): NonEmptyList[Expr[?, ?]] =
                 NonEmptyList(h.asExpr(x.head), Nil)
+
+    inline given fallback[T, CL <: Int](using
+        NotGiven[AsExpr[T, CL]]
+    ): Aux[T, CL, EmptyTuple, Composite[EmptyTuple]] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t into a SQL expression.")

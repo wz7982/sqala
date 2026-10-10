@@ -71,6 +71,20 @@ case class NonEmptyList[+A](head: A, tail: List[A]):
     def ++[B >: A](other: NonEmptyList[B]): NonEmptyList[B] =
         NonEmptyList(head, tail ++ other.toList)
 
+    /**
+     * Zip two non-empty lists together.
+     */
+    def zip[B](other: NonEmptyList[B]): NonEmptyList[(A, B)] =
+        val zippedHead = (head, other.head)
+        val zippedTail = tail.zip(other.tail)
+        NonEmptyList(zippedHead, zippedTail)
+
+    def zipWithIndex: NonEmptyList[(A, Int)] =
+        val indexedHead = (head, 0)
+        val indexedTail = tail.zipWithIndex.map: (elem, idx) =>
+            (elem, idx + 1)
+        NonEmptyList(indexedHead, indexedTail)
+
 object NonEmptyList:
     /**
      * Create a non-empty list from a head and a tail.

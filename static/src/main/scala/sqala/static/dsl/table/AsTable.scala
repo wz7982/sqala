@@ -1,8 +1,5 @@
 package sqala.static.dsl.table
 
-import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.SqlQuery
-import sqala.ast.table.{SqlJoinType, SqlTable, SqlTableAlias}
 import sqala.metadata.{AsSqlExprs, FetchCompanion, TableMacro, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
@@ -13,6 +10,10 @@ import scala.deriving.Mirror
 import scala.util.NotGiven
 import scala.compiletime.summonInline
 import scala.compiletime.ops.int.>
+import sqala.ir.IrTable
+import sqala.ast.table.SqlJoinType
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 /**
  * Used by `from` to lift various DSL types into a table reference
@@ -33,7 +34,7 @@ trait AsTable[T, CL <: Int]:
     /**
      * Converts the value to a table reference and its AST.
      */
-    def asTable(x: T)(using QueryContext[CL]): (R, SqlTable)
+    def asTable(x: T)(using QueryContext[CL]): (R, IrTable)
 
 object AsTable:
     type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsTable[T, CL]:
@@ -53,114 +54,73 @@ object AsTable:
 
             type OKS = EmptyTuple
 
-            def asTable(x: O)(using qc: QueryContext[CL]): (R, SqlTable) =
+            def asTable(x: O)(using qc: QueryContext[CL]): (R, IrTable) =
                 val metaData = fc.metaData
-                val alias = qc.fetchAlias()
+                val irTable = IrTable.Ident(metaData.tableName)
                 val table = Table[fc.R, Column, CL](
-                    alias,
+                    irTable,
                     metaData
                 )
-                val sqlTable =
-                    SqlTable.Ident(
-                        metaData.tableName,
-                        Some(SqlTableAlias(alias, Nil)),
-                        None,
-                        None,
-                        None
-                    )
-                (table, sqlTable)
+                (table, irTable)
 
-    given funcTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromFunc[T, Column, TOKS, CL], CL, Table[T, Column, CL], TOKS] =
-        new AsTable[FromFunc[T, Column, TOKS, CL], CL]:
-            type R = Table[T, Column, CL]
+    // TODO 改回Q的形式
+    // given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](using
+    //     p: AsTableParam[V, CL],
+    //     tt: ToTuple[p.R],
+    //     vss: ValidateSubqueryScope[L, CL]
+    // ): Aux[Query[NamedTuple[N, V], TOKS, L, S], CL, MappedTable[N, tt.R, CL], TOKS] =
+    //     new AsTable[Query[NamedTuple[N, V], TOKS, L, S], CL]:
+    //         type R = MappedTable[N, tt.R, CL]
 
-            type OKS = TOKS
+    //         type OKS = TOKS
 
-            def asTable(x: FromFunc[T, Column, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (Table(x.__aliasName__, x.__metaData__), x.__sqlTable__)
+    //         def asTable(x: Query[NamedTuple[N, V], TOKS, L, S])(using qc: QueryContext[CL]): (R, SqlTable) =
+    //             val alias = qc.fetchAlias()
+    //             val subquery = MappedTable[N, V, CL](alias)
+    //             val sqlTable =
+    //                 SqlTable.Subquery(
+    //                     false,
+    //                     x.tree,
+    //                     Some(SqlTableAlias(alias, Nil)),
+    //                     None
+    //                 )
+    //             (subquery, sqlTable)
 
-    given jsonTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
-        new AsTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, CL]
+    // TODO
+    // given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =
+    //     new AsTable[RecursiveTable[N, V, CL], CL]:
+    //         type R = RecursiveTable[N, V, CL]
 
-            type OKS = TOKS
+    //         type OKS = EmptyTuple
 
-            def asTable(x: FromJson[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
+    //         def asTable(x: RecursiveTable[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
+    //             (x, x.__sqlTable__)
 
-    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
-        p: AsTableParam[V, CL],
-        tt: ToTuple[p.R],
-        refl: L > CL =:= true
-    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
-        new AsTable[Q, CL]:
-            type R = MappedTable[N, tt.R, CL]
+    // TODO
+    // inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+    //     val metaData = TableMacro.tableMetaData[T]
+    //     val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+    //     createValues[T, S, CL](
+    //         metaData,
+    //         (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
+    //     )
 
-            type OKS = TOKS
-
-            def asTable(x: Q)(using qc: QueryContext[CL]): (R, SqlTable) =
-                val alias = qc.fetchAlias()
-                val subquery = MappedTable[N, V, CL](alias)
-                val sqlTable =
-                    SqlTable.Subquery(
-                        false,
-                        x.tree,
-                        Some(SqlTableAlias(alias, Nil)),
-                        None
-                    )
-                (subquery, sqlTable)
-
-    given recognizeTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromRecognize[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
-        new AsTable[FromRecognize[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = TOKS
-
-            def asTable(x: FromRecognize[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
-    given graphTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, CL], TOKS] =
-        new AsTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, CL]
-
-            type OKS = TOKS
-
-            def asTable(x: FromGraph[N, V, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (MappedTable(x.__aliasName__, x.__items__), x.__sqlTable__)
-
-    given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =
-        new AsTable[RecursiveTable[N, V, CL], CL]:
-            type R = RecursiveTable[N, V, CL]
-
-            type OKS = EmptyTuple
-
-            def asTable(x: RecursiveTable[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (x, x.__sqlTable__)
-
-    inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
-        val metaData = TableMacro.tableMetaData[T]
-        val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
-        createValues[T, S, CL](
-            metaData,
-            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
-        )
-
-    private def createValues[T <: Product, S <: Seq[T], CL <: Int](
-        metaData: TableMetaData,
-        asExprs: T => List[SqlExpr]
-    ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
-        new AsTable[S, CL]:
-            type R = Table[T, Column, CL]
-            type OKS = EmptyTuple
-            def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
-                require(x.nonEmpty, "Values table must have at least one row.")
-                val alias = qc.fetchAlias()
-                val tableAlias = SqlTableAlias(alias, metaData.columns)
-                val table = Table[T, Column, CL](alias, metaData)
-                val exprList = x.toList.map: datum =>
-                    asExprs(datum).toNonEmptyList
-                val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
-                (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
+    // private def createValues[T <: Product, S <: Seq[T], CL <: Int](
+    //     metaData: TableMetaData,
+    //     asExprs: T => List[SqlExpr]
+    // ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+    //     new AsTable[S, CL]:
+    //         type R = Table[T, Column, CL]
+    //         type OKS = EmptyTuple
+    //         def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
+    //             require(x.nonEmpty, "Values table must have at least one row.")
+    //             val alias = qc.fetchAlias()
+    //             val tableAlias = SqlTableAlias(alias, metaData.columns)
+    //             val table = Table[T, Column, CL](alias, metaData)
+    //             val exprList = x.toList.map: datum =>
+    //                 asExprs(datum).toNonEmptyList
+    //             val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
+    //             (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
 
     given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
         new AsTable[FromJoin[T, TOKS, CL], CL]:
@@ -168,8 +128,8 @@ object AsTable:
 
             type OKS = TOKS
 
-            def asTable(x: FromJoin[T, TOKS, CL])(using QueryContext[CL]): (R, SqlTable) =
-                (x.params, x.sqlTable)
+            def asTable(x: FromJoin[T, TOKS, CL])(using QueryContext[CL]): (R, IrTable) =
+                (x.params, x.table)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsTable[H, CL],
@@ -182,11 +142,11 @@ object AsTable:
 
             type OKS = c.R
 
-            def asTable(x: H *: T)(using QueryContext[CL]): (R, SqlTable) =
+            def asTable(x: H *: T)(using QueryContext[CL]): (R, IrTable) =
                 val (headParam, headTable) = ah.asTable(x.head)
                 val (tailParam, tailTable) = at.asTable(x.tail)
                 val param = headParam *: t.toTuple(tailParam)
-                val table = SqlTable.Join(headTable, SqlJoinType.Cross, tailTable, None)
+                val table = IrTable.Join(headTable, SqlJoinType.Cross, tailTable, None)
                 (param, table)
 
     given tuple1[H, CL <: Int](using
@@ -197,5 +157,17 @@ object AsTable:
 
             type OKS = ah.OKS
 
-            def asTable(x: H *: EmptyTuple)(using QueryContext[CL]): (R, SqlTable) =
+            def asTable(x: H *: EmptyTuple)(using QueryContext[CL]): (R, IrTable) =
                 ah.asTable(x.head)
+
+    inline given fallback[T, CL <: Int](using
+        NotGiven[AsTable[T, CL]]
+    ): Aux[T, CL, T, EmptyTuple] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t into a SQL table.")

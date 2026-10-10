@@ -1,8 +1,8 @@
 package sqala.static.dsl.table
 
-import sqala.ast.table.{SqlJoinCondition, SqlTable}
 import sqala.metadata.SqlBoolean
 import sqala.static.dsl.*
+import sqala.ir.IrTable
 
 /**
  * Computes the combined row type of an inner join.
@@ -124,11 +124,11 @@ object FullJoin:
                 ta.toTuple(toa.toOption(a)) ++ tb.toTuple(tob.toOption(b))
 
 /**
- * A join table source produced by calling `on` on a `JoinPart`. 
+ * A join table source produced by calling `on` on a `JoinPart`.
  */
 final case class FromJoin[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
-    private[sqala] val sqlTable: SqlTable.Join
+    private[sqala] val table: IrTable.Join
 ) extends AnyTable
 
 /**
@@ -137,7 +137,7 @@ final case class FromJoin[T, OKS <: Tuple, L <: Int](
  */
 final case class JoinPart[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
-    private[sqala] val sqlTable: SqlTable.Join
+    private[sqala] val table: IrTable.Join
 ):
     /**
      * Specifies the join condition. Maps to SQL `ON`. The condition
@@ -163,14 +163,13 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
     def on[F](f: T => F)(using
         qc: QueryContext[L],
         a: AsExpr[F, L],
-        b: SqlBoolean[a.R],
         kt: KindToTuple[a.K],
-        i: CanInFilter[kt.R],
+        i: CanInFilter[a.R, kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): FromJoin[T, c.R, L] =
         val cond = a.asExpr(f(params))
         FromJoin(
             params,
-            sqlTable.copy(condition = Some(SqlJoinCondition.On(cond.asSqlExpr)))
+            table.copy(on = Some(cond.asIrExpr))
         )

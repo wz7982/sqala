@@ -1,5 +1,7 @@
 package sqala.metadata
 
+import sqala.util.NonEmptyList
+
 /**
  * Metadata extracted from an entity case class, describing its mapping to a database table.
  */
@@ -7,6 +9,6 @@ private[sqala] final case class TableMetaData(
     private[sqala] val tableName: String,
     private[sqala] val primaryKeyFields: List[String],
     private[sqala] val incrementField: Option[String],
-    private[sqala] val columns: List[String],
-    private[sqala] val fields: List[String]
+    private[sqala] val columns: NonEmptyList[String],
+    private[sqala] val fields: NonEmptyList[String]
 )

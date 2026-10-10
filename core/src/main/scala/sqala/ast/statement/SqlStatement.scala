@@ -106,7 +106,7 @@ enum SqlQuery:
      *
      * Renders as
      * `SELECT [DISTINCT|ALL] select_item [, ...]
-     *   FROM table [, ...]
+     *   [FROM table [, ...]]
      *   [WHERE expr]
      *   [GROUP BY [DISTINCT|ALL] grouping_item [, ...]]
      *   [HAVING expr]
@@ -118,7 +118,7 @@ enum SqlQuery:
      */
     case Select(
         quantifier: Option[SqlQuantifier],
-        select: List[SqlSelectItem],
+        select: NonEmptyList[SqlSelectItem],
         from: List[SqlTable],
         where: Option[SqlExpr],
         groupBy: Option[SqlGroup],
@@ -150,7 +150,7 @@ enum SqlQuery:
     /**
      * A `VALUES` clause used as a query.
      *
-     * Renders as 
+     * Renders as
      * `VALUES (expr [, ...]) [, ...] [FOR UPDATE|SHARE]
      * [ORDER BY ordering [, ...]]
      * [OFFSET expr [ROW|ROWS]] [FETCH FIRST|NEXT expr [PERCENT] ROW|ROWS ONLY|WITH TIES]`.
@@ -178,7 +178,7 @@ object SqlQuery:
          * Returns a copy with the given item appended to the select list.
          */
         def addSelectItem(item: SqlSelectItem): Select =
-            select.copy(select = select.select.appended(item))
+            select.copy(select = select.select :+ item)
 
         /**
          * Returns a copy with the given condition added to the `WHERE` clause
