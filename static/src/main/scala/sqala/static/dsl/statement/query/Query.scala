@@ -157,8 +157,7 @@ sealed class SelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
-        an: AggNested[a.KS],
-        nan: an.R =:= false
+        an: AggNotNested[a.KS]
     ): SelectQuery[a.R, T, c.R, L, i.R] =
         val mapped = f(tables)
         val sqlSelect = a.asSelectItems(mapped, 1)
@@ -180,8 +179,7 @@ sealed class SelectQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
         i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
-        an: AggNested[a.KS],
-        nan: an.R =:= false
+        an: AggNotNested[a.KS]
     ): SelectQuery[a.R, T, c.R, L, i.R] =
         map(f)
 

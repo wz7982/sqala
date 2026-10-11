@@ -3,7 +3,7 @@ package sqala.static.dsl
 import sqala.ir.IrExpr
 import sqala.ast.quantifier.SqlQuantifier
 
-// TODO 聚合函数换成一个AggExpr
+// TODO 聚合函数
 /**
  * Counts all rows. Maps to `COUNT(*)`.
  *

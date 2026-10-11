@@ -254,3 +254,12 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
      */
     def as[R](using c: Cast[a.R, R], kt: KindToTuple[a.K]): Expr[Option[R], Composite[kt.R]] =
         Expr(IrExpr.Cast(a.asExpr(x).asIrExpr, c.castType))
+
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
+    def filter[F](f: F)(using
+        a: AsExpr[F, CL],
+        kt: KindToTuple[a.K],
+        ci: CanInFilter[a.R, kt.R],
+        c: CallAggFilter[T, kt.R]
+    ): c.R =
+        c.call(x, a.asExpr(f).asIrExpr)
