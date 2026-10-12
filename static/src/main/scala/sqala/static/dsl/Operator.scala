@@ -391,8 +391,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("times")
     def *[B](that: B)(using
         ab: AsExpr[B, CL],
-        na: SqlNumber[aa.R],
-        nb: SqlNumber[ab.R],
+        na: ValidateArgType[SqlNumber, aa.R],
+        nb: ValidateArgType[SqlNumber, aa.R],
         r: Return[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -417,8 +417,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("div")
     def /[B](that: B)(using
         ab: AsExpr[B, CL],
-        na: SqlNumber[aa.R],
-        nb: SqlNumber[ab.R],
+        na: ValidateArgType[SqlNumber, aa.R],
+        nb: ValidateArgType[SqlNumber, aa.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Option[BigDecimal], c.R] =
         Expr(
@@ -443,8 +443,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("mod")
     def %[B](that: B)(using
         ab: AsExpr[B, CL],
-        na: SqlNumber[aa.R],
-        nb: SqlNumber[ab.R],
+        na: ValidateArgType[SqlNumber, aa.R],
+        nb: ValidateArgType[SqlNumber, aa.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Option[BigDecimal], c.R] =
         Expr(
@@ -468,7 +468,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("positive")
     def unary_+(using
-        n: SqlNumber[aa.R],
+        n: ValidateArgType[SqlNumber, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(IrExpr.Unary(SqlUnaryOperator.Positive, aa.asExpr(self).asIrExpr))
@@ -483,7 +483,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("negative")
     def unary_-(using
-        n: SqlNumber[aa.R],
+        n: ValidateArgType[SqlNumber, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(IrExpr.Unary(SqlUnaryOperator.Negative, aa.asExpr(self).asIrExpr))
@@ -500,8 +500,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("and")
     def &&[B](that: B)(using
         ab: AsExpr[B, CL],
-        ba: SqlBoolean[aa.R],
-        bb: SqlBoolean[ab.R],
+        ba: ValidateArgType[SqlBoolean, aa.R],
+        bb: ValidateArgType[SqlBoolean, aa.R],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -525,8 +525,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("or")
     def ||[B](that: B)(using
         ab: AsExpr[B, CL],
-        ba: SqlBoolean[aa.R],
-        bb: SqlBoolean[ab.R],
+        ba: ValidateArgType[SqlBoolean, aa.R],
+        bb: ValidateArgType[SqlBoolean, aa.R],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -547,7 +547,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     @targetName("not")
     def unary_!(using
-        b: SqlBoolean[aa.R],
+        b: ValidateArgType[SqlBoolean, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(IrExpr.Unary(SqlUnaryOperator.Not, aa.asExpr(self).asIrExpr))
@@ -588,8 +588,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      */
     def like[B](that: B)(using
         ab: AsExpr[B, CL],
-        sa: SqlString[aa.R],
-        sb: SqlString[ab.R],
+        sa: ValidateArgType[SqlString, aa.R],
+        sb: ValidateArgType[SqlString, aa.R],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -613,7 +613,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def contains(value: String)(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
@@ -637,7 +637,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def startsWith(value: String)(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
@@ -661,7 +661,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def endsWith(value: String)(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         r: Relation[aa.R, String],
         c: CombineKind[aa.K, Value]
     ): Expr[r.R, c.R] =
@@ -682,7 +682,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def toLowerCase(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(
@@ -705,7 +705,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def toUpperCase(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(
@@ -728,7 +728,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def trim(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(
@@ -751,7 +751,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def length(using
-        s: SqlString[aa.R],
+        s: ValidateArgType[SqlString, aa.R],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
         Expr(
@@ -776,8 +776,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     @targetName("concat")
     def ++[B](that: B)(using
         ab: AsExpr[B, CL],
-        sa: SqlString[aa.R],
-        sb: SqlString[ab.R],
+        sa: ValidateArgType[SqlString, aa.R],
+        sb: ValidateArgType[SqlString, aa.R],
         r: Return[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -870,10 +870,10 @@ extension [A, B, CL <: Int](self: (A, B))(using
     def overlaps[C, D](that: (C, D))(using
         ac: AsExpr[C, CL],
         ad: AsExpr[D, CL],
-        da: SqlDateTime[aa.R],
-        db: SqlDateTime[ab.R],
-        dc: SqlDateTime[ac.R],
-        dd: SqlDateTime[ad.R],
+        da: ValidateArgType[SqlDateTime, aa.R],
+        db: ValidateArgType[SqlDateTime, aa.R],
+        dc: ValidateArgType[SqlDateTime, aa.R],
+        dd: ValidateArgType[SqlDateTime, aa.R],
         r1: Relation[aa.R, ab.R],
         r2: Relation[ac.R, ad.R],
         r: Relation[r1.R, r2.R],

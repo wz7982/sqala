@@ -6,6 +6,8 @@ import scala.compiletime.ops.int.>
 import scala.compiletime.error
 import sqala.metadata.SqlBoolean
 import sqala.metadata.AsSqlExpr
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -64,10 +66,12 @@ final class Composite[KS <: Tuple] extends ExprKind
  * The cardinality of a subquery result.
  */
 sealed trait QuerySize
+
 /**
  * The subquery returns at most one row (scalar subquery).
  */
 final class OneRow extends QuerySize
+
 /**
  * The subquery may return more than one row.
  */
@@ -545,12 +549,12 @@ object AllIsKind:
             type R = h.R
 
 /**
-  * Validates that a kind tuple contains aggregate functions nested.
-  */
+ * Validates that a kind tuple contains aggregate functions nested.
+ */
 trait AggNested[KS <: Tuple]:
     /**
-      * `true` if the kind tuple contains aggregate functions nested.
-      */
+     * `true` if the kind tuple contains aggregate functions nested.
+     */
     type R <: Boolean
 
 object AggNested:
@@ -608,8 +612,8 @@ object AggNested:
             type R = false
 
 /**
-  * Validates that a kind tuple contains no aggregate functions nested.
-  */
+ * Validates that a kind tuple contains no aggregate functions nested.
+ */
 trait AggNotNested[KS <: Tuple]
 
 object AggNotNested:
@@ -666,8 +670,8 @@ object CanInAgg:
         error("Aggregate function calls cannot contain window function calls.")
 
 /**
-  * Validates that a kind tuple contains no window functions nested.
-  */
+ * Validates that a kind tuple contains no window functions nested.
+ */
 trait WindowNotNested[KS <: Tuple]
 
 object WindowNotNested:
@@ -718,8 +722,8 @@ object CanInSimpleClause:
     ): CanInSimpleClause[KS]()
 
 /**
-  * Validates that a kind tuple contains no aggregate functions, allowing it to appear in a filter clause.
-  */
+ * Validates that a kind tuple contains no aggregate functions, allowing it to appear in a filter clause.
+ */
 trait FilterNotAllowedAgg[KS <: Tuple]
 
 object FilterNotAllowedAgg:
@@ -731,11 +735,11 @@ object FilterNotAllowedAgg:
     inline given fallback[KS <: Tuple](using
         NotGiven[FilterNotAllowedAgg[KS]]
     ): FilterNotAllowedAgg[KS] =
-        error("Aggregate functions are not allowed in WHERE/ON.")
+        error("Aggregate functions are not allowed in filter/on.")
 
 /**
-  * Validates that a kind tuple contains no window functions, allowing it to appear in a filter clause.
-  */
+ * Validates that a kind tuple contains no window functions, allowing it to appear in a filter clause.
+ */
 trait FilterNotAllowedWindow[KS <: Tuple]
 
 object FilterNotAllowedWindow:
@@ -747,11 +751,11 @@ object FilterNotAllowedWindow:
     inline given fallback[KS <: Tuple](using
         NotGiven[FilterNotAllowedWindow[KS]]
     ): FilterNotAllowedWindow[KS] =
-        error("Window functions are not allowed in WHERE/ON.")
+        error("Window functions are not allowed in filter/on.")
 
 /**
-  * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a filter clause.
-  */
+ * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a filter clause.
+ */
 trait FilterNotAllowedUngroupedColumn[KS <: Tuple]
 
 object FilterNotAllowedUngroupedColumn:
@@ -763,7 +767,7 @@ object FilterNotAllowedUngroupedColumn:
     inline given fallback[KS <: Tuple](using
         NotGiven[FilterNotAllowedUngroupedColumn[KS]]
     ): FilterNotAllowedUngroupedColumn[KS] =
-        error("Ungrouped column references are not allowed in WHERE/ON.")
+        error("Ungrouped column references are not allowed in filter/on.")
 
 /**
  * Validates that a kind tuple can appear in a `filter` clause.
@@ -781,7 +785,7 @@ object CanInFilter:
     inline given fallback[T, KS <: Tuple](using
         NotGiven[CanInFilter[T, KS]]
     ): CanInFilter[T, KS] =
-        error("Argument of WHERE/ON must be type Boolean.")
+        error("Argument of filter/on must be type Boolean.")
 
 /**
  * Validates that a kind tuple can appear in a `map` clause.
@@ -915,8 +919,8 @@ object CanInRecognizeDefine:
     ): CanInRecognizeDefine[KS, CL]()
 
 /**
-  * Validates that a subquery used as an expression returns most one row.
-  */
+ * Validates that a subquery used as an expression returns most one row.
+ */
 trait ValidateSubqueryExprSize[S <: QuerySize]
 
 object ValidateSubqueryExprSize:
@@ -926,8 +930,8 @@ object ValidateSubqueryExprSize:
         error("More than one row returned by a subquery used as an expression.")
 
 /**
-  * Validates that a scalar subquery returns one column.
-  */
+ * Validates that a scalar subquery returns one column.
+ */
 trait ValidateScalarSubqueryColumnSize[T]
 
 object ValidateScalarSubqueryColumnSize:
@@ -978,3 +982,14 @@ object TakeSize:
     ): Aux[T, ManyRows] =
         new TakeSize[T]:
             type R = ManyRows
+
+/**
+ * TODO
+ */
+trait ValidateArgType[F[_], T]
+
+object ValidateArgType:
+    given validate[F[_], T](using F[T]): ValidateArgType[F, T]()
+
+    inline given fallback[F[_], T, OP <: String](using NotGiven[F[T]]): ValidateArgType[F, T] =
+        error("The parameter type is incorrect.")
