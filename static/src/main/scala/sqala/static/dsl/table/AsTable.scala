@@ -64,28 +64,24 @@ object AsTable:
                 )
                 (table, irTable)
 
-    // TODO 改回Q的形式
-    // given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](using
-    //     p: AsTableParam[V, CL],
-    //     tt: ToTuple[p.R],
-    //     vss: ValidateSubqueryScope[L, CL]
-    // ): Aux[Query[NamedTuple[N, V], TOKS, L, S], CL, MappedTable[N, tt.R, CL], TOKS] =
-    //     new AsTable[Query[NamedTuple[N, V], TOKS, L, S], CL]:
-    //         type R = MappedTable[N, tt.R, CL]
+    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
+        p: AsTableParam[V, CL],
+        tt: ToTuple[p.R],
+        vss: ValidateSubqueryScope[L, CL]
+    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
+        new AsTable[Q, CL]:
+            type R = MappedTable[N, tt.R, CL]
 
-    //         type OKS = TOKS
+            type OKS = TOKS
 
-    //         def asTable(x: Query[NamedTuple[N, V], TOKS, L, S])(using qc: QueryContext[CL]): (R, SqlTable) =
-    //             val alias = qc.fetchAlias()
-    //             val subquery = MappedTable[N, V, CL](alias)
-    //             val sqlTable =
-    //                 SqlTable.Subquery(
-    //                     false,
-    //                     x.tree,
-    //                     Some(SqlTableAlias(alias, Nil)),
-    //                     None
-    //                 )
-    //             (subquery, sqlTable)
+            def asTable(x: Q)(using qc: QueryContext[CL]): (R, IrTable) =
+                val sqlTable =
+                    IrTable.Subquery(
+                        false,
+                        x.tree
+                    )
+                val subquery = MappedTable[N, V, CL](sqlTable)
+                (subquery, sqlTable)
 
     // TODO
     // given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =

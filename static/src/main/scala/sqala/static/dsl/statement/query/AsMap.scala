@@ -88,25 +88,24 @@ object AsSelect:
     //         def asSelectItems(x: RecursiveTable[N, V, L], cursor: Int): List[IrSelectItem] =
     //             a.asSelectItems(x.__items__, cursor)
 
-    // TODO
-    // given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
-    //     a: AsMap[V, L],
-    //     t: ToTuple[a.R]
-    // ): Aux[MappedTable[N, V, L], MappedTable[N, t.R, L]] =
-    //     new AsSelect[MappedTable[N, V, L]]:
-    //         type R = MappedTable[N, t.R, L]
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R]
+    ): Aux[MappedTable[N, V, L], MappedTable[N, t.R, L]] =
+        new AsSelect[MappedTable[N, V, L]]:
+            type R = MappedTable[N, t.R, L]
 
-    //         def transform(x: MappedTable[N, V, L]): R =
-    //             MappedTable(
-    //                 x.__aliasName__,
-    //                 t.toTuple(a.transform(x.__items__))
-    //             )
+            def transform(x: MappedTable[N, V, L]): R =
+                MappedTable(
+                    x.__table__,
+                    t.toTuple(a.transform(x.__items__))
+                )
 
-    //         def offset(x: MappedTable[N, V, L]): Int =
-    //             a.offset(x.__items__)
+            def offset(x: MappedTable[N, V, L]): Int =
+                a.offset(x.__items__)
 
-    //         def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
-    //             a.asSelectItems(x.__items__, cursor)
+            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
+                a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple](using
         ah: AsSelect[H],
@@ -247,49 +246,50 @@ object AsMap:
         error("Window function requires an OVER clause.")
 
     // TODO
-    // given table[T, L <: Int, CL <: Int](using
-    //     kt: KindToTuple[Column[L]]
-    // ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
-    //     new AsMap[Table[T, Column, L], CL]:
-    //         type R = Table[T, Column, L]
+    given table[T, L <: Int, CL <: Int](using
+        kt: KindToTuple[Column[L]]
+    ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =
+        new AsMap[Table[T, Column, L], CL]:
+            type R = Table[T, Column, L]
 
-    //         type KS = kt.R
+            type KS = kt.R
 
-    //         def transform(x: Table[T, Column, L]): R =
-    //             x
+            def transform(x: Table[T, Column, L]): R =
+                x
 
-    //         def offset(x: Table[T, Column, L]): Int =
-    //             x.__metaData__.columns.size
+            def offset(x: Table[T, Column, L]): Int =
+                x.__metaData__.columns.size
 
-    //         def asSelectItems(x: Table[T, Column, L], cursor: Int): NonEmptyList[IrSelectItem] =
-    //             for
-    //                 (column, index) <- x.__metaData__.columns.zipWithIndex
-    //             yield
-    //                 IrSelectItem(
-    //                     SqlExpr.Column(Some(x.__aliasName__), column), Some(s"c${cursor + index}")
-    //                 )
+            def asSelectItems(x: Table[T, Column, L], cursor: Int): NonEmptyList[IrSelectItem] =
+                for
+                    (column, index) <- x.__metaData__.columns.zipWithIndex
+                yield
+                    IrSelectItem(
+                        IrExpr.Column(x.__table__, column),
+                        s"c${cursor + index}"
+                    )
 
-    // given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
-    //     a: AsMap[V, L],
-    //     t: ToTuple[a.R],
-    //     kt: KindToTuple[Column[L]]
-    // ): Aux[MappedTable[N, V, L], CL, MappedTable[N, t.R, L], kt.R] =
-    //     new AsMap[MappedTable[N, V, L], CL]:
-    //         type R = MappedTable[N, t.R, L]
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+        a: AsMap[V, L],
+        t: ToTuple[a.R],
+        kt: KindToTuple[Column[L]]
+    ): Aux[MappedTable[N, V, L], CL, MappedTable[N, t.R, L], kt.R] =
+        new AsMap[MappedTable[N, V, L], CL]:
+            type R = MappedTable[N, t.R, L]
 
-    //         type KS = kt.R
+            type KS = kt.R
 
-    //         def transform(x: MappedTable[N, V, L]): R =
-    //             MappedTable(
-    //                 x.__aliasName__,
-    //                 t.toTuple(a.transform(x.__items__))
-    //             )
+            def transform(x: MappedTable[N, V, L]): R =
+                MappedTable(
+                    x.__table__,
+                    t.toTuple(a.transform(x.__items__))
+                )
 
-    //         def offset(x: MappedTable[N, V, L]): Int =
-    //             a.offset(x.__items__)
+            def offset(x: MappedTable[N, V, L]): Int =
+                a.offset(x.__items__)
 
-    //         def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
-    //             a.asSelectItems(x.__items__, cursor)
+            def asSelectItems(x: MappedTable[N, V, L], cursor: Int): NonEmptyList[IrSelectItem] =
+                a.asSelectItems(x.__items__, cursor)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMap[H, CL],
