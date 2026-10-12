@@ -8,6 +8,8 @@ import sqala.metadata.SqlBoolean
 import sqala.metadata.AsSqlExpr
 import scala.quoted.Type
 import scala.quoted.Quotes
+import sqala.ir.IrExpr
+import sqala.ast.expr.SqlBinaryOperator
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -703,6 +705,47 @@ object CanInWindow:
         NotGiven[CanInWindow[KS]]
     ): CanInWindow[KS] =
         error("Window function calls cannot contain ungrouped column references.")
+
+/**
+ * 注释
+ */
+trait CallAggFilter[T, FKS <: Tuple]:
+    type R
+
+    def call(x: T, filter: IrExpr): R
+
+object CallAggFilter:
+    type Aux[T, FKS <: Tuple, O] = CallAggFilter[T, FKS]:
+        type R = O
+
+    given agg[T, KS <: Tuple, FKS <: Tuple](using
+        c: CombineKindTuple[KS, FKS]
+    ): Aux[AggExpr[T, KS], FKS, AggExpr[T, c.R]] =
+        new CallAggFilter[AggExpr[T, KS], FKS]:
+            type R = AggExpr[T, c.R]
+
+            def call(x: AggExpr[T, KS], filter: IrExpr): AggExpr[T, c.R] =
+                def addFilter(originalFilter: Option[IrExpr], filter: IrExpr): Option[IrExpr] =
+                    originalFilter.map(IrExpr.Binary(_, SqlBinaryOperator.And, filter)).orElse(Some(filter))
+
+                val expr: IrExpr.CountAsteriskFunc | IrExpr.ListAggFunc | IrExpr.GeneralFunc | IrExpr.JsonObjectAggFunc | IrExpr.JsonArrayAggFunc =
+                    x.expr match
+                        case c: IrExpr.CountAsteriskFunc =>
+                            c.copy(addFilter(c.filter, filter))
+                        case g: IrExpr.GeneralFunc =>
+                            g.copy(filter = addFilter(g.filter, filter))
+                        case l: IrExpr.ListAggFunc =>
+                            l.copy(filter = addFilter(l.filter, filter))
+                        case j: IrExpr.JsonArrayAggFunc =>
+                            j.copy(filter = addFilter(j.filter, filter))
+                        case j: IrExpr.JsonObjectAggFunc =>
+                            j.copy(filter = addFilter(j.filter, filter))
+                AggExpr(expr)
+
+    inline given fallback[T, FKS <: Tuple](using
+        NotGiven[CallAggFilter[T, FKS]]
+    ): Aux[T, FKS, T] =
+        error("Filter specified, but this expression is not an aggregate function.")
 
 // TODO 后面的报错还要细化
 /**
