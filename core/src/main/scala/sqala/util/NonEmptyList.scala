@@ -79,11 +79,20 @@ case class NonEmptyList[+A](head: A, tail: List[A]):
         val zippedTail = tail.zip(other.tail)
         NonEmptyList(zippedHead, zippedTail)
 
+    /**
+     * Zip the elements with their indices.
+     */
     def zipWithIndex: NonEmptyList[(A, Int)] =
         val indexedHead = (head, 0)
         val indexedTail = tail.zipWithIndex.map: (elem, idx) =>
             (elem, idx + 1)
         NonEmptyList(indexedHead, indexedTail)
+
+    /**
+     * Get the indices of the elements.
+     */
+    def indices: NonEmptyList[Int] =
+        NonEmptyList(0, (1 until size).toList)
 
 object NonEmptyList:
     /**

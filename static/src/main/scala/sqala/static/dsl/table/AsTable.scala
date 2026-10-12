@@ -14,6 +14,7 @@ import sqala.ir.IrTable
 import sqala.ast.table.SqlJoinType
 import scala.quoted.Type
 import scala.quoted.Quotes
+import scala.compiletime.error
 
 /**
  * Used by `from` to lift various DSL types into a table reference
@@ -121,6 +122,9 @@ object AsTable:
     //                 asExprs(datum).toNonEmptyList
     //             val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
     //             (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
+
+    inline given joinPart[T, TOKS <: Tuple, CL <: Int]: Aux[JoinPart[T, TOKS, CL], CL, T, TOKS] =
+        error("Join table must have an on clause.")
 
     given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
         new AsTable[FromJoin[T, TOKS, CL], CL]:
