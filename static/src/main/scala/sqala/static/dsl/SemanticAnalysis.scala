@@ -2,7 +2,7 @@ package sqala.static.dsl
 
 import scala.util.NotGiven
 import scala.compiletime.ops.boolean.{&&, ||}
-import scala.compiletime.ops.int.>
+import scala.compiletime.ops.int.{>, <}
 import scala.compiletime.error
 import sqala.metadata.SqlBoolean
 import sqala.metadata.AsSqlExpr
@@ -10,6 +10,10 @@ import scala.quoted.Type
 import scala.quoted.Quotes
 import sqala.ir.IrExpr
 import sqala.ast.expr.SqlBinaryOperator
+import sqala.metadata.SqlNumber
+import sqala.metadata.SqlDateTime
+import sqala.metadata.SqlInterval
+import sqala.metadata.SqlTime
 
 /**
  * The `ExprKind` system tags each expression with its SQL semantic
@@ -705,6 +709,93 @@ object CanInWindow:
         NotGiven[CanInWindow[KS]]
     ): CanInWindow[KS] =
         error("Window function calls cannot contain ungrouped column references.")
+
+// TODO fallback
+/**
+ * Determines whether a type can be used as a `rows` or `groups`
+ * frame bound.
+ */
+trait CanInRowsOrGroupsFrame[T]
+
+object CanInRowsOrGroupsFrame:
+    given int: CanInRowsOrGroupsFrame[Int]()
+
+    given long: CanInRowsOrGroupsFrame[Long]()
+
+    given nothing: CanInRowsOrGroupsFrame[Nothing]()
+
+/**
+ * Determines whether `S` and `T` can be used together in a `range`
+ * frame (`S` is the sort key type, `T` is the bound type).
+ */
+trait CanInRangeFrame[S, T]
+
+object CanInRangeFrame:
+    given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
+
+    given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given nothing[S]: CanInRangeFrame[S, Nothing]()
+
+// TODO 注释
+trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
+
+object ValidateFrame:
+    given validate[SS <: Int, SN <: String, ES <: Int, EN <: String](using 
+        SS < ES =:= true
+    ): ValidateFrame[SS, SN, ES, EN]()
+
+    inline given fallback[SS <: Int, SN <: String, ES <: Int, EN <: String](using 
+        SS < ES =:= false
+    ): ValidateFrame[SS, SN, ES, EN] =
+        ${ errorMacro[SN, EN] }
+
+    def errorMacro[S: Type, E: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val start = Type.show[S].replace("\"", "")
+        val end = Type.show[E].replace("\"", "")
+
+        report.errorAndAbort(s"Frame starting from $start cannot end at $end.")
+
+// TODO 注释
+trait CanCallOver[T]:
+    type R
+
+    type KS <: Tuple
+
+    def asIrExpr(x: T): IrExpr
+
+object CanCallOver:
+    type Aux[T, O, OKS <: Tuple] = CanCallOver[T]:
+        type R = O
+
+        type KS = OKS
+
+    given agg[T, EKS <: Tuple]: Aux[AggExpr[T, EKS], T, EKS] =
+        new CanCallOver[AggExpr[T, EKS]]:
+            type R = T
+
+            type KS = EKS
+
+            def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
+                x.expr
+
+    given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
+        new CanCallOver[WindowPart[T, EKS]]:
+            type R = T
+
+            type KS = EKS
+
+            def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
+                x.expr
+
+    inline given fallback[T](using
+        NotGiven[CanCallOver[T]]
+    ): Aux[T, Int, EmptyTuple] =
+        error("Over specified, but this expression is not a window function nor an aggregate function.")
 
 /**
  * 注释

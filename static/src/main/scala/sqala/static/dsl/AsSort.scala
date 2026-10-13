@@ -30,16 +30,16 @@ object AsSortItem:
         AsSortItem[T, S, CL]:
             type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, S <: QuerySize, CL <: Int](using
+    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], S <: QuerySize, CL <: Int](using
         kt: KindToTuple[EK],
         i: CanInSort[kt.R, S],
         iv: IsKind[EK, Value],
         nv: iv.R =:= false
-    ): Aux[Expr[T, EK], S, CL, kt.R] =
-        new AsSortItem[Expr[T, EK], S, CL]:
+    ): Aux[E, S, CL, kt.R] =
+        new AsSortItem[E, S, CL]:
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
+            def asSort(x: E): Sort[?, ?] =
                 Sort(x, SqlOrdering.Asc, None)
 
     given sort[T: AsSqlExpr, EK <: ExprKind, S <: QuerySize, CL <: Int](using
@@ -133,16 +133,16 @@ object AsGroupedSortItem:
     type Aux[T, CL <: Int, OKS <: Tuple] = AsGroupedSortItem[T, CL]:
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
         kt: KindToTuple[EK],
         i: CanInGroupedSort[kt.R],
         iv: IsKind[EK, Value],
         nv: iv.R =:= false
-    ): Aux[Expr[T, EK], CL, kt.R] =
-        new AsGroupedSortItem[Expr[T, EK], CL]:
+    ): Aux[E, CL, kt.R] =
+        new AsGroupedSortItem[E, CL]:
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
+            def asSort(x: E): Sort[?, ?] =
                 Sort(x, SqlOrdering.Asc, None)
 
     given sort[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
@@ -294,16 +294,16 @@ object AsOverSortItem:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
         kt: KindToTuple[EK],
         i: CanInWindow[kt.R]
-    ): Aux[Expr[T, EK], CL, T, kt.R] =
-        new AsOverSortItem[Expr[T, EK], CL]:
+    ): Aux[E, CL, T, kt.R] =
+        new AsOverSortItem[E, CL]:
             type R = T
 
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
+            def asSort(x: E): Sort[?, ?] =
                 Sort(x, SqlOrdering.Asc, None)
 
     given sort[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
@@ -407,8 +407,8 @@ trait AsColumnSortItem[T, CL <: Int]:
 object AsColumnSortItem:
     given expr[T: AsSqlExpr, EL <: Int, CL <: Int](using 
         EL =:= CL
-    ): AsColumnSortItem[Expr[T, Column[EL]], CL] with
-        def asSort(x: Expr[T, Column[EL]]): Sort[?, ?] =
+    ): AsColumnSortItem[ColumnExpr[T, EL], CL] with
+        def asSort(x: ColumnExpr[T, EL]): Sort[?, ?] =
             Sort(x, SqlOrdering.Asc, None)
 
     given sort[T: AsSqlExpr, EL <: Int, CL <: Int](using 

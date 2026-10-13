@@ -21,6 +21,7 @@ import sqala.ir.IrLock
 import sqala.ir.IrLockWaitMode
 import sqala.ir.IrGroup
 import sqala.ir.IrGroupingItem
+import sqala.ir.IrExpr
 
 /**
  * A typed SQL query, the base type for all query operations in the DSL.
@@ -278,7 +279,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      * }}}
      */
     def drop(n: Int): SelectQuery[T, OKS, L, S] =
-        val expr = n.asExpr.asIrExpr
+        val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(Some(expr), l.fetch))
             .orElse(Some(IrLimit(Some(expr), None)))
@@ -305,7 +306,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def take(n: Int)(using
         s: TakeSize[n.type]
     ): SelectQuery[T, OKS, L, s.R] =
-        val expr = n.asExpr.asIrExpr
+        val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(l.offset, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.Only))))
             .orElse(Some(IrLimit(None, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.Only)))))
@@ -406,7 +407,7 @@ sealed class SortedSelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val qc: QueryContext[L]
 ) extends SelectQuery[T, OKS, L, S](params, tree):
     override def drop(n: Int): SortedSelectQuery[T, OKS, L, S] =
-        val expr = n.asExpr.asIrExpr
+        val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(Some(expr), l.fetch))
             .orElse(Some(IrLimit(Some(expr), None)))
@@ -428,7 +429,7 @@ sealed class SortedSelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def takeWithTies(n: Int)(using
         s: TakeSize[n.type]
     ): SelectQuery[T, OKS, L, s.R] =
-        val expr = n.asExpr.asIrExpr
+        val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(l.offset, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies))))
             .orElse(Some(IrLimit(None, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)))))

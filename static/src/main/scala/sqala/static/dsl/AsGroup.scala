@@ -42,21 +42,21 @@ object AsGroupItem:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
         kt: KindToTuple[EK],
         i: CanInGroup[kt.R],
         iv: IsKind[EK, Value],
         nv: iv.R =:= false
-    ): Aux[Expr[T, EK], CL, Expr[T, Grouped[kt.R]], kt.R] =
-        new AsGroupItem[Expr[T, EK], CL]:
+    ): Aux[E, CL, Expr[T, Grouped[kt.R]], kt.R] =
+        new AsGroupItem[E, CL]:
             type R = Expr[T, Grouped[kt.R]]
 
             type KS = kt.R
 
-            def asGroup(x: Expr[T, EK]): R =
+            def asGroup(x: E): R =
                 Expr(x.asIrExpr)
 
-            def asExprs(x: Expr[T, EK]): NonEmptyList[Expr[?, ?]] =
+            def asExprs(x: E): NonEmptyList[Expr[?, ?]] =
                 NonEmptyList(x, Nil)
 
     given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
@@ -168,3 +168,92 @@ object AsGroup:
 
             def asExprs(x: NamedTuple[N, V]): NonEmptyList[Expr[?, ?]] =
                 a.asExprs(x.toTuple)
+
+/**
+ * Lifts values, expressions, and subqueries for `partitionBy`
+ * in window functions. `CL` is the current query context level.
+ */
+trait AsPartitionItem[T, CL <: Int]:
+    /**
+     * The kind tuple.
+     */
+    type KS <: Tuple
+
+    /**
+     * Converts the value to an expression.
+     */
+    def asExpr(x: T): Expr[?, ?]
+
+object AsPartitionItem:
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartitionItem[T, CL]:
+        type KS = OKS
+
+    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
+        kt: KindToTuple[EK],
+        i: CanInWindow[kt.R]
+    ): Aux[E, CL, kt.R] =
+        new AsPartitionItem[E, CL]:
+            type KS = kt.R
+
+            def asExpr(x: E): Expr[?, ?] =
+                x
+
+    given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
+        a: AsExpr[T, CL],
+        vc: ValidateScalarSubqueryColumnSize[a.R],
+        i: CanInGroup[OKS],
+        vs: ValidateSubqueryExprSize[S],
+        vss: ValidateSubqueryScope[L, CL]
+    ): Aux[Q, CL, OKS] =
+        new AsPartitionItem[Q, CL]:
+            type KS = OKS
+
+            def asExpr(x: Q): Expr[?, ?] =
+                Expr(IrExpr.Subquery(x.tree))
+
+/**
+ * Collects partition items for `partitionBy` in window functions.
+ * `CL` is the current query context level.
+ */
+trait AsPartition[T, CL <: Int]:
+    /**
+     * The expression kind tuple of the `partitionBy` clause.
+     */
+    type KS <: Tuple
+
+    /**
+     * Converts the value to a list of partition expressions.
+     */
+    def asExprs(x: T): List[Expr[?, ?]]
+
+object AsPartition:
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartition[T, CL]:
+        type KS = OKS
+
+    given item[T, CL <: Int](using a: AsPartitionItem[T, CL]): Aux[T, CL, a.KS] =
+        new AsPartition[T, CL]:
+            type KS = a.KS
+
+            def asExprs(x: T): List[Expr[?, ?]] =
+                a.asExpr(x) :: Nil
+
+    given tuple[H, T <: Tuple, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        t: AsPartition[T, CL],
+        c: CombineKindTuple[h.KS, t.KS]
+    ): Aux[H *: T, CL, c.R] =
+        new AsPartition[H *: T, CL]:
+            type KS = c.R
+
+            def asExprs(x: H *: T): List[Expr[?, ?]] =
+                h.asExpr(x.head) :: t.asExprs(x.tail)
+
+    given tuple1[H, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        c: CombineKindTuple[h.KS, EmptyTuple]
+    ): Aux[H *: EmptyTuple, CL, c.R] =
+        new AsPartition[H *: EmptyTuple, CL]:
+            type KS = c.R
+
+            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
+                h.asExpr(x.head) :: Nil

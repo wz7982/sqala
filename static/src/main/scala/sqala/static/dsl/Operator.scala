@@ -620,7 +620,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         Expr(
             IrExpr.Like(
                 aa.asExpr(self).asIrExpr,
-                s"%$value%".asExpr.asIrExpr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"%$value%")),
                 false
             )
         )
@@ -644,7 +644,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         Expr(
             IrExpr.Like(
                 aa.asExpr(self).asIrExpr,
-                s"$value%".asExpr.asIrExpr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"$value%")),
                 false
             )
         )
@@ -668,7 +668,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         Expr(
             IrExpr.Like(
                 aa.asExpr(self).asIrExpr,
-                s"%$value".asExpr.asIrExpr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"%$value")),
                 false
             )
         )

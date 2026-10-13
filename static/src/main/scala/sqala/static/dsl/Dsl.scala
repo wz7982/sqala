@@ -17,6 +17,7 @@ import scala.compiletime.ops.int.{+, >}
 import sqala.ir.IrQuery
 import sqala.ir.IrTable
 import sqala.ir.IrExpr
+import sqala.ir.IrWindowFrameBound
 
 /**
  * Starts a `SELECT` query from one or more table sources.
@@ -263,3 +264,168 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
         c: CallAggFilter[T, kt.R]
     ): c.R =
         c.call(x, a.asExpr(f).asIrExpr)
+
+/**
+ * Specifies the `PARTITION BY` clause in a window function.
+ * Partitions the rows into groups for the window calculation.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     partitionBy(p.authorId)
+ * ))
+ * }}}
+ */
+def partitionBy[T, CL <: Int](partitionValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsPartition[T, CL]
+): PartitionedOver[a.KS] =
+    PartitionedOver(partitionBy = a.asExprs(partitionValue))
+
+/**
+ * Specifies the `ORDER BY` clause in a window function.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     sortBy(p.id.desc)
+ * ))
+ * }}}
+ */
+def sortBy[T, CL <: Int](sortValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsOverSort[T, CL]
+): SortedOver[a.R, a.KS] =
+    SortedOver(sortBy = a.asSorts(sortValue))
+
+/**
+ * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     orderBy(p.id.desc)
+ * ))
+ * }}}
+ */
+def orderBy[T, CL <: Int](sortValue: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsOverSort[T, CL]
+): SortedOver[a.R, a.KS] =
+    SortedOver(sortBy = a.asSorts(sortValue))
+
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
+    /**
+     * Applies a window specification to the function, promoting it
+     * to an `Expr`. Maps to SQL `OVER ()`.
+     *
+     * {{{
+     * from(Post).map(p => rowNumber().over())
+     * }}}
+     */
+    def over(): Expr[co.R, Window[co.KS]] =
+        Expr(
+            IrExpr.Window(
+                co.asIrExpr(x),
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Applies a window specification with `partitionBy` and `orderBy`
+     * clause. Maps to SQL `OVER (PARTITION BY ... ORDER BY ...)`.
+     *
+     * {{{
+     * from(Post).map(p => rowNumber().over(
+     *     partitionBy(p.channelId).sortBy(p.viewCount.desc)
+     * ))
+     * }}}
+     */
+    def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
+        i: CanInWindow[OKS],
+        c: CombineKindTuple[co.KS, OKS]
+    ): Expr[co.R, Window[c.R]] =
+        given OverContext = OverContext()
+        val o = over
+        Expr(
+            IrExpr.Window(
+                co.asIrExpr(x),
+                o.partitionBy.map(_.asIrExpr),
+                o.sortBy.map(_.asIrOrderingItem),
+                o.frame
+            )
+        )
+
+/**
+ * References the current row in a window frame. Maps to
+ * `CURRENT ROW`. Used with `rows`, `range`, or `groups`.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     partitionBy(p.authorId).orderBy(p.id.desc).rows(currentRow)
+ * ))
+ * }}}
+ */
+def currentRow[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 3, "current row"] =
+    FrameBound(IrWindowFrameBound.CurrentRow)
+
+/**
+ * References the first row in a window frame. Maps to
+ * `UNBOUNDED PRECEDING`. Used with `rows`, `range`, or `groups`.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     partitionBy(p.authorId).orderBy(p.id.desc).rows(unboundedPreceding)
+ * ))
+ * }}}
+ */
+def unboundedPreceding[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 1, "unbounded preceding"] =
+    FrameBound(IrWindowFrameBound.UnboundedPreceding)
+
+/**
+ * References the last row in a window frame. Maps to
+ * `UNBOUNDED FOLLOWING`. Used with `rows`, `range`, or `groups`.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     partitionBy(p.authorId).orderBy(p.id.desc).rows(unboundedFollowing)
+ * ))
+ * }}}
+ */
+def unboundedFollowing[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 5, "unbounded following"] =
+    FrameBound(IrWindowFrameBound.UnboundedFollowing)
+
+extension [T, CL <: Int](n: T)(using 
+    qc: QueryContext[CL], 
+    oc: OverContext, 
+    a: AsExpr[T, CL], 
+    kt: KindToTuple[a.K], 
+    nv: IsNotVariable[kt.R]
+)
+    /**
+     * References N rows before the current row in a window frame.
+     * Maps to `n PRECEDING`. Used with `rows`, `range`, or `groups`.
+     *
+     * {{{
+     * from(Post).map(p => sum(p.likeCount).over(
+     *     partitionBy(p.authorId).orderBy(p.id.desc).rows(1.preceding)
+     * ))
+     * }}}
+     */
+    def preceding: FrameBound[a.R, 2, "preceding row"] =
+        FrameBound(IrWindowFrameBound.Preceding(n.asExpr.asIrExpr))
+
+    /**
+     * References N rows after the current row in a window frame.
+     * Maps to `n FOLLOWING`. Used with `rows`, `range`, or `groups`.
+     *
+     * {{{
+     * from(Post).map(p => sum(p.likeCount).over(
+     *     partitionBy(p.authorId).orderBy(p.id.desc).rows(1.following)
+     * ))
+     * }}}
+     */
+    def following: FrameBound[a.R, 4, "following row"] =
+        FrameBound(IrWindowFrameBound.Following(n.asExpr.asIrExpr))

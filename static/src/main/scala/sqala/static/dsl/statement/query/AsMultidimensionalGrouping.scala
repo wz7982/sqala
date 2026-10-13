@@ -41,7 +41,6 @@ object AsGroupingItem:
         def asIrGroupingItem(x: GroupingSets): IrGroupingItem =
             IrGroupingItem.GroupingSets(x.items)
 
-
 /**
  * Collects grouping items into a list of `SqlGroupingItem`.
  */
