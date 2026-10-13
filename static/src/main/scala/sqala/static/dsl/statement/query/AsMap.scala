@@ -245,7 +245,6 @@ object AsMap:
     inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], KS] =
         error("Window function requires an OVER clause.")
 
-    // TODO
     given table[T, L <: Int, CL <: Int](using
         kt: KindToTuple[Column[L]]
     ): Aux[Table[T, Column, L], CL, Table[T, Column, L], kt.R] =

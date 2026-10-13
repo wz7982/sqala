@@ -43,7 +43,7 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0]())(
 )(using
     at: AsTable[T, CL + 1],
     as: AsSelect[at.R]
-): SelectQuery[at.R, at.R, at.OKS, CL + 1, ManyRows] =
+): TableQuery[at.R, at.OKS, CL + 1] =
     given QueryContext[CL + 1] = QueryContext()
     val (params, fromTable) = at.asTable(tables)
     val selectItems = as.asSelectItems(params, 1)
@@ -58,7 +58,7 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0]())(
         None,
         None
     )
-    SelectQuery(params, params, tree)
+    TableQuery(params, tree)
 
 extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
     /**

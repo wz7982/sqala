@@ -13,6 +13,9 @@ import scala.compiletime.error
 import scala.quoted.{Type, Quotes, Expr => ScalaExpr}
 import sqala.ir.IrExpr
 import sqala.ir.IrInRightOperand
+import sqala.static.dsl.table.Table
+import sqala.static.dsl.table.AsTableParam
+import sqala.static.dsl.table.MappedTable
 
 /**
  * Determines whether two types are compatible for comparison
@@ -464,162 +467,162 @@ object Return:
         new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
-// /**
-//  * Maps union query items, producing column expressions
-//  * for `union`, `unionAll`, etc. `CL` is the query context level.
-//  */
-// trait Union[A, B, CL <: Int]:
-//     /**
-//      * The result type.
-//      */
-//     type R
+/**
+ * Maps union query items, producing column expressions
+ * for `union`, `unionAll`, etc. `CL` is the query context level.
+ */
+trait Union[A, B, CL <: Int]:
+    /**
+     * The result type.
+     */
+    type R
 
-//     /**
-//      * The number of expressions consumed by each query item.
-//      */
-//     def offset(x: A): Int
+    /**
+     * The number of expressions consumed by each query item.
+     */
+    def offset(x: A): Int
 
-//     /**
-//      * Maps the query item at the given cursor position to a column
-//      * expression.
-//      */
-//     def unionQueryItems(x: A, cursor: Int): R
+    /**
+     * Maps the query item at the given cursor position to a column
+     * expression.
+     */
+    def unionQueryItems(x: A, cursor: Int): R
 
-// object Union:
-//     type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
-//         type R = O
+object Union:
+    type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
+        type R = O
 
-//     given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
-//         r: Return[A, B]
-//     ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
-//         new Union[Expr[A, AK], Expr[B, BK], CL]:
-//             type R = Expr[r.R, Column[CL]]
+    given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
+        r: Return[A, B]
+    ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
+        new Union[Expr[A, AK], Expr[B, BK], CL]:
+            type R = Expr[r.R, Column[CL]]
 
-//             def offset(x: Expr[A, AK]): Int =
-//                 1
+            def offset(x: Expr[A, AK]): Int =
+                1
 
-//             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
-//                 Expr(SqlExpr.Column(None, s"c$cursor"))
+            def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
+                Expr(IrExpr.Native(SqlExpr.Column(None, s"c$cursor")))
 
-//     given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
-//         ma: Mirror.ProductOf[A],
-//         mb: Mirror.ProductOf[B],
-//         refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
-//     ): Aux[Table[A, Column, AL], Table[B, Column, BL], CL, Table[A, Column, CL]] =
-//         new Union[Table[A, Column, AL], Table[B, Column, BL], CL]:
-//             type R = Table[A, Column, CL]
+    given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[A, Column, AL], Table[B, Column, BL], CL, Table[A, Column, CL]] =
+        new Union[Table[A, Column, AL], Table[B, Column, BL], CL]:
+            type R = Table[A, Column, CL]
 
-//             def offset(x: Table[A, Column, AL]): Int =
-//                 x.__metaData__.columns.size
+            def offset(x: Table[A, Column, AL]): Int =
+                x.__metaData__.columns.size
 
-//             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
-//                 Table(x.__aliasName__, x.__metaData__)
+            def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
+                Table(x.__table__, x.__metaData__)
 
-//     given tableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
-//         ma: Mirror.ProductOf[A],
-//         mb: Mirror.ProductOf[B],
-//         refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
-//     ): Aux[Table[A, Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
-//         new Union[Table[A, Column, AL], Table[Option[B], Column, BL], CL]:
-//             type R = Table[Option[A], Column, CL]
+    given tableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[A, Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[A, Column, AL], Table[Option[B], Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
 
-//             def offset(x: Table[A, Column, AL]): Int =
-//                 x.__metaData__.columns.size
+            def offset(x: Table[A, Column, AL]): Int =
+                x.__metaData__.columns.size
 
-//             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
-//                 Table(x.__aliasName__, x.__metaData__)
+            def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
+                Table(x.__table__, x.__metaData__)
 
-//     given optionTableAndTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
-//         ma: Mirror.ProductOf[A],
-//         mb: Mirror.ProductOf[B],
-//         refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
-//     ): Aux[Table[Option[A], Column, AL], Table[B, Column, BL], CL, Table[Option[A], Column, CL]] =
-//         new Union[Table[Option[A], Column, AL], Table[B, Column, BL], CL]:
-//             type R = Table[Option[A], Column, CL]
+    given optionTableAndTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[Option[A], Column, AL], Table[B, Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[Option[A], Column, AL], Table[B, Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
 
-//             def offset(x: Table[Option[A], Column, AL]): Int =
-//                 x.__metaData__.columns.size
+            def offset(x: Table[Option[A], Column, AL]): Int =
+                x.__metaData__.columns.size
 
-//             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
-//                 Table(x.__aliasName__, x.__metaData__)
+            def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
+                Table(x.__table__, x.__metaData__)
 
-//     given optionTableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
-//         ma: Mirror.ProductOf[A],
-//         mb: Mirror.ProductOf[B],
-//         refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
-//     ): Aux[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
-//         new Union[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL]:
-//             type R = Table[Option[A], Column, CL]
+    given optionTableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
 
-//             def offset(x: Table[Option[A], Column, AL]): Int =
-//                 x.__metaData__.columns.size
+            def offset(x: Table[Option[A], Column, AL]): Int =
+                x.__metaData__.columns.size
 
-//             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
-//                 Table(x.__aliasName__, x.__metaData__)
+            def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
+                Table(x.__table__, x.__metaData__)
 
-//     given mappedTable[AN <: Tuple, AV <: Tuple, AL <: Int, BN <: Tuple, BV <: Tuple, BL <: Int, CL <: Int](using
-//         u: Union[AV, BV, CL],
-//         tt: ToTuple[u.R],
-//         a: AsTableParam[AV, CL]
-//     ): Aux[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL, MappedTable[AN, tt.R, CL]] =
-//         new Union[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL]:
-//             type R = MappedTable[AN, tt.R, CL]
+    given mappedTable[AN <: Tuple, AV <: Tuple, AL <: Int, BN <: Tuple, BV <: Tuple, BL <: Int, CL <: Int](using
+        u: Union[AV, BV, CL],
+        tt: ToTuple[u.R],
+        a: AsTableParam[AV, CL]
+    ): Aux[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL, MappedTable[AN, tt.R, CL]] =
+        new Union[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL]:
+            type R = MappedTable[AN, tt.R, CL]
 
-//             def offset(x: MappedTable[AN, AV, AL]): Int =
-//                 a.offset
+            def offset(x: MappedTable[AN, AV, AL]): Int =
+                a.offset
 
-//             def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
-//                 MappedTable(x.__aliasName__, tt.toTuple(u.unionQueryItems(x.__items__, cursor)))
+            def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
+                MappedTable(x.__table__, tt.toTuple(u.unionQueryItems(x.__items__, cursor)))
 
-//     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
-//         h: Union[AH, BH, CL],
-//         t: Union[AT, BT, CL],
-//         tt: ToTuple[t.R]
-//     ): Aux[AH *: AT, BH *: BT, CL, h.R *: tt.R] =
-//         new Union[AH *: AT, BH *: BT, CL]:
-//             type R = h.R *: tt.R
+    given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
+        h: Union[AH, BH, CL],
+        t: Union[AT, BT, CL],
+        tt: ToTuple[t.R]
+    ): Aux[AH *: AT, BH *: BT, CL, h.R *: tt.R] =
+        new Union[AH *: AT, BH *: BT, CL]:
+            type R = h.R *: tt.R
 
-//             def offset(x: AH *: AT): Int =
-//                 h.offset(x.head) + t.offset(x.tail)
+            def offset(x: AH *: AT): Int =
+                h.offset(x.head) + t.offset(x.tail)
 
-//             def unionQueryItems(x: AH *: AT, cursor: Int): R =
-//                 h.unionQueryItems(x.head, cursor) *:
-//                     tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset(x.head)))
+            def unionQueryItems(x: AH *: AT, cursor: Int): R =
+                h.unionQueryItems(x.head, cursor) *:
+                    tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset(x.head)))
 
-//     given tuple1[AH, BH, CL <: Int](using
-//         h: Union[AH, BH, CL]
-//     ): Aux[AH *: EmptyTuple, BH *: EmptyTuple, CL, h.R *: EmptyTuple] =
-//         new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
-//             type R = h.R *: EmptyTuple
+    given tuple1[AH, BH, CL <: Int](using
+        h: Union[AH, BH, CL]
+    ): Aux[AH *: EmptyTuple, BH *: EmptyTuple, CL, h.R *: EmptyTuple] =
+        new Union[AH *: EmptyTuple, BH *: EmptyTuple, CL]:
+            type R = h.R *: EmptyTuple
 
-//             def offset(x: AH *: EmptyTuple): Int =
-//                 h.offset(x.head)
+            def offset(x: AH *: EmptyTuple): Int =
+                h.offset(x.head)
 
-//             def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
-//                 h.unionQueryItems(x.head, cursor) *: EmptyTuple
+            def unionQueryItems(x: AH *: EmptyTuple, cursor: Int): R =
+                h.unionQueryItems(x.head, cursor) *: EmptyTuple
 
-//     given namedTuple[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
-//         u: Union[AV, BV, CL],
-//         t: ToTuple[u.R]
-//     ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, t.R]] =
-//         new Union[NamedTuple[AN, AV], NamedTuple[BN, BV], CL]:
-//             type R = NamedTuple[AN, t.R]
+    given namedTuple[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
+        u: Union[AV, BV, CL],
+        t: ToTuple[u.R]
+    ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, t.R]] =
+        new Union[NamedTuple[AN, AV], NamedTuple[BN, BV], CL]:
+            type R = NamedTuple[AN, t.R]
 
-//             def offset(x: NamedTuple[AN, AV]): Int =
-//                 u.offset(x.toTuple)
+            def offset(x: NamedTuple[AN, AV]): Int =
+                u.offset(x.toTuple)
 
-//             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
-//                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+            def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
+                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
 
-//     given namedTupleAndTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
-//         u: Union[AV, BV, CL],
-//         t: ToTuple[u.R]
-//     ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, t.R]] =
-//         new Union[NamedTuple[AN, AV], BV, CL]:
-//             type R = NamedTuple[AN, t.R]
+    given namedTupleAndTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
+        u: Union[AV, BV, CL],
+        t: ToTuple[u.R]
+    ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, t.R]] =
+        new Union[NamedTuple[AN, AV], BV, CL]:
+            type R = NamedTuple[AN, t.R]
 
-//             def offset(x: NamedTuple[AN, AV]): Int =
-//                 u.offset(x.toTuple)
+            def offset(x: NamedTuple[AN, AV]): Int =
+                u.offset(x.toTuple)
 
-//             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
-//                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+            def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
+                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
