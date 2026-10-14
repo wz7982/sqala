@@ -3,6 +3,7 @@ package sqala.ir
 import sqala.util.NonEmptyList
 import sqala.ast.expr.SqlBinaryOperator
 import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.statement.SqlSetOperator
 
 enum IrQuery:
     case Select(
@@ -15,6 +16,16 @@ enum IrQuery:
         orderBy: List[IrOrderingItem],
         limit: Option[IrLimit],
         lock: Option[IrLock]
+    )
+    case Set(
+        left: IrQuery,
+        operator: SqlSetOperator,
+        right: IrQuery,
+        orderBy: List[IrOrderingItem],
+        limit: Option[IrLimit]
+    )
+    case Values(
+        values: NonEmptyList[NonEmptyList[IrExpr]]
     )
 
 object IrQuery:

@@ -55,6 +55,14 @@ private[sqala] class ToAst:
                     limitAst,
                     lockAst
                 )
+            case s: IrQuery.Set =>
+                val leftAst = queryToAst(s.left)
+                val rightAst = queryToAst(s.right)
+                val orderAst = s.orderBy.map(orderingItemToAst)
+                val limitAst = s.limit.map(limitToAst)
+                SqlQuery.Set(leftAst, s.operator, None, rightAst, orderAst, limitAst)
+            case v: IrQuery.Values =>
+                SqlQuery.Values(v.values.map(row => row.map(exprToAst)), Nil, None)
 
     private def tableToAst(table: IrTable): SqlTable =
         table match
@@ -62,8 +70,9 @@ private[sqala] class ToAst:
                 val alias = fetchAlias(table)
                 SqlTable.Ident(name, tableAliasToAst(alias), None, None, None)
             case IrTable.Subquery(withLateral, query) =>
+                val queryAst = queryToAst(query)
                 val alias = fetchAlias(table)
-                SqlTable.Subquery(withLateral, queryToAst(query), tableAliasToAst(alias), None)
+                SqlTable.Subquery(withLateral, queryAst, tableAliasToAst(alias), None)
             case IrTable.Join(left, joinType, right, on) =>
                 val leftAst = tableToAst(left)
                 val rightAst = tableToAst(right)
