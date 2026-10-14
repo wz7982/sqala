@@ -270,7 +270,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * from(User).filter(u => u.id.in(from(Post).filter(p => p.viewCount > 100).map(p => p.authorId)))
      *
      * // Compare with a tuple of values, expressions, and subqueries
-     * from(Post).filter(p => p.id.in(1, u.id, from(Comment).filter(c => c.postId == p.id).map(c => c.postId).take(1)))
+     * from(Post).filter(p => p.id.in(1, u.id, from(Comment).filter(c => c.postId === p.id).map(c => c.postId).take(1)))
      * }}}
      */
     def in[B](exprs: B)(using

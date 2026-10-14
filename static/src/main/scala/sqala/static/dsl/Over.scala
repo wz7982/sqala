@@ -46,19 +46,6 @@ final case class PartitionedOver[KS <: Tuple](
         SortedOver(partitionBy, a.asSorts(sortValue), frame)
 
     /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     * {{{
-     * .orderBy(p.viewCount.desc)
-     * }}}
-     */
-    def orderBy[T, CL <: Int](sortValue: T)(using
-        qc: QueryContext[CL],
-        a: AsOverSort[T, CL],
-        c: CombineKindTuple[KS, a.KS]
-    ): SortedOver[a.R, c.R] =
-        sortBy(sortValue)
-
-    /**
      * Sets the window frame to `ROWS start`.
      * 
      * {{{

@@ -1118,7 +1118,7 @@ object TakeSize:
             type R = ManyRows
 
 /**
- * TODO
+ * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
  */
 trait ValidateArgType[F[_], T]
 

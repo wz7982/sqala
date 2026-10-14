@@ -287,16 +287,6 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         SelectQuery(params, newTree)
 
     /**
-     * Alias of `drop`, provided for users familiar with `OFFSET`.
-     *
-     * {{{
-     * from(User).offset(10).limit(5)
-     * }}}
-     */
-    def offset(n: Int): SelectQuery[T, OKS, L, S] =
-        drop(n)
-
-    /**
      * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
      *
      * {{{
@@ -312,18 +302,6 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             .orElse(Some(IrLimit(None, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.Only)))))
         val newTree: IrQuery.Select = tree.copy(limit = limit)
         SelectQuery(params, newTree)
-
-    /**
-     * Alias of `take`, provided for users familiar with `LIMIT`.
-     *
-     * {{{
-     * from(User).offset(10).limit(5)
-     * }}}
-     */
-    def limit(n: Int)(using
-        s: TakeSize[n.type]
-    ): SelectQuery[T, OKS, L, s.R] =
-        take(n)
 
     /**
      * Locks selected rows for update. Maps to `FOR UPDATE`.
@@ -414,9 +392,6 @@ sealed class SortedSelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree: IrQuery.Select = tree.copy(limit = limit)
         SortedSelectQuery(params, newTree)
 
-    override def offset(n: Int): SortedSelectQuery[T, OKS, L, S] =
-        drop(n)
-
     /**
      * Limits the result to at most `n` rows, including rows tied with
      * the last row's sort key. Maps to `FETCH NEXT n ROWS WITH TIES`.
@@ -435,18 +410,6 @@ sealed class SortedSelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             .orElse(Some(IrLimit(None, Some(IrFetch(expr, SqlFetchUnit.RowCount, SqlFetchMode.WithTies)))))
         val newTree: IrQuery.Select = tree.copy(limit = limit)
         SelectQuery(params, newTree)
-
-    /**
-     * Alias of `takeWithTies`, provided for users familiar with `LIMIT`.
-     *
-     * {{{
-     * from(User).sortBy(u => u.name).limitWithTies(5)
-     * }}}
-     */
-    def limitWithTies(n: Int)(using
-        s: TakeSize[n.type]
-    ): SelectQuery[T, OKS, L, s.R] =
-        takeWithTies(n)
 
 /**
  * A `SELECT` query. Created by `from`.
@@ -477,29 +440,13 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         TableQuery(params, tree.addWhere(cond.asIrExpr))
 
     /**
-     * Alias of `filter`, provided for users familiar with `WHERE`.
-     *
-     * {{{
-     * from(User).where(u => u.id > 1)
-     * }}}
-     */
-    def where[F](f: QueryContext[L] ?=> T => F)(using
-        a: AsExpr[F, L],
-        kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
-        e: ExcludeCurrentLevelColumn[kt.R, L],
-        c: CombineKindTuple[OKS, e.R]
-    ): TableQuery[T, c.R, L] =
-        filter(f)
-
-    /**
      * Conditionally adds a `WHERE` clause. The condition is only applied
      * when `test` evaluates to `true`. Useful for building dynamic queries
      * without manually concatenating `WHERE TRUE`.
      *
      * {{{
      * val name: Option[String] = None
-     * from(User).filterIf(name.isDefined)(u => u.name == name)
+     * from(User).filterIf(name.isDefined)(u => u.name === name)
      * }}}
      */
     def filterIf[F](test: => Boolean)(f: QueryContext[L] ?=> T => F)(using
@@ -510,22 +457,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
         if test then filter(f) else TableQuery(params, tree)
-
-    /**
-     * Alias of `filterIf`, provided for users familiar with `WHERE`.
-     *
-     * {{{
-     * from(User).whereIf(name.isDefined)(u => u.name == name)
-     * }}}
-     */
-    def whereIf[F](test: => Boolean)(f: QueryContext[L] ?=> T => F)(using
-        a: AsExpr[F, L],
-        kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
-        e: ExcludeCurrentLevelColumn[kt.R, L],
-        c: CombineKindTuple[OKS, e.R]
-    ): TableQuery[T, c.R, L] =
-        filterIf(test)(f)
 
     /**
      * Enables `for` comprehension syntax. Equivalent to `filter`.
@@ -565,21 +496,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         )
 
     /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).orderBy(u => (u.name, u.id.desc))
-     * }}}
-     */
-    def orderBy[S](f: QueryContext[L] ?=> T => S)(using
-        a: AsSort[S, ManyRows, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): SortedTableQuery[T, c.R, L] =
-        sortBy(f)
-
-    /**
      * Specifies the projection list, maps to `SELECT`. Accepts
      * expressions, tuples, and named tuples. The return type is
      * automatically derived, including nullability from outer joins.
@@ -611,22 +527,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         )
 
     /**
-     * Alias of `map`, provided for users familiar with `SELECT`.
-     *
-     * {{{
-     * from(User).select(u => (name = u.name))
-     * }}}
-     */
-    def select[M](f: QueryContext[L] ?=> T => M)(using
-        a: AsMap[M, L],
-        i: CanInMap[a.KS],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): MappedQuery[a.R, T, c.R, L, i.R] =
-        map(f)
-
-    /**
      * Adds `DISTINCT` to the projection. Maps to `SELECT DISTINCT`.
      * After `mapDistinct`, the `sortBy` lambda parameter type represents
      * the projected fields rather than the underlying table.
@@ -650,23 +550,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
             td.toDistinct(mapped),
             tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
         )
-
-    /**
-     * Alias of `mapDistinct`, provided for users familiar with `SELECT`.
-     *
-     * {{{
-     * from(User).selectDistinct(u => u.name)
-     * }}}
-     */
-    def selectDistinct[M](f: QueryContext[L] ?=> T => M)(using
-        a: AsMap[M, L],
-        i: CanInMap[a.KS],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        td: ToDistinct[M, L],
-        an: AggNotNested[a.KS]
-    ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
-        mapDistinct(f)
 
     /**
      * Adds a `GROUP BY` clause. All non-grouped columns are marked as
@@ -749,8 +632,8 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      * table references for the recursive join condition.
      *
      * {{{
-     * from(Comment).filter(c => c.postId == postId)
-     *     .connectBy((c, prior) => c.parentId == prior.id)
+     * from(Comment).filter(c => c.postId === postId)
+     *     .connectBy((c, prior) => c.parentId === prior.id)
      *     .startWith(c => c.parentId.isNull)
      *     .map(c => (id = c.id, content = c.content, level = level()))
      * }}}
@@ -823,21 +706,6 @@ final case class SortedTableQuery[T, OKS <: Tuple, L <: Int](
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
 
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).orderBy(u => u.name).orderBy(u => u.id.desc)
-     * }}}
-     */
-    def orderBy[S](f: QueryContext[L] ?=> T => S)(using
-        a: AsSort[S, ManyRows, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): SortedTableQuery[T, c.R, L] =
-        sortBy(f)
-
 /**
  * A `SELECT` query after `map` projection.
  */
@@ -868,21 +736,6 @@ final case class MappedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).map(u => u.name).orderBy(u => u.id.desc)
-     * }}}
-     */
-    def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
-        a: AsSort[SS, S, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): MappedSortedQuery[M, T, c.R, L, S] =
-        sortBy(f)
 
 /**
  * A `SELECT` query after `map` and `sortBy`.
@@ -915,21 +768,6 @@ final case class MappedSortedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
 
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).map(u => u.name).orderBy(u => u.id).orderBy(u => u.id.desc)
-     * }}}
-     */
-    def orderBy[SS](f: QueryContext[L] ?=> T => SS)(using
-        a: AsSort[SS, S, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): MappedSortedQuery[M, T, c.R, L, S] =
-        sortBy(f)
-
 /**
  * A `SELECT DISTINCT` query after `mapDistinct` projection.
  */
@@ -958,18 +796,6 @@ final case class MappedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySiz
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
 
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).mapDistinct(u => (name = u.name)).orderBy(u => u.name.desc)
-     * }}}
-     */
-    def orderBy[SS](f: D => SS)(using
-        a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
-        sortBy(f)
-
 /**
  * A sorted `SELECT DISTINCT` query after `mapDistinct` and `sortBy`.
  */
@@ -997,18 +823,6 @@ final case class MappedSortedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: Qu
             distinctExprs,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(User).mapDistinct(u => (id = u.id, name = u.name)).orderBy(u => u.id).orderBy(u => u.name.desc)
-     * }}}
-     */
-    def orderBy[SS](f: D => SS)(using
-        a: AsDistinctSort[SS, L]
-    ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
-        sortBy(f)
 
 /**
  * A `SELECT` query after `groupBy`.
@@ -1083,23 +897,6 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
             tree.copy(select = sqlSelect)
         )
 
-    /**
-     * Alias of `map`, provided for users familiar with `SELECT`.
-     *
-     * {{{
-     * from(Post).groupBy(p => p.channelId)
-     *     .select((g, p) => (g, count()))
-     * }}}
-     */
-    def select[M](f: QueryContext[L] ?=> GroupingContext ?=> T => M)(using
-        a: AsMap[M, L],
-        i: CanInMap[a.KS],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): GroupedQuery[a.R, T, c.R, L] =
-        map(f)
-
 /**
  * A grouped `SELECT` query after `map` projection.
  */
@@ -1134,23 +931,6 @@ final case class GroupedQuery[M, T, OKS <: Tuple, L <: Int](
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(Post).groupBy(p => p.channelId)
-     *     .map((g, p) => (g, count()))
-     *     .orderBy((g, p) => g.desc)
-     * }}}
-     */
-    def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
-        a: AsGroupedSort[S, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): GroupedSortedQuery[M, T, c.R, L] =
-        sortBy(f)
 
 /**
  * A grouped and sorted `SELECT` query.
@@ -1187,24 +967,6 @@ final case class GroupedSortedQuery[M, T, OKS <: Tuple, L <: Int](
             tables,
             tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
         )
-
-    /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     *
-     * {{{
-     * from(Post).groupBy(p => p.channelId)
-     *     .map((g, p) => (g, count()))
-     *     .orderBy((g, p) => g.desc)
-     *     .orderBy((g, p) => count().asc)
-     * }}}
-     */
-    def orderBy[S](f: QueryContext[L] ?=> GroupingContext ?=> T => S)(using
-        a: AsGroupedSort[S, L],
-        e: ExcludeCurrentLevelColumn[a.KS, L],
-        c: CombineKindTuple[OKS, e.R],
-        an: AggNotNested[a.KS]
-    ): GroupedSortedQuery[M, T, c.R, L] =
-        sortBy(f)
 
 /**
  * A query produced by set operations (`union`, `except`, `intersect`).
@@ -1246,7 +1008,7 @@ final case class UnionQuery[T, OKS <: Tuple, L <: Int](
 //      * Maps to the base `WHERE` clause of the CTE.
 //      *
 //      * {{{
-//      * from(Comment).connectBy((c, prior) => c.parentId == prior.id)
+//      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
 //      *     .startWith(c => c.parentId.isNull)
 //      * }}}
 //      */
@@ -1300,23 +1062,12 @@ final case class UnionQuery[T, OKS <: Tuple, L <: Int](
 //         )
 
 //     /**
-//      * Alias of `sortSiblingsBy`, provided for users familiar with `ORDER BY`.
-//      */
-//     def orderSiblingsBy[S](f: QueryContext[L] ?=> ConnectByContext ?=> Table[T, Column, L] => S)(using
-//         a: AsSort[S, ManyRows, L],
-//         e: ExcludeCurrentLevelColumn[a.KS, L],
-//         c: CombineKindTuple[OKS, e.R],
-//         ci: CanInSimpleClause[c.R]
-//     ): ConnectBy[T, c.R, L] =
-//         sortSiblingsBy(f)
-
-//     /**
 //      * Projects the final result from the recursive CTE. Maps to
 //      * `SELECT` on the CTE table, generating the complete `WITH RECURSIVE`
 //      * query.
 //      *
 //      * {{{
-//      * from(Comment).connectBy((c, prior) => c.parentId == prior.id)
+//      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
 //      *     .startWith(c => c.parentId.isNull)
 //      *     .map(c => (id = c.id, content = c.content, level = level()))
 //      * }}}
@@ -1353,19 +1104,3 @@ final case class UnionQuery[T, OKS <: Tuple, L <: Int](
 //             mapTree.copy(select = sqlSelect)
 //         )
 //         Query(a.transform(mapped), cteTree)
-
-//     /**
-//      * Alias of `map`, provided for users familiar with `SELECT`.
-//      *
-//      * {{{
-//      * from(Comment).connectBy(...).startWith(...).select(c => (id = c.id, level = level()))
-//      * }}}
-//      */
-//     def select[M](f: ConnectByContext ?=> Table[T, Column, L] => M)(using
-//         a: AsMap[M, L],
-//         i: CanInMap[a.KS],
-//         e: ExcludeCurrentLevelColumn[a.KS, L],
-//         c: CombineKindTuple[OKS, e.R],
-//         an: AggNotNested[a.KS]
-//     ): Query[a.R, c.R, L, ManyRows] =
-//         map(f)

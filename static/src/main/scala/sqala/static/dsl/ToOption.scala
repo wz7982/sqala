@@ -29,13 +29,12 @@ object ToOption:
             def toOption(x: E): R =
                 Expr(x.asIrExpr)
 
-    // TODO
-    // given windowFunc[T, KS <: Tuple]: Aux[WindowFunc[T, KS], WindowFunc[Wrap[T, Option], KS]] =
-    //     new ToOption[WindowFunc[T, KS]]:
-    //         type R = WindowFunc[Wrap[T, Option], KS]
+    given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
+        new ToOption[WindowPart[T, KS]]:
+            type R = WindowPart[Wrap[T, Option], KS]
 
-    //         def toOption(x: WindowFunc[T, KS]): R =
-    //             WindowFunc(x.asSqlExpr)
+            def toOption(x: WindowPart[T, KS]): R =
+                WindowPart(x.asIrExpr)
 
     given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], Table[Wrap[T, Option], K, L]] =
         new ToOption[Table[T, K, L]]:

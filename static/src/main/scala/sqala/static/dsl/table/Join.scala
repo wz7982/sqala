@@ -147,13 +147,13 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
      *
      * {{{
      * // Two-table join
-     * from(Channel.join(Post).on((c, p) => c.id == p.channelId))
+     * from(Channel.join(Post).on((c, p) => c.id === p.channelId))
      *
      * // Multi-table join
      * from(
      *     Channel
-     *     .join(Post).on((c, p) => c.id == p.channelId)
-     *     .join(Comment).on((_, p, ct) => p.id == ct.postId)
+     *     .join(Post).on((c, p) => c.id === p.channelId)
+     *     .join(Comment).on((_, p, ct) => p.id === ct.postId)
      * )
      *
      * // Unconditional join
