@@ -98,7 +98,8 @@ object AsSelect:
             def transform(x: MappedTable[N, V, L]): R =
                 MappedTable(
                     x.__table__,
-                    t.toTuple(a.transform(x.__items__))
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__fields__
                 )
 
             def offset(x: MappedTable[N, V, L]): Int =
@@ -281,7 +282,8 @@ object AsMap:
             def transform(x: MappedTable[N, V, L]): R =
                 MappedTable(
                     x.__table__,
-                    t.toTuple(a.transform(x.__items__))
+                    t.toTuple(a.transform(x.__items__)),
+                    x.__fields__
                 )
 
             def offset(x: MappedTable[N, V, L]): Int =

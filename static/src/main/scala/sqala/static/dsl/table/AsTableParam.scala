@@ -61,7 +61,7 @@ object AsTableParam:
                     metaData.copy(columns = metaData.columns.indices.map(i => s"c${cursor + i}"))
                 )
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+    inline given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]
     ): Aux[MappedTable[N, V, L], CL, MappedTable[N, tt.R, CL]] =

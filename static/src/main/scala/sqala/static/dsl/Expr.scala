@@ -45,11 +45,15 @@ object Expr:
  */
 case class ColumnExpr[T, L <: Int](
     override val expr: IrExpr.Column
-) extends Expr[T, Column[L]](expr)
+) extends Expr[T, Column[L]](expr):
+    private[sqala] override def asIrExpr: IrExpr.Column =
+        expr
 
 /**
  * A typed expression representing an aggregate function.
  */
 case class AggExpr[T, KS <: Tuple](
     override val expr: IrExpr.CountAsteriskFunc | IrExpr.ListAggFunc | IrExpr.GeneralFunc | IrExpr.JsonObjectAggFunc | IrExpr.JsonArrayAggFunc
-) extends Expr[T, Agg[KS]](expr)
+) extends Expr[T, Agg[KS]](expr):
+    private[sqala] override def asIrExpr: IrExpr.CountAsteriskFunc | IrExpr.ListAggFunc | IrExpr.GeneralFunc | IrExpr.JsonObjectAggFunc | IrExpr.JsonArrayAggFunc =
+        expr

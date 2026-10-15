@@ -7,7 +7,7 @@ import sqala.metadata.TableMetaData
 import sqala.static.dsl.*
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
-import scala.compiletime.constValue
+import scala.compiletime.constValueTuple
 
 /**
  * A table reference produced by `from` when an entity companion object
@@ -31,8 +31,8 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     /**
      * Runtime column accessor. Required by `Selectable`.
      */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[Names[From[Unwrap[T, Option]]], name.type, 0]]
+    def selectDynamic(name: String): Any =
+        val index = __metaData__.fields.toList.indexOf(name)
         ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
 
 /**
@@ -41,7 +41,8 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
   */
 final case class MappedTable[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __table__ : IrTable,
-    private[sqala] val __items__ : V
+    private[sqala] val __items__ : V,
+    private[sqala] val __fields__ : List[String]
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.
@@ -52,16 +53,18 @@ final case class MappedTable[N <: Tuple, V <: Tuple, L <: Int](
     /**
      * Runtime column accessor. Required by `Selectable`.
      */
-    inline def selectDynamic(name: String): Any =
-        val index = constValue[Index[N, name.type, 0]]
+    def selectDynamic(name: String): Any =
+        val index = __fields__.toList.indexOf(name)
         __items__.toList(index)
 
 object MappedTable:
-    def apply[N <: Tuple, V <: Tuple, L <: Int](table: IrTable)(using
+    inline def apply[N <: Tuple, V <: Tuple, L <: Int](table: IrTable)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): MappedTable[N, t.R, L] =
+        val fields = constValueTuple[N].toArray.toList.map(_.toString)
         new MappedTable(
             table,
-            t.toTuple(p.asTableParam(table, 1))
+            t.toTuple(p.asTableParam(table, 1)),
+            fields
         )

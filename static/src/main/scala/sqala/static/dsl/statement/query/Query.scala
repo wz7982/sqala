@@ -429,14 +429,26 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      * from(User).filter(u => u.id > 1)
      * }}}
      */
-    def filter[F](f: QueryContext[L] ?=> T => F)(using
+    inline def filter[F](inline f: QueryContext[L] ?=> T => F)(using
         a: AsExpr[F, L],
+        ba: ValidateArgType[SqlBoolean, a.R],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
-        val cond = a.asExpr(f(params))
+        analysisSemantic[FilterNotAllowedAgg[kt.R], QueryContext[L] ?=> T => F](
+            f,
+            "Aggregate functions are not allowed in filter."
+        )
+        analysisSemantic[FilterNotAllowedWindow[kt.R], QueryContext[L] ?=> T => F](
+            f,
+            "Window functions are not allowed in filter."
+        )
+        analysisSemantic[FilterNotAllowedUngroupedColumn[kt.R], QueryContext[L] ?=> T => F](
+            f,
+            "Ungrouped column references are not allowed in filter."
+        )
+        val cond: Expr[?, ?] = a.asExpr(f(params))
         TableQuery(params, tree.addWhere(cond.asIrExpr))
 
     /**
@@ -449,10 +461,10 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      * from(User).filterIf(name.isDefined)(u => u.name === name)
      * }}}
      */
-    def filterIf[F](test: => Boolean)(f: QueryContext[L] ?=> T => F)(using
+    inline def filterIf[F](inline test: => Boolean)(f: QueryContext[L] ?=> T => F)(using
         a: AsExpr[F, L],
+        ba: ValidateArgType[SqlBoolean, a.R],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
@@ -466,10 +478,10 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      * for u <- from(User) if u.id > 1 yield u.name
      * }}}
      */
-    def withFilter[F](f: QueryContext[L] ?=> T => F)(using
+    inline def withFilter[F](inline f: QueryContext[L] ?=> T => F)(using
         a: AsExpr[F, L],
+        ba: ValidateArgType[SqlBoolean, a.R],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =

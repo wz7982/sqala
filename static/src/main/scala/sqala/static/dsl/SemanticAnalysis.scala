@@ -8,6 +8,7 @@ import sqala.metadata.SqlBoolean
 import sqala.metadata.AsSqlExpr
 import scala.quoted.Type
 import scala.quoted.Quotes
+import scala.quoted.{Expr => ScalaExpr}
 import sqala.ir.IrExpr
 import sqala.ast.expr.SqlBinaryOperator
 import sqala.metadata.SqlNumber
@@ -760,42 +761,12 @@ object ValidateFrame:
 
         report.errorAndAbort(s"Frame starting from $start cannot end at $end.")
 
-// TODO 注释
-trait CanCallOver[T]:
-    type R
-
-    type KS <: Tuple
-
-    def asIrExpr(x: T): IrExpr
+trait CanCallOver[T]
 
 object CanCallOver:
-    type Aux[T, O, OKS <: Tuple] = CanCallOver[T]:
-        type R = O
+    given agg[T, KS <: Tuple]: CanCallOver[AggExpr[T, KS]]()
 
-        type KS = OKS
-
-    given agg[T, EKS <: Tuple]: Aux[AggExpr[T, EKS], T, EKS] =
-        new CanCallOver[AggExpr[T, EKS]]:
-            type R = T
-
-            type KS = EKS
-
-            def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
-                x.expr
-
-    given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
-        new CanCallOver[WindowPart[T, EKS]]:
-            type R = T
-
-            type KS = EKS
-
-            def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
-                x.expr
-
-    inline given fallback[T](using
-        NotGiven[CanCallOver[T]]
-    ): Aux[T, Int, EmptyTuple] =
-        error("Over specified, but this expression is not a window function nor an aggregate function.")
+    given window[T, KS <: Tuple]: CanCallOver[WindowPart[T, KS]]()
 
 /**
  * 注释
@@ -820,7 +791,7 @@ object CallAggFilter:
                     originalFilter.map(IrExpr.Binary(_, SqlBinaryOperator.And, filter)).orElse(Some(filter))
 
                 val expr: IrExpr.CountAsteriskFunc | IrExpr.ListAggFunc | IrExpr.GeneralFunc | IrExpr.JsonObjectAggFunc | IrExpr.JsonArrayAggFunc =
-                    x.expr match
+                    x.asIrExpr match
                         case c: IrExpr.CountAsteriskFunc =>
                             c.copy(addFilter(c.filter, filter))
                         case g: IrExpr.GeneralFunc =>
@@ -902,24 +873,6 @@ object FilterNotAllowedUngroupedColumn:
         NotGiven[FilterNotAllowedUngroupedColumn[KS]]
     ): FilterNotAllowedUngroupedColumn[KS] =
         error("Ungrouped column references are not allowed in filter/on.")
-
-/**
- * Validates that a kind tuple can appear in a `filter` clause.
- */
-trait CanInFilter[T, KS <: Tuple]
-
-object CanInFilter:
-    given validate[T, KS <: Tuple](using
-        FilterNotAllowedAgg[KS],
-        FilterNotAllowedWindow[KS],
-        FilterNotAllowedUngroupedColumn[KS],
-        SqlBoolean[T]
-    ): CanInFilter[T, KS]()
-
-    inline given fallback[T, KS <: Tuple](using
-        NotGiven[CanInFilter[T, KS]]
-    ): CanInFilter[T, KS] =
-        error("Argument of filter/on must be type Boolean.")
 
 /**
  * Validates that a kind tuple can appear in a `map` clause.
@@ -1117,13 +1070,36 @@ object TakeSize:
         new TakeSize[T]:
             type R = ManyRows
 
-/**
- * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
- */
-trait ValidateArgType[F[_], T]
+inline def analysisSemantic[T, E](inline x: E, info: String): Unit =
+    ${ analysisSemanticMacro[T, E]('x, 'info) }
 
-object ValidateArgType:
-    given validate[F[_], T](using F[T]): ValidateArgType[F, T]()
+def analysisSemanticMacro[T: Type, E: Type](x: ScalaExpr[E], info: ScalaExpr[String])(using 
+    q: Quotes
+): ScalaExpr[Unit] =
+    import q.reflect.*
 
-    inline given fallback[F[_], T, OP <: String](using NotGiven[F[T]]): ValidateArgType[F, T] =
-        error("The parameter type is incorrect.")
+    val t = ScalaExpr.summon[T]
+
+    def removeInlined(term: Term): Term =
+        term match
+            case Inlined(None, Nil, t) => 
+                removeInlined(t)
+            case _ =>
+                term
+
+    def removeContextFunc(term: Term): Term =
+        val removeInlinedTerm = removeInlined(term)
+        removeInlinedTerm match
+            case Block(DefDef(_, _, _, Some(t)) :: Nil, _) =>
+                removeContextFunc(t)
+            case Block(_, t) =>
+                removeInlined(t)
+            case _ =>
+                removeInlinedTerm
+
+    if t.isDefined then
+        '{}
+    else
+        val term = removeContextFunc(x.asTerm)
+        val errorInfo = info.value.get
+        report.errorAndAbort(errorInfo, term.pos)

@@ -47,14 +47,6 @@ type MapField[X, T, L <: Int] =
         case _ => ColumnExpr[X, L]
 
 /**
- * Finds the index of a type in a tuple.
- */
-type Index[T <: Tuple, X, N <: Int] <: Int =
-    T match
-        case X *: xs => N
-        case x *: xs => Index[xs, X, S[N]]
-
-/**
  * Tests whether a type is `Option`.
  */
 type IsOption[T] <: Boolean =

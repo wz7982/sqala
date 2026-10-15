@@ -64,7 +64,7 @@ object AsTable:
                 )
                 (table, irTable)
 
-    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
+    inline given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]

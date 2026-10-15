@@ -568,14 +568,28 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
-extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
-    def filter[F](f: F)(using
+extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL])
+    // TODO CallAggFilter改成两个类型类
+    inline def filter[F](inline f: F)(using
         a: AsExpr[F, CL],
+        ba: ValidateArgType[SqlBoolean, a.R],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[a.R, kt.R],
         c: CallAggFilter[T, kt.R]
     ): c.R =
-        c.call(x, a.asExpr(f).asIrExpr)
+        analysisSemantic[FilterNotAllowedAgg[kt.R], F](
+            f,
+            "Aggregate functions are not allowed in filter."
+        )
+        analysisSemantic[FilterNotAllowedWindow[kt.R], F](
+            f,
+            "Window functions are not allowed in filter."
+        )
+        analysisSemantic[FilterNotAllowedUngroupedColumn[kt.R], F](
+            f,
+            "Ungrouped column references are not allowed in filter."
+        )
+        val cond: Expr[?, ?] = a.asExpr(f)
+        c.call(x, cond.asIrExpr)
 
 /**
  * Specifies the `PARTITION BY` clause in a window function.
@@ -610,7 +624,7 @@ def sortBy[T, CL <: Int](sortValue: T)(using
 ): SortedOver[a.R, a.KS] =
     SortedOver(sortBy = a.asSorts(sortValue))
 
-extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
+extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL], co: CallOver[T])
     /**
      * Applies a window specification to the function, promoting it
      * to an `Expr`. Maps to SQL `OVER ()`.
@@ -619,7 +633,11 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
      * from(Post).map(p => rowNumber().over())
      * }}}
      */
-    def over(): Expr[co.R, Window[co.KS]] =
+    inline def over(): Expr[co.R, Window[co.KS]] =
+        analysisSemantic[CanCallOver[T], T](
+            x,
+            "Over specified, but this expression is not a window function nor an aggregate function."
+        )
         Expr(
             IrExpr.Window(
                 co.asIrExpr(x),
@@ -639,7 +657,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
      * ))
      * }}}
      */
-    def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
+    inline def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
         i: CanInWindow[OKS],
         c: CombineKindTuple[co.KS, OKS]
     ): Expr[co.R, Window[c.R]] =

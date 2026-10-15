@@ -37,7 +37,7 @@ object ToOption:
             type R = AggExpr[Wrap[T, Option], KS]
 
             def toOption(x: AggExpr[T, KS]): R =
-                AggExpr(x.expr)
+                AggExpr(x.asIrExpr)
 
     given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
         new ToOption[WindowPart[T, KS]]:

@@ -36,7 +36,11 @@ object TransformTableKind:
             type R = MappedTable[N, tt.R, L]
 
             def transform(x: MappedTable[N, V, L]): R =
-                MappedTable(x.__table__, tt.toTuple(tv.transform(x.__items__)))
+                MappedTable(
+                    x.__table__, 
+                    tt.toTuple(tv.transform(x.__items__)), 
+                    x.__fields__
+                )
 
     given tuple[H, T <: Tuple, K[_ <: Int] <: ExprKind](using
         ah: TransformTableKind[H, K],

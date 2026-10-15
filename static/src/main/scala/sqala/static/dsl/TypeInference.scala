@@ -318,50 +318,49 @@ object Relation:
         new Relation[A, B]:
             type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 
-// /**
-//  * Determines whether a type can be used as a `rows` or `groups`
-//  * frame bound.
-//  */
-// trait CanInRowsOrGroupsFrame[T]
+// TODO 注释
+trait CallOver[T]:
+    type R
 
-// object CanInRowsOrGroupsFrame:
-//     given int: CanInRowsOrGroupsFrame[Int]()
+    type KS <: Tuple
 
-//     given long: CanInRowsOrGroupsFrame[Long]()
+    def asIrExpr(x: T): IrExpr
 
-//     given nothing: CanInRowsOrGroupsFrame[Nothing]()
+object CallOver:
+    type Aux[T, O, OKS <: Tuple] = CallOver[T]:
+        type R = O
 
-// /**
-//  * Determines whether `S` and `T` can be used together in a `range`
-//  * frame (`S` is the sort key type, `T` is the bound type).
-//  */
-// trait CanInRangeFrame[S, T]
+        type KS = OKS
 
-// object CanInRangeFrame:
-//     given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
+    given agg[T, EKS <: Tuple]: Aux[AggExpr[T, EKS], T, EKS] =
+        new CallOver[AggExpr[T, EKS]]:
+            type R = T
 
-//     given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+            type KS = EKS
 
-//     given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+            def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
+                x.asIrExpr
 
-//     given nothing[S]: CanInRangeFrame[S, Nothing]()
+    given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
+        new CallOver[WindowPart[T, EKS]]:
+            type R = T
 
-// /**
-//  * Computes the return type of `unnest`.
-//  */
-// trait UnnestReturn[T]:
-//     /**
-//      * The result type.
-//      */
-//     type R
+            type KS = EKS
 
-// object UnnestReturn:
-//     type Aux[T, O] = UnnestReturn[T]:
-//         type R = O
+            def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
+                x.asIrExpr
 
-//     given flatten[T]: Aux[T, FlattenUnnest[T]] =
-//         new UnnestReturn[T]:
-//             type R = FlattenUnnest[T]
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        refl: NotGiven[T <:< AggExpr[?, ?]]
+    ): Aux[T, a.R, EmptyTuple] =
+        new CallOver[T]:
+            type R = a.R
+
+            type KS = EmptyTuple
+
+            def asIrExpr(x: T): IrExpr =
+                a.asExpr(x).asIrExpr
 
 /**
  * Computes the result type of a conditional expression (such as
@@ -468,6 +467,17 @@ object Return:
             type R = Option[Array[r.R]]
 
 /**
+ * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
+ */
+trait ValidateArgType[F[_], T]
+
+object ValidateArgType:
+    given validate[F[_], T](using F[T]): ValidateArgType[F, T]()
+
+    inline given fallback[F[_], T, OP <: String](using NotGiven[F[T]]): ValidateArgType[F, T] =
+        error("The parameter type is incorrect.")
+
+/**
  * Maps union query items, producing column expressions
  * for `union`, `unionAll`, etc. `CL` is the query context level.
  */
@@ -572,7 +582,11 @@ object Union:
                 a.offset
 
             def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
-                MappedTable(x.__table__, tt.toTuple(u.unionQueryItems(x.__items__, cursor)))
+                MappedTable(
+                    x.__table__, 
+                    tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
+                    x.__fields__
+                )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
