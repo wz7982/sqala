@@ -9,11 +9,13 @@ object Test:
             from(A.join(A.join(A).on((a2, a3) => a2.x == a3.x)).on((a1, a2, a3) => a1.x == a3.x))
                 .filter((a1, a2, a3) => a1.x === 10)
 
-                
-        val qq = from(A).filter: a =>
-            val expr = s"".asExpr
-            a.x === 1
+        val aq = from(A).map(a => sum(a.x).filter(a.x > 0))    
 
+        val sq =
+            from:
+                from(from(A).map(a => (xx = a.x, y = a.y))).filter(a => a.xx === 1).map(a => (x = a))
+            .map: a =>
+                a.x.xx
 
 
         // val q =
@@ -22,4 +24,4 @@ object Test:
                 // .map(a => from(A).map(aa => count()).take(1))
 
 
-        println(q.sql(PostgresqlDialect, true))
+        println(aq.sql(PostgresqlDialect, true))

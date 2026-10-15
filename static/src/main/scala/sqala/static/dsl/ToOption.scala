@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
+import scala.util.NotGiven
 
 /**
  * Wraps each field of a projection type with `Option` for nullable results.
@@ -22,12 +23,21 @@ object ToOption:
     type Aux[T, O] = ToOption[T]:
         type R = O
 
-    given expr[T, K <: ExprKind, E <: Expr[T, K]]: Aux[E, Expr[Wrap[T, Option], K]] =
+    given expr[T, K <: ExprKind, E <: Expr[T, K]](using
+        NotGiven[E <:< AggExpr[?, ?]]
+    ): Aux[E, Expr[Wrap[T, Option], K]] =
         new ToOption[E]:
             type R = Expr[Wrap[T, Option], K]
 
             def toOption(x: E): R =
                 Expr(x.asIrExpr)
+    
+    given agg[T, KS <: Tuple]: Aux[AggExpr[T, KS], AggExpr[Wrap[T, Option], KS]] =
+        new ToOption[AggExpr[T, KS]]:
+            type R = AggExpr[Wrap[T, Option], KS]
+
+            def toOption(x: AggExpr[T, KS]): R =
+                AggExpr(x.expr)
 
     given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
         new ToOption[WindowPart[T, KS]]:
