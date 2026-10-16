@@ -160,27 +160,16 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
      * from(Channel.join(Post).on((_, _) => true))
      * }}}
      */
-    inline def on[F](inline f: T => F)(using
+    def on[F](f: T => F)(using
         qc: QueryContext[L],
         a: AsExpr[F, L],
-        ba: ValidateArgType[SqlBoolean, a.R],
+        ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
+        ci: CanInFilter[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): FromJoin[T, c.R, L] =
-        analysisSemantic[FilterNotAllowedAgg[kt.R], QueryContext[L] ?=> T => F](
-            f,
-            "Aggregate functions are not allowed in on."
-        )
-        analysisSemantic[FilterNotAllowedWindow[kt.R], QueryContext[L] ?=> T => F](
-            f,
-            "Window functions are not allowed in on."
-        )
-        analysisSemantic[FilterNotAllowedUngroupedColumn[kt.R], QueryContext[L] ?=> T => F](
-            f,
-            "Ungrouped column references are not allowed in on."
-        )
-        val cond: Expr[?, ?] = a.asExpr(f(params))
+        val cond = a.asExpr(f(params))
         FromJoin(
             params,
             table.copy(on = Some(cond.asIrExpr))

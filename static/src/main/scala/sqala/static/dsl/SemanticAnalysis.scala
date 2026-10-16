@@ -712,33 +712,6 @@ object CanInWindow:
         error("Window function calls cannot contain ungrouped column references.")
 
 // TODO fallback
-/**
- * Determines whether a type can be used as a `rows` or `groups`
- * frame bound.
- */
-trait CanInRowsOrGroupsFrame[T]
-
-object CanInRowsOrGroupsFrame:
-    given int: CanInRowsOrGroupsFrame[Int]()
-
-    given long: CanInRowsOrGroupsFrame[Long]()
-
-    given nothing: CanInRowsOrGroupsFrame[Nothing]()
-
-/**
- * Determines whether `S` and `T` can be used together in a `range`
- * frame (`S` is the sort key type, `T` is the bound type).
- */
-trait CanInRangeFrame[S, T]
-
-object CanInRangeFrame:
-    given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
-
-    given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
-
-    given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
-
-    given nothing[S]: CanInRangeFrame[S, Nothing]()
 
 // TODO 注释
 trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
@@ -761,12 +734,42 @@ object ValidateFrame:
 
         report.errorAndAbort(s"Frame starting from $start cannot end at $end.")
 
-trait CanCallOver[T]
+// TODO 注释
+trait CanCallOver[T]:
+    type R
+
+    type KS <: Tuple
+
+    def asIrExpr(x: T): IrExpr
 
 object CanCallOver:
-    given agg[T, KS <: Tuple]: CanCallOver[AggExpr[T, KS]]()
+    type Aux[T, O, OKS <: Tuple] = CanCallOver[T]:
+        type R = O
 
-    given window[T, KS <: Tuple]: CanCallOver[WindowPart[T, KS]]()
+        type KS = OKS
+
+    given agg[T, EKS <: Tuple]: Aux[AggExpr[T, EKS], T, EKS] =
+        new CanCallOver[AggExpr[T, EKS]]:
+            type R = T
+
+            type KS = EKS
+
+            def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
+                x.asIrExpr
+
+    given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
+        new CanCallOver[WindowPart[T, EKS]]:
+            type R = T
+
+            type KS = EKS
+
+            def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
+                x.asIrExpr
+
+    inline given fallback[T](using
+        NotGiven[CanCallOver[T]]
+    ): Aux[T, T, EmptyTuple] =
+        error("Over specified, but this expression is not a window function nor an aggregate function.")
 
 /**
  * 注释
@@ -873,6 +876,19 @@ object FilterNotAllowedUngroupedColumn:
         NotGiven[FilterNotAllowedUngroupedColumn[KS]]
     ): FilterNotAllowedUngroupedColumn[KS] =
         error("Ungrouped column references are not allowed in filter/on.")
+
+/**
+ * Validates that a kind tuple can appear in a `filter` clause.
+ * No aggregate, window, or ungrouped column references are allowed.
+ */
+trait CanInFilter[KS <: Tuple]
+
+object CanInFilter:
+    given validate[KS <: Tuple](using
+        FilterNotAllowedAgg[KS],
+        FilterNotAllowedWindow[KS],
+        FilterNotAllowedUngroupedColumn[KS]
+    ): CanInFilter[KS]()
 
 /**
  * Validates that a kind tuple can appear in a `map` clause.
@@ -988,24 +1004,6 @@ object CanInHaving:
     ): CanInHaving[KS]()
 
 /**
- * Validates that a kind tuple can appear in a `define` clause
- * of `matchRecognize`. `L` is the query context level.
- */
-trait CanInRecognizeDefine[KS <: Tuple, CL <: Int]
-
-object CanInRecognizeDefine:
-    given validate[KS <: Tuple, CL <: Int](using
-        hc: HasKind[KS, Column[?]],
-        nc: hc.R =:= false,
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
-        hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false,
-        oks: ExcludeCurrentLevelColumn[KS, CL],
-        e: oks.R =:= EmptyTuple
-    ): CanInRecognizeDefine[KS, CL]()
-
-/**
  * Validates that a subquery used as an expression returns most one row.
  */
 trait ValidateSubqueryExprSize[S <: QuerySize]
@@ -1069,37 +1067,3 @@ object TakeSize:
     ): Aux[T, ManyRows] =
         new TakeSize[T]:
             type R = ManyRows
-
-inline def analysisSemantic[T, E](inline x: E, info: String): Unit =
-    ${ analysisSemanticMacro[T, E]('x, 'info) }
-
-def analysisSemanticMacro[T: Type, E: Type](x: ScalaExpr[E], info: ScalaExpr[String])(using 
-    q: Quotes
-): ScalaExpr[Unit] =
-    import q.reflect.*
-
-    val t = ScalaExpr.summon[T]
-
-    def removeInlined(term: Term): Term =
-        term match
-            case Inlined(None, Nil, t) => 
-                removeInlined(t)
-            case _ =>
-                term
-
-    def removeContextFunc(term: Term): Term =
-        val removeInlinedTerm = removeInlined(term)
-        removeInlinedTerm match
-            case Block(DefDef(_, _, _, Some(t)) :: Nil, _) =>
-                removeContextFunc(t)
-            case Block(_, t) =>
-                removeInlined(t)
-            case _ =>
-                removeInlinedTerm
-
-    if t.isDefined then
-        '{}
-    else
-        val term = removeContextFunc(x.asTerm)
-        val errorInfo = info.value.get
-        report.errorAndAbort(errorInfo, term.pos)

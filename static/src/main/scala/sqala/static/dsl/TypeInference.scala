@@ -318,50 +318,6 @@ object Relation:
         new Relation[A, B]:
             type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
 
-// TODO 注释
-trait CallOver[T]:
-    type R
-
-    type KS <: Tuple
-
-    def asIrExpr(x: T): IrExpr
-
-object CallOver:
-    type Aux[T, O, OKS <: Tuple] = CallOver[T]:
-        type R = O
-
-        type KS = OKS
-
-    given agg[T, EKS <: Tuple]: Aux[AggExpr[T, EKS], T, EKS] =
-        new CallOver[AggExpr[T, EKS]]:
-            type R = T
-
-            type KS = EKS
-
-            def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
-                x.asIrExpr
-
-    given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
-        new CallOver[WindowPart[T, EKS]]:
-            type R = T
-
-            type KS = EKS
-
-            def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
-                x.asIrExpr
-
-    given expr[T, CL <: Int](using
-        a: AsExpr[T, CL],
-        refl: NotGiven[T <:< AggExpr[?, ?]]
-    ): Aux[T, a.R, EmptyTuple] =
-        new CallOver[T]:
-            type R = a.R
-
-            type KS = EmptyTuple
-
-            def asIrExpr(x: T): IrExpr =
-                a.asExpr(x).asIrExpr
-
 /**
  * Computes the result type of a conditional expression (such as
  * `caseWhen` or `ifNull`).
@@ -469,13 +425,51 @@ object Return:
 /**
  * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
  */
-trait ValidateArgType[F[_], T]
+trait ValidateArgType[F[_], T, N <: String]
 
 object ValidateArgType:
-    given validate[F[_], T](using F[T]): ValidateArgType[F, T]()
+    given validate[F[_], T, N <: String](using F[T]): ValidateArgType[F, T, N]()
 
-    inline given fallback[F[_], T, OP <: String](using NotGiven[F[T]]): ValidateArgType[F, T] =
-        error("The parameter type is incorrect.")
+    inline given fallback[F[_], T, N <: String](using NotGiven[F[T]]): ValidateArgType[F, T, N] =
+        ${ errorMacro[T, N] }
+
+    def errorMacro[T: Type, N <: String : Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val typeName = Type.show[T]
+        val needTypeName = Type.show[N].replace("\"", "")
+
+        report.errorAndAbort(
+            s"The parameter type should be $needTypeName, but got $typeName."
+        )
+
+/**
+ * Determines whether a type can be used as a `rows` or `groups`
+ * frame bound.
+ */
+trait CanInRowsOrGroupsFrame[T]
+
+object CanInRowsOrGroupsFrame:
+    given int: CanInRowsOrGroupsFrame[Int]()
+
+    given long: CanInRowsOrGroupsFrame[Long]()
+
+    given nothing: CanInRowsOrGroupsFrame[Nothing]()
+
+/**
+ * Determines whether `S` and `T` can be used together in a `range`
+ * frame (`S` is the sort key type, `T` is the bound type).
+ */
+trait CanInRangeFrame[S, T]
+
+object CanInRangeFrame:
+    given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
+
+    given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given nothing[S]: CanInRangeFrame[S, Nothing]()
 
 /**
  * Maps union query items, producing column expressions

@@ -5,7 +5,7 @@ import sqala.static.dsl.*
 import sqala.util.NonEmptyList
 import sqala.ir.IrGroupingItem
 
-// TODO 整理using 加上fallback
+// TODO 整理using =:= 加上fallback
 /**
   * Represents a single grouping item.
   */

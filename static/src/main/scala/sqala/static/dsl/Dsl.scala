@@ -445,7 +445,7 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: NonEmptyList
         qc: QueryContext[CL],
         ac: AsExpr[C, CL],
         ar: AsExpr[R, CL],
-        b: ValidateArgType[SqlBoolean, ac.R],
+        b: ValidateArgType[SqlBoolean, ac.R, "boolean"],
         r: Return[T, ar.R],
         ktc: KindToTuple[ac.K],
         ktr: KindToTuple[ar.K],
@@ -491,7 +491,7 @@ def caseWhen[C, R, CL <: Int](cond: C)(result: R)(using
     qc: QueryContext[CL],
     ac: AsExpr[C, CL],
     ar: AsExpr[R, CL],
-    b: ValidateArgType[SqlBoolean, ac.R],
+    b: ValidateArgType[SqlBoolean, ac.R, "boolean"],
     as: AsSqlExpr[ar.R],
     ktc: KindToTuple[ac.K],
     ktr: KindToTuple[ar.K],
@@ -568,26 +568,14 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
         )
     )
 
-extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL])
-    // TODO CallAggFilter改成两个类型类
-    inline def filter[F](inline f: F)(using
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
+    def filter[F](f: F)(using
         a: AsExpr[F, CL],
-        ba: ValidateArgType[SqlBoolean, a.R],
+        ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
+        ci: CanInFilter[kt.R],
         c: CallAggFilter[T, kt.R]
     ): c.R =
-        analysisSemantic[FilterNotAllowedAgg[kt.R], F](
-            f,
-            "Aggregate functions are not allowed in filter."
-        )
-        analysisSemantic[FilterNotAllowedWindow[kt.R], F](
-            f,
-            "Window functions are not allowed in filter."
-        )
-        analysisSemantic[FilterNotAllowedUngroupedColumn[kt.R], F](
-            f,
-            "Ungrouped column references are not allowed in filter."
-        )
         val cond: Expr[?, ?] = a.asExpr(f)
         c.call(x, cond.asIrExpr)
 
@@ -624,7 +612,7 @@ def sortBy[T, CL <: Int](sortValue: T)(using
 ): SortedOver[a.R, a.KS] =
     SortedOver(sortBy = a.asSorts(sortValue))
 
-extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL], co: CallOver[T])
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
     /**
      * Applies a window specification to the function, promoting it
      * to an `Expr`. Maps to SQL `OVER ()`.
@@ -633,11 +621,7 @@ extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL], co: CallOver[T
      * from(Post).map(p => rowNumber().over())
      * }}}
      */
-    inline def over(): Expr[co.R, Window[co.KS]] =
-        analysisSemantic[CanCallOver[T], T](
-            x,
-            "Over specified, but this expression is not a window function nor an aggregate function."
-        )
+    def over(): Expr[co.R, Window[co.KS]] =
         Expr(
             IrExpr.Window(
                 co.asIrExpr(x),
@@ -657,7 +641,7 @@ extension [T, CL <: Int](inline x: T)(using qc: QueryContext[CL], co: CallOver[T
      * ))
      * }}}
      */
-    inline def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
+    def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
         i: CanInWindow[OKS],
         c: CombineKindTuple[co.KS, OKS]
     ): Expr[co.R, Window[c.R]] =
