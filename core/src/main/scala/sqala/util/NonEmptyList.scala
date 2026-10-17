@@ -100,10 +100,3 @@ object NonEmptyList:
      */
     def apply[A](head: A, tail: NonEmptyList[A]): NonEmptyList[A] =
         NonEmptyList(head, tail.toList)
-
-    extension [A](list: List[A])
-        /**
-         * Convert to a non-empty list.
-         */
-        def toNonEmptyList: NonEmptyList[A] =
-            NonEmptyList(list.head, list.tail)
