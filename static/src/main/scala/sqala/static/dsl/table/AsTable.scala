@@ -3,7 +3,6 @@ package sqala.static.dsl.table
 import sqala.metadata.{AsSqlExprs, FetchCompanion, TableMacro, TableMetaData}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
-import sqala.util.NonEmptyList.toNonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.deriving.Mirror
@@ -15,6 +14,10 @@ import sqala.ast.table.SqlJoinType
 import scala.quoted.Type
 import scala.quoted.Quotes
 import scala.compiletime.error
+import sqala.ast.expr.SqlExpr
+import sqala.ir.IrQuery
+import sqala.util.NonEmptyList
+import sqala.ir.IrExpr
 
 /**
  * Used by `from` to lift various DSL types into a table reference
@@ -94,30 +97,32 @@ object AsTable:
     //             (x, x.__sqlTable__)
 
     // TODO
-    // inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
-    //     val metaData = TableMacro.tableMetaData[T]
-    //     val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
-    //     createValues[T, S, CL](
-    //         metaData,
-    //         (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
-    //     )
+    inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+        val metaData = TableMacro.tableMetaData[T]
+        val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+        createValues[T, S, CL](
+            metaData,
+            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
+        )
 
-    // private def createValues[T <: Product, S <: Seq[T], CL <: Int](
-    //     metaData: TableMetaData,
-    //     asExprs: T => List[SqlExpr]
-    // ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
-    //     new AsTable[S, CL]:
-    //         type R = Table[T, Column, CL]
-    //         type OKS = EmptyTuple
-    //         def asTable(x: S)(using qc: QueryContext[CL]): (R, SqlTable) =
-    //             require(x.nonEmpty, "Values table must have at least one row.")
-    //             val alias = qc.fetchAlias()
-    //             val tableAlias = SqlTableAlias(alias, metaData.columns)
-    //             val table = Table[T, Column, CL](alias, metaData)
-    //             val exprList = x.toList.map: datum =>
-    //                 asExprs(datum).toNonEmptyList
-    //             val sqlValues = SqlQuery.Values(exprList.toNonEmptyList, Nil, None)
-    //             (table, SqlTable.Subquery(false, sqlValues, Some(tableAlias), None))
+    private def createValues[T <: Product, S <: Seq[T], CL <: Int](
+        metaData: TableMetaData,
+        asExprs: T => List[SqlExpr]
+    ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+        new AsTable[S, CL]:
+            type R = Table[T, Column, CL]
+
+            type OKS = EmptyTuple
+            
+            def asTable(x: S)(using qc: QueryContext[CL]): (R, IrTable) =
+                require(x.nonEmpty, "Values table must have at least one row.")
+                val exprList = x.toList.map: datum =>
+                    val row = asExprs(datum).map(e => IrExpr.Native(e))
+                    require(row.nonEmpty, "Values table must have at least one column.")
+                    NonEmptyList(row.head, row.tail)
+                val values = IrQuery.Values(NonEmptyList(exprList.head, exprList.tail))
+                val table = IrTable.Subquery(false, values)
+                (Table[T, Column, CL](table, metaData), table)
 
     inline given joinPart[T, TOKS <: Tuple, CL <: Int]: Aux[JoinPart[T, TOKS, CL], CL, T, TOKS] =
         error("Join table must have an on clause.")
