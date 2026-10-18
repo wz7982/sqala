@@ -512,7 +512,7 @@ object HasKind:
     given windowHeadTuple[KS <: Tuple, T <: Tuple, TK <: ExprKind](using
         h: HasKind[KS, TK],
         t: HasKind[T, TK],
-        refl: NotGiven[TK <:< Window[?]]
+        nw: NotGiven[TK <:< Window[?]]
     ): Aux[Window[KS] *: T, TK, h.R || t.R] =
         new HasKind[Window[KS] *: T, TK]:
             type R = h.R || t.R
@@ -717,11 +717,11 @@ object CanInWindow:
 trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
 
 object ValidateFrame:
-    given validate[SS <: Int, SN <: String, ES <: Int, EN <: String](using 
+    given validate[SS <: Int, SN <: String, ES <: Int, EN <: String](using
         SS < ES =:= true
     ): ValidateFrame[SS, SN, ES, EN]()
 
-    inline given fallback[SS <: Int, SN <: String, ES <: Int, EN <: String](using 
+    inline given fallback[SS <: Int, SN <: String, ES <: Int, EN <: String](using
         SS < ES =:= false
     ): ValidateFrame[SS, SN, ES, EN] =
         ${ errorMacro[SN, EN] }
@@ -811,6 +811,21 @@ object CallAggFilter:
         NotGiven[CallAggFilter[T, FKS]]
     ): Aux[T, FKS, T] =
         error("Filter specified, but this expression is not an aggregate function.")
+
+// TODO
+trait IsGrouped[KS <: Tuple]
+
+object IsGrouped:
+    given validate[KS <: Tuple](using
+        ak: AllIsKind[KS, Grouped[?]],
+        ig: ak.R =:= true
+    ): IsGrouped[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        ak: AllIsKind[KS, Grouped[?]],
+        ng: ak.R =:= false
+    ): IsGrouped[KS] =
+        error("Arguments must be grouping expressions of the associated query level")
 
 // TODO 后面的报错还要细化
 /**
@@ -958,6 +973,20 @@ object CanInSort:
         nu: hu.R =:= false
     ): CanInSort[KS, ManyRows]()
 
+trait SortIsValue[K <: ExprKind]
+
+object SortIsValue:
+    given validate[K <: ExprKind](using
+        hv: IsKind[K, Value],
+        nv: hv.R =:= false
+    ): SortIsValue[K]()
+
+    inline given fallback[K <: ExprKind](using
+        hv: IsKind[K, Value],
+        iv: hv.R =:= true
+    ): SortIsValue[K] =
+        error("Scalar value are not allowed in sortBy.")
+
 /**
  * Validates that a kind tuple can appear in a `sortBy` clause
  * after `groupBy`.
@@ -972,6 +1001,62 @@ object CanInGroupedSort:
         nu: hu.R =:= false
     ): CanInGroupedSort[KS]()
 
+trait GroupByNotAllowedValue[K <: ExprKind]
+
+object GroupByNotAllowedValue:
+    given validate[K <: ExprKind](using
+        hv: IsKind[K, Value],
+        nv: hv.R =:= false
+    ): GroupByNotAllowedValue[K]()
+
+    inline given fallback[K <: ExprKind](using
+        hv: IsKind[K, Value],
+        iv: hv.R =:= true
+    ): GroupByNotAllowedValue[K] =
+        error("Scalar value are not allowed in groupBy.")
+
+trait GroupByNotAllowedAgg[KS <: Tuple]
+
+object GroupByNotAllowedAgg:
+    given validate[KS <: Tuple](using
+        ha: HasKind[KS, Agg[?]],
+        na: ha.R =:= false
+    ): GroupByNotAllowedAgg[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[GroupByNotAllowedAgg[KS]]
+    ): GroupByNotAllowedAgg[KS] =
+        error("Aggregate functions are not allowed in groupBy.")
+
+trait GroupByNotAllowedWindow[KS <: Tuple]
+
+object GroupByNotAllowedWindow:
+    given validate[KS <: Tuple](using
+        ha: HasKind[KS, Window[?]],
+        na: ha.R =:= false
+    ): GroupByNotAllowedWindow[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[GroupByNotAllowedWindow[KS]]
+    ): GroupByNotAllowedWindow[KS] =
+        error("Window functions are not allowed in groupBy.")
+
+/**
+ * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a groupBy clause.
+ */
+trait GroupByNotAllowedUngroupedColumn[KS <: Tuple]
+
+object GroupByNotAllowedUngroupedColumn:
+    given validate[KS <: Tuple](using
+        hu: HasKind[KS, UngroupedColumn[?]],
+        nu: hu.R =:= false
+    ): GroupByNotAllowedUngroupedColumn[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[GroupByNotAllowedUngroupedColumn[KS]]
+    ): GroupByNotAllowedUngroupedColumn[KS] =
+        error("Ungrouped column references are not allowed in groupBy.")
+
 /**
  * Validates that a kind tuple can appear in a `groupBy`
  * clause.
@@ -980,12 +1065,9 @@ trait CanInGroup[KS <: Tuple]
 
 object CanInGroup:
     given validate[KS <: Tuple](using
-        ha: HasKind[KS, Agg[?]],
-        na: ha.R =:= false,
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
-        hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false
+        GroupByNotAllowedAgg[KS],
+        GroupByNotAllowedWindow[KS],
+        GroupByNotAllowedUngroupedColumn[KS]
     ): CanInGroup[KS]()
 
 /**
@@ -1015,6 +1097,7 @@ object ValidateSubqueryExprSize:
         error("More than one row returned by a subquery used as an expression.")
 
 /**
+ * TODO 去掉
  * Validates that a scalar subquery returns one column.
  */
 trait ValidateScalarSubqueryColumnSize[T]

@@ -8,6 +8,8 @@ import sqala.util.NonEmptyList
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>
 import sqala.ir.IrExpr
+import scala.util.NotGiven
+import sqala.static.{dsl => AsMultidimensionalGrouping}
 
 // TODO 去掉=:= 加fallback
 /**
@@ -42,40 +44,23 @@ object AsGroupItem:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
-        kt: KindToTuple[EK],
-        i: CanInGroup[kt.R],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
-    ): Aux[E, CL, Expr[T, Grouped[kt.R]], kt.R] =
-        new AsGroupItem[E, CL]:
-            type R = Expr[T, Grouped[kt.R]]
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        ig: CanInGroup[kt.R],
+        nv: GroupByNotAllowedValue[a.K]
+    ): Aux[T, CL, Expr[a.R, Grouped[kt.R]], kt.R] =
+        new AsGroupItem[T, CL]:
+            type R = Expr[a.R, Grouped[kt.R]]
 
             type KS = kt.R
 
-            def asGroup(x: E): R =
-                Expr(x.asIrExpr)
+            def asGroup(x: T): R =
+                Expr(a.asExpr(x).asIrExpr)
 
-            def asExprs(x: E): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(x, Nil)
-
-    given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
-        a: AsExpr[T, CL],
-        vc: ValidateScalarSubqueryColumnSize[a.R],
-        i: CanInGroup[OKS],
-        vs: ValidateSubqueryExprSize[S],
-        vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, Expr[a.R, Grouped[OKS]], OKS] =
-        new AsGroupItem[Q, CL]:
-            type R = Expr[a.R, Grouped[OKS]]
-
-            type KS = OKS
-
-            def asGroup(x: Q): R =
-                Expr(IrExpr.Subquery(x.tree))
-
-            def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(Expr(IrExpr.Subquery(x.tree)), Nil)
+            def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(a.asExpr(x), Nil)
 
 /**
  * Lifts expressions, subqueries, tuples, and named tuples into grouping
@@ -123,7 +108,7 @@ object AsGroup:
                 a.asExprs(x)
 
     given tuple[H, T <: Tuple, CL <: Int](using
-        h: AsGroup[H, CL],
+        h: AsGroupItem[H, CL],
         t: AsGroup[T, CL],
         tt: ToTuple[t.R],
         c: CombineKindTuple[h.KS, t.KS]
@@ -140,7 +125,7 @@ object AsGroup:
                 h.asExprs(x.head) ++ t.asExprs(x.tail)
 
     given tuple1[H, CL <: Int](using
-        h: AsGroup[H, CL],
+        h: AsGroupItem[H, CL],
         c: CombineKindTuple[h.KS, EmptyTuple]
     ): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple, c.R] =
         new AsGroup[H *: EmptyTuple, CL]:
@@ -188,28 +173,17 @@ object AsPartitionItem:
     type Aux[T, CL <: Int, OKS <: Tuple] = AsPartitionItem[T, CL]:
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, E <: Expr[T, EK], CL <: Int](using
-        kt: KindToTuple[EK],
-        i: CanInWindow[kt.R]
-    ): Aux[E, CL, kt.R] =
-        new AsPartitionItem[E, CL]:
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        iw: CanInWindow[kt.R]
+    ): Aux[T, CL, kt.R] =
+        new AsPartitionItem[T, CL]:
             type KS = kt.R
 
-            def asExpr(x: E): Expr[?, ?] =
-                x
-
-    given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
-        a: AsExpr[T, CL],
-        vc: ValidateScalarSubqueryColumnSize[a.R],
-        i: CanInGroup[OKS],
-        vs: ValidateSubqueryExprSize[S],
-        vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, OKS] =
-        new AsPartitionItem[Q, CL]:
-            type KS = OKS
-
-            def asExpr(x: Q): Expr[?, ?] =
-                Expr(IrExpr.Subquery(x.tree))
+            def asExpr(x: T): Expr[?, ?] =
+                a.asExpr(x)
 
 /**
  * Collects partition items for `partitionBy` in window functions.

@@ -4,6 +4,9 @@ import sqala.ast.group.SqlGroupingItem
 import sqala.static.dsl.*
 import sqala.util.NonEmptyList
 import sqala.ir.IrGroupingItem
+import scala.util.NotGiven
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 // TODO 整理using =:= 加上fallback
 /**
@@ -19,8 +22,7 @@ object AsGroupingItem:
     given expr[T, CL <: Int](using
         a: AsExpr[T, CL],
         kt: KindToTuple[a.K],
-        ak: AllIsKind[kt.R, Grouped[?]],
-        refl: ak.R =:= true
+        ig: IsGrouped[kt.R]
     ): AsGroupingItem[T] with
         def asIrGroupingItem(x: T): IrGroupingItem =
             IrGroupingItem.Expr(a.asExpr(x).asIrExpr)
@@ -41,6 +43,18 @@ object AsGroupingItem:
         def asIrGroupingItem(x: GroupingSets): IrGroupingItem =
             IrGroupingItem.GroupingSets(x.items)
 
+    inline given fallback[T](using
+        NotGiven[AsGroupingItem[T]]
+    ): AsGroupingItem[T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping item.")
+
 /**
  * Collects grouping items into a list of `SqlGroupingItem`.
  */
@@ -54,8 +68,7 @@ object AsMultidimensionalGrouping:
     given expr[T, CL <: Int](using
         a: AsExpr[T, CL],
         kt: KindToTuple[a.K],
-        ak: AllIsKind[kt.R, Grouped[?]],
-        refl: ak.R =:= true
+        ig: IsGrouped[kt.R]
     ): AsMultidimensionalGrouping[T] with
         def asIrGroupingItems(x: T): NonEmptyList[IrGroupingItem] =
             NonEmptyList(IrGroupingItem.Expr(a.asExpr(x).asIrExpr), Nil)
@@ -88,3 +101,15 @@ object AsMultidimensionalGrouping:
     ): AsMultidimensionalGrouping[H *: EmptyTuple] with
         def asIrGroupingItems(x: H *: EmptyTuple): NonEmptyList[IrGroupingItem] =
             h.asIrGroupingItems(x.head)
+
+    inline given fallback[T](using
+        NotGiven[AsMultidimensionalGrouping[T]]
+    ): AsMultidimensionalGrouping[T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val t = Type.show[T]
+
+        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping item.")

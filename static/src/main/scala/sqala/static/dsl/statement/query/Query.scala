@@ -575,7 +575,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      */
     def groupBy[G](f: QueryContext[L] ?=> T => G)(using
         a: AsGroup[G, L],
-        i: CanInGroup[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
         tu: TransformTableKind[T, UngroupedColumn],
@@ -607,7 +606,6 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      */
     def groupBySets[G, S](f: QueryContext[L] ?=> T => G)(using
         a: AsGroup[G, L],
-        i: CanInGroup[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
         to: ToOption[a.R],
@@ -887,7 +885,7 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
      */
     def map[M](f: QueryContext[L] ?=> GroupingContext ?=> T => M)(using
         a: AsMap[M, L],
-        i: CanInMap[a.KS],
+        i: CanInGroupedMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
         an: AggNotNested[a.KS]

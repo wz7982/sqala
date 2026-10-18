@@ -422,6 +422,17 @@ object Return:
         new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
+    inline given fallback[A, B](using NotGiven[Return[A, B]]): Return[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType are incompatible.")
+
 /**
  * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
  */
@@ -439,9 +450,7 @@ object ValidateArgType:
         val typeName = Type.show[T]
         val needTypeName = Type.show[N].replace("\"", "")
 
-        report.errorAndAbort(
-            s"The parameter type should be $needTypeName, but got $typeName."
-        )
+        report.errorAndAbort(s"The arguments type should be $needTypeName, but got $typeName.")
 
 /**
  * Determines whether a type can be used as a `rows` or `groups`
@@ -455,6 +464,11 @@ object CanInRowsOrGroupsFrame:
     given long: CanInRowsOrGroupsFrame[Long]()
 
     given nothing: CanInRowsOrGroupsFrame[Nothing]()
+
+    inline given fallback[T](using
+        NotGiven[CanInRowsOrGroupsFrame[T]]
+    ): CanInRowsOrGroupsFrame[T] =
+        error("Window frame type is incompatible with the ordering expression.")
 
 /**
  * Determines whether `S` and `T` can be used together in a `range`
@@ -470,6 +484,11 @@ object CanInRangeFrame:
     given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
 
     given nothing[S]: CanInRangeFrame[S, Nothing]()
+
+    inline given fallback[S, T](using
+        NotGiven[CanInRangeFrame[S, T]]
+    ): CanInRangeFrame[S, T] =
+        error("Window frame type is incompatible with the ordering expression.")
 
 /**
  * Maps union query items, producing column expressions
@@ -577,7 +596,7 @@ object Union:
 
             def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
                 MappedTable(
-                    x.__table__, 
+                    x.__table__,
                     tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
                     x.__fields__
                 )

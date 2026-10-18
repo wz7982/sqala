@@ -90,7 +90,7 @@ object AsExpr:
                 NonEmptyList(Expr(IrExpr.Subquery(x.tree)), Nil)
 
     inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], Window[KS]] =
-        error("Window function requires an OVER clause.")
+        error("Window function requires an over clause.")
 
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsExpr[H, CL],

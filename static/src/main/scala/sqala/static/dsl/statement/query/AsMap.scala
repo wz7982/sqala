@@ -150,7 +150,7 @@ object AsSelect:
 
         val t = Type.show[T]
 
-        report.errorAndAbort(s"Cannot convert type $t for the SQL SELECT list.")
+        report.errorAndAbort(s"Cannot convert type $t for the SQL select list.")
 
 /**
  * Generates `SELECT` items from `map` clause expressions. Lifts
@@ -189,62 +189,24 @@ object AsMap:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, K <: ExprKind, E <: Expr[T, K], CL <: Int](using
-        kt: KindToTuple[K]
-    ): Aux[E, CL, Expr[T, Column[CL]], kt.R] =
-        new AsMap[E, CL]:
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K]
+    ): Aux[T, CL, Expr[T, Column[CL]], kt.R] =
+        new AsMap[T, CL]:
             type R = Expr[T, Column[CL]]
 
             type KS = kt.R
 
-            def transform(x: E): R =
-                Expr(x.asIrExpr)
-
-            def offset(x: E): Int =
-                1
-
-            def asSelectItems(x: E, cursor: Int): NonEmptyList[IrSelectItem] =
-                NonEmptyList(IrSelectItem(x.asIrExpr, s"c$cursor"), Nil)
-
-    given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, Expr[T, Column[CL]], Value *: EmptyTuple] =
-        new AsMap[T, CL]:
-            type R = Expr[T, Column[CL]]
-
-            type KS = Value *: EmptyTuple
-
             def transform(x: T): R =
-                Expr(IrExpr.Native(a.asSqlExpr(x)))
+                Expr(a.asExpr(x).asIrExpr)
 
             def offset(x: T): Int =
                 1
 
             def asSelectItems(x: T, cursor: Int): NonEmptyList[IrSelectItem] =
-                NonEmptyList(IrSelectItem(transform(x).asIrExpr, s"c$cursor"), Nil)
-
-    given scalarQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
-        a: AsExpr[T, CL],
-        vc: ValidateScalarSubqueryColumnSize[a.R],
-        to: ToOption[Expr[a.R, Column[CL]]],
-        ao: AsExpr[to.R, CL],
-        vs: ValidateSubqueryExprSize[S],
-        vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, to.R, OKS] =
-        new AsMap[Q, CL]:
-            type R = to.R
-
-            type KS = OKS
-
-            def transform(x: Q): R =
-                to.toOption(Expr(IrExpr.Subquery(x.tree)))
-
-            def offset(x: Q): Int =
-                1
-
-            def asSelectItems(x: Q, cursor: Int): NonEmptyList[IrSelectItem] =
-                NonEmptyList(IrSelectItem(ao.asExpr(transform(x)).asIrExpr, s"c$cursor"), Nil)
-
-    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], KS] =
-        error("Window function requires an OVER clause.")
+                NonEmptyList(IrSelectItem(a.asExpr(x).asIrExpr, s"c$cursor"), Nil)
 
     given table[T, L <: Int, CL <: Int](using
         kt: KindToTuple[Column[L]]
@@ -362,4 +324,4 @@ object AsMap:
 
         val t = Type.show[T]
 
-        report.errorAndAbort(s"Cannot convert type $t for the SQL SELECT list.")
+        report.errorAndAbort(s"Cannot convert type $t for the SQL select list.")

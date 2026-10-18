@@ -492,7 +492,7 @@ def caseWhen[C, R, CL <: Int](cond: C)(result: R)(using
     ac: AsExpr[C, CL],
     ar: AsExpr[R, CL],
     b: ValidateArgType[SqlBoolean, ac.R, "boolean"],
-    as: AsSqlExpr[ar.R],
+    as: ValidateArgType[AsSqlExpr, ar.R, "scalar"],
     ktc: KindToTuple[ac.K],
     ktr: KindToTuple[ar.K],
     c: CombineKindTuple[ktc.R, ktr.R]
@@ -512,8 +512,8 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    asa: AsSqlExpr[aa.R],
-    asb: AsSqlExpr[ab.R],
+    asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
+    asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
     r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
@@ -534,8 +534,8 @@ def ifNull[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    asa: AsSqlExpr[aa.R],
-    asb: AsSqlExpr[ab.R],
+    asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
+    asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
     r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
@@ -554,8 +554,8 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
     qc: QueryContext[CL],
     aa: AsExpr[A, CL],
     ab: AsExpr[B, CL],
-    asa: AsSqlExpr[aa.R],
-    asb: AsSqlExpr[ab.R],
+    asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
+    asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
     r: Return[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K],
     to: ToOption[Expr[r.R, c.R]]
@@ -657,19 +657,6 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
         )
 
 /**
- * References the current row in a window frame. Maps to
- * `CURRENT ROW`. Used with `rows`, `range`, or `groups`.
- *
- * {{{
- * from(Post).map(p => sum(p.likeCount).over(
- *     partitionBy(p.authorId).orderBy(p.id.desc).rows(currentRow)
- * ))
- * }}}
- */
-def currentRow[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 3, "current row"] =
-    FrameBound(IrWindowFrameBound.CurrentRow)
-
-/**
  * References the first row in a window frame. Maps to
  * `UNBOUNDED PRECEDING`. Used with `rows`, `range`, or `groups`.
  *
@@ -681,6 +668,19 @@ def currentRow[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothi
  */
 def unboundedPreceding[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 1, "unbounded preceding"] =
     FrameBound(IrWindowFrameBound.UnboundedPreceding)
+
+/**
+ * References the current row in a window frame. Maps to
+ * `CURRENT ROW`. Used with `rows`, `range`, or `groups`.
+ *
+ * {{{
+ * from(Post).map(p => sum(p.likeCount).over(
+ *     partitionBy(p.authorId).orderBy(p.id.desc).rows(currentRow)
+ * ))
+ * }}}
+ */
+def currentRow[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 3, "current row"] =
+    FrameBound(IrWindowFrameBound.CurrentRow)
 
 /**
  * References the last row in a window frame. Maps to
@@ -695,11 +695,11 @@ def unboundedPreceding[CL <: Int](using QueryContext[CL], OverContext): FrameBou
 def unboundedFollowing[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothing, 5, "unbounded following"] =
     FrameBound(IrWindowFrameBound.UnboundedFollowing)
 
-extension [T, CL <: Int](n: T)(using 
-    qc: QueryContext[CL], 
-    oc: OverContext, 
-    a: AsExpr[T, CL], 
-    kt: KindToTuple[a.K], 
+extension [T, CL <: Int](n: T)(using
+    qc: QueryContext[CL],
+    oc: OverContext,
+    a: AsExpr[T, CL],
+    kt: KindToTuple[a.K],
     nv: IsNotVariable[kt.R]
 )
     /**
@@ -769,7 +769,7 @@ def all[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T, OK
 def exists[T, OKS <: Tuple, L <: Int, S <: QuerySize, CL <: Int](query: Query[T, OKS, L, S])(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
-    refl: L > CL =:= true
+    vss: ValidateSubqueryScope[L, CL]
 ): Expr[Boolean, Composite[OKS]] =
     Expr(
         IrExpr.ExistsPredicate(
@@ -788,8 +788,7 @@ def cube[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
-    ak: AllIsKind[kt.R, Grouped[?]],
-    refl: ak.R =:= true
+    ig: IsGrouped[kt.R]
 ): Cube =
     Cube(a.asExprs(x).map(_.asIrExpr))
 
@@ -804,8 +803,7 @@ def rollup[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
-    ak: AllIsKind[kt.R, Grouped[?]],
-    refl: ak.R =:= true
+    ig: IsGrouped[kt.R]
 ): Rollup =
     Rollup(a.asExprs(x).map(_.asIrExpr))
 
