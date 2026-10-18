@@ -112,4 +112,4 @@ object AsMultidimensionalGrouping:
 
         val t = Type.show[T]
 
-        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping item.")
+        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping sets.")

@@ -973,18 +973,23 @@ object CanInSort:
         nu: hu.R =:= false
     ): CanInSort[KS, ManyRows]()
 
-trait SortIsValue[K <: ExprKind]
+    inline given fallback[KS <: Tuple, S <: QuerySize](using
+        NotGiven[CanInSort[KS, S]]
+    ): CanInSort[KS, S] =
+        error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
-object SortIsValue:
+trait SortByNotAllowedValue[K <: ExprKind]
+
+object SortByNotAllowedValue:
     given validate[K <: ExprKind](using
         hv: IsKind[K, Value],
         nv: hv.R =:= false
-    ): SortIsValue[K]()
+    ): SortByNotAllowedValue[K]()
 
     inline given fallback[K <: ExprKind](using
         hv: IsKind[K, Value],
         iv: hv.R =:= true
-    ): SortIsValue[K] =
+    ): SortByNotAllowedValue[K] =
         error("Scalar value are not allowed in sortBy.")
 
 /**
@@ -1000,6 +1005,24 @@ object CanInGroupedSort:
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
     ): CanInGroupedSort[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[CanInGroupedSort[KS]]
+    ): CanInGroupedSort[KS] =
+        error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
+
+// TODO 注释
+trait CanInDistinctSort[T, CL <: Int]
+
+object CanInDistinctSort:
+    given expr[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSort[Distinct[T, L], CL]()
+
+    given sort[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSort[DistinctSort[T, L], CL]()
+
+    inline given fallback[T, CL <: Int](using
+        NotGiven[CanInDistinctSort[T, CL]]
+    ): CanInDistinctSort[T, CL] =
+        error("For mapDistinct, sortBy expressions must appear in select list")
 
 trait GroupByNotAllowedValue[K <: ExprKind]
 

@@ -60,7 +60,7 @@ object AsTable:
 
             def asTable(x: O)(using qc: QueryContext[CL]): (R, IrTable) =
                 val metaData = fc.metaData
-                val irTable = IrTable.Ident(metaData.tableName)
+                val irTable = IrTable.Ident(metaData.tableName, Nil)
                 val table = Table[fc.R, Column, CL](
                     irTable,
                     metaData
@@ -81,7 +81,8 @@ object AsTable:
                 val sqlTable =
                     IrTable.Subquery(
                         false,
-                        x.tree
+                        x.tree,
+                        Nil
                     )
                 val subquery = MappedTable[N, V, CL](sqlTable)
                 (subquery, sqlTable)
@@ -96,7 +97,6 @@ object AsTable:
     //         def asTable(x: RecursiveTable[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
     //             (x, x.__sqlTable__)
 
-    // TODO
     inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
         val metaData = TableMacro.tableMetaData[T]
         val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
@@ -113,7 +113,7 @@ object AsTable:
             type R = Table[T, Column, CL]
 
             type OKS = EmptyTuple
-            
+
             def asTable(x: S)(using qc: QueryContext[CL]): (R, IrTable) =
                 require(x.nonEmpty, "Values table must have at least one row.")
                 val exprList = x.toList.map: datum =>
@@ -121,7 +121,7 @@ object AsTable:
                     require(row.nonEmpty, "Values table must have at least one column.")
                     NonEmptyList(row.head, row.tail)
                 val values = IrQuery.Values(NonEmptyList(exprList.head, exprList.tail))
-                val table = IrTable.Subquery(false, values)
+                val table = IrTable.Subquery(false, values, metaData.columns.toList)
                 (Table[T, Column, CL](table, metaData), table)
 
     inline given joinPart[T, TOKS <: Tuple, CL <: Int]: Aux[JoinPart[T, TOKS, CL], CL, T, TOKS] =
