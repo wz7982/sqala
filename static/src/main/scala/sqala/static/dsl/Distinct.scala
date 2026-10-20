@@ -108,11 +108,11 @@ object ToDistinct:
     type Aux[T, CL <: Int, O] = ToDistinct[T, CL]:
         type R = O
 
-    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, Distinct[T, CL]] =
-        new ToDistinct[Expr[T, EK], CL]:
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], CL <: Int]: Aux[E, CL, Distinct[T, CL]] =
+        new ToDistinct[E, CL]:
             type R = Distinct[T, CL]
 
-            def toDistinct(x: Expr[T, EK]): R =
+            def toDistinct(x: E): R =
                 Distinct(x.asIrExpr)
 
     given tuple[H, T <: Tuple, CL <: Int](using

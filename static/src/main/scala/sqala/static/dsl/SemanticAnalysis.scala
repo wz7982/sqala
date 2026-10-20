@@ -1022,7 +1022,7 @@ object CanInDistinctSort:
     inline given fallback[T, CL <: Int](using
         NotGiven[CanInDistinctSort[T, CL]]
     ): CanInDistinctSort[T, CL] =
-        error("For mapDistinct, sortBy expressions must appear in select list")
+        error("For mapDistinct, sortBy expressions must appear in map.")
 
 trait GroupByNotAllowedValue[K <: ExprKind]
 

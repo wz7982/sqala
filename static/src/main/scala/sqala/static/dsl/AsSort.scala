@@ -245,6 +245,21 @@ object AsDistinctSortItem:
         def asSort(x: DistinctSort[T, EL]): DistinctSort[?, ?] =
             x
 
+    given wrongExpr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        i: CanInDistinctSort[T, CL]
+    ): AsDistinctSortItem[T, CL] with
+        def asSort(x: T): DistinctSort[?, ?] =
+            DistinctSort(a.asExpr(x), SqlOrdering.Asc, None)
+
+    given wrongSort[T, K <: ExprKind, CL <: Int](using
+        ValidateArgType[AsSqlExpr, T, "scalar"],
+        CanInDistinctSort[Sort[T, K], CL]
+    ): AsDistinctSortItem[Sort[T, K], CL] with
+        def asSort(x: Sort[T, K]): DistinctSort[?, ?] =
+            DistinctSort(x.expr, x.ordering, x.nullsOrdering)
+
     inline given fallback[T, CL <: Int](using
         NotGiven[AsDistinctSortItem[T, CL]]
     ): AsDistinctSortItem[T, CL] =

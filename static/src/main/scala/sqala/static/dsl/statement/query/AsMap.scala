@@ -193,9 +193,9 @@ object AsMap:
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
         kt: KindToTuple[a.K]
-    ): Aux[T, CL, Expr[T, Column[CL]], kt.R] =
+    ): Aux[T, CL, Expr[a.R, Column[CL]], kt.R] =
         new AsMap[T, CL]:
-            type R = Expr[T, Column[CL]]
+            type R = Expr[a.R, Column[CL]]
 
             type KS = kt.R
 
