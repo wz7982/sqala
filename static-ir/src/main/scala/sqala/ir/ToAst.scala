@@ -66,13 +66,13 @@ private[sqala] class ToAst:
 
     private def tableToAst(table: IrTable): SqlTable =
         table match
-            case IrTable.Ident(name) =>
+            case IrTable.Ident(name, columnAliases) =>
                 val alias = fetchAlias(table)
-                SqlTable.Ident(name, tableAliasToAst(alias), None, None, None)
-            case IrTable.Subquery(withLateral, query) =>
+                SqlTable.Ident(name, tableAliasToAst(alias, columnAliases), None, None, None)
+            case IrTable.Subquery(withLateral, query, columnAliases) =>
                 val queryAst = queryToAst(query)
                 val alias = fetchAlias(table)
-                SqlTable.Subquery(withLateral, queryAst, tableAliasToAst(alias), None)
+                SqlTable.Subquery(withLateral, queryAst, tableAliasToAst(alias, columnAliases), None)
             case IrTable.Join(left, joinType, right, on) =>
                 val leftAst = tableToAst(left)
                 val rightAst = tableToAst(right)
@@ -274,8 +274,8 @@ private[sqala] class ToAst:
             case IrLock.Share(mode) =>
                 SqlLock.Share(mode.map(modeToAst))
 
-    private def tableAliasToAst(alias: String): Option[SqlTableAlias] =
-        Some(SqlTableAlias(alias, Nil))
+    private def tableAliasToAst(alias: String, columnAliases: List[String]): Option[SqlTableAlias] =
+        Some(SqlTableAlias(alias, columnAliases))
 
     private def fetchAlias(table: IrTable): String =
         tableAliasMap.computeIfAbsent(
