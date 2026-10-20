@@ -938,6 +938,11 @@ object CanInMap:
         new CanInMap[KS]:
             type R = ManyRows
 
+    inline given fallback[KS <: Tuple](using
+        NotGiven[CanInMap[KS]]
+    ): CanInMap[KS] =
+        error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
+
 /**
  * Validates that a kind tuple can appear in a `map` clause
  * after `groupBy`.
@@ -952,30 +957,35 @@ object CanInGroupedMap:
         nu: hu.R =:= false
     ): CanInGroupedMap[KS]()
 
+    inline given fallback[KS <: Tuple](using
+        NotGiven[CanInGroupedMap[KS]]
+    ): CanInGroupedMap[KS] =
+        error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
+
 /**
  * Validates that a kind tuple can appear in a `sortBy` clause.
  * `S` is the query size of the result.
  */
-trait CanInSort[KS <: Tuple, S <: QuerySize]
+trait CanInSortBy[KS <: Tuple, S <: QuerySize]
 
-object CanInSort:
+object CanInSortBy:
     given oneRow[KS <: Tuple](using
         hc: HasKind[KS, Column[?]],
         nc: hc.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): CanInSort[KS, OneRow]()
+    ): CanInSortBy[KS, OneRow]()
 
     given manyRows[KS <: Tuple](using
         ha: HasKind[KS, Agg[?]],
         ia: ha.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): CanInSort[KS, ManyRows]()
+    ): CanInSortBy[KS, ManyRows]()
 
     inline given fallback[KS <: Tuple, S <: QuerySize](using
-        NotGiven[CanInSort[KS, S]]
-    ): CanInSort[KS, S] =
+        NotGiven[CanInSortBy[KS, S]]
+    ): CanInSortBy[KS, S] =
         error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
 trait SortByNotAllowedValue[K <: ExprKind]
@@ -996,32 +1006,32 @@ object SortByNotAllowedValue:
  * Validates that a kind tuple can appear in a `sortBy` clause
  * after `groupBy`.
  */
-trait CanInGroupedSort[KS <: Tuple]
+trait CanInGroupedSortBy[KS <: Tuple]
 
-object CanInGroupedSort:
+object CanInGroupedSortBy:
     given validate[KS <: Tuple](using
         hc: HasKind[KS, Column[?]],
         nc: hc.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): CanInGroupedSort[KS]()
+    ): CanInGroupedSortBy[KS]()
 
     inline given fallback[KS <: Tuple](using
-        NotGiven[CanInGroupedSort[KS]]
-    ): CanInGroupedSort[KS] =
+        NotGiven[CanInGroupedSortBy[KS]]
+    ): CanInGroupedSortBy[KS] =
         error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
 // TODO 注释
-trait CanInDistinctSort[T, CL <: Int]
+trait CanInDistinctSortBy[T, CL <: Int]
 
-object CanInDistinctSort:
-    given expr[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSort[Distinct[T, L], CL]()
+object CanInDistinctSortBy:
+    given expr[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSortBy[Distinct[T, L], CL]()
 
-    given sort[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSort[DistinctSort[T, L], CL]()
+    given sort[T, L <: Int, CL <: Int](using L =:= CL): CanInDistinctSortBy[DistinctSort[T, L], CL]()
 
     inline given fallback[T, CL <: Int](using
-        NotGiven[CanInDistinctSort[T, CL]]
-    ): CanInDistinctSort[T, CL] =
+        NotGiven[CanInDistinctSortBy[T, CL]]
+    ): CanInDistinctSortBy[T, CL] =
         error("For mapDistinct, sortBy expressions must appear in map.")
 
 trait GroupByNotAllowedValue[K <: ExprKind]
@@ -1084,14 +1094,43 @@ object GroupByNotAllowedUngroupedColumn:
  * Validates that a kind tuple can appear in a `groupBy`
  * clause.
  */
-trait CanInGroup[KS <: Tuple]
+trait CanInGroupBy[KS <: Tuple]
 
-object CanInGroup:
+object CanInGroupBy:
     given validate[KS <: Tuple](using
         GroupByNotAllowedAgg[KS],
         GroupByNotAllowedWindow[KS],
         GroupByNotAllowedUngroupedColumn[KS]
-    ): CanInGroup[KS]()
+    ): CanInGroupBy[KS]()
+
+// TODO 注释
+trait HavingNotAllowedWindow[KS <: Tuple]
+
+object HavingNotAllowedWindow:
+    given validate[KS <: Tuple](using
+        hw: HasKind[KS, Window[?]],
+        nw: hw.R =:= false
+    ): HavingNotAllowedWindow[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[HavingNotAllowedWindow[KS]]
+    ): HavingNotAllowedWindow[KS] =
+        error("Window functions are not allowed in having.")
+
+trait HavingNotAllowedUngroupedColumn[KS <: Tuple]
+
+object HavingNotAllowedUngroupedColumn:
+    given validate[KS <: Tuple](using
+        hc: HasKind[KS, Column[?]],
+        nc: hc.R =:= false,
+        hu: HasKind[KS, UngroupedColumn[?]],
+        nu: hu.R =:= false
+    ): HavingNotAllowedUngroupedColumn[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[HavingNotAllowedUngroupedColumn[KS]]
+    ): HavingNotAllowedUngroupedColumn[KS] =
+        error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
 /**
  * Validates that a kind tuple can appear in a `having` clause.
@@ -1100,12 +1139,8 @@ trait CanInHaving[KS <: Tuple]
 
 object CanInHaving:
     given validate[KS <: Tuple](using
-        hc: HasKind[KS, Column[?]],
-        nc: hc.R =:= false,
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
-        hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false
+        HavingNotAllowedWindow[KS],
+        HavingNotAllowedUngroupedColumn[KS]
     ): CanInHaving[KS]()
 
 /**
@@ -1118,20 +1153,6 @@ object ValidateSubqueryExprSize:
 
     inline given manyRows: ValidateSubqueryExprSize[ManyRows] =
         error("More than one row returned by a subquery used as an expression.")
-
-/**
- * TODO 去掉
- * Validates that a scalar subquery returns one column.
- */
-trait ValidateScalarSubqueryColumnSize[T]
-
-object ValidateScalarSubqueryColumnSize:
-    given validate[T: AsSqlExpr]: ValidateScalarSubqueryColumnSize[T]()
-
-    inline given fallback[T](using
-        NotGiven[ValidateScalarSubqueryColumnSize[T]]
-    ): ValidateScalarSubqueryColumnSize[T] =
-        error("Subquery must return only one column.")
 
 // TODO 注释和错误文案
 trait ValidateSubqueryScope[L <: Int, CL <: Int]

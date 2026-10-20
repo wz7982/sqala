@@ -11,7 +11,6 @@ import sqala.ir.IrExpr
 import scala.util.NotGiven
 import sqala.static.{dsl => AsMultidimensionalGrouping}
 
-// TODO 去掉=:= 加fallback
 /**
  * Lifts a single expression or subquery into a grouping item.
  * `CL` is the current query context level.
@@ -48,7 +47,7 @@ object AsGroupItem:
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
         kt: KindToTuple[a.K],
-        ig: CanInGroup[kt.R],
+        ig: CanInGroupBy[kt.R],
         nv: GroupByNotAllowedValue[a.K]
     ): Aux[T, CL, Expr[a.R, Grouped[kt.R]], kt.R] =
         new AsGroupItem[T, CL]:

@@ -848,10 +848,9 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
      *     .map((g, p) => (g, count()))
      * }}}
      */
-    // TODO SqlBoolean改掉
     def having[F](f: QueryContext[L] ?=> GroupingContext ?=> T => F)(using
         a: AsExpr[F, L],
-        b: SqlBoolean[a.R],
+        b: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
         i: CanInHaving[kt.R],
         e: ExcludeCurrentLevelColumn[kt.R, L],

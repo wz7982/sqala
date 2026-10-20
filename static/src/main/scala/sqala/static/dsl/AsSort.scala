@@ -11,7 +11,6 @@ import scala.quoted.Type
 import scala.quoted.Quotes
 import scala.util.NotGiven
 
-// TODO =:=的要改一下 fallback
 /**
  * Lifts values, expressions, and subqueries for `sortBy` in
  * queries. `S` is the query size. `CL` is the current query
@@ -37,7 +36,7 @@ object AsSortItem:
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
         kt: KindToTuple[a.K],
-        i: CanInSort[kt.R, S],
+        i: CanInSortBy[kt.R, S],
         nv: SortByNotAllowedValue[a.K]
     ): Aux[T, S, CL, kt.R] =
         new AsSortItem[T, S, CL]:
@@ -49,7 +48,7 @@ object AsSortItem:
     given sort[T, EK <: ExprKind, S <: QuerySize, CL <: Int](using
         as: ValidateArgType[AsSqlExpr, T, "scalar"],
         kt: KindToTuple[EK],
-        i: CanInSort[kt.R, S],
+        i: CanInSortBy[kt.R, S],
         nv: SortByNotAllowedValue[EK]
     ): Aux[Sort[T, EK], S, CL, kt.R] =
         new AsSortItem[Sort[T, EK], S, CL]:
@@ -140,7 +139,7 @@ object AsGroupedSortItem:
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
         kt: KindToTuple[a.K],
-        i: CanInGroupedSort[kt.R],
+        i: CanInGroupedSortBy[kt.R],
         nv: SortByNotAllowedValue[a.K]
     ): Aux[T, CL, kt.R] =
         new AsGroupedSortItem[T, CL]:
@@ -152,7 +151,7 @@ object AsGroupedSortItem:
     given sort[T, EK <: ExprKind, CL <: Int](using
         as: ValidateArgType[AsSqlExpr, T, "scalar"],
         kt: KindToTuple[EK],
-        i: CanInGroupedSort[kt.R],
+        i: CanInGroupedSortBy[kt.R],
         nv: SortByNotAllowedValue[EK]
     ): Aux[Sort[T, EK], CL, kt.R] =
         new AsGroupedSortItem[Sort[T, EK], CL]:
@@ -233,14 +232,14 @@ trait AsDistinctSortItem[T, CL <: Int]:
 object AsDistinctSortItem:
     given expr[T, EL <: Int, CL <: Int](using
         ValidateArgType[AsSqlExpr, T, "scalar"],
-        CanInDistinctSort[Distinct[T, EL], CL]
+        CanInDistinctSortBy[Distinct[T, EL], CL]
     ): AsDistinctSortItem[Distinct[T, EL], CL] with
         def asSort(x: Distinct[T, EL]): DistinctSort[?, ?] =
             DistinctSort(Expr(x.expr), SqlOrdering.Asc, None)
 
     given sort[T, EL <: Int, CL <: Int](using
         ValidateArgType[AsSqlExpr, T, "scalar"],
-        CanInDistinctSort[DistinctSort[T, EL], CL]
+        CanInDistinctSortBy[DistinctSort[T, EL], CL]
     ): AsDistinctSortItem[DistinctSort[T, EL], CL] with
         def asSort(x: DistinctSort[T, EL]): DistinctSort[?, ?] =
             x
@@ -248,14 +247,14 @@ object AsDistinctSortItem:
     given wrongExpr[T, CL <: Int](using
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
-        i: CanInDistinctSort[T, CL]
+        i: CanInDistinctSortBy[T, CL]
     ): AsDistinctSortItem[T, CL] with
         def asSort(x: T): DistinctSort[?, ?] =
             DistinctSort(a.asExpr(x), SqlOrdering.Asc, None)
 
     given wrongSort[T, K <: ExprKind, CL <: Int](using
         ValidateArgType[AsSqlExpr, T, "scalar"],
-        CanInDistinctSort[Sort[T, K], CL]
+        CanInDistinctSortBy[Sort[T, K], CL]
     ): AsDistinctSortItem[Sort[T, K], CL] with
         def asSort(x: Sort[T, K]): DistinctSort[?, ?] =
             DistinctSort(x.expr, x.ordering, x.nullsOrdering)
