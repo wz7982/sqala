@@ -54,15 +54,15 @@ object ToOption:
                 x.copy[Wrap[T, Option], K, L]()
 
     // TODO
-    // given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
-    //     t: ToOption[V],
-    //     tt: ToTuple[t.R]
-    // ): Aux[MappedTable[N, V, L], MappedTable[N, tt.R, L]] =
-    //     new ToOption[MappedTable[N, V, L]]:
-    //         type R = MappedTable[N, tt.R, L]
+    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](using
+        t: ToOption[V],
+        tt: ToTuple[t.R]
+    ): Aux[MappedTable[N, V, RV, O, L], MappedTable[N, tt.R, RV, true, L]] =
+        new ToOption[MappedTable[N, V, RV, O, L]]:
+            type R = MappedTable[N, tt.R, RV, true, L]
 
-    //         def toOption(x: MappedTable[N, V, L]): R =
-    //             x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: MappedTable[N, V, RV, O, L]): R =
+                x.copy[N, tt.R, RV, true, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
     // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
     //     t: ToOption[V],

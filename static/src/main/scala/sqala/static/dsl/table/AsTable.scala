@@ -71,9 +71,9 @@ object AsTable:
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, tt.R, false, CL], TOKS] =
         new AsTable[Q, CL]:
-            type R = MappedTable[N, tt.R, CL]
+            type R = MappedTable[N, tt.R, tt.R, false, CL]
 
             type OKS = TOKS
 
@@ -84,7 +84,7 @@ object AsTable:
                         x.tree,
                         Nil
                     )
-                val subquery = MappedTable[N, V, CL](sqlTable)
+                val subquery = MappedTable[N, V, tt.R, false, CL](sqlTable)
                 (subquery, sqlTable)
 
     // TODO

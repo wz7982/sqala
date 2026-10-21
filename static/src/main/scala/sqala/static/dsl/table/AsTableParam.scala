@@ -31,15 +31,15 @@ object AsTableParam:
     type Aux[T, CL <: Int, O] = AsTableParam[T, CL]:
         type R = O
 
-    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, Expr[T, Column[CL]]] =
+    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, ColumnExpr[T, CL]] =
         new AsTableParam[Expr[T, EK], CL]:
-            type R = Expr[T, Column[CL]]
+            type R = ColumnExpr[T, CL]
 
             def offset: Int =
                 1
 
-            def asTableParam(table: IrTable, cursor: Int): Expr[T, Column[CL]] =
-                Expr(IrExpr.Column(table, s"c$cursor"))
+            def asTableParam(table: IrTable, cursor: Int): ColumnExpr[T, CL] =
+                ColumnExpr(IrExpr.Column(table, s"c$cursor"))
 
     inline given table[T, L <: Int, CL <: Int]: Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
         val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
@@ -61,18 +61,19 @@ object AsTableParam:
                     metaData.copy(columns = metaData.columns.indices.map(i => s"c${cursor + i}"))
                 )
 
-    inline given mappedTable[N <: Tuple, V <: Tuple, L <: Int, CL <: Int](using
+    // TODO 有bug
+    inline given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]
-    ): Aux[MappedTable[N, V, L], CL, MappedTable[N, tt.R, CL]] =
-        new AsTableParam[MappedTable[N, V, L], CL]:
-            type R = MappedTable[N, tt.R, CL]
+    ): Aux[MappedTable[N, V, RV, O, L], CL, MappedTable[N, tt.R, RV, O, CL]] =
+        new AsTableParam[MappedTable[N, V, RV, O, L], CL]:
+            type R = MappedTable[N, tt.R, RV, O, CL]
 
             def offset: Int =
                 a.offset
 
             def asTableParam(table: IrTable, cursor: Int): R =
-                MappedTable[N, V, CL](table)
+                MappedTable[N, tt.R, RV, O, CL](table, tt.toTuple(a.asTableParam(table, cursor)))
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsTableParam[H, CL],

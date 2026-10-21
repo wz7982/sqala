@@ -18,19 +18,25 @@ object Result:
     type Aux[T, O] = Result[T]:
         type R = O
 
-    given expr[T, K <: ExprKind]: Aux[Expr[T, K], T] =
-        new Result[Expr[T, K]]:
+    given expr[T, K <: ExprKind, E <: Expr[T, K]]: Aux[E, T] =
+        new Result[E]:
             type R = T
 
     given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], T] =
         new Result[Table[T, K, L]]:
             type R = T
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
-        r: Result[NamedTuple[N, V]]
-    ): Aux[MappedTable[N, V, L], r.R] =
-        new Result[MappedTable[N, V, L]]:
+    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, L <: Int](using
+        r: Result[NamedTuple[N, RV]]
+    ): Aux[MappedTable[N, V, RV, false, L], r.R] =
+        new Result[MappedTable[N, V, RV, false, L]]:
             type R = r.R
+
+    given nullableMappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, L <: Int](using
+        r: Result[NamedTuple[N, RV]]
+    ): Aux[MappedTable[N, V, RV, true, L], Option[r.R]] =
+        new Result[MappedTable[N, V, RV, true, L]]:
+            type R = Option[r.R]
 
     // TODO
     // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using

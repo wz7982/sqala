@@ -28,14 +28,14 @@ object TransformTableKind:
             def transform(x: Table[T, TK, L]): R =
                 Table(x.__table__, x.__metaData__)
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int, K[_ <: Int] <: ExprKind](using
+    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, K[_ <: Int] <: ExprKind](using
         tv: TransformExprKind[V, K[L]],
         tt: ToTuple[tv.R]
-    ): Aux[MappedTable[N, V, L], K, MappedTable[N, tt.R, L]] =
-        new TransformTableKind[MappedTable[N, V, L], K]:
-            type R = MappedTable[N, tt.R, L]
+    ): Aux[MappedTable[N, V, RV, O, L], K, MappedTable[N, tt.R, RV, O, L]] =
+        new TransformTableKind[MappedTable[N, V, RV, O, L], K]:
+            type R = MappedTable[N, tt.R, RV, O, L]
 
-            def transform(x: MappedTable[N, V, L]): R =
+            def transform(x: MappedTable[N, V, RV, O, L]): R =
                 MappedTable(
                     x.__table__, 
                     tt.toTuple(tv.transform(x.__items__)), 

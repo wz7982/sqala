@@ -38,17 +38,17 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
         val index = __metaData__.fields.toList.indexOf(name)
         ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
 
-    transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?] =
-        ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, L]('__table__, '__metaData__, 'columns) }
+    transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?, ?] =
+        ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, IsOption[T], L]('__table__, '__metaData__, 'columns) }
 
 private[sqala] object ExcludeMacro:
-    def excludeMacro[T: Type, OT: Type, L <: Int : Type](
+    def excludeMacro[T: Type, OT: Type, O <: Boolean : Type, L <: Int : Type](
         table: ScalaExpr[IrTable], 
         metaData: ScalaExpr[TableMetaData],
         columns: ScalaExpr[Seq[String]],
     )(using 
         q: Quotes
-    ): ScalaExpr[MappedTable[?, ?, ?]] =
+    ): ScalaExpr[MappedTable[?, ?, ?, ?, ?]] =
         import q.reflect.*
 
         val columnsTerm = columns.asTerm
@@ -82,10 +82,16 @@ private[sqala] object ExcludeMacro:
                 case '[t] =>
                     TypeRepr.of[MapField[t, OT, L]]
         val valueType = buildTupleType(types)
-        val fieldNamesExpr = ScalaExpr.ofList(excludedFields.map(_._1).map(n => ScalaExpr(n)))
+        val resultTypes = excludedFields.map(_._2).map: v =>
+            v.asType match
+                case '[t] =>
+                    TypeRepr.of[ColumnExpr[t, L]]
+        val resultType = buildTupleType(resultTypes)
+        val fieldNamesExpr =
+            ScalaExpr.ofList(excludedFields.map(_._1).map(n => ScalaExpr(n)))
 
-        (nameType.asType, valueType.asType) match
-            case ('[type n <: Tuple; n], '[type v <: Tuple; v]) =>
+        (nameType.asType, valueType.asType, resultType.asType) match
+            case ('[type n <: Tuple; n], '[type v <: Tuple; v], '[type r <: Tuple; r]) =>
                 '{
                     val columns = 
                         $metaData.fields.toList
@@ -94,7 +100,7 @@ private[sqala] object ExcludeMacro:
                             .map((_, c) => ColumnExpr(IrExpr.Column($table, c)))
                             .toArray
                     val items = Tuple.fromArray(columns).asInstanceOf[v]
-                    MappedTable[n, v, L]($table, items, $fieldNamesExpr)
+                    MappedTable[n, v, r, O, L]($table, items, $fieldNamesExpr)
                 }
             case _ =>
                 report.errorAndAbort("Cannot exclude all fields. At least one field must be retained.")
@@ -103,7 +109,7 @@ private[sqala] object ExcludeMacro:
   * A table reference produced by `from` when a `MappedTable` is passed,
   * mapping entity class fields to typed expressions via `Fields`.
   */
-final case class MappedTable[N <: Tuple, V <: Tuple, L <: Int](
+final case class MappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](
     private[sqala] val __table__ : IrTable,
     private[sqala] val __items__ : V,
     private[sqala] val __fields__ : List[String]
@@ -122,13 +128,16 @@ final case class MappedTable[N <: Tuple, V <: Tuple, L <: Int](
         __items__.toList(index)
 
 object MappedTable:
-    inline def apply[N <: Tuple, V <: Tuple, L <: Int](table: IrTable)(using
-        p: AsTableParam[V, L],
-        t: ToTuple[p.R]
-    ): MappedTable[N, t.R, L] =
+    inline def apply[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](table: IrTable, items: V): MappedTable[N, V, RV, O, L] =
         val fields = constValueTuple[N].toArray.toList.map(_.toString)
         new MappedTable(
             table,
-            t.toTuple(p.asTableParam(table, 1)),
+            items,
             fields
         )
+
+    inline def apply[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](table: IrTable)(using
+        p: AsTableParam[V, L],
+        t: ToTuple[p.R]
+    ): MappedTable[N, t.R, RV, O, L] =
+        MappedTable(table, t.toTuple(p.asTableParam(table, 1)))

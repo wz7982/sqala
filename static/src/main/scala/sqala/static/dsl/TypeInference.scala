@@ -583,19 +583,21 @@ object Union:
             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
                 Table(x.__table__, x.__metaData__)
 
-    given mappedTable[AN <: Tuple, AV <: Tuple, AL <: Int, BN <: Tuple, BV <: Tuple, BL <: Int, CL <: Int](using
+    given mappedTable[AN <: Tuple, AV <: Tuple, ARV <: Tuple, AO <: Boolean, AL <: Int, BN <: Tuple, BV <: Tuple, BRV <: Tuple, BO <: Boolean, BL <: Int, CL <: Int](using
         u: Union[AV, BV, CL],
         tt: ToTuple[u.R],
-        a: AsTableParam[AV, CL]
-    ): Aux[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL, MappedTable[AN, tt.R, CL]] =
-        new Union[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL]:
-            type R = MappedTable[AN, tt.R, CL]
+        a: AsTableParam[AV, CL],
+        ur: Union[ARV, BRV, CL],
+        rtt: ToTuple[ur.R]
+    ): Aux[MappedTable[AN, AV, ARV, AO, AL], MappedTable[BN, BV, BRV, BO, BL], CL, MappedTable[AN, tt.R, rtt.R, AO || BO, CL]] =
+        new Union[MappedTable[AN, AV, ARV, AO, AL], MappedTable[BN, BV, BRV, BO, BL], CL]:
+            type R = MappedTable[AN, tt.R, rtt.R, AO || BO, CL]
 
-            def offset(x: MappedTable[AN, AV, AL]): Int =
+            def offset(x: MappedTable[AN, AV, ARV, AO, AL]): Int =
                 a.offset
 
-            def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
-                MappedTable(
+            def unionQueryItems(x: MappedTable[AN, AV, ARV, AO, AL], cursor: Int): R =
+                MappedTable[AN, tt.R, rtt.R, AO || BO, CL](
                     x.__table__,
                     tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
                     x.__fields__
