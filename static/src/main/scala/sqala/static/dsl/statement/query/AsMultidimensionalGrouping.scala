@@ -8,7 +8,6 @@ import scala.util.NotGiven
 import scala.quoted.Type
 import scala.quoted.Quotes
 
-// TODO 整理using =:= 加上fallback
 /**
   * Represents a single grouping item.
   */
@@ -42,18 +41,6 @@ object AsGroupingItem:
     given groupingSets: AsGroupingItem[GroupingSets] with
         def asIrGroupingItem(x: GroupingSets): IrGroupingItem =
             IrGroupingItem.GroupingSets(x.items)
-
-    inline given fallback[T](using
-        NotGiven[AsGroupingItem[T]]
-    ): AsGroupingItem[T] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping item.")
 
 /**
  * Collects grouping items into a list of `SqlGroupingItem`.
@@ -101,15 +88,3 @@ object AsMultidimensionalGrouping:
     ): AsMultidimensionalGrouping[H *: EmptyTuple] with
         def asIrGroupingItems(x: H *: EmptyTuple): NonEmptyList[IrGroupingItem] =
             h.asIrGroupingItems(x.head)
-
-    inline given fallback[T](using
-        NotGiven[AsMultidimensionalGrouping[T]]
-    ): AsMultidimensionalGrouping[T] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL grouping sets.")

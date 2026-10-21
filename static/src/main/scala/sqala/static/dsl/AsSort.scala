@@ -57,18 +57,6 @@ object AsSortItem:
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
 
-    inline given fallback[T, S <: QuerySize, CL <: Int](using
-        NotGiven[AsSortItem[T, S, CL]]
-    ): Aux[T, S, CL, EmptyTuple] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL ordering list.")
-
 /**
  * Collects sort items for `sortBy` in queries. `S` is the query
  * size. `CL` is the current query context level.
@@ -160,18 +148,6 @@ object AsGroupedSortItem:
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
 
-    inline given fallback[T, CL <: Int](using
-        NotGiven[AsGroupedSortItem[T, CL]]
-    ): Aux[T, CL, EmptyTuple] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL ordering list.")
-
 /**
  * Collects sort items for `sortBy` after `groupBy`. `CL` is the
  * current query context level.
@@ -259,18 +235,6 @@ object AsDistinctSortItem:
         def asSort(x: Sort[T, K]): DistinctSort[?, ?] =
             DistinctSort(x.expr, x.ordering, x.nullsOrdering)
 
-    inline given fallback[T, CL <: Int](using
-        NotGiven[AsDistinctSortItem[T, CL]]
-    ): AsDistinctSortItem[T, CL] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL ordering list.")
-
 /**
  * Collects distinct sort items for `sortBy` after `mapDistinct`.
  * `CL` is the current query context level.
@@ -351,18 +315,6 @@ object AsOverSortItem:
 
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
-
-    inline given fallback[T, CL <: Int](using
-        NotGiven[AsOverSortItem[T, CL]]
-    ): Aux[T, CL, T, EmptyTuple] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t for the SQL ordering list.")
 
 /**
  * Collects sort items for `sortBy` in a window `over` clause.

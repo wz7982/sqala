@@ -164,15 +164,3 @@ object AsTable:
 
             def asTable(x: H *: EmptyTuple): (R, IrTable) =
                 ah.asTable(x.head)
-
-    inline given fallback[T, CL <: Int](using
-        NotGiven[AsTable[T, CL]]
-    ): Aux[T, CL, T, EmptyTuple] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t into a SQL table.")

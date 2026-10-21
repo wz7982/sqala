@@ -318,7 +318,7 @@ extension [CL <: Int](n: Int)(using QueryContext[CL])
     def second: Interval =
         Interval(n.toString, SqlTimeUnit.Second)
 
-// TODO fallback
+// TODO 移动到类型操作里 fallback
 /**
  * Constrains the types that can be used with `year`, `month`, etc.
  * extract functions.

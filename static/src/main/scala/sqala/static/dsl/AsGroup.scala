@@ -9,7 +9,6 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.ops.int.>
 import sqala.ir.IrExpr
 import scala.util.NotGiven
-import sqala.static.{dsl => AsMultidimensionalGrouping}
 
 /**
  * Lifts a single expression or subquery into a grouping item.
