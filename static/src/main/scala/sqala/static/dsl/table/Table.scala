@@ -39,10 +39,10 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
         ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
 
     transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?] =
-        ${ ExcludeMacro.excludeMacro[T, L]('__table__, '__metaData__, 'columns) }
+        ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, L]('__table__, '__metaData__, 'columns) }
 
 private[sqala] object ExcludeMacro:
-    def excludeMacro[T: Type, L <: Int : Type](
+    def excludeMacro[T: Type, OT: Type, L <: Int : Type](
         table: ScalaExpr[IrTable], 
         metaData: ScalaExpr[TableMetaData],
         columns: ScalaExpr[Seq[String]],
@@ -80,7 +80,7 @@ private[sqala] object ExcludeMacro:
         val types = excludedFields.map(_._2).map: v =>
             v.asType match
                 case '[t] =>
-                    TypeRepr.of[ColumnExpr[t, L]]
+                    TypeRepr.of[MapField[t, OT, L]]
         val valueType = buildTupleType(types)
         val fieldNamesExpr = ScalaExpr.ofList(excludedFields.map(_._1).map(n => ScalaExpr(n)))
 
@@ -96,6 +96,8 @@ private[sqala] object ExcludeMacro:
                     val items = Tuple.fromArray(columns).asInstanceOf[v]
                     MappedTable[n, v, L]($table, items, $fieldNamesExpr)
                 }
+            case _ =>
+                report.errorAndAbort("Cannot exclude all fields. At least one field must be retained.")
 
 /**
   * A table reference produced by `from` when a `MappedTable` is passed,
