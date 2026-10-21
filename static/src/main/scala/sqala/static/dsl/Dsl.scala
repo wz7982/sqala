@@ -514,7 +514,7 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
     ab: AsExpr[B, CL],
     asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
     asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
-    r: Return[aa.R, ab.R],
+    r: CoalesceReturn[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
     Expr(
@@ -536,7 +536,7 @@ def ifNull[A, B, CL <: Int](x: A, y: B)(using
     ab: AsExpr[B, CL],
     asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
     asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
-    r: Return[aa.R, ab.R],
+    r: CoalesceReturn[aa.R, ab.R],
     c: CombineKind[aa.K, ab.K]
 ): Expr[r.R, c.R] =
     coalesce(x, y)

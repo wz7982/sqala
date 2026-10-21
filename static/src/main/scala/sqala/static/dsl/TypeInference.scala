@@ -16,6 +16,9 @@ import sqala.ir.IrInRightOperand
 import sqala.static.dsl.table.Table
 import sqala.static.dsl.table.AsTableParam
 import sqala.static.dsl.table.MappedTable
+import sqala.ast.expr.SqlType
+import java.time.LocalDateTime
+import sqala.ast.expr.SqlTimeZoneMode
 
 /**
  * Determines whether two types are compatible for comparison
@@ -434,6 +437,33 @@ object Return:
         report.errorAndAbort(s"Types $aType and $bType are incompatible.")
 
 /**
+ * Computes the result type of a coalesce expression.
+ */
+trait CoalesceReturn[A, B]:
+    /**
+     * The result type.
+     */
+    type R
+
+object CoalesceReturn:
+    type Aux[A, B, O] = CoalesceReturn[A, B]:
+        type R = O
+
+    given nonEmpty[A, B](using
+        r: Return[A, B],
+        n: NotGiven[B <:< Option[?]]
+    ): Aux[A, B, Unwrap[r.R, Option]] =
+        new CoalesceReturn[A, B]:
+            type R = Unwrap[r.R, Option]
+
+    given empty[A, B](using
+        r: Return[A, B],
+        n: B <:< Option[?]
+    ): Aux[A, B, r.R] =
+        new CoalesceReturn[A, B]:
+            type R = r.R
+
+/**
  * TODO 加注释 报错细化一点。把dsl里的代码扫一遍，除了trait 引用AsSqlExpr的也要转到这个
  */
 trait ValidateArgType[F[_], T, N <: String]
@@ -655,3 +685,60 @@ object Union:
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+
+/**
+ * Provides the target type for a `as` method.
+ */
+trait Cast[T, R]:
+    /**
+     * The target type.
+     */
+    def castType: SqlType
+
+object Cast:
+    given string[T: AsSqlExpr]: Cast[T, String] with
+        def castType: SqlType = 
+            SqlType.Varchar(None)
+
+    given int[T: SqlNumber]: Cast[T, Int] with
+        def castType: SqlType = 
+            SqlType.Int
+
+    given long[T: SqlNumber]: Cast[T, Long] with
+        def castType: SqlType = 
+            SqlType.Long
+
+    given float[T: SqlNumber]: Cast[T, Float] with
+        def castType: SqlType = 
+            SqlType.Float
+
+    given double[T: SqlNumber]: Cast[T, Double] with
+        def castType: SqlType = 
+            SqlType.Double
+
+    given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
+        def castType: SqlType = 
+            SqlType.Decimal(None)
+
+    given json[T: SqlString]: Cast[T, Json] with
+        def castType: SqlType = 
+            SqlType.Json
+
+    given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
+        def castType: SqlType = 
+            SqlType.Timestamp(None)
+
+    given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
+        def castType: SqlType = 
+            SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Cannot convert type $aType to type $bType.")
