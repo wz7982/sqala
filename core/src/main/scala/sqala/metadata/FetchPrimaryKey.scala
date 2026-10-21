@@ -11,7 +11,7 @@ import scala.quoted.{Expr, Quotes, Type}
  * Derives primary key metadata from an entity type at compile time,
  * providing methods to build queries and delete statements by primary key.
  */
-private[sqala] trait FetchPrimaryKey[T]:
+trait FetchPrimaryKey[T]:
     /**
      * The primary key argument type (single type or tuple). *
      */
@@ -27,14 +27,14 @@ private[sqala] trait FetchPrimaryKey[T]:
      */
     def createDeleteTree(x: Seq[Args]): SqlStatement.Delete
 
-private[sqala] object FetchPrimaryKey:
+object FetchPrimaryKey:
     type Aux[T, A] = FetchPrimaryKey[T]:
         type Args = A
 
     transparent inline given derived[T]: Aux[T, ?] =
         ${ derivedImpl[T] }
 
-    def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
+    private[sqala] def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
         import q.reflect.*
 
         val sym = TypeTree.of[T].symbol

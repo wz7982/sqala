@@ -23,7 +23,7 @@ sealed class Over[KS <: Tuple](
 )(using OverContext)
 
 /**
- * A window specification after `partitionBy`, supporting `sortBy`, 
+ * A window specification after `partitionBy`, supporting `sortBy`,
  * and unbounded frame methods.
  */
 final case class PartitionedOver[KS <: Tuple](
@@ -47,7 +47,7 @@ final case class PartitionedOver[KS <: Tuple](
 
     /**
      * Sets the window frame to `ROWS start`.
-     * 
+     *
      * {{{
      * .rows(currentRow)
      * }}}
@@ -58,30 +58,30 @@ final case class PartitionedOver[KS <: Tuple](
         ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None)
         )
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .rowsBetween(1.preceding, currentRow)
      * }}}
      */
     def rowsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
-        start: FrameBound[ST, SS, SN], 
+        start: FrameBound[ST, SS, SN],
         end: FrameBound[ET, ES, EN]
-    )(using 
+    )(using
         QueryContext[CL],
         CanInRowsOrGroupsFrame[ST],
         CanInRowsOrGroupsFrame[ET],
         ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None)
         )
 
@@ -96,7 +96,7 @@ final case class SortedOver[T, KS <: Tuple](
 )(using OverContext) extends Over[KS](partitionBy, sortBy, frame):
     /**
      * Sets the window frame to `ROWS start`.
-     * 
+     *
      * {{{
      * .rows(currentRow)
      * }}}
@@ -107,20 +107,20 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None)
         )
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .rowsBetween(1.preceding, currentRow)
      * }}}
      */
     def rowsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
-        start: FrameBound[ST, SS, SN], 
+        start: FrameBound[ST, SS, SN],
         end: FrameBound[ET, ES, EN]
     )(using
         QueryContext[CL],
@@ -129,16 +129,16 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None)
         )
 
     /**
-     * Sets the window frame to `RANGE start`. 
+     * Sets the window frame to `RANGE start`.
      * The bound must be compatible with the
      * sort key type.
-     * 
+     *
      * {{{
      * .range(currentRow)
      * }}}
@@ -149,8 +149,8 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Start(SqlWindowFrameUnit.Range, start.bound, None)
         )
 
@@ -158,13 +158,13 @@ final case class SortedOver[T, KS <: Tuple](
      * Sets the window frame to `RANGE BETWEEN start AND end`.
      * The bound must be compatible with the
      * sort key type.
-     * 
+     *
      * {{{
      * .rangeBetween(1.preceding, currentRow)
      * }}}
      */
     def rangeBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
-        start: FrameBound[ST, SS, SN], 
+        start: FrameBound[ST, SS, SN],
         end: FrameBound[ET, ES, EN]
     )(using
         QueryContext[CL],
@@ -173,14 +173,14 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Between(SqlWindowFrameUnit.Range, start.bound, end.bound, None)
         )
 
     /**
      * Sets the window frame to `GROUPS start`.
-     * 
+     *
      * {{{
      * .groups(currentRow)
      * }}}
@@ -191,20 +191,20 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Start(SqlWindowFrameUnit.Groups, start.bound, None)
         )
 
     /**
      * Sets the window frame to `GROUPS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .groupsBetween(1.preceding, currentRow)
      * }}}
      */
     def groupsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
-        start: FrameBound[ST, SS, SN], 
+        start: FrameBound[ST, SS, SN],
         end: FrameBound[ET, ES, EN]
     )(using
         QueryContext[CL],
@@ -213,8 +213,8 @@ final case class SortedOver[T, KS <: Tuple](
         ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
         BoundedOver(
-            partitionBy, 
-            sortBy, 
+            partitionBy,
+            sortBy,
             IrWindowFrame.Between(SqlWindowFrameUnit.Groups, start.bound, end.bound, None)
         )
 
@@ -240,7 +240,7 @@ final case class BoundedOver[KS <: Tuple](
     /**
      * Excludes the current row from the window frame. Maps to
      * `EXCLUDE CURRENT ROW`.
-     * 
+     *
      * {{{
      * .excludeCurrentRow
      * }}}
@@ -251,7 +251,7 @@ final case class BoundedOver[KS <: Tuple](
     /**
      * Excludes ties from the window frame. Maps to
      * `EXCLUDE TIES`.
-     * 
+     *
      * {{{
      * .excludeTies
      * }}}
@@ -262,7 +262,7 @@ final case class BoundedOver[KS <: Tuple](
     /**
      * Excludes the current group from the window frame. Maps to
      * `EXCLUDE GROUP`.
-     * 
+     *
      * {{{
      * .excludeGroup
      * }}}

@@ -15,7 +15,7 @@ extension [T](data: List[T])
  * driven by the `@view`, `@nested`, and `@derivedField` annotations on
  * the target type.
  */
-private[sqala] trait ViewMapping[T, R]:
+trait ViewMapping[T, R]:
     /**
      * Groups flat rows by the view key and maps each group to a cascade
      * object, returning a list of root-level objects.
@@ -32,11 +32,11 @@ private[sqala] trait ViewMapping[T, R]:
      */
     def mapToObject(data: List[T]): R
 
-private[sqala] object ViewMapping:
+object ViewMapping:
     inline given derived[T, R]: ViewMapping[T,R] =
         ${ derivedImpl[T, R] }
 
-    def derivedImpl[T: Type, R: Type](using q: Quotes): Expr[ViewMapping[T, R]] =
+    private[sqala] def derivedImpl[T: Type, R: Type](using q: Quotes): Expr[ViewMapping[T, R]] =
         import q.reflect.*
 
         val tp = TypeRepr.of[T]

@@ -38,7 +38,7 @@ trait AsTable[T, CL <: Int]:
     /**
      * Converts the value to a table reference and its AST.
      */
-    def asTable(x: T)(using QueryContext[CL]): (R, IrTable)
+    def asTable(x: T): (R, IrTable)
 
 object AsTable:
     type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsTable[T, CL]:
@@ -58,7 +58,7 @@ object AsTable:
 
             type OKS = EmptyTuple
 
-            def asTable(x: O)(using qc: QueryContext[CL]): (R, IrTable) =
+            def asTable(x: O): (R, IrTable) =
                 val metaData = fc.metaData
                 val irTable = IrTable.Ident(metaData.tableName, Nil)
                 val table = Table[fc.R, Column, CL](
@@ -77,7 +77,7 @@ object AsTable:
 
             type OKS = TOKS
 
-            def asTable(x: Q)(using qc: QueryContext[CL]): (R, IrTable) =
+            def asTable(x: Q): (R, IrTable) =
                 val sqlTable =
                     IrTable.Subquery(
                         false,
@@ -94,7 +94,7 @@ object AsTable:
 
     //         type OKS = EmptyTuple
 
-    //         def asTable(x: RecursiveTable[N, V, CL])(using QueryContext[CL]): (R, SqlTable) =
+    //         def asTable(x: RecursiveTable[N, V, CL]): (R, SqlTable) =
     //             (x, x.__sqlTable__)
 
     inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
@@ -114,7 +114,7 @@ object AsTable:
 
             type OKS = EmptyTuple
 
-            def asTable(x: S)(using qc: QueryContext[CL]): (R, IrTable) =
+            def asTable(x: S): (R, IrTable) =
                 require(x.nonEmpty, "Values table must have at least one row.")
                 val exprList = x.toList.map: datum =>
                     val row = asExprs(datum).map(e => IrExpr.Native(e))
@@ -133,7 +133,7 @@ object AsTable:
 
             type OKS = TOKS
 
-            def asTable(x: FromJoin[T, TOKS, CL])(using QueryContext[CL]): (R, IrTable) =
+            def asTable(x: FromJoin[T, TOKS, CL]): (R, IrTable) =
                 (x.params, x.table)
 
     given tuple[H, T <: Tuple, CL <: Int](using
@@ -147,7 +147,7 @@ object AsTable:
 
             type OKS = c.R
 
-            def asTable(x: H *: T)(using QueryContext[CL]): (R, IrTable) =
+            def asTable(x: H *: T): (R, IrTable) =
                 val (headParam, headTable) = ah.asTable(x.head)
                 val (tailParam, tailTable) = at.asTable(x.tail)
                 val param = headParam *: t.toTuple(tailParam)
@@ -162,7 +162,7 @@ object AsTable:
 
             type OKS = ah.OKS
 
-            def asTable(x: H *: EmptyTuple)(using QueryContext[CL]): (R, IrTable) =
+            def asTable(x: H *: EmptyTuple): (R, IrTable) =
                 ah.asTable(x.head)
 
     inline given fallback[T, CL <: Int](using
