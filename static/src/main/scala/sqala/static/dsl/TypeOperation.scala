@@ -2,7 +2,6 @@ package sqala.static.dsl
 
 import java.time.*
 import scala.compiletime.ops.boolean.||
-import scala.compiletime.ops.int.S
 
 /**
  * Wraps a type with constructor if not already wrapped.

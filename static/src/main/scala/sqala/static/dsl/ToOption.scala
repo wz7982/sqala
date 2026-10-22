@@ -53,7 +53,6 @@ object ToOption:
             def toOption(x: Table[T, K, L]): R =
                 x.copy[Wrap[T, Option], K, L]()
 
-    // TODO
     given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](using
         t: ToOption[V],
         tt: ToTuple[t.R]
@@ -64,6 +63,7 @@ object ToOption:
             def toOption(x: MappedTable[N, V, RV, O, L]): R =
                 x.copy[N, tt.R, RV, true, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
+    // TODO
     // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
     //     t: ToOption[V],
     //     tt: ToTuple[t.R]

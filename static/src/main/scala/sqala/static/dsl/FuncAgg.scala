@@ -6,7 +6,6 @@ import sqala.metadata.SqlNumber
 import sqala.metadata.AsSqlExpr
 import sqala.metadata.SqlString
 
-// TODO 聚合函数
 /**
  * Counts all rows. Maps to `COUNT(*)`.
  *
