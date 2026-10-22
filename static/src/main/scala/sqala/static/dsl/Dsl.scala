@@ -44,11 +44,11 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0]())(
     tables: QueryContext[CL + 1] ?=> T
 )(using
     at: AsTable[T, CL + 1],
-    as: AsSelect[at.R]
+    am: AsMap[at.R, CL + 1]
 ): TableQuery[at.R, at.OKS, CL + 1] =
     given QueryContext[CL + 1] = QueryContext()
     val (params, fromTable) = at.asTable(tables)
-    val selectItems = as.asSelectItems(params, 1)
+    val selectItems = am.asSelectItems(params, 1)
     val tree: IrQuery.Select = IrQuery.Select(
         None,
         selectItems,
@@ -96,16 +96,16 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
      * )
      * }}}
      */
-    // def joinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
-    //     tb: AsLateralTable[B, CL + 1],
-    //     j: Join[ta.R, tb.R],
-    //     c: CombineKindTuple[ta.OKS, tb.OKS]
-    // ): JoinPart[j.R, c.R, CL] =
-    //     given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
-    //     val (leftTable, leftIrTable) = ta.asTable(a)
-    //     val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
-    //     val params = j.join(leftTable, rightTable)
-    //     JoinPart(params, IrTable.Join(leftIrTable, SqlJoinType.Inner, rightIrTable, None))
+    def joinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL] =
+        given QueryContext[CL + 1] = QueryContext()
+        val (leftTable, leftIrTable) = ta.asTable(a)
+        val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
+        val params = j.join(leftTable, rightTable)
+        JoinPart(params, IrTable.Join(leftIrTable, SqlJoinType.Inner, rightIrTable, None))
 
     /**
      * Cross join. No `on` condition needed.
@@ -140,16 +140,16 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
      * ).filter((c, p) => c.id === p.channelId)
      * }}}
      */
-    // def crossJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
-    //     tb: AsLateralTable[B, CL + 1],
-    //     j: Join[ta.R, tb.R],
-    //     c: CombineKindTuple[ta.OKS, tb.OKS]
-    // ): FromJoin[j.R, c.R, CL + 1] =
-    //     given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
-    //     val (leftTable, leftIrTable) = ta.asTable(a)
-    //     val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
-    //     val params = j.join(leftTable, rightTable)
-    //     FromJoin(params, IrTable.Join(leftIrTable, SqlJoinType.Cross, rightIrTable, None))
+    def crossJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): FromJoin[j.R, c.R, CL + 1] =
+        given QueryContext[CL + 1] = QueryContext()
+        val (leftTable, leftIrTable) = ta.asTable(a)
+        val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
+        val params = j.join(leftTable, rightTable)
+        FromJoin(params, IrTable.Join(leftIrTable, SqlJoinType.Cross, rightIrTable, None))
 
     /**
      * Left outer join. Must be followed by `on`. The right side
@@ -186,16 +186,16 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
      * )
      * }}}
      */
-    // def leftJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
-    //     tb: AsLateralTable[B, CL + 1],
-    //     j: Join[ta.R, tb.R],
-    //     c: CombineKindTuple[ta.OKS, tb.OKS]
-    // ): JoinPart[j.R, c.R, CL + 1] =
-    //     given QueryContext[CL + 1] = QueryContext(qc.tableIndex)
-    //     val (leftTable, leftIrTable) = ta.asTable(a)
-    //     val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
-    //     val params = j.join(leftTable, rightTable)
-    //     JoinPart(params, IrTable.Join(leftIrTable, SqlJoinType.Left, rightIrTable, None))
+    def leftJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
+        tb: AsLateralTable[B, CL + 1],
+        j: Join[ta.R, tb.R],
+        c: CombineKindTuple[ta.OKS, tb.OKS]
+    ): JoinPart[j.R, c.R, CL + 1] =
+        given QueryContext[CL + 1] = QueryContext()
+        val (leftTable, leftIrTable) = ta.asTable(a)
+        val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
+        val params = j.join(leftTable, rightTable)
+        JoinPart(params, IrTable.Join(leftIrTable, SqlJoinType.Left, rightIrTable, None))
 
     /**
      * Right outer join. Must be followed by `on`. The left side

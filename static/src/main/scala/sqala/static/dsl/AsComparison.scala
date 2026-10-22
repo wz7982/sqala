@@ -116,15 +116,3 @@ object AsComparison:
                         case ComparisonOperator.LessThanEqual =>
                             SqlQuantifiedComparisonOperator.LessThanEqual
                 IrExpr.QuantifiedComparisonPredicate(expr, sqlOperator, x.quantifier, x.tree)
-
-    inline given fallback[T, CL <: Int](using
-        NotGiven[AsComparison[T, CL]]
-    ): Aux[T, CL, EmptyTuple, Composite[EmptyTuple]] =
-        ${ errorMacro[T] }
-
-    def errorMacro[T: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val t = Type.show[T]
-
-        report.errorAndAbort(s"Cannot convert type $t into a SQL expression.")

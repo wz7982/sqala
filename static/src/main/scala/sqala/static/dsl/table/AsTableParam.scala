@@ -45,9 +45,6 @@ object AsTableParam:
         val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
         createTableInstance[T, L, CL](metaData)
 
-    /**
-      * Creates a table instance for a given table metadata.
-      */
     private def createTableInstance[T, L <: Int, CL <: Int](metaData: TableMetaData): Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
         new AsTableParam[Table[T, Column, L], CL]:
             type R = Table[T, Column, CL]
@@ -61,7 +58,6 @@ object AsTableParam:
                     metaData.copy(columns = metaData.columns.indices.map(i => s"c${cursor + i}"))
                 )
 
-    // TODO 有bug
     inline given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]

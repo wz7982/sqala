@@ -711,8 +711,6 @@ object CanInWindow:
     ): CanInWindow[KS] =
         error("Window function calls cannot contain ungrouped column references.")
 
-// TODO fallback
-
 // TODO 注释
 trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
 
@@ -825,9 +823,48 @@ object IsGrouped:
         ak: AllIsKind[KS, Grouped[?]],
         ng: ak.R =:= false
     ): IsGrouped[KS] =
-        error("Arguments must be grouping expressions of the associated query level")
+        error("Arguments must be grouping expressions of the associated query level.")
 
 // TODO 后面的报错还要细化
+trait SimpleClauseNotAllowedAgg[KS <: Tuple]
+
+object SimpleClauseNotAllowedAgg:
+    given validate[KS <: Tuple](using
+        ha: HasKind[KS, Agg[?]],
+        na: ha.R =:= false
+    ): SimpleClauseNotAllowedAgg[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[SimpleClauseNotAllowedAgg[KS]]
+    ): SimpleClauseNotAllowedAgg[KS] =
+        error("Aggregate functions are not allowed here.")
+
+trait SimpleClauseNotAllowedWindow[KS <: Tuple]
+
+object SimpleClauseNotAllowedWindow:
+    given validate[KS <: Tuple](using
+        ha: HasKind[KS, Window[?]],
+        na: ha.R =:= false
+    ): SimpleClauseNotAllowedWindow[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[SimpleClauseNotAllowedWindow[KS]]
+    ): SimpleClauseNotAllowedWindow[KS] =
+        error("Window functions are not allowed here.")
+
+trait SimpleClauseNotAllowedUngroupedColumn[KS <: Tuple]
+
+object SimpleClauseNotAllowedUngroupedColumn:
+    given validate[KS <: Tuple](using
+        hu: HasKind[KS, UngroupedColumn[?]],
+        nu: hu.R =:= false
+    ): SimpleClauseNotAllowedUngroupedColumn[KS]()
+
+    inline given fallback[KS <: Tuple](using
+        NotGiven[SimpleClauseNotAllowedUngroupedColumn[KS]]
+    ): SimpleClauseNotAllowedUngroupedColumn[KS] =
+        error("Ungrouped column references are not allowed here.")
+
 /**
  * Validates that a kind tuple contains no aggregate or window
  * functions, allowing it to appear in a simple clause.
@@ -836,12 +873,9 @@ trait CanInSimpleClause[KS <: Tuple]
 
 object CanInSimpleClause:
     given validate[KS <: Tuple](using
-        ha: HasKind[KS, Agg[?]],
-        na: ha.R =:= false,
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false,
-        hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false
+        SimpleClauseNotAllowedAgg[KS],
+        SimpleClauseNotAllowedWindow[KS],
+        SimpleClauseNotAllowedUngroupedColumn[KS]
     ): CanInSimpleClause[KS]()
 
 /**

@@ -78,14 +78,14 @@ object AsTable:
             type OKS = TOKS
 
             def asTable(x: Q): (R, IrTable) =
-                val sqlTable =
+                val irTable =
                     IrTable.Subquery(
                         false,
                         x.tree,
                         Nil
                     )
-                val subquery = MappedTable[N, V, tt.R, false, CL](sqlTable)
-                (subquery, sqlTable)
+                val table = MappedTable[N, V, tt.R, false, CL](irTable)
+                (table, irTable)
 
     // TODO
     // given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =

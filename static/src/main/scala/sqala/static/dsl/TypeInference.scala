@@ -219,7 +219,7 @@ object In:
 
     given seq[A, B, S <: Seq[B], CL <: Int](using
         aa: AsExpr[A, CL],
-        ab: AsSqlExpr[B],
+        ab: AsExpr[B, CL],
         r: Relation[aa.R, B]
     ): Aux[A, S, CL, r.R, Value *: EmptyTuple] =
         new In[A, S, CL]:
@@ -228,11 +228,11 @@ object In:
             type KS = Value *: EmptyTuple
 
             def asExprs(x: S): List[Expr[?, ?]] =
-                x.toList.map(i => Expr(IrExpr.Native(ab.asSqlExpr(i))))
+                x.toList.map(i => ab.asExpr(i))
 
     given array[A, B, CL <: Int](using
         aa: AsExpr[A, CL],
-        ab: AsSqlExpr[B],
+        ab: AsExpr[B, CL],
         r: Relation[aa.R, B],
     ): Aux[A, Array[B], CL, r.R, Value *: EmptyTuple] =
         new In[A, Array[B], CL]:
@@ -241,7 +241,7 @@ object In:
             type KS = Value *: EmptyTuple
 
             def asExprs(x: Array[B]): List[Expr[?, ?]] =
-                x.toList.map(i => Expr(IrExpr.Native(ab.asSqlExpr(i))))
+                x.toList.map(i => ab.asExpr(i))
 
 /**
  * Computes the result type of addition (via `+`).
@@ -267,6 +267,17 @@ object Plus:
     given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
         new Plus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
+
+    inline given fallback[A, B](using NotGiven[Plus[A, B]]): Plus[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType cannot be added.")
 
 /**
  * Computes the result type of subtraction (via `-`).
@@ -300,6 +311,17 @@ object Minus:
     given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
         new Minus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
+
+    inline given fallback[A, B](using NotGiven[Minus[A, B]]): Minus[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType cannot be subtracted.")
 
 /**
  * Computes the result type of a comparison.
