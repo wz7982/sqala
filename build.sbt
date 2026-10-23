@@ -1,9 +1,9 @@
 import xerial.sbt.Sonatype.*
 
 lazy val commonSettings = Seq(
-    scalaVersion := "3.8.2",
+    scalaVersion := "3.9.0",
 
-    version := "0.7.9",
+    version := "0.8.0",
 
     organization := "com.wz7982",
 
@@ -45,7 +45,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
-    .aggregate(core, static, dynamic, jdbc)
+    .aggregate(core, staticIr, static, staticExt, dynamic, jdbc)
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
 lazy val staticIr = project.in(file("static-ir")).dependsOn(core).settings(commonSettings).settings(name := "sqala-static-ir")
 lazy val static = project.in(file("static")).dependsOn(staticIr).settings(commonSettings).settings(name := "sqala-static")
