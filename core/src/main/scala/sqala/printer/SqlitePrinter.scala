@@ -1,6 +1,6 @@
 package sqala.printer
 
-import sqala.ast.expr.SqlExpr
+import sqala.ast.expr.{SqlExpr, SqlType}
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.statement.SqlStatement
 
@@ -49,3 +49,10 @@ class SqlitePrinter(override val standardEscapeStrings: Boolean) extends Standar
                 None
             )
             printExpr(func)
+
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Decimal(_) =>
+                sqlBuilder.append("REAL")
+            case _ =>
+                super.printType(`type`)
