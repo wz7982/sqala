@@ -819,3 +819,61 @@ def groupingSets[T, CL <: Int](x: T)(using
     a: AsMultidimensionalGrouping[T]
 ): GroupingSets =
     GroupingSets(a.asIrGroupingItems(x))
+
+/**
+ * Creates a raw expression from a string interpolation, supporting
+ * values, expressions, and subqueries as arguments. Values are
+ * automatically escaped. Must be followed by `as`.
+ *
+ * {{{
+ * from(Post).filter(p => rawExpr"MATCH(${p.title}) AGAINST(${word})".as[Boolean])
+ * }}}
+ */
+extension (s: StringContext)
+    inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
+        val sqlExprs = RawMacro.asSqlExprs[CL](args)
+        RawExpr(s.parts.toList.map(_.trim), sqlExprs)
+
+/**
+ * Creates a custom function call expression. Maps to `name(args...)`.
+ * Used to wrap non-standard functions that aren't built into sqala.
+ *
+ * {{{
+ * def left(x: Expr[String, ?], n: Int) =
+ *     createFunc[Option[String]]("LEFT", x :: n.asExpr :: Nil)
+ *
+ * from(Post).map(p => left(p.title, 10))
+ * }}}
+ */
+def createFunc[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
+    Expr(
+        IrExpr.GeneralFunc(
+            None,
+            name,
+            args.map(_.asIrExpr),
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+/**
+ * Creates a custom binary expression with a raw operator string.
+ * For non-standard operators that aren't built into sqala.
+ *
+ * {{{
+ * extension (x: Expr[Json, ?])
+ *     def ->>(k: String) =
+ *         createBinaryExpr[Boolean](x, "->>", k.asExpr)
+ *
+ * from(Post).map(p => p.data ->> "key")
+ * }}}
+ */
+def createBinaryExpr[T, CL <: Int](left: Expr[?, ?], operator: String, right: Expr[?, ?])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
+    Expr(
+        IrExpr.Binary(
+            left.asIrExpr,
+            SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword(operator) :: Nil),
+            right.asIrExpr
+        )
+    )

@@ -36,7 +36,7 @@ object ViewMapping:
     inline given derived[T, R]: ViewMapping[T,R] =
         ${ derivedImpl[T, R] }
 
-    private[sqala] def derivedImpl[T: Type, R: Type](using q: Quotes): Expr[ViewMapping[T, R]] =
+    def derivedImpl[T: Type, R: Type](using q: Quotes): Expr[ViewMapping[T, R]] =
         import q.reflect.*
 
         val tp = TypeRepr.of[T]

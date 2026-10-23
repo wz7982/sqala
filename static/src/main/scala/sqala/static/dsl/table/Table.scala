@@ -38,10 +38,11 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
         val index = __metaData__.fields.toList.indexOf(name)
         ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
 
+    // TODO 注释
     transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?, ?] =
         ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, IsOption[T], L]('__table__, '__metaData__, 'columns) }
 
-private[sqala] object ExcludeMacro:
+object ExcludeMacro:
     def excludeMacro[T: Type, OT: Type, O <: Boolean : Type, L <: Int : Type](
         table: ScalaExpr[IrTable], 
         metaData: ScalaExpr[TableMetaData],

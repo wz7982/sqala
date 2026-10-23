@@ -24,7 +24,7 @@ object FetchCompanion:
     transparent inline given derived[T]: Aux[T, ?] =
         ${ derivedImpl[T] }
 
-    private[sqala] def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
+    def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
         import q.reflect.*
 
         val typeSymbol = TypeTree.of[T].symbol
