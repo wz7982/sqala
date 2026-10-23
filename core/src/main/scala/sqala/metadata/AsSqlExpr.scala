@@ -52,7 +52,7 @@ object AsSqlExpr:
 
     given decimal: AsSqlExpr[BigDecimal] with
         def sqlType: SqlType =
-            SqlType.Decimal(None)
+            SqlType.Decimal(Some(38, 10))
 
         def asSqlExpr(x: BigDecimal): SqlExpr =
             SqlExpr.NumberLiteral(x)

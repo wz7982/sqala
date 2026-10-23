@@ -118,9 +118,9 @@ private[sqala] class ToAst:
                 SqlExpr.Unary(operator, exprToAst(expr))
             case IrExpr.Binary(left, SqlBinaryOperator.Div, right) =>
                 SqlExpr.Binary(
-                    SqlExpr.Cast(exprToAst(left), SqlType.Decimal(None)),
-                    SqlBinaryOperator.Div, 
-                    SqlExpr.Cast(exprToAst(right), SqlType.Decimal(None))
+                    SqlExpr.Cast(exprToAst(left), SqlType.Decimal(Some(38, 10))),
+                    SqlBinaryOperator.Div,
+                    SqlExpr.Cast(exprToAst(right), SqlType.Decimal(Some(38, 10)))
                 )
             case IrExpr.Binary(left, operator, right) =>
                 SqlExpr.Binary(exprToAst(left), operator, exprToAst(right))

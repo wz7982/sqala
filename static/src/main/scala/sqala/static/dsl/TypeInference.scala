@@ -568,7 +568,7 @@ object Cast:
 
     given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
         def castType: SqlType = 
-            SqlType.Decimal(None)
+            SqlType.Decimal(Some(38, 10))
 
     given json[T: SqlString]: Cast[T, Json] with
         def castType: SqlType = 
