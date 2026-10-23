@@ -516,8 +516,8 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      */
     def map[M](f: QueryContext[L] ?=> T => M)(using
         a: AsMap[M, L],
-        i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
+        i: CanInMap[a.KS, e.R],
         c: CombineKindTuple[OKS, e.R],
         an: AggNotNested[a.KS]
     ): MappedQuery[a.R, T, c.R, L, i.R] =
@@ -540,8 +540,8 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
      */
     def mapDistinct[M](f: QueryContext[L] ?=> T => M)(using
         a: AsMap[M, L],
-        i: CanInMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
+        i: CanInMap[a.KS, e.R],
         c: CombineKindTuple[OKS, e.R],
         td: ToDistinct[M, L],
         an: AggNotNested[a.KS]
@@ -884,8 +884,8 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
      */
     def map[M](f: QueryContext[L] ?=> GroupingContext ?=> T => M)(using
         a: AsMap[M, L],
-        i: CanInGroupedMap[a.KS],
         e: ExcludeCurrentLevelColumn[a.KS, L],
+        i: CanInGroupedMap[a.KS],
         c: CombineKindTuple[OKS, e.R],
         an: AggNotNested[a.KS]
     ): GroupedQuery[a.R, T, c.R, L] =

@@ -7,6 +7,8 @@ import sqala.util.NonEmptyList
 
 import scala.annotation.targetName
 import sqala.ir.IrExpr
+import sqala.static.dsl.statement.query.Query
+import sqala.ir.IrInRightOperand
 
 extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     /**
@@ -260,14 +262,11 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * of values, a subquery, or a tuple of values, expressions, and
      * subqueries. When used as part of a
      * tuple, subquery elements must return at most one row, enforced at
-     * compile time. Empty collections are optimized to `FALSE`.
+     * compile time. Empty collections are optimized to `1 = 0`.
      *
      * {{{
      * // Compare with a list of values
      * from(User).filter(u => u.id.in(List(1, 2, 3)))
-     *
-     * // Compare with a subquery
-     * from(User).filter(u => u.id.in(from(Post).filter(p => p.viewCount > 100).map(p => p.authorId)))
      *
      * // Compare with a tuple of values, expressions, and subqueries
      * from(Post).filter(p => p.id.in(1, u.id, from(Comment).filter(c => c.postId === p.id).map(c => c.postId).take(1)))
@@ -280,6 +279,32 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[i.R, Composite[c.R]] =
         Expr(
             i.asIrExpr(aa.asExpr(self).asIrExpr, exprs)
+        )
+
+    /**
+     * Type-safe `IN` membership test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `IN`. The right-hand side can be a list
+     * of values, a subquery, or a tuple of values, expressions, and
+     * subqueries. When used as part of a
+     * tuple, subquery elements must return at most one row, enforced at
+     * compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.id.in(from(Post).filter(p => p.viewCount > 100).map(p => p.authorId)))
+     * }}}
+     */
+    def in[B, OKS <: Tuple](query: Query[B, OKS, ?, ?])(using
+        ab: AsExpr[B, CL],
+        kt: KindToTuple[aa.K],
+        r: Relation[aa.R, ab.R],
+        c: CombineKindTuple[kt.R, OKS]
+    ): Expr[r.R, Composite[c.R]] =
+        Expr(
+            IrExpr.In(
+                aa.asExpr(self).asIrExpr, 
+                IrInRightOperand.Subquery(query.tree),
+                false
+            )
         )
 
     /**

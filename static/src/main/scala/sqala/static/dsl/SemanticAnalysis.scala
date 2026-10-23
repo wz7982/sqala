@@ -942,14 +942,14 @@ object CanInFilter:
 /**
  * Validates that a kind tuple can appear in a `map` clause.
  */
-trait CanInMap[KS <: Tuple]:
+trait CanInMap[KS <: Tuple, OKS <: Tuple]:
     /**
      * The resulting query size.
      */
     type R <: QuerySize
 
 object CanInMap:
-    type Aux[KS <: Tuple, O <: QuerySize] = CanInMap[KS]:
+    type Aux[KS <: Tuple, OKS <: Tuple, O <: QuerySize] = CanInMap[KS, OKS]:
         type R = O
 
     given oneRow[KS <: Tuple](using
@@ -959,22 +959,34 @@ object CanInMap:
         nc: hc.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): Aux[KS, OneRow] =
-        new CanInMap[KS]:
+    ): Aux[KS, EmptyTuple, OneRow] =
+        new CanInMap[KS, EmptyTuple]:
             type R = OneRow
 
-    given manyRows[KS <: Tuple](using
+    given manyRowsRefOuterLayer[KS <: Tuple, OKS <: Tuple](using
+        ha: HasKind[KS, Agg[?]],
+        ia: ha.R =:= true,
+        hc: HasKind[KS, Column[?]],
+        nc: hc.R =:= false,
+        hu: HasKind[KS, UngroupedColumn[?]],
+        nu: hu.R =:= false,
+        n: NotGiven[OKS =:= EmptyTuple]
+    ): Aux[KS, OKS, ManyRows] =
+        new CanInMap[KS, OKS]:
+            type R = ManyRows
+
+    given manyRows[KS <: Tuple, OKS <: Tuple](using
         ha: HasKind[KS, Agg[?]],
         ia: ha.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): Aux[KS, ManyRows] =
-        new CanInMap[KS]:
+    ): Aux[KS, OKS, ManyRows] =
+        new CanInMap[KS, OKS]:
             type R = ManyRows
 
-    inline given fallback[KS <: Tuple](using
-        NotGiven[CanInMap[KS]]
-    ): CanInMap[KS] =
+    inline given fallback[KS <: Tuple, OKS <: Tuple](using
+        NotGiven[CanInMap[KS, OKS]]
+    ): CanInMap[KS, OKS] =
         error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
 /**

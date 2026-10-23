@@ -21,7 +21,7 @@ import sqala.ir.IrExpr
 
 /**
  * Used by `from` to lift various DSL types into a table reference
- * and its AST node. `CL` is the current query context level, used for
+ * and its IR node. `CL` is the current query context level, used for
  * scope validation.
  */
 trait AsTable[T, CL <: Int]:

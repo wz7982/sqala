@@ -14,7 +14,7 @@ final case class Sort[T, K <: ExprKind](
     private[sqala] val nullsOrdering: Option[SqlNullsOrdering]
 ):
     /**
-     * Converts this sort specification to a `SqlOrderingItem` AST node.
+     * Converts this sort specification to a `IrOrderingItem` IR node.
      */
     private[sqala] def asIrOrderingItem: IrOrderingItem =
         IrOrderingItem(expr.asIrExpr, ordering, nullsOrdering)

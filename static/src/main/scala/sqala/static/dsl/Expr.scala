@@ -5,7 +5,7 @@ import sqala.ir.IrExpr
 import scala.annotation.targetName
 
 /**
- * A typed expression wrapping an AST node. All DSL operations on
+ * A typed expression wrapping an IR node. All DSL operations on
  * columns, values, and subqueries produce or consume `Expr` values.
  */
 sealed class Expr[T, K <: ExprKind](private[sqala] val expr: IrExpr):
@@ -14,31 +14,11 @@ sealed class Expr[T, K <: ExprKind](private[sqala] val expr: IrExpr):
      * (e.g. `NOT TRUE` → `FALSE`, `x IN ()` → `FALSE`, double negation elimination).
      */
     private[sqala] def asIrExpr: IrExpr =
-        import IrExpr.*
-
-        expr match
-            case Unary(SqlUnaryOperator.Not, e) =>
-                e match
-                    case Native(SqlExpr.BooleanLiteral(boolean)) =>
-                        Native(SqlExpr.BooleanLiteral(!boolean))
-                    case Like(expr, pattern, not) =>
-                        Like(expr, pattern, !not)
-                    case In(left, right, not) =>
-                        In(left, right, !not)
-                    case Binary(left, SqlBinaryOperator.IsDistinctFrom(not), right) =>
-                        Binary(left, SqlBinaryOperator.IsDistinctFrom(!not), right)
-                    case Binary(left, SqlBinaryOperator.Is(not), right) =>
-                        Binary(left, SqlBinaryOperator.Is(!not), right)
-                    case Between(expr, s, e, n) =>
-                        Between(expr, s, e, !n)
-                    case _ =>
-                        IrExpr.Unary(SqlUnaryOperator.Not, e)
-            case _ =>
-                expr
+        expr
 
 object Expr:
-    def unapply[T, K <: ExprKind](expr: Expr[T, K]): Option[IrExpr] =
-        Some(expr.expr)
+    private[sqala] def unapply[T, K <: ExprKind](expr: Expr[T, K]): Option[IrExpr] =
+        Some(expr.asIrExpr)
 
 /**
  * A typed expression representing a column reference.

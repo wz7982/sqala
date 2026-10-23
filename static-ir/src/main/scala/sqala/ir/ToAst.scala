@@ -21,6 +21,10 @@ import sqala.ast.limit.SqlFetch
 import sqala.ast.statement.SqlLock
 import sqala.ast.statement.SqlLockWaitMode
 import sqala.ast.group.SqlGroup
+import sqala.ast.expr.SqlBinaryOperator
+import sqala.util.NonEmptyList
+import sqala.ast.expr.SqlType
+import sqala.ast.expr.SqlUnaryOperator
 
 private[sqala] class ToAst:
     var tableIndex = 0
@@ -90,12 +94,54 @@ private[sqala] class ToAst:
                 SqlExpr.Tuple(items.map(exprToAst))
             case IrExpr.Array(items) =>
                 SqlExpr.Array(items.map(exprToAst))
+            case IrExpr.Unary(SqlUnaryOperator.Not, expr) =>
+                expr match
+                    case IrExpr.Native(SqlExpr.BooleanLiteral(boolean)) =>
+                        SqlExpr.BooleanLiteral(!boolean)
+                    case IrExpr.Binary(left, SqlBinaryOperator.Equal, right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.NotEqual, exprToAst(right))
+                    case IrExpr.Binary(left, SqlBinaryOperator.NotEqual, right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.Equal, exprToAst(right))
+                    case IrExpr.Binary(left, SqlBinaryOperator.Is(not), right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.Is(!not), exprToAst(right))
+                    case IrExpr.Like(expr, pattern, not) =>
+                        SqlExpr.Like(exprToAst(expr), exprToAst(pattern), None, !not)
+                    case IrExpr.In(expr, in, withNot) =>
+                        exprToAst(IrExpr.In(expr, in, !withNot))
+                    case IrExpr.Between(expr, between, and, not) =>
+                        SqlExpr.Between(exprToAst(expr), exprToAst(between), exprToAst(and), !not)
+                    case IrExpr.Unary(SqlUnaryOperator.Not, expr) =>
+                        exprToAst(expr)
+                    case _ =>
+                        SqlExpr.Unary(SqlUnaryOperator.Not, exprToAst(expr))
             case IrExpr.Unary(operator, expr) =>
                 SqlExpr.Unary(operator, exprToAst(expr))
+            case IrExpr.Binary(left, SqlBinaryOperator.Div, right) =>
+                SqlExpr.Binary(
+                    SqlExpr.Cast(exprToAst(left), SqlType.Decimal(None)),
+                    SqlBinaryOperator.Div, 
+                    SqlExpr.Cast(exprToAst(right), SqlType.Decimal(None))
+                )
             case IrExpr.Binary(left, operator, right) =>
                 SqlExpr.Binary(exprToAst(left), operator, exprToAst(right))
             case IrExpr.In(expr, in, withNot) =>
-                SqlExpr.In(exprToAst(expr), inRightOperandToAst(in), withNot)
+                in match
+                    case IrInRightOperand.Values(Nil) =>
+                        val operatorAst = 
+                            if withNot then SqlBinaryOperator.NotEqual else SqlBinaryOperator.Equal
+                        SqlExpr.Binary(
+                            SqlExpr.NumberLiteral(1), 
+                            operatorAst, 
+                            SqlExpr.NumberLiteral(0)
+                        )
+                    case IrInRightOperand.Values(e :: es) =>
+                        SqlExpr.In(
+                            exprToAst(expr), 
+                            SqlInRightOperand.Values(NonEmptyList(exprToAst(e), es.map(exprToAst))), 
+                            withNot
+                        )
+                    case IrInRightOperand.Subquery(query) =>
+                        SqlExpr.In(exprToAst(expr), SqlInRightOperand.Subquery(queryToAst(query)), withNot)
             case IrExpr.Between(expr, start, end, withNot) =>
                 SqlExpr.Between(exprToAst(expr), exprToAst(start), exprToAst(end), withNot)
             case IrExpr.Like(expr, pattern, withNot) =>
@@ -182,13 +228,6 @@ private[sqala] class ToAst:
                 )
             case IrExpr.MatchPhase(phase, expr) =>
                 SqlExpr.MatchPhase(phase, exprToAst(expr))
-
-    private def inRightOperandToAst(operand: IrInRightOperand): SqlInRightOperand =
-        operand match
-            case IrInRightOperand.Subquery(query) =>
-                SqlInRightOperand.Subquery(queryToAst(query))
-            case IrInRightOperand.Values(values) =>
-                SqlInRightOperand.Values(values.map(exprToAst))
 
     private def caseBranchToAst(branch: IrCaseBranch): SqlCaseBranch =
         SqlCaseBranch(exprToAst(branch.when), exprToAst(branch.`then`))
@@ -284,6 +323,9 @@ private[sqala] class ToAst:
                 tableIndex += 1
                 s"t$tableIndex"
         )
+
+    def toAst(expr: IrExpr): SqlExpr =
+        exprToAst(expr)
 
     def toAst(query: IrQuery): SqlQuery =
         queryToAst(query)

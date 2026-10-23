@@ -154,17 +154,11 @@ trait In[A, B, CL <: Int]:
      */
     def asIrExpr(expr: IrExpr, x: B): IrExpr =
         val exprList = asExprs(x)
-        exprList match
-            case Nil =>
-                IrExpr.Native(SqlExpr.BooleanLiteral(false))
-            case Expr(IrExpr.Subquery(query)) :: Nil =>
-                IrExpr.In(expr, IrInRightOperand.Subquery(query), false)
-            case e :: es =>
-                IrExpr.In(
-                    expr,
-                    IrInRightOperand.Values(NonEmptyList(e.asIrExpr, es.map(_.asIrExpr))),
-                    false
-                )
+        IrExpr.In(
+            expr,
+            IrInRightOperand.Values(exprList.map(_.asIrExpr)),
+            false
+        )
 
 object In:
     type Aux[A, B, CL <: Int, O, OKS <: Tuple] = In[A, B, CL]:
@@ -541,6 +535,63 @@ object CanInRangeFrame:
         NotGiven[CanInRangeFrame[S, T]]
     ): CanInRangeFrame[S, T] =
         error("Window frame type is incompatible with the ordering expression.")
+ 
+/**
+ * Provides the target type for a `as` method.
+ */
+trait Cast[T, R]:
+    /**
+     * The target type.
+     */
+    def castType: SqlType
+
+object Cast:
+    given string[T: AsSqlExpr]: Cast[T, String] with
+        def castType: SqlType = 
+            SqlType.Varchar(None)
+
+    given int[T: SqlNumber]: Cast[T, Int] with
+        def castType: SqlType = 
+            SqlType.Int
+
+    given long[T: SqlNumber]: Cast[T, Long] with
+        def castType: SqlType = 
+            SqlType.Long
+
+    given float[T: SqlNumber]: Cast[T, Float] with
+        def castType: SqlType = 
+            SqlType.Float
+
+    given double[T: SqlNumber]: Cast[T, Double] with
+        def castType: SqlType = 
+            SqlType.Double
+
+    given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
+        def castType: SqlType = 
+            SqlType.Decimal(None)
+
+    given json[T: SqlString]: Cast[T, Json] with
+        def castType: SqlType = 
+            SqlType.Json
+
+    given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
+        def castType: SqlType = 
+            SqlType.Timestamp(None)
+
+    given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
+        def castType: SqlType = 
+            SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Cannot convert type $aType to type $bType.")
 
 /**
  * Maps union query items, producing column expressions
@@ -707,60 +758,3 @@ object Union:
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
-
-/**
- * Provides the target type for a `as` method.
- */
-trait Cast[T, R]:
-    /**
-     * The target type.
-     */
-    def castType: SqlType
-
-object Cast:
-    given string[T: AsSqlExpr]: Cast[T, String] with
-        def castType: SqlType = 
-            SqlType.Varchar(None)
-
-    given int[T: SqlNumber]: Cast[T, Int] with
-        def castType: SqlType = 
-            SqlType.Int
-
-    given long[T: SqlNumber]: Cast[T, Long] with
-        def castType: SqlType = 
-            SqlType.Long
-
-    given float[T: SqlNumber]: Cast[T, Float] with
-        def castType: SqlType = 
-            SqlType.Float
-
-    given double[T: SqlNumber]: Cast[T, Double] with
-        def castType: SqlType = 
-            SqlType.Double
-
-    given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
-        def castType: SqlType = 
-            SqlType.Decimal(None)
-
-    given json[T: SqlString]: Cast[T, Json] with
-        def castType: SqlType = 
-            SqlType.Json
-
-    given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
-        def castType: SqlType = 
-            SqlType.Timestamp(None)
-
-    given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
-        def castType: SqlType = 
-            SqlType.Timestamp(Some(SqlTimeZoneMode.With))
-
-    inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =
-        ${ errorMacro[A, B] }
-
-    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
-        import q.reflect.*
-
-        val aType = Type.show[A]
-        val bType = Type.show[B]
-
-        report.errorAndAbort(s"Cannot convert type $aType to type $bType.")

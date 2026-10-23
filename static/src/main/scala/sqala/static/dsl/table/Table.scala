@@ -53,7 +53,7 @@ object ExcludeMacro:
         import q.reflect.*
 
         val columnsTerm = columns.asTerm
-        val columnNames = 
+        val columnNames =
             columnsTerm match
                 case Inlined(_, _, Typed(Repeated(cs, _), _)) =>
                     cs.map:

@@ -10,7 +10,7 @@ import sqala.ast.limit.SqlFetchMode
 import sqala.ast.quantifier.SqlQuantifier
 
 enum IrInRightOperand:
-    case Values(items: NonEmptyList[IrExpr])
+    case Values(items: List[IrExpr])
     case Subquery(query: IrQuery)
 
 case class IrCaseBranch(when: IrExpr, `then`: IrExpr)

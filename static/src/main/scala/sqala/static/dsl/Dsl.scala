@@ -524,24 +524,6 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
     )
 
 /**
- * Alias of `coalesce`, provided for users familiar with `IFNULL`.
- *
- * {{{
- * from(Post).map(p => ifNull(p.title, "Untitled"))
- * }}}
- */
-def ifNull[A, B, CL <: Int](x: A, y: B)(using
-    qc: QueryContext[CL],
-    aa: AsExpr[A, CL],
-    ab: AsExpr[B, CL],
-    asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
-    asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
-    r: CoalesceReturn[aa.R, ab.R],
-    c: CombineKind[aa.K, ab.K]
-): Expr[r.R, c.R] =
-    coalesce(x, y)
-
-/**
  * Returns null if two expressions are equal, otherwise returns the
  * first expression. Maps to `NULLIF(expr1, expr2)`. Both arguments
  * must be compatible types.
@@ -576,7 +558,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
         ci: CanInFilter[kt.R],
         c: CallAggFilter[T, kt.R]
     ): c.R =
-        val cond: Expr[?, ?] = a.asExpr(f)
+        val cond = a.asExpr(f)
         c.call(x, cond.asIrExpr)
 
 /**
@@ -632,7 +614,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
         )
 
     /**
-     * Applies a window specification with `partitionBy` and `orderBy`
+     * Applies a window specification with `partitionBy` and `sortBy`
      * clause. Maps to SQL `OVER (PARTITION BY ... ORDER BY ...)`.
      *
      * {{{
@@ -662,7 +644,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
  *
  * {{{
  * from(Post).map(p => sum(p.likeCount).over(
- *     partitionBy(p.authorId).orderBy(p.id.desc).rows(unboundedPreceding)
+ *     partitionBy(p.authorId).sortBy(p.id.desc).rows(unboundedPreceding)
  * ))
  * }}}
  */
@@ -675,7 +657,7 @@ def unboundedPreceding[CL <: Int](using QueryContext[CL], OverContext): FrameBou
  *
  * {{{
  * from(Post).map(p => sum(p.likeCount).over(
- *     partitionBy(p.authorId).orderBy(p.id.desc).rows(currentRow)
+ *     partitionBy(p.authorId).sortBy(p.id.desc).rows(currentRow)
  * ))
  * }}}
  */
@@ -688,7 +670,7 @@ def currentRow[CL <: Int](using QueryContext[CL], OverContext): FrameBound[Nothi
  *
  * {{{
  * from(Post).map(p => sum(p.likeCount).over(
- *     partitionBy(p.authorId).orderBy(p.id.desc).rows(unboundedFollowing)
+ *     partitionBy(p.authorId).sortBy(p.id.desc).rows(unboundedFollowing)
  * ))
  * }}}
  */
@@ -708,7 +690,7 @@ extension [T, CL <: Int](n: T)(using
      *
      * {{{
      * from(Post).map(p => sum(p.likeCount).over(
-     *     partitionBy(p.authorId).orderBy(p.id.desc).rows(1.preceding)
+     *     partitionBy(p.authorId).sortBy(p.id.desc).rows(1.preceding)
      * ))
      * }}}
      */
@@ -721,7 +703,7 @@ extension [T, CL <: Int](n: T)(using
      *
      * {{{
      * from(Post).map(p => sum(p.likeCount).over(
-     *     partitionBy(p.authorId).orderBy(p.id.desc).rows(1.following)
+     *     partitionBy(p.authorId).sortBy(p.id.desc).rows(1.following)
      * ))
      * }}}
      */
