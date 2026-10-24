@@ -21,7 +21,7 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def asc: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Asc, None)
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Asc, None))
 
     /**
      * Ascending sort order with nulls first. Maps to SQL
@@ -32,7 +32,7 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def ascNullsFirst: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Asc, Some(SqlNullsOrdering.First)))
 
     /**
      * Ascending sort order with nulls last. Maps to SQL
@@ -43,7 +43,7 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def ascNullsLast: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Asc, Some(SqlNullsOrdering.Last)))
 
     /**
      * Descending sort order. Maps to SQL `DESC`. Used in `sortBy` clause after `mapDistinct`.
@@ -53,7 +53,7 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def desc: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Desc, None)
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Desc, None))
 
     /**
      * Descending sort order with nulls first. Maps to SQL
@@ -64,7 +64,7 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def descNullsFirst: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Desc, Some(SqlNullsOrdering.First)))
 
     /**
      * Descending sort order with nulls last. Maps to SQL
@@ -75,18 +75,12 @@ final case class Distinct[T, L <: Int](private[sqala] val expr: IrExpr):
      * }}}
      */
     def descNullsLast: DistinctSort[T, L] =
-        DistinctSort(Expr(expr), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
+        DistinctSort(IrOrderingItem(expr, SqlOrdering.Desc, Some(SqlNullsOrdering.Last)))
 
 /**
  * A sort specification for a `Distinct` expression.
  */
-final case class DistinctSort[T, L <: Int](
-    private[sqala] val expr: Expr[?, ?],
-    private[sqala] val ordering: SqlOrdering,
-    private[sqala] val nullsOrdering: Option[SqlNullsOrdering]
-):
-    private[sqala] def asIrOrderingItem: IrOrderingItem =
-        IrOrderingItem(expr.asIrExpr, ordering, nullsOrdering)
+final case class DistinctSort[T, L <: Int](private[sqala] val ordering: IrOrderingItem)
 
 /**
  * Lifts expressions and tuples into `Distinct` for validating
@@ -113,7 +107,7 @@ object ToDistinct:
             type R = Distinct[T, CL]
 
             def toDistinct(x: E): R =
-                Distinct(x.asIrExpr)
+                Distinct(x.expr)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: ToDistinct[H, CL],

@@ -39,9 +39,9 @@ trait AsExpr[T, CL <: Int]:
     def asExpr(x: T): Expr[R, K] =
         val exprList = asExprs(x)
         if exprList.size == 1 then
-            Expr(exprList.head.asIrExpr)
+            Expr(exprList.head.expr)
         else
-            val exprs = exprList.map(_.asIrExpr)
+            val exprs = exprList.map(_.expr)
             Expr(IrExpr.Tuple(exprs))
 
     /**

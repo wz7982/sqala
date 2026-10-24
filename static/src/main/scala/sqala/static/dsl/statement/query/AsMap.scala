@@ -63,13 +63,13 @@ object AsMapItem:
             type KS = kt.R
 
             def transform(x: T): R =
-                Expr(a.asExpr(x).asIrExpr)
+                Expr(a.asExpr(x).expr)
 
             def offset(x: T): Int =
                 1
 
             def asSelectItems(x: T, cursor: Int): NonEmptyList[IrSelectItem] =
-                NonEmptyList(IrSelectItem(a.asExpr(x).asIrExpr, s"c$cursor"), Nil)
+                NonEmptyList(IrSelectItem(a.asExpr(x).expr, s"c$cursor"), Nil)
 
     given table[T, L <: Int, CL <: Int](using
         kt: KindToTuple[Column[L]]

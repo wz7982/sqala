@@ -55,7 +55,7 @@ object AsGroupItem:
             type KS = kt.R
 
             def asGroup(x: T): R =
-                Expr(a.asExpr(x).asIrExpr)
+                Expr(a.asExpr(x).expr)
 
             def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
                 NonEmptyList(a.asExpr(x), Nil)

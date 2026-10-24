@@ -9,6 +9,7 @@ import scala.annotation.targetName
 import sqala.ir.IrExpr
 import sqala.static.dsl.statement.query.Query
 import sqala.ir.IrInRightOperand
+import sqala.ir.IrOrderingItem
 
 extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     /**
@@ -38,7 +39,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.Equal, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.Equal, that)
         )
 
     /**
@@ -55,8 +56,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[Boolean, Composite[kt.R]] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr, 
-                SqlBinaryOperator.Is(false), 
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Is(false),
                 IrExpr.Native(SqlExpr.NullLiteral)
             )
         )
@@ -88,7 +89,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.NotEqual, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.NotEqual, that)
         )
 
     /**
@@ -105,8 +106,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[Boolean, Composite[kt.R]] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr, 
-                SqlBinaryOperator.Is(true), 
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Is(true),
                 IrExpr.Native(SqlExpr.NullLiteral)
             )
         )
@@ -130,9 +131,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[Boolean, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.IsDistinctFrom(true),
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -163,7 +164,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.GreaterThan, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.GreaterThan, that)
         )
 
     /**
@@ -193,7 +194,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.GreaterThanEqual, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.GreaterThanEqual, that)
         )
 
     /**
@@ -223,7 +224,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.LessThan, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.LessThan, that)
         )
 
     /**
@@ -253,7 +254,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
         Expr(
-            ab.asIrExpr(aa.asExpr(self).asIrExpr, ComparisonOperator.LessThanEqual, that)
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.LessThanEqual, that)
         )
 
     /**
@@ -278,7 +279,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         c: CombineKindTuple[kt.R, i.KS]
     ): Expr[i.R, Composite[c.R]] =
         Expr(
-            i.asIrExpr(aa.asExpr(self).asIrExpr, exprs)
+            i.asIrExpr(aa.asExpr(self).expr, exprs)
         )
 
     /**
@@ -301,7 +302,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, Composite[c.R]] =
         Expr(
             IrExpr.In(
-                aa.asExpr(self).asIrExpr, 
+                aa.asExpr(self).expr,
                 IrInRightOperand.Subquery(query.tree),
                 false
             )
@@ -334,17 +335,17 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Between(
-                aa.asExpr(self).asIrExpr,
-                as.asExpr(start).asIrExpr,
-                ae.asExpr(end).asIrExpr,
+                aa.asExpr(self).expr,
+                as.asExpr(start).expr,
+                ae.asExpr(end).expr,
                 false
             )
         )
 
     /**
      * Type-safe addition. Supports number + number, datetime + interval,
-     * time + interval. Map to SQL `+`. Operates on any object that can 
-     * be lifted to an expression. Subqueries must return at most one row, 
+     * time + interval. Map to SQL `+`. Operates on any object that can
+     * be lifted to an expression. Subqueries must return at most one row,
      * enforced at compile time.
      *
      * {{{
@@ -366,9 +367,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr, 
-                SqlBinaryOperator.Plus, 
-                ab.asExpr(that).asIrExpr
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Plus,
+                ab.asExpr(that).expr
             )
         )
 
@@ -397,9 +398,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.Minus,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -423,9 +424,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.Times,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -448,9 +449,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[Option[BigDecimal], c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.Div,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -476,7 +477,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             IrExpr.GeneralFunc(
                 None,
                 "MOD",
-                aa.asExpr(self).asIrExpr :: ab.asExpr(that).asIrExpr :: Nil,
+                aa.asExpr(self).expr :: ab.asExpr(that).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -496,7 +497,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         n: ValidateArgType[SqlNumber, aa.R, "numeric"],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
-        Expr(IrExpr.Unary(SqlUnaryOperator.Positive, aa.asExpr(self).asIrExpr))
+        Expr(IrExpr.Unary(SqlUnaryOperator.Positive, aa.asExpr(self).expr))
 
     /**
      * Unary minus (negation). Maps to SQL `-expr`. The expression must be
@@ -511,7 +512,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         n: ValidateArgType[SqlNumber, aa.R, "numeric"],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
-        Expr(IrExpr.Unary(SqlUnaryOperator.Negative, aa.asExpr(self).asIrExpr))
+        Expr(IrExpr.Unary(SqlUnaryOperator.Negative, aa.asExpr(self).expr))
 
     /**
      * Logical AND. Typically used in `filter`, `on`, and
@@ -532,9 +533,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.And,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -557,9 +558,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.Or,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -575,7 +576,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         b: ValidateArgType[SqlBoolean, aa.R, "boolean"],
         kt: KindToTuple[aa.K]
     ): Expr[aa.R, Composite[kt.R]] =
-        Expr(IrExpr.Unary(SqlUnaryOperator.Not, aa.asExpr(self).asIrExpr))
+        Expr(IrExpr.Unary(SqlUnaryOperator.Not, aa.asExpr(self).expr))
 
     /**
      * Returns the first non-null value from two expressions.
@@ -595,7 +596,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Coalesce(
-                NonEmptyList(aa.asExpr(self).asIrExpr, ab.asExpr(that).asIrExpr :: Nil)
+                NonEmptyList(aa.asExpr(self).expr, ab.asExpr(that).expr :: Nil)
             )
         )
 
@@ -620,8 +621,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Like(
-                aa.asExpr(self).asIrExpr,
-                ab.asExpr(that).asIrExpr,
+                aa.asExpr(self).expr,
+                ab.asExpr(that).expr,
                 false
             )
         )
@@ -644,7 +645,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Like(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 IrExpr.Native(SqlExpr.StringLiteral(s"%$value%")),
                 false
             )
@@ -668,7 +669,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Like(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 IrExpr.Native(SqlExpr.StringLiteral(s"$value%")),
                 false
             )
@@ -692,7 +693,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Like(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 IrExpr.Native(SqlExpr.StringLiteral(s"%$value")),
                 false
             )
@@ -714,7 +715,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             IrExpr.GeneralFunc(
                 None,
                 "LOWER",
-                aa.asExpr(self).asIrExpr :: Nil,
+                aa.asExpr(self).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -737,7 +738,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             IrExpr.GeneralFunc(
                 None,
                 "UPPER",
-                aa.asExpr(self).asIrExpr :: Nil,
+                aa.asExpr(self).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -760,7 +761,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             IrExpr.GeneralFunc(
                 None,
                 "TRIM",
-                aa.asExpr(self).asIrExpr :: Nil,
+                aa.asExpr(self).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -783,7 +784,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
             IrExpr.GeneralFunc(
                 None,
                 "CHAR_LENGTH",
-                aa.asExpr(self).asIrExpr :: Nil,
+                aa.asExpr(self).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -808,9 +809,9 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             IrExpr.Binary(
-                aa.asExpr(self).asIrExpr,
+                aa.asExpr(self).expr,
                 SqlBinaryOperator.Concat,
-                ab.asExpr(that).asIrExpr
+                ab.asExpr(that).expr
             )
         )
 
@@ -822,7 +823,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def asc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Asc, None)
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, None))
 
     /**
      * Ascending sort order with nulls first. Maps to SQL
@@ -833,7 +834,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def ascNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.First))
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, Some(SqlNullsOrdering.First)))
 
     /**
      * Ascending sort order with nulls last. Maps to SQL
@@ -844,7 +845,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def ascNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Asc, Some(SqlNullsOrdering.Last))
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, Some(SqlNullsOrdering.Last)))
 
     /**
      * Descending sort order. Maps to SQL `DESC`. Used in `sortBy` clause.
@@ -854,7 +855,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def desc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Desc, None)
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, None))
 
     /**
      * Descending sort order with nulls first. Maps to SQL
@@ -865,7 +866,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def descNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.First))
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, Some(SqlNullsOrdering.First)))
 
     /**
      * Descending sort order with nulls last. Maps to SQL
@@ -876,7 +877,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def descNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
-        Sort(aa.asExpr(self), SqlOrdering.Desc, Some(SqlNullsOrdering.Last))
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, Some(SqlNullsOrdering.Last)))
 
 extension [A, B, CL <: Int](self: (A, B))(using
     qc: QueryContext[CL],
@@ -910,15 +911,15 @@ extension [A, B, CL <: Int](self: (A, B))(using
             IrExpr.Binary(
                 IrExpr.Tuple(
                     NonEmptyList(
-                        aa.asExpr(self._1).asIrExpr,
-                        ab.asExpr(self._2).asIrExpr :: Nil
+                        aa.asExpr(self._1).expr,
+                        ab.asExpr(self._2).expr :: Nil
                     )
                 ),
                 SqlBinaryOperator.Overlaps,
                 IrExpr.Tuple(
                     NonEmptyList(
-                        ac.asExpr(that._1).asIrExpr,
-                        ad.asExpr(that._2).asIrExpr :: Nil
+                        ac.asExpr(that._1).expr,
+                        ad.asExpr(that._2).expr :: Nil
                     )
                 )
             )

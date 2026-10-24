@@ -10,6 +10,7 @@ import sqala.ir.IrExpr
 import scala.quoted.Type
 import scala.quoted.Quotes
 import scala.util.NotGiven
+import sqala.ir.IrOrderingItem
 
 /**
  * Lifts values, expressions, and subqueries for `sortBy` in
@@ -43,7 +44,7 @@ object AsSortItem:
             type KS = kt.R
 
             def asSort(x: T): Sort[?, ?] =
-                Sort(a.asExpr(x), SqlOrdering.Asc, None)
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
     given sort[T, EK <: ExprKind, S <: QuerySize, CL <: Int](using
         as: ValidateArgType[AsSqlExpr, T, "scalar"],
@@ -134,7 +135,7 @@ object AsGroupedSortItem:
             type KS = kt.R
 
             def asSort(x: T): Sort[?, ?] =
-                Sort(a.asExpr(x), SqlOrdering.Asc, None)
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
     given sort[T, EK <: ExprKind, CL <: Int](using
         as: ValidateArgType[AsSqlExpr, T, "scalar"],
@@ -211,7 +212,7 @@ object AsDistinctSortItem:
         CanInDistinctSortBy[Distinct[T, EL], CL]
     ): AsDistinctSortItem[Distinct[T, EL], CL] with
         def asSort(x: Distinct[T, EL]): DistinctSort[?, ?] =
-            DistinctSort(Expr(x.expr), SqlOrdering.Asc, None)
+            DistinctSort(IrOrderingItem(x.expr, SqlOrdering.Asc, None))
 
     given sort[T, EL <: Int, CL <: Int](using
         ValidateArgType[AsSqlExpr, T, "scalar"],
@@ -226,14 +227,14 @@ object AsDistinctSortItem:
         i: CanInDistinctSortBy[T, CL]
     ): AsDistinctSortItem[T, CL] with
         def asSort(x: T): DistinctSort[?, ?] =
-            DistinctSort(a.asExpr(x), SqlOrdering.Asc, None)
+            DistinctSort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
     given wrongSort[T, K <: ExprKind, CL <: Int](using
         ValidateArgType[AsSqlExpr, T, "scalar"],
         CanInDistinctSortBy[Sort[T, K], CL]
     ): AsDistinctSortItem[Sort[T, K], CL] with
         def asSort(x: Sort[T, K]): DistinctSort[?, ?] =
-            DistinctSort(x.expr, x.ordering, x.nullsOrdering)
+            DistinctSort(IrOrderingItem(x.ordering.expr, x.ordering.ordering, x.ordering.nullsOrdering))
 
 /**
  * Collects distinct sort items for `sortBy` after `mapDistinct`.
@@ -301,7 +302,7 @@ object AsOverSortItem:
             type KS = kt.R
 
             def asSort(x: T): Sort[?, ?] =
-                Sort(a.asExpr(x), SqlOrdering.Asc, None)
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
     given sort[T, EK <: ExprKind, CL <: Int](using
         as: ValidateArgType[AsSqlExpr, T, "scalar"],

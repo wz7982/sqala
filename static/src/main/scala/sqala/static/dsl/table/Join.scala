@@ -172,5 +172,5 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
         val cond = a.asExpr(f(params))
         FromJoin(
             params,
-            table.copy(on = Some(cond.asIrExpr))
+            table.copy(on = Some(cond.expr))
         )

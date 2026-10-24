@@ -255,7 +255,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
      * }}}
      */
     def as[R](using c: Cast[a.R, R], kt: KindToTuple[a.K]): Expr[Option[R], Composite[kt.R]] =
-        Expr(IrExpr.Cast(a.asExpr(x).asIrExpr, c.castType))
+        Expr(IrExpr.Cast(a.asExpr(x).expr, c.castType))
 
 extension [CL <: Int](n: Int)(using QueryContext[CL])
     /**
@@ -345,7 +345,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Year,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -361,7 +361,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Month,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -377,7 +377,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Day,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -393,7 +393,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Hour,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -409,7 +409,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Minute,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -425,7 +425,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
         Expr(
             IrExpr.ExtractFunc(
                 SqlTimeUnit.Second,
-                a.asExpr(x).asIrExpr
+                a.asExpr(x).expr
             )
         )
 
@@ -472,11 +472,11 @@ final case class CaseWhen[T, KS <: Tuple](private[sqala] val exprs: NonEmptyList
             exprs
                 .grouped(2)
                 .map(i => (i.toList(0), i.toList(1)))
-                .map((w, t) => IrCaseBranch(w.asIrExpr, t.asIrExpr))
+                .map((w, t) => IrCaseBranch(w.expr, t.expr))
         Expr(
             IrExpr.Case(
                 caseBranches,
-                Some(a.asExpr(result).asIrExpr)
+                Some(a.asExpr(result).expr)
             )
         )
 
@@ -519,7 +519,7 @@ def coalesce[A, B, CL <: Int](x: A, y: B)(using
 ): Expr[r.R, c.R] =
     Expr(
         IrExpr.Coalesce(
-            NonEmptyList(aa.asExpr(x).asIrExpr, ab.asExpr(y).asIrExpr :: Nil)
+            NonEmptyList(aa.asExpr(x).expr, ab.asExpr(y).expr :: Nil)
         )
     )
 
@@ -545,7 +545,7 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
     to.toOption(
         Expr(
             IrExpr.NullIf(
-                aa.asExpr(x).asIrExpr, ab.asExpr(y).asIrExpr
+                aa.asExpr(x).expr, ab.asExpr(y).expr
             )
         )
     )
@@ -559,7 +559,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
         c: CallAggFilter[T, kt.R]
     ): c.R =
         val cond = a.asExpr(f)
-        c.call(x, cond.asIrExpr)
+        c.call(x, cond.expr)
 
 /**
  * Specifies the `PARTITION BY` clause in a window function.
@@ -632,8 +632,8 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
         Expr(
             IrExpr.Window(
                 co.asIrExpr(x),
-                o.partitionBy.map(_.asIrExpr),
-                o.sortBy.map(_.asIrOrderingItem),
+                o.partitionBy.map(_.expr),
+                o.sortBy.map(_.ordering),
                 o.frame
             )
         )
@@ -695,7 +695,7 @@ extension [T, CL <: Int](n: T)(using
      * }}}
      */
     def preceding: FrameBound[a.R, 2, "preceding row"] =
-        FrameBound(IrWindowFrameBound.Preceding(n.asExpr.asIrExpr))
+        FrameBound(IrWindowFrameBound.Preceding(n.asExpr.expr))
 
     /**
      * References N rows after the current row in a window frame.
@@ -708,7 +708,7 @@ extension [T, CL <: Int](n: T)(using
      * }}}
      */
     def following: FrameBound[a.R, 4, "following row"] =
-        FrameBound(IrWindowFrameBound.Following(n.asExpr.asIrExpr))
+        FrameBound(IrWindowFrameBound.Following(n.asExpr.expr))
 
 /**
  * Tests whether a condition holds for any row in a subquery.
@@ -772,7 +772,7 @@ def cube[T, CL <: Int](x: T)(using
     kt: KindToTuple[a.K],
     ig: IsGrouped[kt.R]
 ): Cube =
-    Cube(a.asExprs(x).map(_.asIrExpr))
+    Cube(a.asExprs(x).map(_.expr))
 
 /**
  * Creates a `ROLLUP` clause. Maps to `ROLLUP(exprs)`.
@@ -787,7 +787,7 @@ def rollup[T, CL <: Int](x: T)(using
     kt: KindToTuple[a.K],
     ig: IsGrouped[kt.R]
 ): Rollup =
-    Rollup(a.asExprs(x).map(_.asIrExpr))
+    Rollup(a.asExprs(x).map(_.expr))
 
 /**
  * Creates a `GROUPING SETS` clause. Maps to `GROUPING SETS(exprs)`.
@@ -813,7 +813,7 @@ def groupingSets[T, CL <: Int](x: T)(using
  */
 extension (s: StringContext)
     inline def rawExpr[CL <: Int](inline args: Any*)(using QueryContext[CL]): RawExpr[CL] =
-        val sqlExprs = RawMacro.asSqlExprs[CL](args)
+        val sqlExprs = RawMacro.asIrExprs[CL](args)
         RawExpr(s.parts.toList.map(_.trim), sqlExprs)
 
 /**
@@ -832,7 +832,7 @@ def createFunc[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryCo
         IrExpr.GeneralFunc(
             None,
             name,
-            args.map(_.asIrExpr),
+            args.map(_.expr),
             Nil,
             Nil,
             None
@@ -854,8 +854,8 @@ def createFunc[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryCo
 def createBinaryExpr[T, CL <: Int](left: Expr[?, ?], operator: String, right: Expr[?, ?])(using QueryContext[CL]): Expr[T, Composite[EmptyTuple]] =
     Expr(
         IrExpr.Binary(
-            left.asIrExpr,
+            left.expr,
             SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword(operator) :: Nil),
-            right.asIrExpr
+            right.expr
         )
     )

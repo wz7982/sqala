@@ -125,7 +125,7 @@ def ntile[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "NTILE",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -152,7 +152,7 @@ def firstValue[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "FIRST_VALUE",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 None
             )
         )
@@ -178,7 +178,7 @@ def firstValueIgnoreNulls[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "FIRST_VALUE",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -204,7 +204,7 @@ def lastValue[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAST_VALUE",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 None
             )
         )
@@ -230,7 +230,7 @@ def lastValueIgnoreNulls[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAST_VALUE",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -260,8 +260,8 @@ def nthValue[A, N, CL <: Int](x: A, n: N)(using
     to.toOption(
         WindowPart(
             IrExpr.NthValueFunc(
-                aa.asExpr(x).asIrExpr,
-                an.asExpr(n).asIrExpr,
+                aa.asExpr(x).expr,
+                an.asExpr(n).expr,
                 None,
                 None
             )
@@ -292,8 +292,8 @@ def nthValueIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     to.toOption(
         WindowPart(
             IrExpr.NthValueFunc(
-                aa.asExpr(x).asIrExpr,
-                an.asExpr(n).asIrExpr,
+                aa.asExpr(x).expr,
+                an.asExpr(n).expr,
                 None,
                 Some(SqlWindowNullsMode.Ignore)
             )
@@ -324,8 +324,8 @@ def nthValueFromLast[A, N, CL <: Int](x: A, n: N)(using
     to.toOption(
         WindowPart(
             IrExpr.NthValueFunc(
-                aa.asExpr(x).asIrExpr,
-                an.asExpr(n).asIrExpr,
+                aa.asExpr(x).expr,
+                an.asExpr(n).expr,
                 Some(SqlNthValueFromMode.Last),
                 None
             )
@@ -357,8 +357,8 @@ def nthValueFromLastIgnoreNulls[A, N, CL <: Int](x: A, n: N)(using
     to.toOption(
         WindowPart(
             IrExpr.NthValueFunc(
-                aa.asExpr(x).asIrExpr,
-                an.asExpr(n).asIrExpr,
+                aa.asExpr(x).expr,
+                an.asExpr(n).expr,
                 Some(SqlNthValueFromMode.Last),
                 Some(SqlWindowNullsMode.Ignore)
             )
@@ -385,7 +385,7 @@ def lag[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 None
             )
         )
@@ -411,7 +411,7 @@ def lagIgnoreNulls[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -442,7 +442,7 @@ def lag[A, O, CL <: Int](x: A, offset: O)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asIrExpr :: ao.asExpr(offset).asIrExpr :: Nil,
+                aa.asExpr(x).expr :: ao.asExpr(offset).expr :: Nil,
                 None
             )
         )
@@ -473,7 +473,7 @@ def lagIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asIrExpr :: ao.asExpr(offset).asIrExpr :: Nil,
+                aa.asExpr(x).expr :: ao.asExpr(offset).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -510,9 +510,9 @@ def lag[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asIrExpr ::
-                    ao.asExpr(offset).asIrExpr ::
-                    ad.asExpr(default).asIrExpr :: Nil
+                aa.asExpr(x).expr ::
+                ao.asExpr(offset).expr ::
+                ad.asExpr(default).expr :: Nil
                 ,
                 None
             )
@@ -551,9 +551,9 @@ def lagIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LAG",
-                aa.asExpr(x).asIrExpr ::
-                    ao.asExpr(offset).asIrExpr ::
-                    ad.asExpr(default).asIrExpr :: Nil
+                aa.asExpr(x).expr ::
+                ao.asExpr(offset).expr ::
+                ad.asExpr(default).expr :: Nil
                 ,
                 Some(SqlWindowNullsMode.Ignore)
             )
@@ -580,7 +580,7 @@ def lead[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 None
             )
         )
@@ -606,7 +606,7 @@ def leadIgnoreNulls[A, CL <: Int](x: A)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -637,7 +637,7 @@ def lead[A, O, CL <: Int](x: A, offset: O)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asIrExpr :: ao.asExpr(offset).asIrExpr :: Nil,
+                aa.asExpr(x).expr :: ao.asExpr(offset).expr :: Nil,
                 None
             )
         )
@@ -668,7 +668,7 @@ def leadIgnoreNulls[A, O, CL <: Int](x: A, offset: O)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asIrExpr :: ao.asExpr(offset).asIrExpr :: Nil,
+                aa.asExpr(x).expr :: ao.asExpr(offset).expr :: Nil,
                 Some(SqlWindowNullsMode.Ignore)
             )
         )
@@ -705,9 +705,9 @@ def lead[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asIrExpr ::
-                    ao.asExpr(offset).asIrExpr ::
-                    ad.asExpr(default).asIrExpr :: Nil
+                aa.asExpr(x).expr ::
+                ao.asExpr(offset).expr ::
+                ad.asExpr(default).expr :: Nil
                 ,
                 None
             )
@@ -746,9 +746,9 @@ def leadIgnoreNulls[A, O, D, CL <: Int](x: A, offset: O, default: D)(using
         WindowPart(
             IrExpr.NullsTreatmentFunc(
                 "LEAD",
-                aa.asExpr(x).asIrExpr ::
-                    ao.asExpr(offset).asIrExpr ::
-                    ad.asExpr(default).asIrExpr :: Nil
+                aa.asExpr(x).expr ::
+                ao.asExpr(offset).expr ::
+                ad.asExpr(default).expr :: Nil
                 ,
                 Some(SqlWindowNullsMode.Ignore)
             )

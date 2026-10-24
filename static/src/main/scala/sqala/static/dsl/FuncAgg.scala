@@ -37,7 +37,7 @@ def count[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "COUNT",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -64,7 +64,7 @@ def countDistinct[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             Some(SqlQuantifier.Distinct),
             "COUNT",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -95,7 +95,7 @@ def sum[T, CL <: Int](x: T)(using
             IrExpr.GeneralFunc(
                 None,
                 "SUM",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -124,7 +124,7 @@ def avg[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "AVG",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -154,7 +154,7 @@ def max[T, CL <: Int](x: T)(using
             IrExpr.GeneralFunc(
                 None,
                 "MAX",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -185,7 +185,7 @@ def min[T, CL <: Int](x: T)(using
             IrExpr.GeneralFunc(
                 None,
                 "MIN",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -217,7 +217,7 @@ def anyValue[T, CL <: Int](x: T)(using
             IrExpr.GeneralFunc(
                 None,
                 "ANY_VALUE",
-                a.asExpr(x).asIrExpr :: Nil,
+                a.asExpr(x).expr :: Nil,
                 Nil,
                 Nil,
                 None
@@ -246,7 +246,7 @@ def stddevPop[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "STDDEV_POP",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -274,7 +274,7 @@ def stddevSamp[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "STDDEV_SAMP",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -302,7 +302,7 @@ def varPop[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "VAR_POP",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -330,7 +330,7 @@ def varSamp[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "VAR_SAMP",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -364,7 +364,7 @@ def covarPop[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "COVAR_POP",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -398,7 +398,7 @@ def covarSamp[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "COVAR_SAMP",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -431,7 +431,7 @@ def corr[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "CORR",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -465,7 +465,7 @@ def regrSlope[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_SLOPE",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -499,7 +499,7 @@ def regrIntercept[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_INTERCEPT",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -533,7 +533,7 @@ def regrCount[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_COUNT",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -567,7 +567,7 @@ def regrR2[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_R2",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -601,7 +601,7 @@ def regrAvgx[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_AVGX",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -635,7 +635,7 @@ def regrAvgy[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_AVGY",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -669,7 +669,7 @@ def regrSxx[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_SXX",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -703,7 +703,7 @@ def regrSyy[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_SYY",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -737,7 +737,7 @@ def regrSxy[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGR_SXY",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -773,9 +773,9 @@ def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
             IrExpr.GeneralFunc(
                 None,
                 "PERCENTILE_CONT",
-                at.asExpr(x).asIrExpr :: Nil,
+                at.asExpr(x).expr :: Nil,
                 Nil,
-                withinGroup.asIrOrderingItem :: Nil,
+                withinGroup.ordering :: Nil,
                 None
             )
         )
@@ -810,9 +810,9 @@ def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
             IrExpr.GeneralFunc(
                 None,
                 "PERCENTILE_DISC",
-                at.asExpr(x).asIrExpr :: Nil,
+                at.asExpr(x).expr :: Nil,
                 Nil,
-                withinGroup.asIrOrderingItem :: Nil,
+                withinGroup.ordering :: Nil,
                 None
             )
         )
@@ -847,9 +847,9 @@ def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup
     AggExpr(
         IrExpr.ListAggFunc(
             None,
-            at.asExpr(x).asIrExpr,
-            as.asExpr(separator).asIrExpr,
-            withinGroup.asIrOrderingItem :: Nil,
+            at.asExpr(x).expr,
+            as.asExpr(separator).expr,
+            withinGroup.ordering :: Nil,
             None
         )
     )

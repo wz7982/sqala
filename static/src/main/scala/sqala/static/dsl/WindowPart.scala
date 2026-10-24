@@ -10,9 +10,4 @@ import sqala.ir.IrExpr
  * `over` is called, matching the SQL requirement that window
  * functions require an `OVER` clause.
  */
-final case class WindowPart[T, KS <: Tuple](private[sqala] val expr: IrExpr):
-    /**
-     * Normalizes the expression via `Expr.asIrExpr`.
-     */
-    private[sqala] def asIrExpr: IrExpr =
-        Expr(expr).asIrExpr
+final case class WindowPart[T, KS <: Tuple](private[sqala] val expr: IrExpr)

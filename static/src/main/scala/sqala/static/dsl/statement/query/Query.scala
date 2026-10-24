@@ -438,7 +438,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
         val cond = a.asExpr(f(params))
-        TableQuery(params, tree.addWhere(cond.asIrExpr))
+        TableQuery(params, tree.addWhere(cond.expr))
 
     /**
      * Conditionally adds a `WHERE` clause. The condition is only applied
@@ -495,7 +495,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         val sort = a.asSorts(f(params))
         SortedTableQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
     /**
@@ -586,7 +586,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
             a.asGroup(group) *: tt.toTuple(tu.transform(params)),
             tree.copy(
                 groupBy = Some(
-                    IrGroup(None, groupExprs.map(g => IrGroupingItem.Expr(g.asIrExpr)))
+                    IrGroup(None, groupExprs.map(g => IrGroupingItem.Expr(g.expr)))
                 )
             )
         )
@@ -704,7 +704,7 @@ final case class SortedTableQuery[T, OKS <: Tuple, L <: Int](
         val sort = a.asSorts(f(params))
         SortedTableQuery(
             params,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -735,7 +735,7 @@ final case class MappedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
         MappedSortedQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -766,7 +766,7 @@ final case class MappedSortedQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize]
         MappedSortedQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -794,7 +794,7 @@ final case class MappedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySiz
         MappedSortedDistinctQuery(
             params,
             distinctExprs,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -822,7 +822,7 @@ final case class MappedSortedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: Qu
         MappedSortedDistinctQuery(
             params,
             distinctExprs,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -858,7 +858,7 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         an: AggNotNested[kt.R]
     ): Grouping[T, c.R, L] =
         val cond = a.asExpr(f(params))
-        Grouping(params, tree.addHaving(cond.asIrExpr))
+        Grouping(params, tree.addHaving(cond.expr))
 
     /**
      * Specifies the grouped projection list, maps to `SELECT` after
@@ -929,7 +929,7 @@ final case class GroupedQuery[M, T, OKS <: Tuple, L <: Int](
         GroupedSortedQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**
@@ -965,7 +965,7 @@ final case class GroupedSortedQuery[M, T, OKS <: Tuple, L <: Int](
         GroupedSortedQuery(
             params,
             tables,
-            tree.copy(orderBy = tree.orderBy ++ sort.map(_.asIrOrderingItem))
+            tree.copy(orderBy = tree.orderBy ++ sort.map(_.ordering))
         )
 
 /**

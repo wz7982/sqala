@@ -30,21 +30,21 @@ object ToOption:
             type R = Expr[Wrap[T, Option], K]
 
             def toOption(x: E): R =
-                Expr(x.asIrExpr)
-    
+                Expr(x.expr)
+
     given agg[T, KS <: Tuple]: Aux[AggExpr[T, KS], AggExpr[Wrap[T, Option], KS]] =
         new ToOption[AggExpr[T, KS]]:
             type R = AggExpr[Wrap[T, Option], KS]
 
             def toOption(x: AggExpr[T, KS]): R =
-                AggExpr(x.asIrExpr)
+                AggExpr(x.expr)
 
     given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
         new ToOption[WindowPart[T, KS]]:
             type R = WindowPart[Wrap[T, Option], KS]
 
             def toOption(x: WindowPart[T, KS]): R =
-                WindowPart(x.asIrExpr)
+                WindowPart(x.expr)
 
     given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], Table[Wrap[T, Option], K, L]] =
         new ToOption[Table[T, K, L]]:

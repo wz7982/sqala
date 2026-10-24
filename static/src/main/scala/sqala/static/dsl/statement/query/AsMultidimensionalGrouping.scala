@@ -24,7 +24,7 @@ object AsGroupingItem:
         ig: IsGrouped[kt.R]
     ): AsGroupingItem[T] with
         def asIrGroupingItem(x: T): IrGroupingItem =
-            IrGroupingItem.Expr(a.asExpr(x).asIrExpr)
+            IrGroupingItem.Expr(a.asExpr(x).expr)
 
     given unit: AsGroupingItem[Unit] with
         def asIrGroupingItem(x: Unit): IrGroupingItem =
@@ -58,7 +58,7 @@ object AsMultidimensionalGrouping:
         ig: IsGrouped[kt.R]
     ): AsMultidimensionalGrouping[T] with
         def asIrGroupingItems(x: T): NonEmptyList[IrGroupingItem] =
-            NonEmptyList(IrGroupingItem.Expr(a.asExpr(x).asIrExpr), Nil)
+            NonEmptyList(IrGroupingItem.Expr(a.asExpr(x).expr), Nil)
 
     given unit: AsMultidimensionalGrouping[Unit] with
         def asIrGroupingItems(x: Unit): NonEmptyList[IrGroupingItem] =

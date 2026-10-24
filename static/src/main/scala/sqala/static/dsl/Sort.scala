@@ -8,13 +8,4 @@ import sqala.ir.IrOrderingItem
  * and window ordering clause, combining an expression with an
  * ordering direction and nulls handling.
  */
-final case class Sort[T, K <: ExprKind](
-    private[sqala] val expr: Expr[?, ?],
-    private[sqala] val ordering: SqlOrdering,
-    private[sqala] val nullsOrdering: Option[SqlNullsOrdering]
-):
-    /**
-     * Converts this sort specification to a `IrOrderingItem` IR node.
-     */
-    private[sqala] def asIrOrderingItem: IrOrderingItem =
-        IrOrderingItem(expr.asIrExpr, ordering, nullsOrdering)
+final case class Sort[T, K <: ExprKind](private[sqala] val ordering: IrOrderingItem)

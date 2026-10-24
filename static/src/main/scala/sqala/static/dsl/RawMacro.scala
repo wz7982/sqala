@@ -13,7 +13,7 @@ object RawMacro:
     /**
       * Converts a sequence of values to a list of `SqlExpr` using the
       */
-    inline def asSqlExprs[CL <: Int](inline expr: Seq[Any]): List[IrExpr] =
+    inline def asIrExprs[CL <: Int](inline expr: Seq[Any]): List[IrExpr] =
         ${ RawMacroImpl.asIrExprs('expr) }
 
 object RawMacroImpl:
@@ -36,6 +36,6 @@ object RawMacroImpl:
                 tpe match
                     case '[t] =>
                         val instance = Expr.summon[AsExpr[t, CL]].get
-                        '{ $instance.asErasedExpr(${ term.asExprOf[t] }).asIrExpr }
+                        '{ $instance.asErasedExpr(${ term.asExprOf[t] }).expr }
 
         Expr.ofList(sqlExprs)

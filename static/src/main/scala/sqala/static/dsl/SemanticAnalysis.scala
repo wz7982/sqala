@@ -108,7 +108,7 @@ object TransformExprKind:
             type R = Expr[T, K]
 
             def transform(x: Expr[T, EK]): R =
-                Expr(x.asIrExpr)
+                Expr(x.expr)
 
     given tuple[H, T <: Tuple, K <: ExprKind](using
         h: TransformExprKind[H, K],
@@ -249,7 +249,7 @@ object ToUngrouped:
             type R = Expr[T, UngroupedColumn[CL]]
 
             def toUngrouped(x: E): R =
-                Expr(x.asIrExpr)
+                Expr(x.expr)
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: ToUngrouped[H, CL],
@@ -753,7 +753,7 @@ object CanCallOver:
             type KS = EKS
 
             def asIrExpr(x: AggExpr[T, EKS]): IrExpr =
-                x.asIrExpr
+                x.expr
 
     given window[T, EKS <: Tuple]: Aux[WindowPart[T, EKS], T, EKS] =
         new CanCallOver[WindowPart[T, EKS]]:
@@ -762,7 +762,7 @@ object CanCallOver:
             type KS = EKS
 
             def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
-                x.asIrExpr
+                x.expr
 
     inline given fallback[T](using
         NotGiven[CanCallOver[T]]
@@ -792,7 +792,7 @@ object CallAggFilter:
                     originalFilter.map(IrExpr.Binary(_, SqlBinaryOperator.And, filter)).orElse(Some(filter))
 
                 val expr: IrExpr.CountAsteriskFunc | IrExpr.ListAggFunc | IrExpr.GeneralFunc | IrExpr.JsonObjectAggFunc | IrExpr.JsonArrayAggFunc =
-                    x.asIrExpr match
+                    x.expr match
                         case c: IrExpr.CountAsteriskFunc =>
                             c.copy(addFilter(c.filter, filter))
                         case g: IrExpr.GeneralFunc =>

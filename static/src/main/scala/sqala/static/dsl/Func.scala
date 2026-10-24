@@ -28,8 +28,8 @@ def substring[T, S, CL <: Int](x: T, start: S)(using
 ): Expr[Option[String], c.R] =
     Expr(
         IrExpr.SubstringFunc(
-            at.asExpr(x).asIrExpr,
-            as.asExpr(start).asIrExpr,
+            at.asExpr(x).expr,
+            as.asExpr(start).expr,
             None
         )
     )
@@ -57,9 +57,9 @@ def substring[T, S, E, CL <: Int](x: T, start: S, end: E)(using
 ): Expr[Option[String], c.R] =
     Expr(
         IrExpr.SubstringFunc(
-            at.asExpr(x).asIrExpr,
-            as.asExpr(start).asIrExpr,
-            Some(ae.asExpr(end).asIrExpr)
+            at.asExpr(x).expr,
+            as.asExpr(start).expr,
+            Some(ae.asExpr(end).expr)
         )
     )
 
@@ -80,7 +80,7 @@ def upper[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "UPPER",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -104,7 +104,7 @@ def lower[T, CL <: Int](x: T)(using
         IrExpr.GeneralFunc(
             None,
             "LOWER",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -132,7 +132,7 @@ def lpad[T, N, CL <: Int](x: T, n: N)(using
         IrExpr.GeneralFunc(
             None,
             "LPAD",
-            at.asExpr(x).asIrExpr :: an.asExpr(n).asIrExpr :: Nil,
+            at.asExpr(x).expr :: an.asExpr(n).expr :: Nil,
             Nil,
             Nil,
             None
@@ -163,7 +163,7 @@ def lpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
         IrExpr.GeneralFunc(
             None,
             "LPAD",
-            at.asExpr(x).asIrExpr :: an.asExpr(n).asIrExpr :: ap.asExpr(pad).asIrExpr :: Nil,
+            at.asExpr(x).expr :: an.asExpr(n).expr :: ap.asExpr(pad).expr :: Nil,
             Nil,
             Nil,
             None
@@ -191,7 +191,7 @@ def rpad[T, N, CL <: Int](x: T, n: N)(using
         IrExpr.GeneralFunc(
             None,
             "RPAD",
-            at.asExpr(x).asIrExpr :: an.asExpr(n).asIrExpr :: Nil,
+            at.asExpr(x).expr :: an.asExpr(n).expr :: Nil,
             Nil,
             Nil,
             None
@@ -222,7 +222,7 @@ def rpad[T, N, P, CL <: Int](x: T, n: N, pad: P)(using
         IrExpr.GeneralFunc(
             None,
             "RPAD",
-            at.asExpr(x).asIrExpr :: an.asExpr(n).asIrExpr :: ap.asExpr(pad).asIrExpr :: Nil,
+            at.asExpr(x).expr :: an.asExpr(n).expr :: ap.asExpr(pad).expr :: Nil,
             Nil,
             Nil,
             None
@@ -247,7 +247,7 @@ def btrim[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "BTRIM",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -274,7 +274,7 @@ def btrim[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "BTRIM",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -299,7 +299,7 @@ def ltrim[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "LTRIM",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -326,7 +326,7 @@ def ltrim[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "LTRIM",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -351,7 +351,7 @@ def rtrim[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "RTRIM",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -378,7 +378,7 @@ def rtrim[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "RTRIM",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -408,9 +408,9 @@ def overlay[A, B, S, CL <: Int](x: A, y: B, start: S)(using
 ): Expr[Option[String], c.R] =
     Expr(
         IrExpr.OverlayFunc(
-            aa.asExpr(x).asIrExpr,
-            ab.asExpr(y).asIrExpr,
-            as.asExpr(start).asIrExpr,
+            aa.asExpr(x).expr,
+            ab.asExpr(y).expr,
+            as.asExpr(start).expr,
             None
         )
     )
@@ -441,10 +441,10 @@ def overlay[A, B, S, E, CL <: Int](x: A, y: B, start: S, end: E)(using
 ): Expr[Option[String], c.R] =
     Expr(
         IrExpr.OverlayFunc(
-            aa.asExpr(x).asIrExpr,
-            ab.asExpr(y).asIrExpr,
-            as.asExpr(start).asIrExpr,
-            Some(ae.asExpr(end).asIrExpr)
+            aa.asExpr(x).expr,
+            ab.asExpr(y).expr,
+            as.asExpr(start).expr,
+            Some(ae.asExpr(end).expr)
         )
     )
 
@@ -469,7 +469,7 @@ def regexpLike[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "REGEXP_LIKE",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -494,8 +494,8 @@ def position[A, B, CL <: Int](x: A, y: B)(using
 ): Expr[Int, c.R] =
     Expr(
         IrExpr.PositionFunc(
-            aa.asExpr(x).asIrExpr,
-            ab.asExpr(y).asIrExpr
+            aa.asExpr(x).expr,
+            ab.asExpr(y).expr
         )
     )
 
@@ -517,7 +517,7 @@ def charLength[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "CHAR_LENGTH",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -541,7 +541,7 @@ def octetLength[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "OCTET_LENGTH",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -565,7 +565,7 @@ def abs[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "ABS",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -591,7 +591,7 @@ def mod[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "MOD",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -615,7 +615,7 @@ def sin[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "SIN",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -639,7 +639,7 @@ def cos[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "COS",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -663,7 +663,7 @@ def tan[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "TAN",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -687,7 +687,7 @@ def sinh[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "SINH",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -711,7 +711,7 @@ def cosh[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "COSH",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -735,7 +735,7 @@ def tanh[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "TANH",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -759,7 +759,7 @@ def asin[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "ASIN",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -783,7 +783,7 @@ def acos[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "ACOS",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -807,7 +807,7 @@ def atan[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "ATAN",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -833,7 +833,7 @@ def log[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "LOG",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -857,7 +857,7 @@ def log10[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "LOG10",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -881,7 +881,7 @@ def ln[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "LN",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -905,7 +905,7 @@ def exp[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "EXP",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -931,7 +931,7 @@ def power[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "POWER",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -955,7 +955,7 @@ def sqrt[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "SQRT",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -979,7 +979,7 @@ def floor[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "FLOOR",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -1003,7 +1003,7 @@ def ceil[A, CL <: Int](x: A)(using
         IrExpr.GeneralFunc(
             None,
             "CEIL",
-            a.asExpr(x).asIrExpr :: Nil,
+            a.asExpr(x).expr :: Nil,
             Nil,
             Nil,
             None
@@ -1030,7 +1030,7 @@ def round[A, B, CL <: Int](x: A, y: B)(using
         IrExpr.GeneralFunc(
             None,
             "ROUND",
-            aa.asExpr(x).asIrExpr :: ab.asExpr(y).asIrExpr :: Nil,
+            aa.asExpr(x).expr :: ab.asExpr(y).expr :: Nil,
             Nil,
             Nil,
             None
@@ -1063,10 +1063,10 @@ def widthBucket[A, B, C, D, CL <: Int](x: A, min: B, max: C, num: D)(using
         IrExpr.GeneralFunc(
             None,
             "WIDTH_BUCKET",
-            aa.asExpr(x).asIrExpr ::
-            ab.asExpr(min).asIrExpr ::
-            ac.asExpr(max).asIrExpr ::
-            ad.asExpr(num).asIrExpr :: Nil,
+            aa.asExpr(x).expr ::
+            ab.asExpr(min).expr ::
+            ac.asExpr(max).expr ::
+            ad.asExpr(num).expr :: Nil,
             Nil,
             Nil,
             None

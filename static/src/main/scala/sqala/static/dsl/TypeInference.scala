@@ -156,7 +156,7 @@ trait In[A, B, CL <: Int]:
         val exprList = asExprs(x)
         IrExpr.In(
             expr,
-            IrInRightOperand.Values(exprList.map(_.asIrExpr)),
+            IrInRightOperand.Values(exprList.map(_.expr)),
             false
         )
 
@@ -535,7 +535,7 @@ object CanInRangeFrame:
         NotGiven[CanInRangeFrame[S, T]]
     ): CanInRangeFrame[S, T] =
         error("Window frame type is incompatible with the ordering expression.")
- 
+
 /**
  * Provides the target type for a `as` method.
  */
@@ -547,39 +547,39 @@ trait Cast[T, R]:
 
 object Cast:
     given string[T: AsSqlExpr]: Cast[T, String] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Varchar(None)
 
     given int[T: SqlNumber]: Cast[T, Int] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Int
 
     given long[T: SqlNumber]: Cast[T, Long] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Long
 
     given float[T: SqlNumber]: Cast[T, Float] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Float
 
     given double[T: SqlNumber]: Cast[T, Double] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Double
 
     given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Decimal(Some(38, 10))
 
     given json[T: SqlString]: Cast[T, Json] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Json
 
     given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Timestamp(None)
 
     given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
-        def castType: SqlType = 
+        def castType: SqlType =
             SqlType.Timestamp(Some(SqlTimeZoneMode.With))
 
     inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =

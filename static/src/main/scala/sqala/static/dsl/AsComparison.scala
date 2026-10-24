@@ -37,7 +37,7 @@ enum ComparisonOperator:
      * Less-than comparison.
      */
     case LessThan
-    
+
     /**
      * Less-than-or-equal comparison.
      */
@@ -90,7 +90,7 @@ object AsComparison:
                             SqlBinaryOperator.LessThan
                         case ComparisonOperator.LessThanEqual =>
                             SqlBinaryOperator.LessThanEqual
-                IrExpr.Binary(expr, sqlOperator, a.asExpr(x).asIrExpr)
+                IrExpr.Binary(expr, sqlOperator, a.asExpr(x).expr)
 
     given quantifiedSubquery[T, OKS <: Tuple, L <: Int, CL <: Int](using
         vss: ValidateSubqueryScope[L, CL]
