@@ -66,3 +66,5 @@ enum IrLock(val waitMode: Option[IrLockWaitMode]):
 enum IrLockWaitMode:
     case NoWait
     case SkipLocked
+
+case class IrWithItem(columns: List[String], query: IrQuery)

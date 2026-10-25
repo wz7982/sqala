@@ -63,17 +63,6 @@ object ToOption:
             def toOption(x: MappedTable[N, V, RV, O, L]): R =
                 x.copy[N, tt.R, RV, true, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
 
-    // TODO
-    // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
-    //     t: ToOption[V],
-    //     tt: ToTuple[t.R]
-    // ): Aux[RecursiveTable[N, V, L], RecursiveTable[N, tt.R, L]] =
-    //     new ToOption[RecursiveTable[N, V, L]]:
-    //         type R = RecursiveTable[N, tt.R, L]
-
-    //         def toOption(x: RecursiveTable[N, V, L]): R =
-    //             x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
-
     given tuple[H, T <: Tuple](using
         h: ToOption[H],
         t: ToOption[T],

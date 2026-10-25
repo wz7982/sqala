@@ -38,13 +38,6 @@ object Result:
         new Result[MappedTable[N, V, RV, true, L]]:
             type R = Option[r.R]
 
-    // TODO
-    // given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
-    //     r: Result[NamedTuple[N, V]]
-    // ): Aux[RecursiveTable[N, V, L], r.R] =
-    //     new Result[RecursiveTable[N, V, L]]:
-    //         type R = r.R
-
     given tuple[H, T <: Tuple](using
         hr: Result[H],
         tr: Result[T],

@@ -52,7 +52,7 @@ def from[T, CL <: Int](using qc: QueryContext[CL] = QueryContext[0]())(
     val tree: IrQuery.Select = IrQuery.Select(
         None,
         selectItems,
-        fromTable,
+        Some(fromTable),
         None,
         None,
         None,
@@ -551,6 +551,7 @@ def nullIf[A, B, CL <: Int](x: A, y: B)(using
     )
 
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
+    // TODO 注释
     def filter[F](f: F)(using
         a: AsExpr[F, CL],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
@@ -560,6 +561,30 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
     ): c.R =
         val cond = a.asExpr(f)
         c.call(x, cond.expr)
+
+/**
+ * Returns 1 if the column is not part of the current grouping set
+ * (aggregated), 0 if it is. Maps to `GROUPING(expr)`. Used after
+ * `groupBy` clause.
+ *
+ * {{{
+ * from(Post)
+ *     .groupBy(p => (author = p.authorId, channel = p.channelId))
+ *     .map((g, p) => (author = g.author, count = count(), groupingAuthorId = grouping(g.author)))
+ * }}}
+ */
+def grouping[T, K <: ExprKind, CL <: Int](x: Expr[T, K])(using
+    qc: QueryContext[CL],
+    gc: GroupingContext,
+    as: ValidateArgType[AsSqlExpr, T, "scalar"],
+    kt: KindToTuple[K],
+    ig: IsGrouped[kt.R]
+): Expr[Int, Agg[K *: EmptyTuple]] =
+    Expr(
+        IrExpr.Grouping(
+            NonEmptyList(x.expr, Nil)
+        )
+    )
 
 /**
  * Specifies the `PARTITION BY` clause in a window function.

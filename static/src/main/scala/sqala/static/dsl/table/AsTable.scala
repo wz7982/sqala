@@ -111,7 +111,7 @@ object AsTable:
                     val row = asExprs(datum).map(e => IrExpr.Native(e))
                     require(row.nonEmpty, "Values table must have at least one column.")
                     NonEmptyList(row.head, row.tail)
-                val values = IrQuery.Values(NonEmptyList(exprList.head, exprList.tail))
+                val values = IrQuery.Values(NonEmptyList(exprList.head, exprList.tail), Nil, None)
                 val table = IrTable.Subquery(false, values, metaData.columns.toList)
                 (Table[T, Column, CL](table, metaData), table)
 

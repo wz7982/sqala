@@ -9,7 +9,7 @@ enum IrQuery:
     case Select(
         quantifier: Option[SqlQuantifier],
         select: NonEmptyList[IrSelectItem],
-        from: IrTable,
+        from: Option[IrTable],
         where: Option[IrExpr],
         groupBy: Option[IrGroup],
         having: Option[IrExpr],
@@ -25,7 +25,14 @@ enum IrQuery:
         limit: Option[IrLimit]
     )
     case Values(
-        values: NonEmptyList[NonEmptyList[IrExpr]]
+        values: NonEmptyList[NonEmptyList[IrExpr]],
+        orderBy: List[IrOrderingItem],
+        limit: Option[IrLimit]
+    )
+    case With(
+        recursive: Boolean,
+        withItems: NonEmptyList[IrWithItem],
+        query: IrQuery
     )
 
 object IrQuery:

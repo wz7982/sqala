@@ -25,16 +25,21 @@ import sqala.ast.expr.SqlBinaryOperator
 import sqala.util.NonEmptyList
 import sqala.ast.expr.SqlType
 import sqala.ast.expr.SqlUnaryOperator
+import sqala.ast.statement.SqlWithItem
 
 private[sqala] class ToAst:
-    var tableIndex = 0
+    private var tableIndex = 0
 
-    val tableAliasMap = java.util.IdentityHashMap[IrTable, String]()
+    private val tableAliasMap = java.util.IdentityHashMap[IrTable, String]()
+
+    private var cteIndex = 0
+
+    private val cteNames = scala.collection.mutable.Stack[List[String]]()
 
     private def queryToAst(query: IrQuery): SqlQuery =
         query match
             case s: IrQuery.Select =>
-                val fromAst = tableToAst(s.from)
+                val fromAst = s.from.map(tableToAst).toList
                 val selectAst = s.select.map(selectItemToAst)
                 val whereAst = s.where.map(exprToAst)
                 val groupAst = s.groupBy.map: g =>
@@ -49,7 +54,7 @@ private[sqala] class ToAst:
                 SqlQuery.Select(
                     s.quantifier,
                     selectAst,
-                    List(fromAst),
+                    fromAst,
                     whereAst,
                     groupAst,
                     havingAst,
@@ -66,7 +71,19 @@ private[sqala] class ToAst:
                 val limitAst = s.limit.map(limitToAst)
                 SqlQuery.Set(leftAst, s.operator, None, rightAst, orderAst, limitAst)
             case v: IrQuery.Values =>
-                SqlQuery.Values(v.values.map(row => row.map(exprToAst)), Nil, None)
+                SqlQuery.Values(
+                    v.values.map(row => row.map(exprToAst)),
+                    v.orderBy.map(orderingItemToAst),
+                    v.limit.map(limitToAst)
+                )
+            case w: IrQuery.With =>
+                val names = w.withItems.map(_ => freshCteName())
+                cteNames.push(names.toList)
+                val itemsAst = w.withItems.zip(names).map: (item, name) =>
+                    SqlWithItem(name, item.columns, queryToAst(item.query))
+                val queryAst = queryToAst(w.query)
+                cteNames.pop()
+                SqlQuery.With(w.recursive, itemsAst, queryAst)
 
     private def tableToAst(table: IrTable): SqlTable =
         table match
@@ -82,6 +99,9 @@ private[sqala] class ToAst:
                 val rightAst = tableToAst(right)
                 val onAst = on.map(o => SqlJoinCondition.On(exprToAst(o)))
                 SqlTable.Join(leftAst, joinType, rightAst, onAst)
+            case IrTable.Cte(index, columnAliases) =>
+                val name = cteNames.top(index)
+                SqlTable.Ident(name, tableAliasToAst(fetchAlias(table), columnAliases), None, None, None)
 
     private def exprToAst(expr: IrExpr): SqlExpr =
         expr match
@@ -127,17 +147,17 @@ private[sqala] class ToAst:
             case IrExpr.In(expr, in, withNot) =>
                 in match
                     case IrInRightOperand.Values(Nil) =>
-                        val operatorAst = 
+                        val operatorAst =
                             if withNot then SqlBinaryOperator.NotEqual else SqlBinaryOperator.Equal
                         SqlExpr.Binary(
-                            SqlExpr.NumberLiteral(1), 
-                            operatorAst, 
+                            SqlExpr.NumberLiteral(1),
+                            operatorAst,
                             SqlExpr.NumberLiteral(0)
                         )
                     case IrInRightOperand.Values(e :: es) =>
                         SqlExpr.In(
-                            exprToAst(expr), 
-                            SqlInRightOperand.Values(NonEmptyList(exprToAst(e), es.map(exprToAst))), 
+                            exprToAst(expr),
+                            SqlInRightOperand.Values(NonEmptyList(exprToAst(e), es.map(exprToAst))),
                             withNot
                         )
                     case IrInRightOperand.Subquery(query) =>
@@ -323,6 +343,10 @@ private[sqala] class ToAst:
                 tableIndex += 1
                 s"t$tableIndex"
         )
+
+    private def freshCteName(): String =
+        cteIndex += 1
+        s"cte$cteIndex"
 
     def toAst(expr: IrExpr): SqlExpr =
         exprToAst(expr)

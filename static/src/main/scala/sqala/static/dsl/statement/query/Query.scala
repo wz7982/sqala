@@ -22,6 +22,8 @@ import sqala.ir.IrLockWaitMode
 import sqala.ir.IrGroup
 import sqala.ir.IrGroupingItem
 import sqala.ir.IrExpr
+import sqala.ir.IrSelectItem
+import sqala.ir.IrTable
 
 /**
  * A typed SQL query, the base type for all query operations in the DSL.
@@ -57,9 +59,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def union[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -81,9 +83,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def unionAll[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -105,9 +107,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def except[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -129,9 +131,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def exceptAll[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -153,9 +155,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def intersect[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -177,9 +179,9 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     def intersectAll[R, ROKS <: Tuple, RS <: QuerySize](unionQuery: QueryContext[L - 1] ?=> Query[R, ROKS, L, RS])(using
         u: Union[T, R, L],
         c: CombineKindTuple[OKS, ROKS]
-    ): UnionQuery[u.R, c.R, L] =
+    ): SetQuery[u.R, c.R, L, ManyRows] =
         given QueryContext[L - 1] = QueryContext()
-        UnionQuery(
+        SetQuery(
             u.unionQueryItems(params, 1),
             IrQuery.Set(
                 tree,
@@ -194,70 +196,67 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      * Wraps the query as a `COUNT(*)` subquery, removing any existing
      * `LIMIT` and `ORDER BY` to produce a valid scalar subquery.
      */
-    // private[sqala] def size: Query[Expr[Long, Column[L]], EmptyTuple, L, OneRow] =
-    //     val countExpr = count()
-    //     val expr = Expr[Long, Column[L]](countExpr.asIrExpr)
-    //     tree match
-    //         case s@SqlQuery.Select(p, _, _, _, None, _, _, _, _, _, _)
-    //             if p != Some(SqlQuantifier.Distinct)
-    //         =>
-    //             Query(
-    //                 expr,
-    //                 s.copy(
-    //                     select = SqlSelectItem.Expr(expr.asIrExpr, None) :: Nil,
-    //                     limit = None,
-    //                     orderBy = Nil
-    //                 )
-    //             )
-    //         case _ =>
-    //             def removeLimitAndOrderBy(tree: SqlQuery): SqlQuery =
-    //                 tree match
-    //                     case s: SqlQuery.Select =>
-    //                         s.copy(limit = None, orderBy = Nil)
-    //                     case s: SqlQuery.Set =>
-    //                         s.copy(limit = None, orderBy = Nil)
-    //                     case v: SqlQuery.Values =>
-    //                         v.copy(limit = None, orderBy = Nil)
-    //                     case c: SqlQuery.With =>
-    //                         c.copy(query = removeLimitAndOrderBy(c.query))
+    private[sqala] def size: Query[Expr[Long, Column[L]], EmptyTuple, L, OneRow] =
+        val countExpr = count()
+        val expr = Expr[Long, Column[L]](countExpr.expr)
+        tree match
+            case s@IrQuery.Select(p, _, _, _, None, _, _, _, _)
+                if p != Some(SqlQuantifier.Distinct)
+            =>
+                Query(
+                    expr,
+                    s.copy(
+                        select = NonEmptyList(IrSelectItem(expr.expr, "c1"), Nil),
+                        limit = None,
+                        orderBy = Nil
+                    )
+                )
+            case _ =>
+                def removeLimitAndOrderBy(tree: IrQuery): IrQuery =
+                    tree match
+                        case s: IrQuery.Select =>
+                            s.copy(limit = None, orderBy = Nil)
+                        case s: IrQuery.Set =>
+                            s.copy(limit = None, orderBy = Nil)
+                        case v: IrQuery.Values =>
+                            v.copy(limit = None, orderBy = Nil)
+                        case c: IrQuery.With =>
+                            c.copy(query = removeLimitAndOrderBy(c.query))
 
-    //             val outerQuery: SqlQuery.Select = SqlQuery.Select(
-    //                 None,
-    //                 SqlSelectItem.Expr(expr.asIrExpr, None) :: Nil,
-    //                 SqlTable.Subquery(
-    //                     false,
-    //                     removeLimitAndOrderBy(tree),
-    //                     Some(SqlTableAlias("t", Nil)),
-    //                     None
-    //                 ) :: Nil,
-    //                 None,
-    //                 None,
-    //                 None,
-    //                 Nil,
-    //                 None,
-    //                 Nil,
-    //                 None,
-    //                 None
-    //             )
-    //             Query(expr, outerQuery)
+                val outerQuery: IrQuery.Select = IrQuery.Select(
+                    None,
+                    NonEmptyList(IrSelectItem(expr.expr, "c1"), Nil),
+                    Some(
+                        IrTable.Subquery(
+                            false,
+                            removeLimitAndOrderBy(tree),
+                            Nil
+                        )
+                    ),
+                    None,
+                    None,
+                    None,
+                    Nil,
+                    None,
+                    None
+                )
+                Query(expr, outerQuery)
 
     /**
      * Wraps the query as an `EXISTS` subquery, producing a boolean
      * expression.
      */
-    // private[sqala] def exists: Query[Expr[Boolean, Column[L]], EmptyTuple, L, OneRow] =
-    //     val expr = Expr[Boolean, Column[L]](SqlExpr.ExistsPredicate(tree))
-    //     val outerQuery: SqlQuery.Select = SqlQuery.Select(
-    //         None,
-    //         SqlSelectItem.Expr(expr.asIrExpr, None) :: Nil,
-    //         Nil,
-    //         None,
-    //         None,
-    //         None,
-    //         Nil,
-    //         None,
-    //         Nil,
-    //         None,
-    //         None
-    //     )
-    //     Query(expr, outerQuery)
+    private[sqala] def exists: Query[Expr[Boolean, Column[L]], EmptyTuple, L, OneRow] =
+        val expr = Expr[Boolean, Column[L]](IrExpr.ExistsPredicate(tree))
+        val outerQuery: IrQuery.Select = IrQuery.Select(
+            None,
+            NonEmptyList(IrSelectItem(expr.expr, "c1"), Nil),
+            None,
+            None,
+            None,
+            None,
+            Nil,
+            None,
+            None
+        )
+        Query(expr, outerQuery)
