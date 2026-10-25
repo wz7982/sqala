@@ -58,6 +58,7 @@ object AsTableParam:
                     metaData.copy(columns = metaData.columns.indices.map(i => s"c${cursor + i}"))
                 )
 
+    // TODO
     inline given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]

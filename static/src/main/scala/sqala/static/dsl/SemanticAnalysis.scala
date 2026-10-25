@@ -825,119 +825,79 @@ object IsGrouped:
     ): IsGrouped[KS] =
         error("Arguments must be grouping expressions of the associated query level.")
 
-// TODO 后面的报错还要细化
-trait SimpleClauseNotAllowedAgg[KS <: Tuple]
+// TODO 后面的报错还要细化 加一个子句字符串参数，然后删掉filter的校验
+trait SimpleClauseNotAllowedAgg[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedAgg:
-    given validate[KS <: Tuple](using
+    given validate[KS <: Tuple, C <: String](using
         ha: HasKind[KS, Agg[?]],
         na: ha.R =:= false
-    ): SimpleClauseNotAllowedAgg[KS]()
+    ): SimpleClauseNotAllowedAgg[KS, C]()
 
-    inline given fallback[KS <: Tuple](using
-        NotGiven[SimpleClauseNotAllowedAgg[KS]]
-    ): SimpleClauseNotAllowedAgg[KS] =
-        error("Aggregate functions are not allowed here.")
+    inline given fallback[KS <: Tuple, C <: String](using
+        NotGiven[SimpleClauseNotAllowedAgg[KS, C]]
+    ): SimpleClauseNotAllowedAgg[KS, C] =
+        ${ errorMacro[C] }
 
-trait SimpleClauseNotAllowedWindow[KS <: Tuple]
+    def errorMacro[C: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val clause = Type.show[C].replace("\"", "")
+
+        report.errorAndAbort(s"Aggregate functions are not allowed in $clause.")
+
+trait SimpleClauseNotAllowedWindow[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedWindow:
-    given validate[KS <: Tuple](using
+    given validate[KS <: Tuple, C <: String](using
         ha: HasKind[KS, Window[?]],
         na: ha.R =:= false
-    ): SimpleClauseNotAllowedWindow[KS]()
+    ): SimpleClauseNotAllowedWindow[KS, C]()
 
-    inline given fallback[KS <: Tuple](using
-        NotGiven[SimpleClauseNotAllowedWindow[KS]]
-    ): SimpleClauseNotAllowedWindow[KS] =
-        error("Window functions are not allowed here.")
+    inline given fallback[KS <: Tuple, C <: String](using
+        NotGiven[SimpleClauseNotAllowedWindow[KS, C]]
+    ): SimpleClauseNotAllowedWindow[KS, C] =
+        ${ errorMacro[C] }
 
-trait SimpleClauseNotAllowedUngroupedColumn[KS <: Tuple]
+    def errorMacro[C: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val clause = Type.show[C].replace("\"", "")
+
+        report.errorAndAbort(s"Window functions are not allowed in $clause.")
+
+trait SimpleClauseNotAllowedUngroupedColumn[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedUngroupedColumn:
-    given validate[KS <: Tuple](using
+    given validate[KS <: Tuple, C <: String](using
         hu: HasKind[KS, UngroupedColumn[?]],
         nu: hu.R =:= false
-    ): SimpleClauseNotAllowedUngroupedColumn[KS]()
+    ): SimpleClauseNotAllowedUngroupedColumn[KS, C]()
 
-    inline given fallback[KS <: Tuple](using
-        NotGiven[SimpleClauseNotAllowedUngroupedColumn[KS]]
-    ): SimpleClauseNotAllowedUngroupedColumn[KS] =
-        error("Ungrouped column references are not allowed here.")
+    inline given fallback[KS <: Tuple, C <: String](using
+        NotGiven[SimpleClauseNotAllowedUngroupedColumn[KS, C]]
+    ): SimpleClauseNotAllowedUngroupedColumn[KS, C] =
+        ${ errorMacro[C] }
+
+    def errorMacro[C: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val clause = Type.show[C].replace("\"", "")
+
+        report.errorAndAbort(s"Ungrouped column references are not allowed in $clause.")
 
 /**
  * Validates that a kind tuple contains no aggregate or window
  * functions, allowing it to appear in a simple clause.
  */
-trait CanInSimpleClause[KS <: Tuple]
+trait CanInSimpleClause[KS <: Tuple, C <: String]
 
 object CanInSimpleClause:
-    given validate[KS <: Tuple](using
-        SimpleClauseNotAllowedAgg[KS],
-        SimpleClauseNotAllowedWindow[KS],
-        SimpleClauseNotAllowedUngroupedColumn[KS]
-    ): CanInSimpleClause[KS]()
-
-/**
- * Validates that a kind tuple contains no aggregate functions, allowing it to appear in a filter clause.
- */
-trait FilterNotAllowedAgg[KS <: Tuple]
-
-object FilterNotAllowedAgg:
-    given validate[KS <: Tuple](using
-        ha: HasKind[KS, Agg[?]],
-        na: ha.R =:= false
-    ): FilterNotAllowedAgg[KS]()
-
-    inline given fallback[KS <: Tuple](using
-        NotGiven[FilterNotAllowedAgg[KS]]
-    ): FilterNotAllowedAgg[KS] =
-        error("Aggregate functions are not allowed in filter/on.")
-
-/**
- * Validates that a kind tuple contains no window functions, allowing it to appear in a filter clause.
- */
-trait FilterNotAllowedWindow[KS <: Tuple]
-
-object FilterNotAllowedWindow:
-    given validate[KS <: Tuple](using
-        hw: HasKind[KS, Window[?]],
-        nw: hw.R =:= false
-    ): FilterNotAllowedWindow[KS]()
-
-    inline given fallback[KS <: Tuple](using
-        NotGiven[FilterNotAllowedWindow[KS]]
-    ): FilterNotAllowedWindow[KS] =
-        error("Window functions are not allowed in filter/on.")
-
-/**
- * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a filter clause.
- */
-trait FilterNotAllowedUngroupedColumn[KS <: Tuple]
-
-object FilterNotAllowedUngroupedColumn:
-    given validate[KS <: Tuple](using
-        hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false
-    ): FilterNotAllowedUngroupedColumn[KS]()
-
-    inline given fallback[KS <: Tuple](using
-        NotGiven[FilterNotAllowedUngroupedColumn[KS]]
-    ): FilterNotAllowedUngroupedColumn[KS] =
-        error("Ungrouped column references are not allowed in filter/on.")
-
-/**
- * Validates that a kind tuple can appear in a `filter` clause.
- * No aggregate, window, or ungrouped column references are allowed.
- */
-trait CanInFilter[KS <: Tuple]
-
-object CanInFilter:
-    given validate[KS <: Tuple](using
-        FilterNotAllowedAgg[KS],
-        FilterNotAllowedWindow[KS],
-        FilterNotAllowedUngroupedColumn[KS]
-    ): CanInFilter[KS]()
+    given validate[KS <: Tuple, C <: String](using
+        SimpleClauseNotAllowedAgg[KS, C],
+        SimpleClauseNotAllowedWindow[KS, C],
+        SimpleClauseNotAllowedUngroupedColumn[KS, C]
+    ): CanInSimpleClause[KS, C]()
 
 /**
  * Validates that a kind tuple can appear in a `map` clause.

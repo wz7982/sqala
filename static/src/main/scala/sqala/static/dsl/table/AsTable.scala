@@ -67,6 +67,7 @@ object AsTable:
                 )
                 (table, irTable)
 
+    // TODO
     inline given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
@@ -86,16 +87,6 @@ object AsTable:
                     )
                 val table = MappedTable[N, V, tt.R, false, CL](irTable)
                 (table, irTable)
-
-    // TODO
-    // given recursiveTable[N <: Tuple, V <: Tuple, CL <: Int]: Aux[RecursiveTable[N, V, CL], CL, RecursiveTable[N, V, CL], EmptyTuple] =
-    //     new AsTable[RecursiveTable[N, V, CL], CL]:
-    //         type R = RecursiveTable[N, V, CL]
-
-    //         type OKS = EmptyTuple
-
-    //         def asTable(x: RecursiveTable[N, V, CL]): (R, SqlTable) =
-    //             (x, x.__sqlTable__)
 
     inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
         val metaData = TableMacro.tableMetaData[T]

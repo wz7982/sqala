@@ -16,8 +16,3 @@ final class OverContext
  * Provides a grouping context.
  */
 final class GroupingContext
-
-/**
- * Provides a recursive query context.
- */
-final class ConnectByContext

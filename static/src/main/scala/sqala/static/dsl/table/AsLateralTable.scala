@@ -43,7 +43,7 @@ object AsLateralTable:
         tt: ToTuple[p.R],
         e: ExcludeCurrentLevelColumn[QOKS, CL - 1],
         i: IncludeCurrentLevelColumn[QOKS, CL - 1],
-        c: CanInSimpleClause[i.R],
+        c: CanInSimpleClause[i.R, "subquery"],
         vss: ValidateSubqueryScope[L, CL]
     ): Aux[Q, CL, MappedTable[N, tt.R, tt.R, false, CL - 1], e.R] =
         new AsLateralTable[Q, CL]:

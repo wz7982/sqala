@@ -555,7 +555,7 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL])
         a: AsExpr[F, CL],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "filter"],
         c: CallAggFilter[T, kt.R]
     ): c.R =
         val cond = a.asExpr(f)

@@ -165,7 +165,7 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
         a: AsExpr[F, L],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "on"],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): FromJoin[T, c.R, L] =

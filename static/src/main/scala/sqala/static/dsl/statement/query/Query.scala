@@ -433,7 +433,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsExpr[F, L],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "filter"],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
@@ -454,7 +454,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsExpr[F, L],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "filter"],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
@@ -472,7 +472,7 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsExpr[F, L],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        ci: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "filter"],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): TableQuery[T, c.R, L] =
