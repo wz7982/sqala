@@ -334,9 +334,9 @@ object ExcludeCurrentLevelColumn:
         h: ExcludeCurrentLevelColumn[HS, CL],
         t: ExcludeCurrentLevelColumn[T, CL],
         refl: NotGiven[h.R =:= EmptyTuple]
-    ): Aux[Window[HS] *: T, CL, Window[h.R] *: t.R] =
+    ): Aux[Window[HS] *: T, CL, Tuple.Concat[h.R, t.R]] =
         new ExcludeCurrentLevelColumn[Window[HS] *: T, CL]:
-            type R = Window[h.R] *: t.R
+            type R = Tuple.Concat[h.R, t.R]
 
     given groupedHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],

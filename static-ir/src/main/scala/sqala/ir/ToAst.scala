@@ -26,6 +26,9 @@ import sqala.util.NonEmptyList
 import sqala.ast.expr.SqlType
 import sqala.ast.expr.SqlUnaryOperator
 import sqala.ast.statement.SqlWithItem
+import sqala.ast.statement.SqlStatement
+import sqala.ast.statement.SqlInsertMode
+import sqala.ast.statement.SqlUpdateSetPair
 
 private[sqala] class ToAst:
     private var tableIndex = 0
@@ -85,6 +88,37 @@ private[sqala] class ToAst:
                 cteNames.pop()
                 SqlQuery.With(w.recursive, itemsAst, queryAst)
 
+    private def statementToAst(statement: IrStatement): SqlStatement =
+        def insertModeToAst(mode: IrInsertMode): SqlInsertMode =
+            mode match
+                case IrInsertMode.Values(values) =>
+                    SqlInsertMode.Values(values.map(row => row.map(exprToAst)))
+                case IrInsertMode.Subquery(query) =>
+                    SqlInsertMode.Subquery(queryToAst(query))
+
+        def setPairToAst(pair: IrUpdateSetPair): SqlUpdateSetPair =
+            SqlUpdateSetPair(pair.column, exprToAst(pair.value))
+
+        statement match
+            case s: IrStatement.Delete =>
+                val tableAst = dmlTableToAst(s.table, true)
+                SqlStatement.Delete(tableAst, s.where.map(exprToAst))
+            case s: IrStatement.Insert =>
+                val tableAst = dmlTableToAst(s.table, false)
+                SqlStatement.Insert(tableAst, s.columns, insertModeToAst(s.mode))
+            case s: IrStatement.Update =>
+                val tableAst = dmlTableToAst(s.table, true)
+                SqlStatement.Update(tableAst, s.setPairs.map(setPairToAst), s.where.map(exprToAst))
+            case s: IrStatement.Upsert =>
+                val tableAst = dmlTableToAst(s.table, false)
+                SqlStatement.Upsert(
+                    tableAst,
+                    s.columns,
+                    s.values.map(exprToAst),
+                    s.primaryKeys,
+                    s.updateColumns
+                )
+
     private def tableToAst(table: IrTable): SqlTable =
         table match
             case IrTable.Ident(name, columnAliases) =>
@@ -102,6 +136,12 @@ private[sqala] class ToAst:
             case IrTable.Cte(index, columnAliases) =>
                 val name = cteNames.top(index)
                 SqlTable.Ident(name, tableAliasToAst(fetchAlias(table), columnAliases), None, None, None)
+
+    private def dmlTableToAst(table: IrTable.Ident, needAlias: Boolean): SqlTable.Ident =
+        if needAlias then
+            SqlTable.Ident(table.name, tableAliasToAst(fetchAlias(table), Nil), None, None, None)
+        else
+            SqlTable.Ident(table.name, None, None, None, None)
 
     private def exprToAst(expr: IrExpr): SqlExpr =
         expr match
@@ -353,3 +393,6 @@ private[sqala] class ToAst:
 
     def toAst(query: IrQuery): SqlQuery =
         queryToAst(query)
+
+    def toAst(statement: IrStatement): SqlStatement =
+        statementToAst(statement)

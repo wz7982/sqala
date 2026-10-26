@@ -19,6 +19,59 @@ import sqala.ir.IrTable
 import sqala.ir.IrExpr
 import sqala.ir.IrWindowFrameBound
 import sqala.ir.IrCaseBranch
+import sqala.static.dsl.statement.dml.Insert
+import sqala.static.dsl.statement.dml.InsertTable
+import sqala.static.dsl.statement.dml.Update
+import sqala.static.dsl.statement.dml.UpdateTable
+import sqala.static.dsl.statement.dml.Delete
+import sqala.static.dsl.statement.dml.UpdatePair
+import sqala.static.dsl.statement.dml.UpdateSetContext
+
+/**
+ * Starts an `INSERT` statement builder.
+ *
+ * {{{
+ * insert[User](u => (u.id, u.name)).values((1, "Alice"), (2, "Bob"))
+ * }}}
+ */
+inline def insert[T <: Product]: Insert[T, InsertTable] =
+    Insert.apply[T]
+
+/**
+ * Starts an `UPDATE` statement builder.
+ *
+ * {{{
+ * update[User].set(u => u.name := "Alice").where(_.id == 1)
+ * }}}
+ */
+inline def update[T <: Product]: Update[T, UpdateTable] =
+    Update.apply[T]
+
+/**
+ * Starts a `DELETE` statement builder.
+ *
+ * {{{
+ * delete[User].where(_.id == 1)
+ * }}}
+ */
+inline def delete[T <: Product]: Delete[T] =
+    Delete.apply[T]
+
+extension [T](expr: ColumnExpr[T, 1])
+    /**
+     * Assigns a value to a column in an `UPDATE` statement.
+     *
+     * {{{
+     * update[User].set(u => u.name := "Alice")
+     * }}}
+     */
+    @targetName("to")
+    def :=[R](updateExpr: R)(using
+        a: AsExpr[R, 1],
+        c: CanCompare[T, a.R],
+        uc: UpdateSetContext
+    ): UpdatePair =
+        UpdatePair(expr.expr.name, a.asExpr(updateExpr).expr)
 
 /**
  * Starts a `SELECT` query from one or more table sources.

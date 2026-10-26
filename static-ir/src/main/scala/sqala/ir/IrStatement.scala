@@ -37,22 +37,38 @@ enum IrQuery:
 
 object IrQuery:
     extension (select: Select)
-        /**
-         * Returns a copy with the given item appended to the select list.
-         */
         def addSelectItem(item: IrSelectItem): Select =
             select.copy(select = select.select :+ item)
 
-        /**
-         * Returns a copy with the given condition added to the `WHERE` clause
-         * via `AND`.
-         */
         def addWhere(condition: IrExpr): Select =
             select.copy(where = select.where.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
-        /**
-         * Returns a copy with the given condition added to the `HAVING` clause
-         * via `AND`.
-         */
         def addHaving(condition: IrExpr): Select =
             select.copy(having = select.having.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
+
+enum IrInsertMode:
+    case Values(values: NonEmptyList[NonEmptyList[IrExpr]])
+    case Subquery(query: IrQuery)
+
+case class IrUpdateSetPair(column: String, value: IrExpr)
+
+enum IrStatement:
+    case Delete(table: IrTable.Ident, where: Option[IrExpr])
+    case Insert(table: IrTable.Ident, columns: List[String], mode: IrInsertMode)
+    case Update(table: IrTable.Ident, setPairs: NonEmptyList[IrUpdateSetPair], where: Option[IrExpr])
+    case Upsert(
+        table: IrTable.Ident,
+        columns: NonEmptyList[String],
+        values: NonEmptyList[IrExpr],
+        primaryKeys: NonEmptyList[String],
+        updateColumns: NonEmptyList[String]
+    )
+
+object IrStatement:
+    extension (statement: Delete)
+        def addWhere(condition: IrExpr): Delete =
+            statement.copy(where = statement.where.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
+
+    extension (statement: Update)
+        def addWhere(condition: IrExpr): Update =
+            statement.copy(where = statement.where.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
