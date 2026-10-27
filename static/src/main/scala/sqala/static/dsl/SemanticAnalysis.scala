@@ -692,7 +692,6 @@ object WindowNotNested:
     ): WindowNotNested[KS] =
         error("Window function calls cannot be nested.")
 
-// TODO 测一下window嵌套的错能不能正常报出来
 /**
  * Validates that a kind tuple can appear inside a window
  * specification.
@@ -711,7 +710,9 @@ object CanInWindow:
     ): CanInWindow[KS] =
         error("Window function calls cannot contain ungrouped column references.")
 
-// TODO 注释
+/**
+ * Validates that the start frame precedes the end frame.
+ */
 trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
 
 object ValidateFrame:
@@ -732,7 +733,9 @@ object ValidateFrame:
 
         report.errorAndAbort(s"Frame starting from $start cannot end at $end.")
 
-// TODO 注释
+/**
+ * Validates that the expression can be called over.
+ */
 trait CanCallOver[T]:
     type R
 
@@ -770,7 +773,7 @@ object CanCallOver:
         error("Over specified, but this expression is not a window function nor an aggregate function.")
 
 /**
- * 注释
+ * Validates that the expression can be filtered.
  */
 trait CallAggFilter[T, FKS <: Tuple]:
     type R
@@ -810,7 +813,9 @@ object CallAggFilter:
     ): Aux[T, FKS, T] =
         error("Filter specified, but this expression is not an aggregate function.")
 
-// TODO
+/**
+ * Validates that the expression is grouped.
+ */
 trait IsGrouped[KS <: Tuple]
 
 object IsGrouped:
@@ -825,7 +830,9 @@ object IsGrouped:
     ): IsGrouped[KS] =
         error("Arguments must be grouping expressions of the associated query level.")
 
-// TODO 后面的报错还要细化 加一个子句字符串参数，然后删掉filter的校验
+/**
+ * Validates that the expression is not an aggregate function.
+ */
 trait SimpleClauseNotAllowedAgg[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedAgg:
@@ -846,6 +853,9 @@ object SimpleClauseNotAllowedAgg:
 
         report.errorAndAbort(s"Aggregate functions are not allowed in $clause.")
 
+/**
+ * Validates that the expression is not a window function.
+ */
 trait SimpleClauseNotAllowedWindow[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedWindow:
@@ -866,6 +876,9 @@ object SimpleClauseNotAllowedWindow:
 
         report.errorAndAbort(s"Window functions are not allowed in $clause.")
 
+/**
+ * Validates that the expression is not an ungrouped column reference.
+ */
 trait SimpleClauseNotAllowedUngroupedColumn[KS <: Tuple, C <: String]
 
 object SimpleClauseNotAllowedUngroupedColumn:
@@ -994,6 +1007,7 @@ object CanInSortBy:
     ): CanInSortBy[KS, S] =
         error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
+// TODO
 trait SortByNotAllowedValue[K <: ExprKind]
 
 object SortByNotAllowedValue:
@@ -1081,7 +1095,7 @@ object GroupByNotAllowedWindow:
         error("Window functions are not allowed in groupBy.")
 
 /**
- * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a groupBy clause.
+ * Validates that a kind tuple contains no ungrouped column references, allowing it to appear in a `groupBy` clause.
  */
 trait GroupByNotAllowedUngroupedColumn[KS <: Tuple]
 

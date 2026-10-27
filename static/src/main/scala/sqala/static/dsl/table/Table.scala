@@ -38,7 +38,13 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
         val index = __metaData__.fields.toList.indexOf(name)
         ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
 
-    // TODO 注释
+    /**
+      * Exclude columns from the table.
+      * 
+      * {{{
+      * val q = from(Post).map(p => p.exclude("content"))
+      * }}}
+      */
     transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?, ?] =
         ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, IsOption[T], L]('__table__, '__metaData__, 'columns) }
 
@@ -59,6 +65,10 @@ object ExcludeMacro:
                     cs.map:
                         case Literal(StringConstant(n)) =>
                             n
+                        case _ =>
+                            report.errorAndAbort("Invalid column names.")
+                case _ =>
+                    report.errorAndAbort("Invalid column names.")
         val tpe = TypeRepr.of[T]
         val sym = tpe.typeSymbol
         val fields = sym.caseFields

@@ -594,6 +594,29 @@ object Cast:
         report.errorAndAbort(s"Cannot convert type $aType to type $bType.")
 
 /**
+ * Constrains the types that can be used with `year`, `month`, etc.
+ * extract functions.
+ */
+trait ExtractArg[T]
+
+object ExtractArg:
+    given dateTime[T: SqlDateTime]: ExtractArg[T]()
+
+    given time[T: SqlTime]: ExtractArg[T]()
+
+    given interval[T: SqlInterval]: ExtractArg[T]()
+
+    inline given fallback[T](using NotGiven[ExtractArg[T]]): ExtractArg[T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val typeName = Type.show[T]
+
+        report.errorAndAbort(s"The argument type should be a date/time or interval type, but got $typeName.")
+
+/**
  * Maps union query items, producing column expressions
  * for `union`, `unionAll`, etc. `CL` is the query context level.
  */

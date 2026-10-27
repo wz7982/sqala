@@ -371,20 +371,6 @@ extension [CL <: Int](n: Int)(using QueryContext[CL])
     def second: Interval =
         Interval(n.toString, SqlTimeUnit.Second)
 
-// TODO 移动到类型操作里 fallback
-/**
- * Constrains the types that can be used with `year`, `month`, etc.
- * extract functions.
- */
-trait ExtractArg[T]
-
-object ExtractArg:
-    given dateTime[T: SqlDateTime]: ExtractArg[T]()
-
-    given time[T: SqlTime]: ExtractArg[T]()
-
-    given interval[T: SqlInterval]: ExtractArg[T]()
-
 extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt: KindToTuple[a.K], e: ExtractArg[a.R])
     /**
      * Extracts the year from a datetime expression. Maps to
