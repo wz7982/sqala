@@ -1007,7 +1007,9 @@ object CanInSortBy:
     ): CanInSortBy[KS, S] =
         error("Ungrouped column references must appear in the groupBy clause or be used in an aggregate function.")
 
-// TODO
+/**
+ * TODO
+ */
 trait SortByNotAllowedValue[K <: ExprKind]
 
 object SortByNotAllowedValue:
