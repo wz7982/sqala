@@ -29,6 +29,7 @@ import sqala.ast.statement.SqlWithItem
 import sqala.ast.statement.SqlStatement
 import sqala.ast.statement.SqlInsertMode
 import sqala.ast.statement.SqlUpdateSetPair
+import sqala.ast.table.SqlJsonColumn
 
 private[sqala] class ToAst:
     private var tableIndex = 0
@@ -136,6 +137,48 @@ private[sqala] class ToAst:
             case IrTable.Cte(index, columnAliases) =>
                 val name = cteNames.top(index)
                 SqlTable.Ident(name, tableAliasToAst(fetchAlias(table), columnAliases), None, None, None)
+            case IrTable.Func(withLateral, name, args, withOrdinality, columnAliases) =>
+                val argsAst = args.map(exprToAst)
+                val alias = fetchAlias(table)
+                SqlTable.Func(
+                    withLateral,
+                    name,
+                    argsAst,
+                    withOrdinality,
+                    tableAliasToAst(alias, columnAliases),
+                    None
+                )
+            case IrTable.Json(withLateral, expr, path, pathAlias, columns, columnAliases) =>
+                def jsonColumnToAst(column: IrJsonColumn): SqlJsonColumn =
+                    column match
+                        case IrJsonColumn.Ordinality(name) =>
+                            SqlJsonColumn.Ordinality(name)
+                        case IrJsonColumn.Column(name, t, path) =>
+                            val pathAst = path.map(exprToAst)
+                            SqlJsonColumn.Column(name, t, None, pathAst, None, None, None, None)
+                        case IrJsonColumn.Exists(name, t, path) =>
+                            val pathAst = path.map(exprToAst)
+                            SqlJsonColumn.Exists(name, t, pathAst, None)
+                        case IrJsonColumn.Nested(path, pathAlias, columns) =>
+                            val pathAst = exprToAst(path)
+                            val columnsAst = columns.map(jsonColumnToAst)
+                            SqlJsonColumn.Nested(pathAst, pathAlias, columnsAst)
+
+                val exprAst = exprToAst(expr)
+                val pathAst = exprToAst(path)
+                val columnsAst = columns.map(jsonColumnToAst)
+                val alias = fetchAlias(table)
+                SqlTable.Json(
+                    withLateral,
+                    exprAst,
+                    pathAst,
+                    pathAlias,
+                    Nil,
+                    columnsAst,
+                    None,
+                    tableAliasToAst(alias, columnAliases),
+                    None
+                )
 
     private def dmlTableToAst(table: IrTable.Ident, needAlias: Boolean): SqlTable.Ident =
         if needAlias then

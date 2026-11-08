@@ -30,7 +30,7 @@ trait AsLateralTable[T, CL <: Int]:
      * Converts the value to a lateral table reference and its SQL
      * table AST.
      */
-    def asTable(x: T)(using QueryContext[CL]): (R, IrTable)
+    def asTable(x: T): (R, IrTable)
 
 object AsLateralTable:
     type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsLateralTable[T, CL]:
@@ -51,7 +51,7 @@ object AsLateralTable:
 
             type OKS = e.R
 
-            def asTable(x: Q)(using qc: QueryContext[CL]): (R, IrTable) =
+            def asTable(x: Q): (R, IrTable) =
                 val irTable =
                     IrTable.Subquery(
                         true,
