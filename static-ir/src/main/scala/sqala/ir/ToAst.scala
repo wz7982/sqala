@@ -215,6 +215,8 @@ private[sqala] class ToAst:
                         SqlExpr.Between(exprToAst(expr), exprToAst(between), exprToAst(and), !not)
                     case IrExpr.Unary(SqlUnaryOperator.Not, expr) =>
                         exprToAst(expr)
+                    case IrExpr.JsonTest(expr, nodeType, not) =>
+                        SqlExpr.JsonTest(exprToAst(expr), nodeType, None, !not)
                     case _ =>
                         SqlExpr.Unary(SqlUnaryOperator.Not, exprToAst(expr))
             case IrExpr.Unary(operator, expr) =>
@@ -257,6 +259,8 @@ private[sqala] class ToAst:
                 SqlExpr.NullIf(exprToAst(expr), exprToAst(test))
             case IrExpr.Cast(expr, t) =>
                 SqlExpr.Cast(exprToAst(expr), t)
+            case IrExpr.JsonTest(expr, nodeType, withNot) =>
+                SqlExpr.JsonTest(exprToAst(expr), nodeType, None, withNot)
             case IrExpr.Window(expr, partitionBy, orderBy, frame) =>
                 val partitionByAst = partitionBy.map(exprToAst)
                 val orderByAst = orderBy.map(orderingItemToAst)
@@ -291,8 +295,8 @@ private[sqala] class ToAst:
                 SqlExpr.PositionFunc(exprToAst(expr), exprToAst(in))
             case IrExpr.ExtractFunc(unit, expr) =>
                 SqlExpr.ExtractFunc(unit, exprToAst(expr))
-            case IrExpr.JsonObjectAggFunc(key, value, filter) =>
-                val itemAst = SqlJsonObjectItem(exprToAst(key), exprToAst(value))
+            case IrExpr.JsonObjectAggFunc(item, filter) =>
+                val itemAst = SqlJsonObjectItem(exprToAst(item.key), exprToAst(item.value))
                 val filterAst = filter.map(exprToAst)
                 SqlExpr.JsonObjectAggFunc(itemAst, None, None, None, filterAst)
             case IrExpr.JsonArrayAggFunc(value, orderBy, filter) =>
@@ -300,6 +304,25 @@ private[sqala] class ToAst:
                 val orderByAst = orderBy.map(orderingItemToAst)
                 val filterAst = filter.map(exprToAst)
                 SqlExpr.JsonArrayAggFunc(itemAst, orderByAst, None, None, filterAst)
+            case IrExpr.JsonSerializeFunc(expr) =>
+                SqlExpr.JsonSerializeFunc(exprToAst(expr), None)
+            case IrExpr.JsonParseFunc(expr) =>
+                SqlExpr.JsonParseFunc(exprToAst(expr), None, None)
+            case IrExpr.JsonQueryFunc(expr, path) =>
+                SqlExpr.JsonQueryFunc(exprToAst(expr), exprToAst(path), Nil, None, None, None, None, None)
+            case IrExpr.JsonValueFunc(expr, path) =>
+                SqlExpr.JsonValueFunc(exprToAst(expr), exprToAst(path), Nil, None, None, None)
+            case IrExpr.JsonExistsFunc(expr, path) =>
+                SqlExpr.JsonExistsFunc(exprToAst(expr), exprToAst(path), Nil, None)
+            case IrExpr.JsonObjectFunc(items) =>
+                SqlExpr.JsonObjectFunc(
+                    items.map(i => SqlJsonObjectItem(exprToAst(i.key), exprToAst(i.value))),
+                    None,
+                    None,
+                    None
+                )
+            case IrExpr.JsonArrayFunc(items) =>
+                SqlExpr.JsonArrayFunc(items.map(i => SqlJsonArrayItem(exprToAst(i), None)), None, None)
             case IrExpr.CountAsteriskFunc(filter) =>
                 SqlExpr.CountAsteriskFunc(None, filter.map(exprToAst))
             case IrExpr.ListAggFunc(quantifier, expr, separator, withinGroup, filter) =>

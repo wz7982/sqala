@@ -12,6 +12,7 @@ import sqala.ast.expr.SqlWindowNullsMode
 import sqala.ast.expr.SqlNthValueFromMode
 import sqala.ast.expr.SqlMatchPhase
 import sqala.ast.quantifier.SqlQuantifier
+import sqala.ast.expr.SqlJsonNodeType
 
 enum IrExpr:
     case Native(expr: SqlExpr)
@@ -27,6 +28,7 @@ enum IrExpr:
     case Coalesce(items: NonEmptyList[IrExpr])
     case NullIf(expr: IrExpr, test: IrExpr)
     case Cast(expr: IrExpr, `type`: SqlType)
+    case JsonTest(expr: IrExpr, nodeType: Option[SqlJsonNodeType], withNot: Boolean)
     case Window(
         expr: IrExpr,
         partitionBy: List[IrExpr],
@@ -47,9 +49,15 @@ enum IrExpr:
     case OverlayFunc(expr: IrExpr, placing: IrExpr, from: IrExpr, `for`: Option[IrExpr])
     case PositionFunc(expr: IrExpr, in: IrExpr)
     case ExtractFunc(unit: SqlTimeUnit, expr: IrExpr)
+    case JsonSerializeFunc(expr: IrExpr)
+    case JsonParseFunc(expr: IrExpr)
+    case JsonQueryFunc(expr: IrExpr, path: IrExpr)
+    case JsonValueFunc(expr: IrExpr, path: IrExpr)
+    case JsonExistsFunc(expr: IrExpr, path: IrExpr)
+    case JsonObjectFunc(items: List[IrJsonObjectItem])
+    case JsonArrayFunc(items: List[IrExpr])
     case JsonObjectAggFunc(
-        key: IrExpr,
-        value: IrExpr,
+        item: IrJsonObjectItem,
         filter: Option[IrExpr]
     )
     case JsonArrayAggFunc(

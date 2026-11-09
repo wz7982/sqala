@@ -15,6 +15,44 @@ import sqala.static.dsl.CanInAgg
 import sqala.metadata.SqlNumber
 
 /**
+ * Returns the matched pattern name in `matchRecognize`. Maps to
+ * `CLASSIFIER()`.
+ */
+def classifier[T <: IrTable, CL <: Int]()(using 
+    QueryContext[CL], 
+    MatchRecognizeContext[T]
+): AggExpr[String, EmptyTuple] =
+    AggExpr(
+        IrExpr.GeneralFunc(
+            None,
+            "CLASSIFIER",
+            Nil,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+/**
+ * Returns the sequential match number in `matchRecognize`. Maps to
+ * `MATCH_NUMBER()`.
+ */
+def matchNumber[T <: IrTable, CL <: Int]()(using 
+    QueryContext[CL], 
+    MatchRecognizeContext[T]
+): AggExpr[Int, EmptyTuple] =
+    AggExpr(
+        IrExpr.GeneralFunc(
+            None,
+            "MATCH_NUMBER",
+            Nil,
+            Nil,
+            Nil,
+            None
+        )
+    )
+
+/**
  * Returns the first value of an expression in `matchRecognize`.
  * Maps to `FIRST(expr)`.
  *

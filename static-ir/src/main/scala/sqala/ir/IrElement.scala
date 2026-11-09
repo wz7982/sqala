@@ -38,6 +38,8 @@ enum IrWindowFrameBound:
     case UnboundedFollowing
     case Following(n: IrExpr)
 
+case class IrJsonObjectItem(key: IrExpr, value: IrExpr)
+
 case class IrOrderingItem(
     expr: IrExpr,
     ordering: SqlOrdering,
