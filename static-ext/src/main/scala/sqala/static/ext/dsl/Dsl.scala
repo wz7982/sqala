@@ -26,6 +26,16 @@ import sqala.static.dsl.asExpr
 import sqala.static.ext.dsl.table.JsonExistsColumn
 import scala.NamedTuple.NamedTuple
 import sqala.static.ext.dsl.table.JsonNestedColumns
+import sqala.static.ext.dsl.table.GraphVertexSchema
+import sqala.metadata.TableMacro
+import sqala.static.ext.dsl.table.GraphEdgeSchema
+import sqala.static.ext.dsl.table.GraphSchema
+import sqala.static.ext.dsl.table.GraphPatternTerm
+import sqala.static.ext.dsl.table.GraphPattern
+import scala.compiletime.constValueTuple
+import sqala.static.ext.dsl.table.TransformGraphSchema
+import sqala.static.ext.dsl.table.FromGraph
+import sqala.static.ext.dsl.table.Graph
 
 /**
  * Computes the return type of `unnest`.
@@ -250,3 +260,101 @@ def columns[N <: Tuple, V <: Tuple, CL <: Int](c: JsonContext ?=> NamedTuple[N, 
     JsonContext
 ): JsonColumns[N, V] =
     JsonColumns(c.toTuple)
+
+/**
+ * Creates a vertex schema for a graph query. The type parameter is
+ * the entity class for the vertex.
+ *
+ * {{{
+ * val friendGraph = createGraph(name = "friend_graph")(
+ *     person = vertex[Person](label = "person"),
+ *     friends = edge[Friendship](label = "friendship")
+ * )
+ * }}}
+ */
+inline def vertex[T](label: String): GraphVertexSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphVertexSchema(metaData.copy(tableName = label))
+
+/**
+ * Creates an edge schema for a graph query. The type parameter is
+ * the entity class for the edge.
+ *
+ * {{{
+ * val friendGraph = createGraph(name = "friend_graph")(
+ *     person = vertex[Person](label = "person"),
+ *     friends = edge[Friendship](label = "friendship")
+ * )
+ * }}}
+ */
+inline def edge[T](label: String): GraphEdgeSchema[T] =
+    val metaData = TableMacro.tableMetaData[T]
+    GraphEdgeSchema(metaData.copy(tableName = label))
+
+/**
+ * Creates a graph schema combining vertices and edges, used as the
+ * input to `graphTable`.
+ *
+ * {{{
+ * val friendGraph = createGraph(name = "friend_graph")(
+ *     person = vertex[Person](label = "person"),
+ *     friends = edge[Friendship](label = "friendship")
+ * )
+ * }}}
+ */
+def createGraph[N <: Tuple, V <: Tuple](name: String)(labels: NamedTuple[N, V]): GraphSchema[N, V] =
+    GraphSchema(name, labels.toTuple)
+
+extension [CL <: Int](s: String)(using QueryContext[CL])
+    /**
+     * Associates a label name with a vertex or edge schema in a
+     * graph pattern. Used inside `matching` blocks of `graphTable`.
+     *
+     * {{{
+     * ("a" is g.person)
+     * }}}
+     */
+    inline infix def is[V, OKS <: Tuple, T <: GraphPatternTerm[V, OKS, CL]](term: T)(using
+        GraphContext
+    ): GraphPattern[Tuple1[s.type], Tuple1[T], OKS, CL] =
+        val fields = constValueTuple[Tuple1[s.type]].toArray.toList.map(_.toString)
+        GraphPattern(Tuple1(term), term.asTerm :: Nil, fields)
+
+/**
+ * Creates a graph table from a graph schema. Maps to `GRAPH_TABLE`. Used with `matching`
+ * to define graph patterns, `filter` for conditions, and `columns` for the output projection.
+ *
+ * {{{
+ * from(
+ *     graphTable(friendGraph)(g =>
+ *         g.matching(
+ *             ("a" is g.person) |-|
+ *             ("f" is g.friends.filter(f => f.personAId > 1)) |->|
+ *             ("b" is g.person)
+ *         ).filter(p => p.a.id > 1)
+ *         .columns( p =>
+ *             (
+ *                 personA = p.a.name,
+ *                 personB = p.b.name,
+ *                 meetingDate = p.f.meetingDate
+ *             )
+ *         )
+ *     )
+ * )
+ * }}}
+ */
+inline def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, CL <: Int](using
+    qc: QueryContext[CL]
+)(
+    schema: GraphSchema[N, V]
+)(using
+    t: TransformGraphSchema[V, CL],
+    tt: ToTuple[t.R]
+)(
+    f: GraphContext ?=> Graph[N, tt.R, CL] => FromGraph[TN, TV, TOKS, CL]
+): FromGraph[TN, TV, TOKS, CL] =
+    given GraphContext = GraphContext()
+    val fields = constValueTuple[N].toArray.toList.map(_.toString)
+    val graph =
+        Graph[N, tt.R, CL](schema.__name__, tt.toTuple(t.transform(schema.__items__)), fields)
+    f(graph)

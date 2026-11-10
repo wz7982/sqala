@@ -30,6 +30,9 @@ import sqala.ast.statement.SqlStatement
 import sqala.ast.statement.SqlInsertMode
 import sqala.ast.statement.SqlUpdateSetPair
 import sqala.ast.table.SqlJsonColumn
+import sqala.ast.table.SqlGraphPattern
+import sqala.ast.table.SqlGraphPatternTerm
+import sqala.ast.table.SqlGraphQuantifier
 
 private[sqala] class ToAst:
     private var tableIndex = 0
@@ -177,6 +180,53 @@ private[sqala] class ToAst:
                     columnsAst,
                     None,
                     tableAliasToAst(alias, columnAliases),
+                    None
+                )
+            case IrTable.Graph(withLateral, name, matchMode, patterns, where, rowsMode, columns, exportMode, columnAliases) =>
+                def graphPatternToAst(pattern: IrGraphPattern): SqlGraphPattern =
+                    val termAst = graphPatternTermToAst(pattern.term)
+                    SqlGraphPattern(pattern.name, termAst)
+
+                def graphPatternTermToAst(term: IrGraphPatternTerm): SqlGraphPatternTerm =
+                    term match
+                        case IrGraphPatternTerm.Quantified(term, quantifier) =>
+                            SqlGraphPatternTerm.Quantified(graphPatternTermToAst(term), graphQuantifierToAst(quantifier))
+                        case IrGraphPatternTerm.Vertex(table, label, where) =>
+                            val alias = fetchAlias(table)
+                            SqlGraphPatternTerm.Vertex(Some(alias), label, where.map(exprToAst))
+                        case IrGraphPatternTerm.Edge(leftSymbol, table, label, where, rightSymbol) =>
+                            val alias = fetchAlias(table)
+                            SqlGraphPatternTerm.Edge(leftSymbol, Some(alias), label, where.map(exprToAst), rightSymbol)
+                        case IrGraphPatternTerm.And(left, right) =>
+                            SqlGraphPatternTerm.And(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                        case IrGraphPatternTerm.Or(left, right) =>
+                            SqlGraphPatternTerm.Or(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                        case IrGraphPatternTerm.Alternation(left, right) =>
+                            SqlGraphPatternTerm.Alternation(graphPatternTermToAst(left), graphPatternTermToAst(right))
+
+                def graphQuantifierToAst(quantifier: IrGraphQuantifier): SqlGraphQuantifier =
+                    quantifier match
+                        case IrGraphQuantifier.Asterisk =>
+                            SqlGraphQuantifier.Asterisk
+                        case IrGraphQuantifier.Question =>
+                            SqlGraphQuantifier.Question
+                        case IrGraphQuantifier.Plus =>
+                            SqlGraphQuantifier.Plus
+                        case IrGraphQuantifier.Between(start, end) =>
+                            SqlGraphQuantifier.Between(start.map(exprToAst), end.map(exprToAst))
+                        case IrGraphQuantifier.Quantity(quantity) =>
+                            SqlGraphQuantifier.Quantity(exprToAst(quantity))
+
+                SqlTable.Graph(
+                    withLateral,
+                    name,
+                    matchMode,
+                    patterns.map(graphPatternToAst),
+                    where.map(exprToAst),
+                    rowsMode,
+                    columns.map(selectItemToAst),
+                    exportMode,
+                    tableAliasToAst(fetchAlias(table), columnAliases),
                     None
                 )
 
