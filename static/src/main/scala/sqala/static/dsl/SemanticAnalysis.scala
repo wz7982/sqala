@@ -103,11 +103,11 @@ object TransformExprKind:
     type Aux[T, K <: ExprKind, O] = TransformExprKind[T, K]:
         type R = O
 
-    given expr[T, EK <: ExprKind, K <: ExprKind]: Aux[Expr[T, EK], K, Expr[T, K]] =
-        new TransformExprKind[Expr[T, EK], K]:
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], K <: ExprKind]: Aux[E, K, Expr[T, K]] =
+        new TransformExprKind[E, K]:
             type R = Expr[T, K]
 
-            def transform(x: Expr[T, EK]): R =
+            def transform(x: E): R =
                 Expr(x.expr)
 
     given tuple[H, T <: Tuple, K <: ExprKind](using

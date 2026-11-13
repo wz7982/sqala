@@ -22,6 +22,9 @@ import sqala.ir.IrLockWaitMode
 import sqala.ir.IrGroup
 import sqala.ir.IrGroupingItem
 import sqala.ir.IrExpr
+import sqala.static.dsl.table.AsTableParam
+import sqala.ir.IrTable
+import sqala.ir.IrSelectItem
 
 /**
  * A `SELECT` query.
@@ -283,11 +286,11 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         an: AggNotNested[a.KS]
     ): MappedQuery[a.R, T, c.R, L, i.R] =
         val mapped = f(params)
-        val sqlSelect = a.asSelectItems(mapped, 1)
+        val selectItems = a.asSelectItems(mapped, 1)
         MappedQuery(
             a.transform(mapped),
             params,
-            tree.copy(select = sqlSelect)
+            tree.copy(select = selectItems)
         )
 
     /**
@@ -308,11 +311,11 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
         an: AggNotNested[a.KS]
     ): MappedDistinctQuery[a.R, td.R, c.R, L, i.R] =
         val mapped = f(params)
-        val sqlSelect = a.asSelectItems(mapped, 1)
+        val selectItems = a.asSelectItems(mapped, 1)
         MappedDistinctQuery(
             a.transform(mapped),
             td.toDistinct(mapped),
-            tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = sqlSelect)
+            tree.copy(quantifier = Some(SqlQuantifier.Distinct), select = selectItems)
         )
 
     /**
@@ -386,58 +389,47 @@ final case class TableQuery[T, OKS <: Tuple, L <: Int](
                 )
             )
         )
-
-// object TableQuery:
-    /**
-     * Creates a hierarchical recursive query using `WITH RECURSIVE`
-     * under the hood. The function receives the current and prior
-     * table references for the recursive join condition.
-     *
-     * {{{
-     * from(Comment).filter(c => c.postId === postId)
-     *     .connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId.isNull)
-     *     .map(c => (id = c.id, content = c.content, level = level()))
-     * }}}
-     */
-    // extension [T, OKS <: Tuple, L <: Int](query: TableQuery[Table[T, Column, L], OKS, L])
-    //     def connectBy[F](f: QueryContext[L] ?=> (Table[T, Column, L], Table[T, Column, L]) => F)(using
-    //         a: AsExpr[F, L],
-    //         b: SqlBoolean[a.R],
-    //         kt: KindToTuple[a.K],
-    //         i: CanInFilter[kt.R],
-    //         e: ExcludeCurrentLevelColumn[kt.R, L],
-    //         c: CombineKindTuple[OKS, e.R]
-    //     ): ConnectBy[T, c.R, L] =
-    //         given QueryContext[L] = query.qc
-    //         val cond = a.asExpr(
-    //             f(query.params, query.params.copy(__aliasName__ = tableCte))
-    //         ).asIrExpr
-    //         val joinTree = query.tree
-    //             .copy(
-    //                 select = query.tree.select :+ SqlSelectItem.Expr(
-    //                     SqlExpr.Binary(
-    //                         SqlExpr.Column(Some(tableCte), columnPseudoLevel),
-    //                         SqlBinaryOperator.Plus,
-    //                         SqlExpr.NumberLiteral(1)
-    //                     ),
-    //                     Some(columnPseudoLevel)
-    //                 ),
-    //                 from = SqlTable.Join(
-    //                     query.tree.from.head,
-    //                     SqlJoinType.Inner,
-    //                     SqlTable.Ident(tableCte, None, None, None, None),
-    //                     Some(SqlJoinCondition.On(cond))
-    //                 ) :: Nil
-    //             )
-    //         val startTree = query.tree
-    //             .copy(
-    //                 select = query.tree.select :+ SqlSelectItem.Expr(
-    //                     SqlExpr.NumberLiteral(1),
-    //                     Some(columnPseudoLevel)
-    //                 )
-    //             )
-    //         ConnectBy(query.params, joinTree, startTree)
+object TableQuery:
+    extension [T, OKS <: Tuple, L <: Int](query: TableQuery[T, OKS, L])(using p: AsTableParam[T, L])
+        /**
+         * Creates a hierarchical recursive query using `WITH RECURSIVE`
+         * under the hood. The function receives the current and prior
+         * table references for the recursive join condition.
+         *
+         * {{{
+         * from(Comment).filter(c => c.postId === postId)
+         *     .connectBy((c, prior) => c.parentId === prior.id)
+         *     .startWith(c => c.parentId.isNull)
+         *     .map((c, level) => (id = c.id, content = c.content, level = level))
+         * }}}
+         */
+        def connectBy[F](f: QueryContext[L] ?=> (T, p.R) => F)(using
+            a: AsExpr[F, L],
+            b: ValidateArgType[SqlBoolean, a.R, "boolean"],
+            kt: KindToTuple[a.K],
+            i: CanInSimpleClause[kt.R, "connectBy"],
+            e: ExcludeCurrentLevelColumn[kt.R, L],
+            c: CombineKindTuple[OKS, e.R]
+        ): ConnectBy[T, p.R, c.R, L] =
+            given QueryContext[L] = query.qc
+            val stepCte = IrTable.Cte(0, Nil)
+            val finalCte = IrTable.Cte(0, Nil)
+            val prior = p.asTableParam(stepCte, 1)
+            val cteRow = p.asTableParam(finalCte, 1)
+            val cond = a.asExpr(f(query.params, prior)).expr
+            val levelName = s"c${query.tree.select.size + 1}"
+            val sourceFrom = query.tree.from.get
+            val stepTree = query.tree.copy(
+                from = Some(IrTable.Join(sourceFrom, SqlJoinType.Inner, stepCte, Some(cond))),
+                select = query.tree.select :+ IrSelectItem(
+                    IrExpr.Binary(IrExpr.Column(Some(stepCte), levelName), SqlBinaryOperator.Plus, IrExpr.Native(SqlExpr.NumberLiteral(1))),
+                    levelName
+                )
+            )
+            val seedTree = query.tree.copy(
+                select = query.tree.select :+ IrSelectItem(IrExpr.Native(SqlExpr.NumberLiteral(1)), levelName)
+            )
+            ConnectBy(query.params, cteRow, stepCte, finalCte, seedTree, stepTree)
 
 /**
  * A sorted `SELECT` query.
@@ -651,11 +643,11 @@ final case class Grouping[T, OKS <: Tuple, L <: Int](
         an: AggNotNested[a.KS]
     ): GroupedQuery[a.R, T, c.R, L] =
         val mapped = f(params)
-        val sqlSelect = a.asSelectItems(mapped, 1)
+        val selectItems = a.asSelectItems(mapped, 1)
         GroupedQuery(
             a.transform(mapped),
             params,
-            tree.copy(select = sqlSelect)
+            tree.copy(select = selectItems)
         )
 
 /**

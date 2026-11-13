@@ -31,8 +31,8 @@ object AsTableParam:
     type Aux[T, CL <: Int, O] = AsTableParam[T, CL]:
         type R = O
 
-    given expr[T, EK <: ExprKind, CL <: Int]: Aux[Expr[T, EK], CL, ColumnExpr[T, CL]] =
-        new AsTableParam[Expr[T, EK], CL]:
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], CL <: Int]: Aux[E, CL, ColumnExpr[T, CL]] =
+        new AsTableParam[E, CL]:
             type R = ColumnExpr[T, CL]
 
             def offset: Int =

@@ -641,16 +641,16 @@ object Union:
     type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
         type R = O
 
-    given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
+    given expr[A, AK <: ExprKind, AE <: Expr[A, AK], B, BK <: ExprKind, BE <: Expr[B, BK], CL <: Int](using
         r: Return[A, B]
-    ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
-        new Union[Expr[A, AK], Expr[B, BK], CL]:
+    ): Aux[AE, BE, CL, Expr[r.R, Column[CL]]] =
+        new Union[AE, BE, CL]:
             type R = Expr[r.R, Column[CL]]
 
-            def offset(x: Expr[A, AK]): Int =
+            def offset(x: AE): Int =
                 1
 
-            def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
+            def unionQueryItems(x: AE, cursor: Int): R =
                 Expr(IrExpr.Column(None, s"c$cursor"))
 
     given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
