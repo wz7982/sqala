@@ -19,7 +19,8 @@ import scala.quoted.Varargs
  */
 final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     private[sqala] val __table__ : IrTable,
-    private[sqala] val __metaData__ : TableMetaData
+    private[sqala] val __metaData__ : TableMetaData,
+    private[sqala] val __withTable__ : Boolean = true
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.
@@ -36,7 +37,11 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fields.toList.indexOf(name)
-        ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
+        val table = if __withTable__ then
+            Some(__table__)
+        else
+            None
+        ColumnExpr(IrExpr.Column(table, __metaData__.columns.toList(index)))
 
     /**
       * Exclude columns from the table.
@@ -108,7 +113,7 @@ object ExcludeMacro:
                         $metaData.fields.toList
                             .zip($metaData.columns.toList)
                             .filter((f, _) => $fieldNamesExpr.contains(f))
-                            .map((_, c) => ColumnExpr(IrExpr.Column($table, c)))
+                            .map((_, c) => ColumnExpr(IrExpr.Column(Some($table), c)))
                             .toArray
                     val items = Tuple.fromArray(columns).asInstanceOf[v]
                     MappedTable[n, v, r, O, L]($table, items, $fieldNamesExpr)

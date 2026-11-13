@@ -241,8 +241,8 @@ private[sqala] class ToAst:
             case IrExpr.Native(expr) =>
                 expr
             case IrExpr.Column(table, name) =>
-                val tableAlias = fetchAlias(table)
-                SqlExpr.Column(Some(tableAlias), name)
+                val tableAlias = table.map(fetchAlias)
+                SqlExpr.Column(tableAlias, name)
             case IrExpr.Tuple(items) =>
                 SqlExpr.Tuple(items.map(exprToAst))
             case IrExpr.Array(items) =>

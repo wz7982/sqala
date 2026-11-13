@@ -90,7 +90,7 @@ object AsMapItem:
                     (column, index) <- x.__metaData__.columns.zipWithIndex
                 yield
                     IrSelectItem(
-                        IrExpr.Column(x.__table__, column),
+                        IrExpr.Column(Some(x.__table__), column),
                         s"c${cursor + index}"
                     )
 

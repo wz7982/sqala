@@ -651,7 +651,91 @@ object Union:
                 1
 
             def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
-                Expr(IrExpr.Native(SqlExpr.Column(None, s"c$cursor")))
+                Expr(IrExpr.Column(None, s"c$cursor"))
+
+    given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[A, Column, AL], Table[B, Column, BL], CL, Table[A, Column, CL]] =
+        new Union[Table[A, Column, AL], Table[B, Column, BL], CL]:
+            type R = Table[A, Column, CL]
+
+            def offset(x: Table[A, Column, AL]): Int =
+                x.__metaData__.columns.size
+
+            def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
+
+    given tableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[A, Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[A, Column, AL], Table[Option[B], Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
+
+            def offset(x: Table[A, Column, AL]): Int =
+                x.__metaData__.columns.size
+
+            def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
+
+    given optionTableAndTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[Option[A], Column, AL], Table[B, Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[Option[A], Column, AL], Table[B, Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
+
+            def offset(x: Table[Option[A], Column, AL]): Int =
+                x.__metaData__.columns.size
+
+            def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
+
+    given optionTableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
+        ma: Mirror.ProductOf[A],
+        mb: Mirror.ProductOf[B],
+        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+    ): Aux[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
+        new Union[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL]:
+            type R = Table[Option[A], Column, CL]
+
+            def offset(x: Table[Option[A], Column, AL]): Int =
+                x.__metaData__.columns.size
+
+            def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
+
+    given mappedTable[AN <: Tuple, AV <: Tuple, ARV <: Tuple, AO <: Boolean, AL <: Int, BN <: Tuple, BV <: Tuple, BRV <: Tuple, BO <: Boolean, BL <: Int, CL <: Int](using
+        u: Union[AV, BV, CL],
+        tt: ToTuple[u.R],
+        a: AsTableParam[AV, CL],
+        ur: Union[ARV, BRV, CL],
+        rtt: ToTuple[ur.R]
+    ): Aux[MappedTable[AN, AV, ARV, AO, AL], MappedTable[BN, BV, BRV, BO, BL], CL, MappedTable[AN, tt.R, rtt.R, AO || BO, CL]] =
+        new Union[MappedTable[AN, AV, ARV, AO, AL], MappedTable[BN, BV, BRV, BO, BL], CL]:
+            type R = MappedTable[AN, tt.R, rtt.R, AO || BO, CL]
+
+            def offset(x: MappedTable[AN, AV, ARV, AO, AL]): Int =
+                a.offset
+
+            def unionQueryItems(x: MappedTable[AN, AV, ARV, AO, AL], cursor: Int): R =
+                MappedTable[AN, tt.R, rtt.R, AO || BO, CL](
+                    x.__table__,
+                    tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
+                    x.__fields__
+                )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],

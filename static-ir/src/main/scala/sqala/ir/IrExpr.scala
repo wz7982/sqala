@@ -16,7 +16,7 @@ import sqala.ast.expr.SqlJsonNodeType
 
 enum IrExpr:
     case Native(expr: SqlExpr)
-    case Column(table: IrTable, name: String)
+    case Column(table: Option[IrTable], name: String)
     case Tuple(items: NonEmptyList[IrExpr])
     case Array(items: List[IrExpr])
     case Unary(operator: SqlUnaryOperator, expr: IrExpr)

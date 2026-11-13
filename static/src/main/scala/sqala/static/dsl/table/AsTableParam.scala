@@ -39,7 +39,7 @@ object AsTableParam:
                 1
 
             def asTableParam(table: IrTable, cursor: Int): ColumnExpr[T, CL] =
-                ColumnExpr(IrExpr.Column(table, s"c$cursor"))
+                ColumnExpr(IrExpr.Column(Some(table), s"c$cursor"))
 
     inline given table[T, L <: Int, CL <: Int]: Aux[Table[T, Column, L], CL, Table[T, Column, CL]] =
         val metaData: TableMetaData = TableMacro.tableMetaData[Unwrap[T, Option]]
