@@ -49,7 +49,7 @@ final case class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      *
      * {{{
      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId.isNull)
+     *     .startWith(c => c.parentId === None)
      * }}}
      */
     def startWith[F](f: QueryContext[L] ?=> ConnectByContext ?=> T => F)(using
@@ -96,7 +96,7 @@ final case class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      * from(Comment)
      *     .filter(c => c.postId === postId)
      *     .connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId.isNull)
+     *     .startWith(c => c.parentId === None)
      *     .preMap(
      *         c => (id = c.id, content = c.content, parentId = c.parentId)
      *     )(
@@ -113,7 +113,7 @@ final case class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      * from(Comment)
      *     .filter(c => c.postId === postId)
      *     .connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId.isNull)
+     *     .startWith(c => c.parentId === None)
      *     .preMap(
      *         c => (id = c.id, content = c.content, rootId = c.id)
      *     )(
@@ -175,7 +175,7 @@ final case class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      *
      * {{{
      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId.isNull)
+     *     .startWith(c => c.parentId === None)
      *     .map((c, level) => (id = c.id, content = c.content, level = level))
      * }}}
      */

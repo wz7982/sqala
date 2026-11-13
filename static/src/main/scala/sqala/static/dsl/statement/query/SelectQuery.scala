@@ -399,7 +399,7 @@ object TableQuery:
          * {{{
          * from(Comment).filter(c => c.postId === postId)
          *     .connectBy((c, prior) => c.parentId === prior.id)
-         *     .startWith(c => c.parentId.isNull)
+         *     .startWith(c => c.parentId === None)
          *     .map((c, level) => (id = c.id, content = c.content, level = level))
          * }}}
          */
