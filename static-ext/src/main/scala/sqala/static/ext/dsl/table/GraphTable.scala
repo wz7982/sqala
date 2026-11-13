@@ -212,7 +212,7 @@ case class GraphVertex[T, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fields.toList.indexOf(name)
-        ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
+        ColumnExpr(IrExpr.Column(Some(__table__), __metaData__.columns.toList(index)))
 
 /**
  * An edge in a graph pattern. Created by `edge[T]` and accessed
@@ -271,7 +271,7 @@ final case class GraphEdge[T, OKS <: Tuple, L <: Int](
      */
     def selectDynamic(name: String): Any =
         val index = __metaData__.fields.toList.indexOf(name)
-        ColumnExpr(IrExpr.Column(__table__, __metaData__.columns.toList(index)))
+        ColumnExpr(IrExpr.Column(Some(__table__), __metaData__.columns.toList(index)))
 
     /**
      * Adds a `WHERE` condition to the edge. Maps to the `WHERE`

@@ -177,7 +177,7 @@ object Update:
         val conditions = updateMetaData
             .filter((f, _, _) => metaData.primaryKeyFields.contains(f))
             .map: (_, column, expr) =>
-                IrExpr.Binary(IrExpr.Native(SqlExpr.Column(None, column)), SqlBinaryOperator.Equal, expr)
+                IrExpr.Binary(IrExpr.Column(None, column), SqlBinaryOperator.Equal, expr)
         val condition =
             if conditions.isEmpty then None
             else Some(conditions.reduce((x, y) => IrExpr.Binary(x, SqlBinaryOperator.And, y)))
