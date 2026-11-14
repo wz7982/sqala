@@ -24,7 +24,8 @@ object ToOption:
         type R = O
 
     given expr[T, K <: ExprKind, E <: Expr[T, K]](using
-        NotGiven[E <:< AggExpr[?, ?]]
+        NotGiven[E <:< AggExpr[?, ?]],
+        NotGiven[E <:< ColumnExpr[?, ?]]
     ): Aux[E, Expr[Wrap[T, Option], K]] =
         new ToOption[E]:
             type R = Expr[Wrap[T, Option], K]
@@ -38,6 +39,13 @@ object ToOption:
 
             def toOption(x: AggExpr[T, KS]): R =
                 AggExpr(x.expr)
+
+    given column[T, L <: Int]: Aux[ColumnExpr[T, L], ColumnExpr[Wrap[T, Option], L]] =
+        new ToOption[ColumnExpr[T, L]]:
+            type R = ColumnExpr[Wrap[T, Option], L]
+
+            def toOption(x: ColumnExpr[T, L]): R =
+                ColumnExpr(x.expr)
 
     given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
         new ToOption[WindowPart[T, KS]]:
@@ -53,15 +61,12 @@ object ToOption:
             def toOption(x: Table[T, K, L]): R =
                 x.copy[Wrap[T, Option], K, L]()
 
-    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](using
-        t: ToOption[V],
-        tt: ToTuple[t.R]
-    ): Aux[MappedTable[N, V, RV, O, L], MappedTable[N, tt.R, RV, true, L]] =
-        new ToOption[MappedTable[N, V, RV, O, L]]:
-            type R = MappedTable[N, tt.R, RV, true, L]
+    given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int]: Aux[MappedTable[N, V, O, L], MappedTable[N, V, true, L]] =
+        new ToOption[MappedTable[N, V, O, L]]:
+            type R = MappedTable[N, V, true, L]
 
-            def toOption(x: MappedTable[N, V, RV, O, L]): R =
-                x.copy[N, tt.R, RV, true, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: MappedTable[N, V, O, L]): R =
+                x.copy[N, V, true, L]()
 
     given tuple[H, T <: Tuple](using
         h: ToOption[H],

@@ -50,7 +50,7 @@ final case class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
       * val q = from(Post).map(p => p.exclude("content"))
       * }}}
       */
-    transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?, ?] =
+    transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?] =
         ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, IsOption[T], L]('__table__, '__metaData__, 'columns) }
 
 object ExcludeMacro:
@@ -60,7 +60,7 @@ object ExcludeMacro:
         columns: ScalaExpr[Seq[String]],
     )(using 
         q: Quotes
-    ): ScalaExpr[MappedTable[?, ?, ?, ?, ?]] =
+    ): ScalaExpr[MappedTable[?, ?, ?, ?]] =
         import q.reflect.*
 
         val columnsTerm = columns.asTerm
@@ -98,16 +98,11 @@ object ExcludeMacro:
                 case '[t] =>
                     TypeRepr.of[MapField[t, OT, L]]
         val valueType = buildTupleType(types)
-        val resultTypes = excludedFields.map(_._2).map: v =>
-            v.asType match
-                case '[t] =>
-                    TypeRepr.of[ColumnExpr[t, L]]
-        val resultType = buildTupleType(resultTypes)
         val fieldNamesExpr =
             ScalaExpr.ofList(excludedFields.map(_._1).map(n => ScalaExpr(n)))
 
-        (nameType.asType, valueType.asType, resultType.asType) match
-            case ('[type n <: Tuple; n], '[type v <: Tuple; v], '[type r <: Tuple; r]) =>
+        (nameType.asType, valueType.asType) match
+            case ('[type n <: Tuple; n], '[type v <: Tuple; v]) =>
                 '{
                     val columns = 
                         $metaData.fields.toList
@@ -116,7 +111,7 @@ object ExcludeMacro:
                             .map((_, c) => ColumnExpr(IrExpr.Column(Some($table), c)))
                             .toArray
                     val items = Tuple.fromArray(columns).asInstanceOf[v]
-                    MappedTable[n, v, r, O, L]($table, items, $fieldNamesExpr)
+                    MappedTable[n, v, O, L]($table, items, $fieldNamesExpr)
                 }
             case _ =>
                 report.errorAndAbort("Cannot exclude all fields. At least one field must be retained.")
@@ -125,7 +120,7 @@ object ExcludeMacro:
   * A table reference produced by `from` when a `MappedTable` is passed,
   * mapping entity class fields to typed expressions via `Fields`.
   */
-final case class MappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](
+final case class MappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](
     private[sqala] val __table__ : IrTable,
     private[sqala] val __items__ : V,
     private[sqala] val __fields__ : List[String]
@@ -134,7 +129,7 @@ final case class MappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, 
      * The structural type declaring available columns as a named tuple.
      * Required by `Selectable`.
      */
-    type Fields = NamedTuple[N, V]
+    type Fields = NamedTuple[N, MapOptionField[V, O]]
 
     /**
      * Runtime column accessor. Required by `Selectable`.
@@ -144,7 +139,7 @@ final case class MappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, 
         __items__.toList(index)
 
 object MappedTable:
-    inline def apply[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](table: IrTable, items: V): MappedTable[N, V, RV, O, L] =
+    inline def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](table: IrTable, items: V): MappedTable[N, V, O, L] =
         val fields = constValueTuple[N].toArray.toList.map(_.toString)
         new MappedTable(
             table,
@@ -152,8 +147,8 @@ object MappedTable:
             fields
         )
 
-    inline def apply[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int](table: IrTable)(using
+    inline def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](table: IrTable)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
-    ): MappedTable[N, t.R, RV, O, L] =
+    ): MappedTable[N, t.R, O, L] =
         MappedTable(table, t.toTuple(p.asTableParam(table, 1)))

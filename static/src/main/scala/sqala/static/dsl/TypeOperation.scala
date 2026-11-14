@@ -2,6 +2,8 @@ package sqala.static.dsl
 
 import java.time.*
 import scala.compiletime.ops.boolean.||
+import sqala.static.dsl.table.Table
+import sqala.static.dsl.table.MappedTable
 
 /**
  * Wraps a type with constructor if not already wrapped.
@@ -52,6 +54,20 @@ type IsOption[T] <: Boolean =
     T match
         case Option[t] => true
         case _ => false
+
+/**
+ * Maps an entity field to its expression type, wrapping with
+ * `Option` when the entity field is optional.
+ */
+type MapOptionField[T <: Tuple, O <: Boolean] <: Tuple =
+    O match
+        case false => T
+        case true =>
+            T match
+                case ColumnExpr[t, l] *: xs => ColumnExpr[Wrap[t, Option], l] *: MapOptionField[xs, O]
+                case Table[t, k, l] *: xs => Table[Wrap[t, Option], k, l] *: MapOptionField[xs, O]
+                case MappedTable[n, v, o, l] *: xs => MappedTable[n, v, true, l] *: MapOptionField[xs, O]
+                case EmptyTuple => EmptyTuple
 
 /**
  * Removes duplicate types from a tuple.

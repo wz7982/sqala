@@ -26,16 +26,16 @@ object Result:
         new Result[Table[T, K, L]]:
             type R = T
 
-    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, L <: Int](using
-        r: Result[NamedTuple[N, RV]]
-    ): Aux[MappedTable[N, V, RV, false, L], r.R] =
-        new Result[MappedTable[N, V, RV, false, L]]:
+    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[MappedTable[N, V, false, L], r.R] =
+        new Result[MappedTable[N, V, false, L]]:
             type R = r.R
 
-    given nullableMappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, L <: Int](using
-        r: Result[NamedTuple[N, RV]]
-    ): Aux[MappedTable[N, V, RV, true, L], Option[r.R]] =
-        new Result[MappedTable[N, V, RV, true, L]]:
+    given nullableMappedTable[N <: Tuple, V <: Tuple, L <: Int](using
+        r: Result[NamedTuple[N, V]]
+    ): Aux[MappedTable[N, V, true, L], Option[r.R]] =
+        new Result[MappedTable[N, V, true, L]]:
             type R = Option[r.R]
 
     given tuple[H, T <: Tuple](using

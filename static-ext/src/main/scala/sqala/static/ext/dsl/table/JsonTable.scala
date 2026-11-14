@@ -50,9 +50,9 @@ object FromJson:
         )
 
     // TODO
-    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, V, false, CL], TOKS] =
+    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
         new AsTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, V, false, CL]
+            type R = MappedTable[N, V, false, CL]
 
             type OKS = TOKS
 
@@ -61,9 +61,9 @@ object FromJson:
 
     inline given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, V, false, CL - 1], e.R] =
+    ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
         new AsLateralTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, V, false, CL - 1]
+            type R = MappedTable[N, V, false, CL - 1]
 
             type OKS = e.R
 

@@ -129,18 +129,18 @@ final case class ConnectBy[T, C, OKS <: Tuple, L <: Int](
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     )(
-        step: QueryContext[L] ?=> (T, MappedTable[N, t.R, V, false, L], Expr[Int, Column[L]]) => NamedTuple[UN, UV]
+        step: QueryContext[L] ?=> (T, MappedTable[N, t.R, false, L], Expr[Int, Column[L]]) => NamedTuple[UN, UV]
     )(using
         au: AsMap[NamedTuple[UN, UV], L],
         u: Union[V, UV, L],
         tu: ToTuple[u.R],
         up: AsTableParam[tu.R, L],
         tup: ToTuple[up.R]
-    ): ConnectBy[T, MappedTable[N, tup.R, tu.R, false, L], OKS, L] =
+    ): ConnectBy[T, MappedTable[N, tup.R, false, L], OKS, L] =
         val seedItems = a.asSelectItems(seed(row), 1)
         val levelName = s"c${seedItems.size + 1}"
-        val stepPrior = MappedTable[N, V, V, false, L](stepCte)
-        val finalRow = MappedTable[N, tu.R, tu.R, false, L](finalCte)
+        val stepPrior = MappedTable[N, V, false, L](stepCte)
+        val finalRow = MappedTable[N, tu.R, false, L](finalCte)
         val stepItems = au.asSelectItems(
             step(
                 row,

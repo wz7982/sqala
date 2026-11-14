@@ -55,7 +55,7 @@ object AsMapItem:
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
         kt: KindToTuple[a.K],
         nt: NotGiven[T <:< Table[?, ?, ?]],
-        nmt: NotGiven[T <:< MappedTable[?, ?, ?, ?, ?]]
+        nmt: NotGiven[T <:< MappedTable[?, ?, ?, ?]]
     ): Aux[T, CL, Expr[a.R, Column[CL]], kt.R] =
         new AsMapItem[T, CL]:
             type R = Expr[a.R, Column[CL]]
@@ -94,27 +94,27 @@ object AsMapItem:
                         s"c${cursor + index}"
                     )
 
-    given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
+    given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsMap[V, L],
         t: ToTuple[a.R],
         kt: KindToTuple[Column[L]]
-    ): Aux[MappedTable[N, V, RV, O, L], CL, MappedTable[N, t.R, RV, O, L], kt.R] =
-        new AsMapItem[MappedTable[N, V, RV, O, L], CL]:
-            type R = MappedTable[N, t.R, RV, O, L]
+    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, t.R, O, L], kt.R] =
+        new AsMapItem[MappedTable[N, V, O, L], CL]:
+            type R = MappedTable[N, t.R, O, L]
 
             type KS = kt.R
 
-            def transform(x: MappedTable[N, V, RV, O, L]): R =
+            def transform(x: MappedTable[N, V, O, L]): R =
                 MappedTable(
                     x.__table__,
                     t.toTuple(a.transform(x.__items__)),
                     x.__fields__
                 )
 
-            def offset(x: MappedTable[N, V, RV, O, L]): Int =
+            def offset(x: MappedTable[N, V, O, L]): Int =
                 a.offset(x.__items__)
 
-            def asSelectItems(x: MappedTable[N, V, RV, O, L], cursor: Int): NonEmptyList[IrSelectItem] =
+            def asSelectItems(x: MappedTable[N, V, O, L], cursor: Int): NonEmptyList[IrSelectItem] =
                 a.asSelectItems(x.__items__, cursor)
 
 /**

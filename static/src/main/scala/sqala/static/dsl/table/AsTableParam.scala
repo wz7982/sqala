@@ -59,18 +59,18 @@ object AsTableParam:
                 )
 
     // TODO
-    inline given mappedTable[N <: Tuple, V <: Tuple, RV <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
+    inline given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]
-    ): Aux[MappedTable[N, V, RV, O, L], CL, MappedTable[N, tt.R, RV, O, CL]] =
-        new AsTableParam[MappedTable[N, V, RV, O, L], CL]:
-            type R = MappedTable[N, tt.R, RV, O, CL]
+    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, tt.R, O, CL]] =
+        new AsTableParam[MappedTable[N, V, O, L], CL]:
+            type R = MappedTable[N, tt.R, O, CL]
 
             def offset: Int =
                 a.offset
 
             def asTableParam(table: IrTable, cursor: Int): R =
-                MappedTable[N, tt.R, RV, O, CL](table, tt.toTuple(a.asTableParam(table, cursor)))
+                MappedTable[N, tt.R, O, CL](table, tt.toTuple(a.asTableParam(table, cursor)))
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsTableParam[H, CL],

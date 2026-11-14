@@ -45,9 +45,9 @@ object AsLateralTable:
         i: IncludeCurrentLevelColumn[QOKS, CL - 1],
         c: CanInSimpleClause[i.R, "subquery"],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, tt.R, false, CL - 1], e.R] =
+    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL - 1], e.R] =
         new AsLateralTable[Q, CL]:
-            type R = MappedTable[N, tt.R, tt.R, false, CL - 1]
+            type R = MappedTable[N, tt.R, false, CL - 1]
 
             type OKS = e.R
 
@@ -58,5 +58,5 @@ object AsLateralTable:
                         x.tree,
                         Nil
                     )
-                val table = MappedTable[N, V, tt.R, false, CL - 1](irTable)
+                val table = MappedTable[N, V, false, CL - 1](irTable)
                 (table, irTable)

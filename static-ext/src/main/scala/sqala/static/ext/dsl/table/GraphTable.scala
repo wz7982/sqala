@@ -747,9 +747,9 @@ final case class FromGraph[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
 ) extends AnyTable
 
 object FromGraph:
-    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, V, false, CL], TOKS] =
+    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
         new AsTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, V, false, CL]
+            type R = MappedTable[N, V, false, CL]
 
             type OKS = TOKS
 
@@ -758,9 +758,9 @@ object FromGraph:
 
     inline given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, V, false, CL - 1], e.R] =
+    ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
         new AsLateralTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, V, false, CL - 1]
+            type R = MappedTable[N, V, false, CL - 1]
 
             type OKS = e.R
 
