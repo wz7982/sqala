@@ -10,7 +10,7 @@ final class GraphContext
 /**
  * Provides a match-recognize context.
  */
-final class MatchRecognizeContext(private[sqala] val table: IrTable)
+final class MatchRecognizeContext(private[sqala] val table: IrTable.MatchRecognizable)
 
 /**
  * Provides a JSON table context.

@@ -61,7 +61,7 @@ case class RecognizePatternedSpec(
  */
 final class RecognizePredefine[T, L <: Int](
     private[sqala] val table: T,
-    private[sqala] val source: IrTable,
+    private[sqala] val source: IrTable.MatchRecognizable,
     private[sqala] val spec: RecognizeInitSpec
 )(using
     private[sqala] val qc: QueryContext[L],
@@ -175,7 +175,7 @@ object RecognizePredefineMacro:
  */
 final class Recognize[N <: Tuple, T, L <: Int](
     private[sqala] val table: T,
-    private[sqala] val source: IrTable,
+    private[sqala] val source: IrTable.MatchRecognizable,
     private[sqala] val spec: RecognizeInitSpec
 )(using
     private[sqala] val qc: QueryContext[L],
@@ -232,7 +232,7 @@ object Recognize:
  */
 final class DefinedRecognize[N <: Tuple, T, L <: Int](
     private[sqala] val table: T,
-    private[sqala] val source: IrTable,
+    private[sqala] val source: IrTable.MatchRecognizable,
     private[sqala] val spec: RecognizeDefinedSpec
 )(using
     private[sqala] val qc: QueryContext[L],
@@ -348,7 +348,7 @@ final class DefinedRecognize[N <: Tuple, T, L <: Int](
  */
 final class PatternedRecognize[N <: Tuple, T, L <: Int](
     private[sqala] val table: T,
-    private[sqala] val source: IrTable,
+    private[sqala] val source: IrTable.MatchRecognizable,
     private[sqala] val spec: RecognizePatternedSpec
 )(using
     private[sqala] val qc: QueryContext[L],

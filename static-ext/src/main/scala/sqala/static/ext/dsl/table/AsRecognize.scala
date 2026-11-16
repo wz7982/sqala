@@ -31,7 +31,7 @@ trait AsRecognize[T, CL <: Int]:
     /**
      * Initializes the `matchRecognize` clause on the table.
      */
-    def asRecognizeTable(x: T): (R, IrTable)
+    def asRecognizeTable(x: T): (R, IrTable.MatchRecognizable)
 
 object AsRecognize:
     type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsRecognize[T, CL]:
@@ -51,9 +51,9 @@ object AsRecognize:
 
             type OKS = EmptyTuple
 
-            def asRecognizeTable(x: O): (R, IrTable) =
+            def asRecognizeTable(x: O): (R, IrTable.MatchRecognizable) =
                 val metaData = fc.metaData
-                val source = IrTable.Ident(metaData.tableName, Nil)
+                val source: IrTable.Ident = IrTable.Ident(metaData.tableName, Nil)
                 val table = Table[fc.R, Column, CL](
                     source,
                     metaData
@@ -79,8 +79,8 @@ object AsRecognize:
 
             type OKS = TOKS
 
-            def asRecognizeTable(x: Q): (R, IrTable) =
-                val source = IrTable.Subquery(false, x.tree, Nil)
+            def asRecognizeTable(x: Q): (R, IrTable.MatchRecognizable) =
+                val source: IrTable.Subquery = IrTable.Subquery(false, x.tree, Nil)
                 val table = MappedTable[N, V, false, CL](source, fields)
                 (table, source)
 
