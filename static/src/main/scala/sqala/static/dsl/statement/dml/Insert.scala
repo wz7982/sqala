@@ -1,6 +1,5 @@
 package sqala.static.dsl.statement.dml
 
-import sqala.ast.expr.SqlExpr
 import sqala.ir.*
 import sqala.metadata.{AsSqlExprs, Dialect, TableMacro}
 import sqala.static.dsl.*
@@ -39,6 +38,53 @@ case class InsertTree(
 )
 
 /**
+ * Restricts the target of `insert[T]` to columns.
+ *
+ * Only a `ColumnExpr` or a tuple of `ColumnExpr`s is accepted. Values,
+ * computed expressions, aggregates, and subqueries are rejected at compile
+ * time, so an invalid insert column list never reaches the printer.
+ */
+trait AsInsertColumns[T]:
+    /**
+     * The tuple type of the selected columns' values.
+     */
+    type R
+
+    /**
+     * Returns the names of the selected columns, in selection order.
+     */
+    def columnNames(x: T): List[String]
+
+object AsInsertColumns:
+    type Aux[T, O] = AsInsertColumns[T]:
+        type R = O
+
+    given column[T, L <: Int]: Aux[ColumnExpr[T, L], T] =
+        new AsInsertColumns[ColumnExpr[T, L]]:
+            type R = T
+
+            def columnNames(x: ColumnExpr[T, L]): List[String] =
+                List(x.expr.name)
+
+    given tuple[H, T <: Tuple](using
+        ah: AsInsertColumns[H],
+        at: AsInsertColumns[T],
+        tt: ToTuple[at.R]
+    ): Aux[H *: T, ah.R *: tt.R] =
+        new AsInsertColumns[H *: T]:
+            type R = ah.R *: tt.R
+
+            def columnNames(x: H *: T): List[String] =
+                ah.columnNames(x.head) ++ at.columnNames(x.tail)
+
+    given tuple1[H](using ah: AsInsertColumns[H]): Aux[H *: EmptyTuple, ah.R] =
+        new AsInsertColumns[H *: EmptyTuple]:
+            type R = ah.R
+
+            def columnNames(x: H *: EmptyTuple): List[String] =
+                ah.columnNames(x.head)
+
+/**
  * An `INSERT` statement builder, created by `insert[T]`.
  */
 final class Insert[T, S <: InsertState](
@@ -51,21 +97,13 @@ final class Insert[T, S <: InsertState](
      * insert[User](u => (u.id, u.name))
      * }}}
      */
-    inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsExpr[I, 1]): Insert[a.R, InsertTable] =
+    inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsInsertColumns[I]): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val irTable: IrTable.Ident = IrTable.Ident(tableName, Nil)
         val table = Table[T, Column, 1](irTable, metaData)
-        val insertItems = a.asExprs(f(table))
-        val columns = insertItems.map: i =>
-            i match
-                case c: ColumnExpr[?, ?] =>
-                    c match
-                        case SqlExpr.Column(_, name) => name
-                case _ =>
-                    throw new MatchError("The inserted expression must be a column expression.")
-        val tree =
-            InsertTree(irTable, columns.toList, Nil)
+        val insertItems = a.columnNames(f(table))
+        val tree = InsertTree(irTable, insertItems, Nil)
         new Insert(tree)
 
     /**
@@ -76,12 +114,12 @@ final class Insert[T, S <: InsertState](
      * insert[User](u => (u.id, u.name)).values(List((1, "Alice"), (2, "Bob")))
      * }}}
      */
-    inline def values(rows: Seq[T])(using
-        t: ToTuple[T],
+    def values(rows: Seq[T])(using
+        a: AsSqlExprs[T],
         refl: S =:= InsertTable
     ): Insert[T, InsertValues] =
         val insertValues = rows.toList.map: row =>
-            summonInline[AsSqlExprs[t.R]].asSqlExprs(t.toTuple(row)).map(e => IrExpr.Native(e))
+            a.asSqlExprs(row).map(e => IrExpr.Native(e))
         new Insert(tree.copy(insert = insertValues))
 
     /**
@@ -93,6 +131,7 @@ final class Insert[T, S <: InsertState](
      * }}}
      */
     inline def values(row: T)(using
+        AsSqlExprs[T],
         S =:= InsertTable
     ): Insert[T, InsertValues] =
         values(row :: Nil)

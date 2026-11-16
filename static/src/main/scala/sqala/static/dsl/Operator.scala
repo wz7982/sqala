@@ -61,6 +61,25 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         )
 
     /**
+     * Type-safe null check. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NULL`.
+     *
+     * {{{
+     * from(User).filter(u => u.id.isEmpty)
+     * }}}
+     */
+    def isEmpty(using
+        kt: KindToTuple[aa.K]
+    ): Expr[Boolean, Composite[kt.R]] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Is(false),
+                IrExpr.Native(SqlExpr.NullLiteral)
+            )
+        )
+
+    /**
      * Type-safe inequality comparison. Typically used in `filter`, `on`, and
      * `having` clause. Maps to SQL `<>`. Unlike raw `!=` on `Expr`, this
      * operates on any object that can be lifted to an expression. Subqueries

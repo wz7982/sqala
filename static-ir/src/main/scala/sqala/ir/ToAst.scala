@@ -106,15 +106,123 @@ class ToAst:
                     s.updateColumns
                 )
 
+    private def identTableToAst(table: IrTable.Ident): SqlTable.Ident =
+        val alias = fetchAlias(table)
+        SqlTable.Ident(table.name, tableAliasToAst(alias, table.columnAliases), None, None, None)
+
+    private def subqueryTableToAst(table: IrTable.Subquery): SqlTable.Subquery =
+        val queryAst = queryToAst(table.query)
+        val alias = fetchAlias(table)
+        SqlTable.Subquery(table.withLateral, queryAst, tableAliasToAst(alias, table.columnAliases), None)
+
+    private def funcTableToAst(table: IrTable.Func): SqlTable.Func =
+        val argsAst = table.args.map(exprToAst)
+        val alias = fetchAlias(table)
+        SqlTable.Func(
+            table.withLateral,
+            table.name,
+            argsAst,
+            table.withOrdinality,
+            tableAliasToAst(alias, table.columnAliases),
+            None
+        )
+
+    private def jsonTableToAst(table: IrTable.Json): SqlTable.Json =
+        def jsonColumnToAst(column: IrJsonColumn): SqlJsonColumn =
+            column match
+                case IrJsonColumn.Ordinality(name) =>
+                    SqlJsonColumn.Ordinality(name)
+                case IrJsonColumn.Column(name, t, path) =>
+                    val pathAst = path.map(exprToAst)
+                    SqlJsonColumn.Column(name, t, None, pathAst, None, None, None, None)
+                case IrJsonColumn.Exists(name, t, path) =>
+                    val pathAst = path.map(exprToAst)
+                    SqlJsonColumn.Exists(name, t, pathAst, None)
+                case IrJsonColumn.Nested(path, pathAlias, columns) =>
+                    val pathAst = exprToAst(path)
+                    val columnsAst = columns.map(jsonColumnToAst)
+                    SqlJsonColumn.Nested(pathAst, pathAlias, columnsAst)
+
+        val exprAst = exprToAst(table.expr)
+        val pathAst = exprToAst(table.path)
+        val columnsAst = table.columns.map(jsonColumnToAst)
+        val alias = fetchAlias(table)
+        SqlTable.Json(
+            table.withLateral,
+            exprAst,
+            pathAst,
+            table.pathAlias,
+            Nil,
+            columnsAst,
+            None,
+            tableAliasToAst(alias, table.columnAliases),
+            None
+        )
+
+    private def graphTableToAst(table: IrTable.Graph): SqlTable.Graph =
+        def graphPatternToAst(pattern: IrGraphPattern): SqlGraphPattern =
+            val termAst = graphPatternTermToAst(pattern.term)
+            SqlGraphPattern(pattern.name, termAst)
+
+        def graphPatternTermToAst(term: IrGraphPatternTerm): SqlGraphPatternTerm =
+            term match
+                case IrGraphPatternTerm.Quantified(term, quantifier) =>
+                    SqlGraphPatternTerm.Quantified(graphPatternTermToAst(term), graphQuantifierToAst(quantifier))
+                case IrGraphPatternTerm.Vertex(table, label, where) =>
+                    val alias = fetchAlias(table)
+                    SqlGraphPatternTerm.Vertex(Some(alias), label, where.map(exprToAst))
+                case IrGraphPatternTerm.Edge(leftSymbol, table, label, where, rightSymbol) =>
+                    val alias = fetchAlias(table)
+                    SqlGraphPatternTerm.Edge(leftSymbol, Some(alias), label, where.map(exprToAst), rightSymbol)
+                case IrGraphPatternTerm.And(left, right) =>
+                    SqlGraphPatternTerm.And(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                case IrGraphPatternTerm.Or(left, right) =>
+                    SqlGraphPatternTerm.Or(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                case IrGraphPatternTerm.Alternation(left, right) =>
+                    SqlGraphPatternTerm.Alternation(graphPatternTermToAst(left), graphPatternTermToAst(right))
+
+        def graphQuantifierToAst(quantifier: IrGraphQuantifier): SqlGraphQuantifier =
+            quantifier match
+                case IrGraphQuantifier.Asterisk =>
+                    SqlGraphQuantifier.Asterisk
+                case IrGraphQuantifier.Question =>
+                    SqlGraphQuantifier.Question
+                case IrGraphQuantifier.Plus =>
+                    SqlGraphQuantifier.Plus
+                case IrGraphQuantifier.Between(start, end) =>
+                    SqlGraphQuantifier.Between(start.map(exprToAst), end.map(exprToAst))
+                case IrGraphQuantifier.Quantity(quantity) =>
+                    SqlGraphQuantifier.Quantity(exprToAst(quantity))
+
+        SqlTable.Graph(
+            table.withLateral,
+            table.name,
+            table.matchMode,
+            table.patterns.map(graphPatternToAst),
+            table.where.map(exprToAst),
+            table.rowsMode,
+            table.columns.map(selectItemToAst),
+            table.exportMode,
+            tableAliasToAst(fetchAlias(table), table.columnAliases),
+            None
+        )
+
+    private def matchRecognizableToAst(
+        table: IrTable.MatchRecognizable
+    ): IrTable.SqlMatchRecognizable =
+        table match
+            case t: IrTable.Ident => identTableToAst(t)
+            case t: IrTable.Subquery => subqueryTableToAst(t)
+            case t: IrTable.Func => funcTableToAst(t)
+            case t: IrTable.Json => jsonTableToAst(t)
+            case t: IrTable.Graph => graphTableToAst(t)
+
     private def tableToAst(table: IrTable): SqlTable =
         table match
-            case IrTable.Ident(name, columnAliases) =>
-                val alias = fetchAlias(table)
-                SqlTable.Ident(name, tableAliasToAst(alias, columnAliases), None, None, None)
-            case IrTable.Subquery(withLateral, query, columnAliases) =>
-                val queryAst = queryToAst(query)
-                val alias = fetchAlias(table)
-                SqlTable.Subquery(withLateral, queryAst, tableAliasToAst(alias, columnAliases), None)
+            case t: IrTable.Ident =>
+                identTableToAst(t)
+            case t: IrTable.Subquery =>
+                subqueryTableToAst(t)
             case IrTable.Join(left, joinType, right, on) =>
                 val leftAst = tableToAst(left)
                 val rightAst = tableToAst(right)
@@ -123,96 +231,13 @@ class ToAst:
             case IrTable.Cte(index, columnAliases) =>
                 val name = cteNames.top(index)
                 SqlTable.Ident(name, tableAliasToAst(fetchAlias(table), columnAliases), None, None, None)
-            case IrTable.Func(withLateral, name, args, withOrdinality, columnAliases) =>
-                val argsAst = args.map(exprToAst)
-                val alias = fetchAlias(table)
-                SqlTable.Func(
-                    withLateral,
-                    name,
-                    argsAst,
-                    withOrdinality,
-                    tableAliasToAst(alias, columnAliases),
-                    None
-                )
-            case IrTable.Json(withLateral, expr, path, pathAlias, columns, columnAliases) =>
-                def jsonColumnToAst(column: IrJsonColumn): SqlJsonColumn =
-                    column match
-                        case IrJsonColumn.Ordinality(name) =>
-                            SqlJsonColumn.Ordinality(name)
-                        case IrJsonColumn.Column(name, t, path) =>
-                            val pathAst = path.map(exprToAst)
-                            SqlJsonColumn.Column(name, t, None, pathAst, None, None, None, None)
-                        case IrJsonColumn.Exists(name, t, path) =>
-                            val pathAst = path.map(exprToAst)
-                            SqlJsonColumn.Exists(name, t, pathAst, None)
-                        case IrJsonColumn.Nested(path, pathAlias, columns) =>
-                            val pathAst = exprToAst(path)
-                            val columnsAst = columns.map(jsonColumnToAst)
-                            SqlJsonColumn.Nested(pathAst, pathAlias, columnsAst)
-
-                val exprAst = exprToAst(expr)
-                val pathAst = exprToAst(path)
-                val columnsAst = columns.map(jsonColumnToAst)
-                val alias = fetchAlias(table)
-                SqlTable.Json(
-                    withLateral,
-                    exprAst,
-                    pathAst,
-                    pathAlias,
-                    Nil,
-                    columnsAst,
-                    None,
-                    tableAliasToAst(alias, columnAliases),
-                    None
-                )
-            case IrTable.Graph(withLateral, name, matchMode, patterns, where, rowsMode, columns, exportMode, columnAliases) =>
-                def graphPatternToAst(pattern: IrGraphPattern): SqlGraphPattern =
-                    val termAst = graphPatternTermToAst(pattern.term)
-                    SqlGraphPattern(pattern.name, termAst)
-
-                def graphPatternTermToAst(term: IrGraphPatternTerm): SqlGraphPatternTerm =
-                    term match
-                        case IrGraphPatternTerm.Quantified(term, quantifier) =>
-                            SqlGraphPatternTerm.Quantified(graphPatternTermToAst(term), graphQuantifierToAst(quantifier))
-                        case IrGraphPatternTerm.Vertex(table, label, where) =>
-                            val alias = fetchAlias(table)
-                            SqlGraphPatternTerm.Vertex(Some(alias), label, where.map(exprToAst))
-                        case IrGraphPatternTerm.Edge(leftSymbol, table, label, where, rightSymbol) =>
-                            val alias = fetchAlias(table)
-                            SqlGraphPatternTerm.Edge(leftSymbol, Some(alias), label, where.map(exprToAst), rightSymbol)
-                        case IrGraphPatternTerm.And(left, right) =>
-                            SqlGraphPatternTerm.And(graphPatternTermToAst(left), graphPatternTermToAst(right))
-                        case IrGraphPatternTerm.Or(left, right) =>
-                            SqlGraphPatternTerm.Or(graphPatternTermToAst(left), graphPatternTermToAst(right))
-                        case IrGraphPatternTerm.Alternation(left, right) =>
-                            SqlGraphPatternTerm.Alternation(graphPatternTermToAst(left), graphPatternTermToAst(right))
-
-                def graphQuantifierToAst(quantifier: IrGraphQuantifier): SqlGraphQuantifier =
-                    quantifier match
-                        case IrGraphQuantifier.Asterisk =>
-                            SqlGraphQuantifier.Asterisk
-                        case IrGraphQuantifier.Question =>
-                            SqlGraphQuantifier.Question
-                        case IrGraphQuantifier.Plus =>
-                            SqlGraphQuantifier.Plus
-                        case IrGraphQuantifier.Between(start, end) =>
-                            SqlGraphQuantifier.Between(start.map(exprToAst), end.map(exprToAst))
-                        case IrGraphQuantifier.Quantity(quantity) =>
-                            SqlGraphQuantifier.Quantity(exprToAst(quantity))
-
-                SqlTable.Graph(
-                    withLateral,
-                    name,
-                    matchMode,
-                    patterns.map(graphPatternToAst),
-                    where.map(exprToAst),
-                    rowsMode,
-                    columns.map(selectItemToAst),
-                    exportMode,
-                    tableAliasToAst(fetchAlias(table), columnAliases),
-                    None
-                )
-            case r @ IrTable.MatchRecognize(
+            case t: IrTable.Func =>
+                funcTableToAst(t)
+            case t: IrTable.Json =>
+                jsonTableToAst(t)
+            case t: IrTable.Graph =>
+                graphTableToAst(t)
+            case t @ IrTable.MatchRecognize(
                 source,
                 partitionBy,
                 orderBy,
@@ -257,9 +282,9 @@ class ToAst:
                             SqlRowPatternTerm.Or(termToAst(left), termToAst(right), quantifierAst)
 
                 def attachMatchRecognize(
-                    table: SqlTable,
+                    table: IrTable.SqlMatchRecognizable,
                     recognize: SqlMatchRecognize
-                ): SqlTable =
+                ): IrTable.SqlMatchRecognizable =
                     table match
                         case t: SqlTable.Ident =>
                             t.copy(matchRecognize = Some(recognize))
@@ -271,10 +296,6 @@ class ToAst:
                             t.copy(matchRecognize = Some(recognize))
                         case t: SqlTable.Graph =>
                             t.copy(matchRecognize = Some(recognize))
-                        case _: SqlTable.Join =>
-                            throw new IllegalArgumentException(
-                                "MATCH_RECOGNIZE cannot be applied to a join; wrap it in a subquery."
-                            )
 
                 val rowPatternAst =
                     SqlRowPattern(
@@ -293,9 +314,9 @@ class ToAst:
                             SqlRowPatternMeasureItem(exprToAst(measure.expr), measure.alias),
                         rowsMode,
                         rowPatternAst,
-                        Some(SqlTableAlias(fetchAlias(r), columnAliases))
+                        Some(SqlTableAlias(fetchAlias(t), columnAliases))
                     )
-                attachMatchRecognize(tableToAst(source), recognizeAst)
+                attachMatchRecognize(matchRecognizableToAst(source), recognizeAst)
             case IrTable.PatternVariable(name) =>
                 SqlTable.Ident(name, None, None, None, None)
 
