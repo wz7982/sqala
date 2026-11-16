@@ -6,7 +6,7 @@ import scala.quoted.{Expr, Quotes, Type}
  * Resolves the companion class of an entity's companion object at compile
  * time and provides its `TableMetaData`.
  */
-private[sqala] trait FetchCompanion[T]:
+trait FetchCompanion[T]:
     /**
      * The companion class type.
      */
@@ -17,7 +17,7 @@ private[sqala] trait FetchCompanion[T]:
      */
     def metaData: TableMetaData
 
-private[sqala] object FetchCompanion:
+object FetchCompanion:
     type Aux[T, O] = FetchCompanion[T]:
         type R = O
 

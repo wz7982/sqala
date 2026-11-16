@@ -1,12 +1,9 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
 import sqala.metadata.AsSqlExpr
-import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.ops.int.>
 
 /**
  * Lifts a single expression or subquery into a grouping item.
@@ -40,39 +37,23 @@ object AsGroupItem:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
-        kt: KindToTuple[EK],
-        i: CanInGroup[kt.R],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
-    ): Aux[Expr[T, EK], CL, Expr[T, Grouped[kt.R]], kt.R] =
-        new AsGroupItem[Expr[T, EK], CL]:
-            type R = Expr[T, Grouped[kt.R]]
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        ig: CanInGroupBy[kt.R],
+        nv: GroupByNotAllowedValue[a.K]
+    ): Aux[T, CL, Expr[a.R, Grouped[kt.R]], kt.R] =
+        new AsGroupItem[T, CL]:
+            type R = Expr[a.R, Grouped[kt.R]]
 
             type KS = kt.R
 
-            def asGroup(x: Expr[T, EK]): R =
-                Expr(x.asSqlExpr)
+            def asGroup(x: T): R =
+                Expr(a.asExpr(x).expr)
 
-            def asExprs(x: Expr[T, EK]): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(x, Nil)
-
-    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], S <: QuerySize, CL <: Int](using
-        a: AsExpr[T, CL],
-        as: AsSqlExpr[a.R],
-        i: CanInSort[OKS, S],
-        refl: L > CL =:= true
-    ): Aux[Q, CL, Expr[a.R, Grouped[OKS]], OKS] =
-        new AsGroupItem[Q, CL]:
-            type R = Expr[a.R, Grouped[OKS]]
-
-            type KS = OKS
-
-            def asGroup(x: Q): R =
-                Expr(SqlExpr.Subquery(x.tree))
-
-            def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(Expr(SqlExpr.Subquery(x.tree)), Nil)
+            def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(a.asExpr(x), Nil)
 
 /**
  * Lifts expressions, subqueries, tuples, and named tuples into grouping
@@ -120,7 +101,7 @@ object AsGroup:
                 a.asExprs(x)
 
     given tuple[H, T <: Tuple, CL <: Int](using
-        h: AsGroup[H, CL],
+        h: AsGroupItem[H, CL],
         t: AsGroup[T, CL],
         tt: ToTuple[t.R],
         c: CombineKindTuple[h.KS, t.KS]
@@ -137,7 +118,7 @@ object AsGroup:
                 h.asExprs(x.head) ++ t.asExprs(x.tail)
 
     given tuple1[H, CL <: Int](using
-        h: AsGroup[H, CL],
+        h: AsGroupItem[H, CL],
         c: CombineKindTuple[h.KS, EmptyTuple]
     ): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple, c.R] =
         new AsGroup[H *: EmptyTuple, CL]:
@@ -165,3 +146,81 @@ object AsGroup:
 
             def asExprs(x: NamedTuple[N, V]): NonEmptyList[Expr[?, ?]] =
                 a.asExprs(x.toTuple)
+
+/**
+ * Lifts values, expressions, and subqueries for `partitionBy`
+ * in window functions. `CL` is the current query context level.
+ */
+trait AsPartitionItem[T, CL <: Int]:
+    /**
+     * The kind tuple.
+     */
+    type KS <: Tuple
+
+    /**
+     * Converts the value to an expression.
+     */
+    def asExpr(x: T): Expr[?, ?]
+
+object AsPartitionItem:
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartitionItem[T, CL]:
+        type KS = OKS
+
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        iw: CanInWindow[kt.R]
+    ): Aux[T, CL, kt.R] =
+        new AsPartitionItem[T, CL]:
+            type KS = kt.R
+
+            def asExpr(x: T): Expr[?, ?] =
+                a.asExpr(x)
+
+/**
+ * Collects partition items for `partitionBy` in window functions.
+ * `CL` is the current query context level.
+ */
+trait AsPartition[T, CL <: Int]:
+    /**
+     * The expression kind tuple of the `partitionBy` clause.
+     */
+    type KS <: Tuple
+
+    /**
+     * Converts the value to a list of partition expressions.
+     */
+    def asExprs(x: T): List[Expr[?, ?]]
+
+object AsPartition:
+    type Aux[T, CL <: Int, OKS <: Tuple] = AsPartition[T, CL]:
+        type KS = OKS
+
+    given item[T, CL <: Int](using a: AsPartitionItem[T, CL]): Aux[T, CL, a.KS] =
+        new AsPartition[T, CL]:
+            type KS = a.KS
+
+            def asExprs(x: T): List[Expr[?, ?]] =
+                a.asExpr(x) :: Nil
+
+    given tuple[H, T <: Tuple, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        t: AsPartition[T, CL],
+        c: CombineKindTuple[h.KS, t.KS]
+    ): Aux[H *: T, CL, c.R] =
+        new AsPartition[H *: T, CL]:
+            type KS = c.R
+
+            def asExprs(x: H *: T): List[Expr[?, ?]] =
+                h.asExpr(x.head) :: t.asExprs(x.tail)
+
+    given tuple1[H, CL <: Int](using
+        h: AsPartitionItem[H, CL],
+        c: CombineKindTuple[h.KS, EmptyTuple]
+    ): Aux[H *: EmptyTuple, CL, c.R] =
+        new AsPartition[H *: EmptyTuple, CL]:
+            type KS = c.R
+
+            def asExprs(x: H *: EmptyTuple): List[Expr[?, ?]] =
+                h.asExpr(x.head) :: Nil

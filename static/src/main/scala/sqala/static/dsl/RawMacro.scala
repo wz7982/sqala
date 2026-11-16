@@ -1,6 +1,6 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
+import sqala.ir.IrExpr
 
 import scala.quoted.{Expr, Quotes, Type}
 
@@ -8,15 +8,15 @@ import scala.quoted.{Expr, Quotes, Type}
  * Internal macro that summons `AsExpr` instances for `rawExpr`
  * interpolation arguments.
  */
-private[sqala] object RawMacro:
+object RawMacro:
     /**
       * Converts a sequence of values to a list of `SqlExpr` using the
       */
-    inline def asSqlExprs[CL <: Int](inline expr: Seq[Any]): List[SqlExpr] =
-        ${ RawMacroImpl.asSqlExprs('expr) }
+    inline def asIrExprs[CL <: Int](inline expr: Seq[Any]): List[IrExpr] =
+        ${ RawMacroImpl.asIrExprs('expr) }
 
-private[sqala] object RawMacroImpl:
-    def asSqlExprs[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[SqlExpr]] =
+object RawMacroImpl:
+    def asIrExprs[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[IrExpr]] =
         import q.reflect.*
 
         def removeInlined(term: Term): Term =
@@ -35,6 +35,6 @@ private[sqala] object RawMacroImpl:
                 tpe match
                     case '[t] =>
                         val instance = Expr.summon[AsExpr[t, CL]].get
-                        '{ $instance.asErasedExpr(${ term.asExprOf[t] }).asSqlExpr }
+                        '{ $instance.asErasedExpr(${ term.asExprOf[t] }).expr }
 
         Expr.ofList(sqlExprs)

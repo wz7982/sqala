@@ -1,13 +1,13 @@
 package sqala.static.dsl
 
 import sqala.ast.expr.SqlSubqueryQuantifier
-import sqala.ast.statement.SqlQuery
+import sqala.ir.IrQuery
 
 /**
- * A subquery qualified with `ANY`, `ALL`, or `EXISTS`, used as the
+ * A subquery qualified with `ANY`, `ALL`, used as the
  * right-hand side of comparison operators.
  */
-final case class QuantifiedSubquery[T, OKS <: Tuple, L <: Int](
+final class QuantifiedSubquery[T, OKS <: Tuple, L <: Int](
     private[sqala] val quantifier: SqlSubqueryQuantifier,
-    private[sqala] val tree: SqlQuery
+    private[sqala] val tree: IrQuery
 )

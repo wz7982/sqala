@@ -1,36 +1,17 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlQuantifiedComparisonOperator}
-
-import scala.compiletime.ops.int.>
+import sqala.ast.expr.{SqlBinaryOperator, SqlQuantifiedComparisonOperator}
+import sqala.ir.IrExpr
 
 /**
  * Comparison operators.
  */
 enum ComparisonOperator:
-    /**
-     * Equality comparison.
-     */
     case Equal
-    /**
-     * Not-equal comparison.
-     */
     case NotEqual
-    /**
-     * Greater-than comparison.
-     */
     case GreaterThan
-    /**
-     * Greater-than-or-equal comparison.
-     */
     case GreaterThanEqual
-    /**
-     * Less-than comparison.
-     */
     case LessThan
-    /**
-     * Less-than-or-equal comparison.
-     */
     case LessThanEqual
 
 /**
@@ -51,7 +32,7 @@ trait AsComparison[T, CL <: Int]:
     /**
      * Converts the value to an expression.
      */
-    def asSqlExpr(expr: SqlExpr, operator: ComparisonOperator, x: T): SqlExpr
+    def asIrExpr(expr: IrExpr, operator: ComparisonOperator, x: T): IrExpr
 
 object AsComparison:
     type Aux[T, CL <: Int, O, OK <: ExprKind] = AsComparison[T, CL]:
@@ -65,8 +46,8 @@ object AsComparison:
 
             type K = a.K
 
-            def asSqlExpr(expr: SqlExpr, operator: ComparisonOperator, x: T): SqlExpr =
-                val sqlOperator = 
+            def asIrExpr(expr: IrExpr, operator: ComparisonOperator, x: T): IrExpr =
+                val sqlOperator =
                     operator match
                         case ComparisonOperator.Equal =>
                             SqlBinaryOperator.Equal
@@ -80,18 +61,18 @@ object AsComparison:
                             SqlBinaryOperator.LessThan
                         case ComparisonOperator.LessThanEqual =>
                             SqlBinaryOperator.LessThanEqual
-                SqlExpr.Binary(expr, sqlOperator, a.asExpr(x).asSqlExpr)
+                IrExpr.Binary(expr, sqlOperator, a.asExpr(x).expr)
 
     given quantifiedSubquery[T, OKS <: Tuple, L <: Int, CL <: Int](using
-        refl: L > CL =:= true
+        vss: ValidateSubqueryScope[L, CL]
     ): Aux[QuantifiedSubquery[T, OKS, L], CL, T, Composite[OKS]] =
         new AsComparison[QuantifiedSubquery[T, OKS, L], CL]:
             type R = T
 
             type K = Composite[OKS]
 
-            def asSqlExpr(expr: SqlExpr, operator: ComparisonOperator, x: QuantifiedSubquery[T, OKS, L]): SqlExpr =
-                val sqlOperator = 
+            def asIrExpr(expr: IrExpr, operator: ComparisonOperator, x: QuantifiedSubquery[T, OKS, L]): IrExpr =
+                val sqlOperator =
                     operator match
                         case ComparisonOperator.Equal =>
                             SqlQuantifiedComparisonOperator.Equal
@@ -105,4 +86,4 @@ object AsComparison:
                             SqlQuantifiedComparisonOperator.LessThan
                         case ComparisonOperator.LessThanEqual =>
                             SqlQuantifiedComparisonOperator.LessThanEqual
-                SqlExpr.QuantifiedComparisonPredicate(expr, sqlOperator, x.quantifier, x.tree)
+                IrExpr.QuantifiedComparisonPredicate(expr, sqlOperator, x.quantifier, x.tree)

@@ -1,9 +1,8 @@
 package sqala.static.dsl.statement.dml
 
-import sqala.ast.statement.SqlStatement
-import sqala.ast.table.SqlTable
-import sqala.metadata.{AsSqlExprs, TableMacro}
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.ir.{IrExpr, IrStatement, IrTable, ToAst}
+import sqala.metadata.{AsSqlExprs, Dialect, TableMacro}
+import sqala.util.{NonEmptyList, statementToString}
 
 import scala.compiletime.summonInline
 import scala.deriving.Mirror
@@ -11,7 +10,20 @@ import scala.deriving.Mirror
 /**
  * Wraps an upsert statement.
  */
-final class Save(private[sqala] val tree: SqlStatement.Upsert)
+final class Save(private[sqala] val tree: IrStatement.Upsert):
+    /**
+     * Generates the SQL string for the given dialect.
+     *
+     * `standardEscapeStrings` controls string literal escaping: `true` treats
+     * backslashes literally (standard behavior, e.g. PostgreSQL, Oracle);
+     * `false` uses backslashes as escape characters (e.g. MySQL).
+     *
+     * {{{
+     * val sql = q.sql(PostgresqlDialect, true)
+     * }}}
+     */
+    def sql(dialect: Dialect, standardEscapeStrings: Boolean = true): String =
+        statementToString(ToAst().toAst(tree), dialect, standardEscapeStrings)
 
 object Save:
     /**
@@ -23,21 +35,25 @@ object Save:
         val metaData = TableMacro.tableMetaData[T]
         val columns = metaData.columns
         val data: m.MirroredElemTypes = Tuple.fromProductTyped(entity)
-        val values = summonInline[AsSqlExprs[m.MirroredElemTypes]].asSqlExprs(data)
-        val primaryKeys = metaData.columns
-            .zip(metaData.fields)
+        val values = summonInline[AsSqlExprs[m.MirroredElemTypes]]
+            .asSqlExprs(data)
+            .map(e => IrExpr.Native(e))
+        val primaryKeys = metaData.columns.toList
+            .zip(metaData.fields.toList)
             .filter((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => c)
-        val updateColumns = metaData.columns
-            .zip(metaData.fields)
+        require(primaryKeys.nonEmpty, "Save table must have at least one primary key column.")
+        val updateColumns = metaData.columns.toList
+            .zip(metaData.fields.toList)
             .filterNot((_, f) => metaData.primaryKeyFields.contains(f))
             .map((c, _) => c)
-        val tree: SqlStatement.Upsert =
-            SqlStatement.Upsert(
-                SqlTable.Ident(tableName, None, None, None, None),
-                columns.toNonEmptyList,
-                values.toNonEmptyList,
-                primaryKeys.toNonEmptyList,
-                updateColumns.toNonEmptyList
+        require(updateColumns.nonEmpty, "Save table must have at least one update column.")
+        val tree: IrStatement.Upsert =
+            IrStatement.Upsert(
+                IrTable.Ident(tableName, Nil),
+                columns,
+                NonEmptyList(values.head, values.tail),
+                NonEmptyList(primaryKeys.head, primaryKeys.tail),
+                NonEmptyList(updateColumns.head, updateColumns.tail)
             )
         new Save(tree)

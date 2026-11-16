@@ -21,6 +21,7 @@ enum SqlGroupingItem:
      * Renders as `()`.
      */
     case EmptyGroup
+    
     /**
      * A single expression to group by.
      *

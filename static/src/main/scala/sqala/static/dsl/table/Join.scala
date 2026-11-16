@@ -1,11 +1,11 @@
 package sqala.static.dsl.table
 
-import sqala.ast.table.{SqlJoinCondition, SqlTable}
+import sqala.ir.IrTable
 import sqala.metadata.SqlBoolean
 import sqala.static.dsl.*
 
 /**
- * Computes the combined row type of an inner join.
+ * Computes the combined row type of inner join.
  */
 trait Join[A, B]:
     /**
@@ -124,20 +124,20 @@ object FullJoin:
                 ta.toTuple(toa.toOption(a)) ++ tb.toTuple(tob.toOption(b))
 
 /**
- * A join table source produced by calling `on` on a `JoinPart`. 
+ * A join table source produced by calling `on` on a `JoinPart`.
  */
-final case class FromJoin[T, OKS <: Tuple, L <: Int](
+final class FromJoin[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
-    private[sqala] val sqlTable: SqlTable.Join
+    private[sqala] val table: IrTable.Join
 ) extends AnyTable
 
 /**
  * An intermediate join before the condition is specified. Created by
  * `join`, `leftJoin`, etc., and converted to `FromJoin` via `on`.
  */
-final case class JoinPart[T, OKS <: Tuple, L <: Int](
+final class JoinPart[T, OKS <: Tuple, L <: Int](
     private[sqala] val params: T,
-    private[sqala] val sqlTable: SqlTable.Join
+    private[sqala] val table: IrTable.Join
 ):
     /**
      * Specifies the join condition. Maps to SQL `ON`. The condition
@@ -147,13 +147,13 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
      *
      * {{{
      * // Two-table join
-     * from(Channel.join(Post).on((c, p) => c.id == p.channelId))
+     * from(Channel.join(Post).on((c, p) => c.id === p.channelId))
      *
      * // Multi-table join
      * from(
      *     Channel
-     *     .join(Post).on((c, p) => c.id == p.channelId)
-     *     .join(Comment).on((_, p, ct) => p.id == ct.postId)
+     *     .join(Post).on((c, p) => c.id === p.channelId)
+     *     .join(Comment).on((_, p, ct) => p.id === ct.postId)
      * )
      *
      * // Unconditional join
@@ -163,14 +163,14 @@ final case class JoinPart[T, OKS <: Tuple, L <: Int](
     def on[F](f: T => F)(using
         qc: QueryContext[L],
         a: AsExpr[F, L],
-        b: SqlBoolean[a.R],
+        ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        i: CanInFilter[kt.R],
+        ci: CanInSimpleClause[kt.R, "on"],
         e: ExcludeCurrentLevelColumn[kt.R, L],
         c: CombineKindTuple[OKS, e.R]
     ): FromJoin[T, c.R, L] =
         val cond = a.asExpr(f(params))
         FromJoin(
             params,
-            sqlTable.copy(condition = Some(SqlJoinCondition.On(cond.asSqlExpr)))
+            table.copy(on = Some(cond.expr))
         )

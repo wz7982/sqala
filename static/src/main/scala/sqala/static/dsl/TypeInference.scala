@@ -1,14 +1,17 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.{SqlBinaryOperator, SqlExpr, SqlInRightOperand}
+import sqala.ast.expr.{SqlTimeZoneMode, SqlType}
+import sqala.ir.{IrExpr, IrInRightOperand}
 import sqala.metadata.*
 import sqala.static.dsl.table.{AsTableParam, MappedTable, Table}
-import sqala.util.NonEmptyList
 
-import java.time.{OffsetDateTime, OffsetTime}
+import java.time.{LocalDateTime, OffsetDateTime, OffsetTime}
 import scala.NamedTuple.NamedTuple
+import scala.compiletime.error
 import scala.compiletime.ops.boolean.||
 import scala.deriving.Mirror
+import scala.quoted.{Quotes, Type}
+import scala.util.NotGiven
 
 /**
  * Determines whether two types are compatible for comparison
@@ -103,6 +106,17 @@ object CanCompare:
         CanCompare[AH, BH]
     ): CanCompare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
 
+    inline given fallback[A, B](using NotGiven[CanCompare[A, B]]): CanCompare[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Cannot compare types $aType and $bType.")
+
 /**
  * Lifts values, tuples, sequences, and arrays into `in` operands,
  * computing the result type and kind tuple. `CL` is the
@@ -129,19 +143,13 @@ trait In[A, B, CL <: Int]:
      * operands in a tuple. Subqueries are passed through without
      * wrapping.
      */
-    def asSqlExpr(expr: SqlExpr, x: B): SqlExpr =
+    def asIrExpr(expr: IrExpr, x: B): IrExpr =
         val exprList = asExprs(x)
-        exprList match
-            case Nil =>
-                SqlExpr.BooleanLiteral(false)
-            case Expr(SqlExpr.Subquery(query)) :: Nil =>
-                SqlExpr.In(expr, SqlInRightOperand.Subquery(query), false)
-            case e :: es =>
-                SqlExpr.In(
-                    expr,
-                    SqlInRightOperand.Values(NonEmptyList(e.asSqlExpr, es.map(_.asSqlExpr))),
-                    false
-                )
+        IrExpr.In(
+            expr,
+            IrInRightOperand.Values(exprList.map(_.expr)),
+            false
+        )
 
 object In:
     type Aux[A, B, CL <: Int, O, OKS <: Tuple] = In[A, B, CL]:
@@ -196,7 +204,7 @@ object In:
 
     given seq[A, B, S <: Seq[B], CL <: Int](using
         aa: AsExpr[A, CL],
-        ab: AsSqlExpr[B],
+        ab: AsExpr[B, CL],
         r: Relation[aa.R, B]
     ): Aux[A, S, CL, r.R, Value *: EmptyTuple] =
         new In[A, S, CL]:
@@ -205,11 +213,11 @@ object In:
             type KS = Value *: EmptyTuple
 
             def asExprs(x: S): List[Expr[?, ?]] =
-                x.toList.map(i => Expr(ab.asSqlExpr(i)))
+                x.toList.map(i => ab.asExpr(i))
 
     given array[A, B, CL <: Int](using
         aa: AsExpr[A, CL],
-        ab: AsSqlExpr[B],
+        ab: AsExpr[B, CL],
         r: Relation[aa.R, B],
     ): Aux[A, Array[B], CL, r.R, Value *: EmptyTuple] =
         new In[A, Array[B], CL]:
@@ -218,7 +226,7 @@ object In:
             type KS = Value *: EmptyTuple
 
             def asExprs(x: Array[B]): List[Expr[?, ?]] =
-                x.toList.map(i => Expr(ab.asSqlExpr(i)))
+                x.toList.map(i => ab.asExpr(i))
 
 /**
  * Computes the result type of addition (via `+`).
@@ -229,11 +237,6 @@ trait Plus[A, B]:
      */
     type R
 
-    /**
-     * Produces the SQL expression for the addition.
-     */
-    def plus(x: SqlExpr, y: SqlExpr): SqlExpr
-
 object Plus:
     type Aux[A, B, O] = Plus[A, B]:
         type R = O
@@ -242,29 +245,24 @@ object Plus:
         new Plus[A, B]:
             type R = NumericResult[A, B]
 
-            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
-                SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
-
     given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
         new Plus[A, B]:
             type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
-
-            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
-                SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
 
     given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
         new Plus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
-            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
-                SqlExpr.Binary(x, SqlBinaryOperator.Plus, y)
+    inline given fallback[A, B](using NotGiven[Plus[A, B]]): Plus[A, B] =
+        ${ errorMacro[A, B] }
 
-    given string[A: SqlString, B: SqlString]: Aux[A, B, WrapIf[String, IsOption[A] || IsOption[B], Option]] =
-        new Plus[A, B]:
-            type R = WrapIf[String, IsOption[A] || IsOption[B], Option]
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
 
-            def plus(x: SqlExpr, y: SqlExpr): SqlExpr =
-                SqlExpr.Binary(x, SqlBinaryOperator.Concat, y)
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType cannot be added.")
 
 /**
  * Computes the result type of subtraction (via `-`).
@@ -299,6 +297,17 @@ object Minus:
         new Minus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
+    inline given fallback[A, B](using NotGiven[Minus[A, B]]): Minus[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType cannot be subtracted.")
+
 /**
  * Computes the result type of a comparison.
  * Always wraps `Boolean` with `Option` if either side is optional.
@@ -318,51 +327,6 @@ object Relation:
     ): Aux[A, B, WrapIf[Boolean, IsOption[A] || IsOption[B], Option]] =
         new Relation[A, B]:
             type R = WrapIf[Boolean, IsOption[A] || IsOption[B], Option]
-
-/**
- * Determines whether a type can be used as a `rows` or `groups`
- * frame bound.
- */
-trait CanInRowsOrGroupsFrame[T]
-
-object CanInRowsOrGroupsFrame:
-    given int: CanInRowsOrGroupsFrame[Int]()
-
-    given long: CanInRowsOrGroupsFrame[Long]()
-
-    given nothing: CanInRowsOrGroupsFrame[Nothing]()
-
-/**
- * Determines whether `S` and `T` can be used together in a `range`
- * frame (`S` is the sort key type, `T` is the bound type).
- */
-trait CanInRangeFrame[S, T]
-
-object CanInRangeFrame:
-    given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
-
-    given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
-
-    given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
-
-    given nothing[S]: CanInRangeFrame[S, Nothing]()
-
-/**
- * Computes the return type of `unnest`.
- */
-trait UnnestReturn[T]:
-    /**
-     * The result type.
-     */
-    type R
-
-object UnnestReturn:
-    type Aux[T, O] = UnnestReturn[T]:
-        type R = O
-
-    given flatten[T]: Aux[T, FlattenUnnest[T]] =
-        new UnnestReturn[T]:
-            type R = FlattenUnnest[T]
 
 /**
  * Computes the result type of a conditional expression (such as
@@ -468,6 +432,182 @@ object Return:
         new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
+    inline given fallback[A, B](using NotGiven[Return[A, B]]): Return[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Types $aType and $bType are incompatible.")
+
+/**
+ * Computes the result type of a coalesce expression.
+ */
+trait CoalesceReturn[A, B]:
+    /**
+     * The result type.
+     */
+    type R
+
+object CoalesceReturn:
+    type Aux[A, B, O] = CoalesceReturn[A, B]:
+        type R = O
+
+    given nonEmpty[A, B](using
+        r: Return[A, B],
+        n: NotGiven[B <:< Option[?]]
+    ): Aux[A, B, Unwrap[r.R, Option]] =
+        new CoalesceReturn[A, B]:
+            type R = Unwrap[r.R, Option]
+
+    given empty[A, B](using
+        r: Return[A, B],
+        n: B <:< Option[?]
+    ): Aux[A, B, r.R] =
+        new CoalesceReturn[A, B]:
+            type R = r.R
+
+/**
+ * Validates that an argument type is acceptable for a given requirement,
+ * producing a readable compile-time error when it is not.
+ */
+trait ValidateArgType[F[_], T, N <: String]
+
+object ValidateArgType:
+    given validate[F[_], T, N <: String](using F[T]): ValidateArgType[F, T, N]()
+
+    inline given fallback[F[_], T, N <: String](using NotGiven[F[T]]): ValidateArgType[F, T, N] =
+        ${ errorMacro[T, N] }
+
+    def errorMacro[T: Type, N <: String : Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val typeName = Type.show[T]
+        val needTypeName = Type.show[N].replace("\"", "")
+
+        report.errorAndAbort(s"The arguments type should be $needTypeName, but got $typeName.")
+
+/**
+ * Determines whether a type can be used as a `rows` or `groups`
+ * frame bound.
+ */
+trait CanInRowsOrGroupsFrame[T]
+
+object CanInRowsOrGroupsFrame:
+    given int: CanInRowsOrGroupsFrame[Int]()
+
+    given long: CanInRowsOrGroupsFrame[Long]()
+
+    given nothing: CanInRowsOrGroupsFrame[Nothing]()
+
+    inline given fallback[T](using
+        NotGiven[CanInRowsOrGroupsFrame[T]]
+    ): CanInRowsOrGroupsFrame[T] =
+        error("Window frame type is incompatible with the ordering expression.")
+
+/**
+ * Determines whether `S` and `T` can be used together in a `range`
+ * frame (`S` is the sort key type, `T` is the bound type).
+ */
+trait CanInRangeFrame[S, T]
+
+object CanInRangeFrame:
+    given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
+
+    given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
+
+    given nothing[S]: CanInRangeFrame[S, Nothing]()
+
+    inline given fallback[S, T](using
+        NotGiven[CanInRangeFrame[S, T]]
+    ): CanInRangeFrame[S, T] =
+        error("Window frame type is incompatible with the ordering expression.")
+
+/**
+ * Provides the target type for a `as` method.
+ */
+trait Cast[T, R]:
+    /**
+     * The target type.
+     */
+    def castType: SqlType
+
+object Cast:
+    given string[T: AsSqlExpr]: Cast[T, String] with
+        def castType: SqlType =
+            SqlType.Varchar(None)
+
+    given int[T: SqlNumber]: Cast[T, Int] with
+        def castType: SqlType =
+            SqlType.Int
+
+    given long[T: SqlNumber]: Cast[T, Long] with
+        def castType: SqlType =
+            SqlType.Long
+
+    given float[T: SqlNumber]: Cast[T, Float] with
+        def castType: SqlType =
+            SqlType.Float
+
+    given double[T: SqlNumber]: Cast[T, Double] with
+        def castType: SqlType =
+            SqlType.Double
+
+    given decimal[T: SqlNumber]: Cast[T, BigDecimal] with
+        def castType: SqlType =
+            SqlType.Decimal(Some(38, 10))
+
+    given json[T: SqlString]: Cast[T, Json] with
+        def castType: SqlType =
+            SqlType.Json
+
+    given localDateTime[T: SqlString]: Cast[T, LocalDateTime] with
+        def castType: SqlType =
+            SqlType.Timestamp(None)
+
+    given offsetDateTime[T: SqlString]: Cast[T, OffsetDateTime] with
+        def castType: SqlType =
+            SqlType.Timestamp(Some(SqlTimeZoneMode.With))
+
+    inline given fallback[A, B](using NotGiven[Cast[A, B]]): Cast[A, B] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(s"Cannot convert type $aType to type $bType.")
+
+/**
+ * Constrains the types that can be used with `year`, `month`, etc.
+ * extract functions.
+ */
+trait ExtractArg[T]
+
+object ExtractArg:
+    given dateTime[T: SqlDateTime]: ExtractArg[T]()
+
+    given time[T: SqlTime]: ExtractArg[T]()
+
+    given interval[T: SqlInterval]: ExtractArg[T]()
+
+    inline given fallback[T](using NotGiven[ExtractArg[T]]): ExtractArg[T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val typeName = Type.show[T]
+
+        report.errorAndAbort(s"The argument type should be a date/time or interval type, but got $typeName.")
+
 /**
  * Maps union query items, producing column expressions
  * for `union`, `unionAll`, etc. `CL` is the query context level.
@@ -493,17 +633,17 @@ object Union:
     type Aux[A, B, CL <: Int, O] = Union[A, B, CL]:
         type R = O
 
-    given expr[A, AK <: ExprKind, B, BK <: ExprKind, CL <: Int](using
+    given expr[A, AK <: ExprKind, AE <: Expr[A, AK], B, BK <: ExprKind, BE <: Expr[B, BK], CL <: Int](using
         r: Return[A, B]
-    ): Aux[Expr[A, AK], Expr[B, BK], CL, Expr[r.R, Column[CL]]] =
-        new Union[Expr[A, AK], Expr[B, BK], CL]:
+    ): Aux[AE, BE, CL, Expr[r.R, Column[CL]]] =
+        new Union[AE, BE, CL]:
             type R = Expr[r.R, Column[CL]]
 
-            def offset(x: Expr[A, AK]): Int =
+            def offset(x: AE): Int =
                 1
 
-            def unionQueryItems(x: Expr[A, AK], cursor: Int): R =
-                Expr(SqlExpr.Column(None, s"c$cursor"))
+            def unionQueryItems(x: AE, cursor: Int): R =
+                Expr(IrExpr.Column(None, s"c$cursor"))
 
     given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
@@ -517,7 +657,9 @@ object Union:
                 x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
-                Table(x.__aliasName__, x.__metaData__)
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
 
     given tableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
@@ -531,7 +673,9 @@ object Union:
                 x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[A, Column, AL], cursor: Int): R =
-                Table(x.__aliasName__, x.__metaData__)
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
 
     given optionTableAndTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
@@ -545,7 +689,9 @@ object Union:
                 x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
-                Table(x.__aliasName__, x.__metaData__)
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
 
     given optionTableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
@@ -559,21 +705,26 @@ object Union:
                 x.__metaData__.columns.size
 
             def unionQueryItems(x: Table[Option[A], Column, AL], cursor: Int): R =
-                Table(x.__aliasName__, x.__metaData__)
+                val columns = x.__metaData__.columns.indices.map: i =>
+                    s"c${cursor + i}"
+                Table(x.__table__, x.__metaData__.copy(columns = columns), false)
 
-    given mappedTable[AN <: Tuple, AV <: Tuple, AL <: Int, BN <: Tuple, BV <: Tuple, BL <: Int, CL <: Int](using
+    given mappedTable[AN <: Tuple, AV <: Tuple, AO <: Boolean, AL <: Int, BN <: Tuple, BV <: Tuple, BO <: Boolean, BL <: Int, CL <: Int](using
         u: Union[AV, BV, CL],
         tt: ToTuple[u.R],
         a: AsTableParam[AV, CL]
-    ): Aux[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL, MappedTable[AN, tt.R, CL]] =
-        new Union[MappedTable[AN, AV, AL], MappedTable[BN, BV, BL], CL]:
-            type R = MappedTable[AN, tt.R, CL]
+    ): Aux[MappedTable[AN, AV, AO, AL], MappedTable[BN, BV, BO, BL], CL, MappedTable[AN, tt.R, AO || BO, CL]] =
+        new Union[MappedTable[AN, AV, AO, AL], MappedTable[BN, BV, BO, BL], CL]:
+            type R = MappedTable[AN, tt.R, AO || BO, CL]
 
-            def offset(x: MappedTable[AN, AV, AL]): Int =
+            def offset(x: MappedTable[AN, AV, AO, AL]): Int =
                 a.offset
 
-            def unionQueryItems(x: MappedTable[AN, AV, AL], cursor: Int): R =
-                MappedTable(x.__aliasName__, tt.toTuple(u.unionQueryItems(x.__items__, cursor)))
+            def unionQueryItems(x: MappedTable[AN, AV, AO, AL], cursor: Int): R =
+                MappedTable[AN, tt.R, AO || BO, CL](
+                    tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
+                    x.__fields__
+                )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
@@ -627,3 +778,19 @@ object Union:
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
                 NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+
+    inline given fallback[A, B, CL <: Int](using NotGiven[Union[A, B, CL]]): Aux[A, B, CL, A] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+
+        report.errorAndAbort(
+            s"Set operations (union/except/intersect) require both sides to be " +
+            s"mapped queries with matching column shapes. " +
+            s"Found $aType and $bType. Call map on each side to project into " +
+            s"matching named tuples first."
+        )
