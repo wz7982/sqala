@@ -416,7 +416,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def *[B](that: B)(using
         ab: AsExpr[B, CL],
         na: ValidateArgType[SqlNumber, aa.R, "numeric"],
-        nb: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
         r: Return[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -442,7 +442,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def /[B](that: B)(using
         ab: AsExpr[B, CL],
         na: ValidateArgType[SqlNumber, aa.R, "numeric"],
-        nb: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Option[BigDecimal], c.R] =
         Expr(
@@ -468,7 +468,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def %[B](that: B)(using
         ab: AsExpr[B, CL],
         na: ValidateArgType[SqlNumber, aa.R, "numeric"],
-        nb: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
         c: CombineKind[aa.K, ab.K]
     ): Expr[Option[BigDecimal], c.R] =
         Expr(
