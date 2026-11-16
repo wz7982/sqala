@@ -1,0 +1,597 @@
+package sqala.ir
+
+import sqala.ast.expr.*
+import sqala.ast.group.{SqlGroup, SqlGroupingItem}
+import sqala.ast.limit.{SqlFetch, SqlLimit}
+import sqala.ast.order.SqlOrderingItem
+import sqala.ast.statement.*
+import sqala.ast.table.*
+import sqala.ast.window.{SqlWindow, SqlWindowFrame, SqlWindowFrameBound}
+import sqala.util.NonEmptyList
+
+/**
+ * Lowers the intermediate representation (IR) to the SQL AST
+ * (`SqlExpr` / `SqlQuery` / `SqlStatement`).
+ *
+ * During lowering it assigns stable table aliases (`t1`, `t2`, ...) and
+ * fresh CTE names (`cte1`, `cte2`, ...), resolving column and subquery
+ * references accordingly.
+ */
+class ToAst:
+    private var tableIndex = 0
+
+    private val tableAliasMap = java.util.IdentityHashMap[IrTable, String]()
+
+    private var cteIndex = 0
+
+    private val cteNames = scala.collection.mutable.Stack[List[String]]()
+
+    private def queryToAst(query: IrQuery): SqlQuery =
+        query match
+            case s: IrQuery.Select =>
+                val fromAst = s.from.map(tableToAst).toList
+                val selectAst = s.select.map(selectItemToAst)
+                val whereAst = s.where.map(exprToAst)
+                val groupAst = s.groupBy.map: g =>
+                    SqlGroup(
+                        g.quantifier,
+                        g.items.map(groupingItemToAst)
+                    )
+                val havingAst = s.having.map(exprToAst)
+                val orderAst = s.orderBy.map(orderingItemToAst)
+                val limitAst = s.limit.map(limitToAst)
+                val lockAst = s.lock.map(lockToAst)
+                SqlQuery.Select(
+                    s.quantifier,
+                    selectAst,
+                    fromAst,
+                    whereAst,
+                    groupAst,
+                    havingAst,
+                    Nil,
+                    None,
+                    orderAst,
+                    limitAst,
+                    lockAst
+                )
+            case s: IrQuery.Set =>
+                val leftAst = queryToAst(s.left)
+                val rightAst = queryToAst(s.right)
+                val orderAst = s.orderBy.map(orderingItemToAst)
+                val limitAst = s.limit.map(limitToAst)
+                SqlQuery.Set(leftAst, s.operator, None, rightAst, orderAst, limitAst)
+            case v: IrQuery.Values =>
+                SqlQuery.Values(
+                    v.values.map(row => row.map(exprToAst)),
+                    v.orderBy.map(orderingItemToAst),
+                    v.limit.map(limitToAst)
+                )
+            case w: IrQuery.With =>
+                val names = w.withItems.map(_ => freshCteName())
+                cteNames.push(names.toList)
+                val itemsAst = w.withItems.zip(names).map: (item, name) =>
+                    SqlWithItem(name, item.columns, queryToAst(item.query))
+                val queryAst = queryToAst(w.query)
+                cteNames.pop()
+                SqlQuery.With(w.recursive, itemsAst, queryAst)
+
+    private def statementToAst(statement: IrStatement): SqlStatement =
+        def insertModeToAst(mode: IrInsertMode): SqlInsertMode =
+            mode match
+                case IrInsertMode.Values(values) =>
+                    SqlInsertMode.Values(values.map(row => row.map(exprToAst)))
+                case IrInsertMode.Subquery(query) =>
+                    SqlInsertMode.Subquery(queryToAst(query))
+
+        def setPairToAst(pair: IrUpdateSetPair): SqlUpdateSetPair =
+            SqlUpdateSetPair(pair.column, exprToAst(pair.value))
+
+        statement match
+            case s: IrStatement.Delete =>
+                val tableAst = dmlTableToAst(s.table, true)
+                SqlStatement.Delete(tableAst, s.where.map(exprToAst))
+            case s: IrStatement.Insert =>
+                val tableAst = dmlTableToAst(s.table, false)
+                SqlStatement.Insert(tableAst, s.columns, insertModeToAst(s.mode))
+            case s: IrStatement.Update =>
+                val tableAst = dmlTableToAst(s.table, true)
+                SqlStatement.Update(tableAst, s.setPairs.map(setPairToAst), s.where.map(exprToAst))
+            case s: IrStatement.Upsert =>
+                val tableAst = dmlTableToAst(s.table, false)
+                SqlStatement.Upsert(
+                    tableAst,
+                    s.columns,
+                    s.values.map(exprToAst),
+                    s.primaryKeys,
+                    s.updateColumns
+                )
+
+    private def tableToAst(table: IrTable): SqlTable =
+        table match
+            case IrTable.Ident(name, columnAliases) =>
+                val alias = fetchAlias(table)
+                SqlTable.Ident(name, tableAliasToAst(alias, columnAliases), None, None, None)
+            case IrTable.Subquery(withLateral, query, columnAliases) =>
+                val queryAst = queryToAst(query)
+                val alias = fetchAlias(table)
+                SqlTable.Subquery(withLateral, queryAst, tableAliasToAst(alias, columnAliases), None)
+            case IrTable.Join(left, joinType, right, on) =>
+                val leftAst = tableToAst(left)
+                val rightAst = tableToAst(right)
+                val onAst = on.map(o => SqlJoinCondition.On(exprToAst(o)))
+                SqlTable.Join(leftAst, joinType, rightAst, onAst)
+            case IrTable.Cte(index, columnAliases) =>
+                val name = cteNames.top(index)
+                SqlTable.Ident(name, tableAliasToAst(fetchAlias(table), columnAliases), None, None, None)
+            case IrTable.Func(withLateral, name, args, withOrdinality, columnAliases) =>
+                val argsAst = args.map(exprToAst)
+                val alias = fetchAlias(table)
+                SqlTable.Func(
+                    withLateral,
+                    name,
+                    argsAst,
+                    withOrdinality,
+                    tableAliasToAst(alias, columnAliases),
+                    None
+                )
+            case IrTable.Json(withLateral, expr, path, pathAlias, columns, columnAliases) =>
+                def jsonColumnToAst(column: IrJsonColumn): SqlJsonColumn =
+                    column match
+                        case IrJsonColumn.Ordinality(name) =>
+                            SqlJsonColumn.Ordinality(name)
+                        case IrJsonColumn.Column(name, t, path) =>
+                            val pathAst = path.map(exprToAst)
+                            SqlJsonColumn.Column(name, t, None, pathAst, None, None, None, None)
+                        case IrJsonColumn.Exists(name, t, path) =>
+                            val pathAst = path.map(exprToAst)
+                            SqlJsonColumn.Exists(name, t, pathAst, None)
+                        case IrJsonColumn.Nested(path, pathAlias, columns) =>
+                            val pathAst = exprToAst(path)
+                            val columnsAst = columns.map(jsonColumnToAst)
+                            SqlJsonColumn.Nested(pathAst, pathAlias, columnsAst)
+
+                val exprAst = exprToAst(expr)
+                val pathAst = exprToAst(path)
+                val columnsAst = columns.map(jsonColumnToAst)
+                val alias = fetchAlias(table)
+                SqlTable.Json(
+                    withLateral,
+                    exprAst,
+                    pathAst,
+                    pathAlias,
+                    Nil,
+                    columnsAst,
+                    None,
+                    tableAliasToAst(alias, columnAliases),
+                    None
+                )
+            case IrTable.Graph(withLateral, name, matchMode, patterns, where, rowsMode, columns, exportMode, columnAliases) =>
+                def graphPatternToAst(pattern: IrGraphPattern): SqlGraphPattern =
+                    val termAst = graphPatternTermToAst(pattern.term)
+                    SqlGraphPattern(pattern.name, termAst)
+
+                def graphPatternTermToAst(term: IrGraphPatternTerm): SqlGraphPatternTerm =
+                    term match
+                        case IrGraphPatternTerm.Quantified(term, quantifier) =>
+                            SqlGraphPatternTerm.Quantified(graphPatternTermToAst(term), graphQuantifierToAst(quantifier))
+                        case IrGraphPatternTerm.Vertex(table, label, where) =>
+                            val alias = fetchAlias(table)
+                            SqlGraphPatternTerm.Vertex(Some(alias), label, where.map(exprToAst))
+                        case IrGraphPatternTerm.Edge(leftSymbol, table, label, where, rightSymbol) =>
+                            val alias = fetchAlias(table)
+                            SqlGraphPatternTerm.Edge(leftSymbol, Some(alias), label, where.map(exprToAst), rightSymbol)
+                        case IrGraphPatternTerm.And(left, right) =>
+                            SqlGraphPatternTerm.And(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                        case IrGraphPatternTerm.Or(left, right) =>
+                            SqlGraphPatternTerm.Or(graphPatternTermToAst(left), graphPatternTermToAst(right))
+                        case IrGraphPatternTerm.Alternation(left, right) =>
+                            SqlGraphPatternTerm.Alternation(graphPatternTermToAst(left), graphPatternTermToAst(right))
+
+                def graphQuantifierToAst(quantifier: IrGraphQuantifier): SqlGraphQuantifier =
+                    quantifier match
+                        case IrGraphQuantifier.Asterisk =>
+                            SqlGraphQuantifier.Asterisk
+                        case IrGraphQuantifier.Question =>
+                            SqlGraphQuantifier.Question
+                        case IrGraphQuantifier.Plus =>
+                            SqlGraphQuantifier.Plus
+                        case IrGraphQuantifier.Between(start, end) =>
+                            SqlGraphQuantifier.Between(start.map(exprToAst), end.map(exprToAst))
+                        case IrGraphQuantifier.Quantity(quantity) =>
+                            SqlGraphQuantifier.Quantity(exprToAst(quantity))
+
+                SqlTable.Graph(
+                    withLateral,
+                    name,
+                    matchMode,
+                    patterns.map(graphPatternToAst),
+                    where.map(exprToAst),
+                    rowsMode,
+                    columns.map(selectItemToAst),
+                    exportMode,
+                    tableAliasToAst(fetchAlias(table), columnAliases),
+                    None
+                )
+            case r @ IrTable.MatchRecognize(
+                source,
+                partitionBy,
+                orderBy,
+                measures,
+                rowsMode,
+                rowPattern,
+                columnAliases
+            ) =>
+                def quantifierToAst(quantifier: IrRowPatternQuantifier): SqlRowPatternQuantifier =
+                    quantifier match
+                        case IrRowPatternQuantifier.Asterisk(withQuestion) =>
+                            SqlRowPatternQuantifier.Asterisk(withQuestion)
+                        case IrRowPatternQuantifier.Plus(withQuestion) =>
+                            SqlRowPatternQuantifier.Plus(withQuestion)
+                        case IrRowPatternQuantifier.Question(withQuestion) =>
+                            SqlRowPatternQuantifier.Question(withQuestion)
+                        case IrRowPatternQuantifier.Between(start, end, withQuestion) =>
+                            SqlRowPatternQuantifier.Between(
+                                start.map(exprToAst),
+                                end.map(exprToAst),
+                                withQuestion
+                            )
+                        case IrRowPatternQuantifier.Quantity(quantity) =>
+                            SqlRowPatternQuantifier.Quantity(exprToAst(quantity))
+
+                def termToAst(term: IrRowPatternTerm): SqlRowPatternTerm =
+                    val quantifierAst = term.quantifier.map(quantifierToAst)
+                    term match
+                        case IrRowPatternTerm.Pattern(name, _) =>
+                            SqlRowPatternTerm.Pattern(name, quantifierAst)
+                        case IrRowPatternTerm.Circumflex(_) =>
+                            SqlRowPatternTerm.Circumflex(quantifierAst)
+                        case IrRowPatternTerm.Dollar(_) =>
+                            SqlRowPatternTerm.Dollar(quantifierAst)
+                        case IrRowPatternTerm.Exclusion(inner, _) =>
+                            SqlRowPatternTerm.Exclusion(termToAst(inner), quantifierAst)
+                        case IrRowPatternTerm.Permute(terms, _) =>
+                            SqlRowPatternTerm.Permute(terms.map(termToAst), quantifierAst)
+                        case IrRowPatternTerm.Then(left, right, _) =>
+                            SqlRowPatternTerm.Then(termToAst(left), termToAst(right), quantifierAst)
+                        case IrRowPatternTerm.Or(left, right, _) =>
+                            SqlRowPatternTerm.Or(termToAst(left), termToAst(right), quantifierAst)
+
+                def attachMatchRecognize(
+                    table: SqlTable,
+                    recognize: SqlMatchRecognize
+                ): SqlTable =
+                    table match
+                        case t: SqlTable.Ident =>
+                            t.copy(matchRecognize = Some(recognize))
+                        case t: SqlTable.Subquery =>
+                            t.copy(matchRecognize = Some(recognize))
+                        case t: SqlTable.Func =>
+                            t.copy(matchRecognize = Some(recognize))
+                        case t: SqlTable.Json =>
+                            t.copy(matchRecognize = Some(recognize))
+                        case t: SqlTable.Graph =>
+                            t.copy(matchRecognize = Some(recognize))
+                        case _: SqlTable.Join =>
+                            throw new IllegalArgumentException(
+                                "MATCH_RECOGNIZE cannot be applied to a join; wrap it in a subquery."
+                            )
+
+                val rowPatternAst =
+                    SqlRowPattern(
+                        rowPattern.afterMatchMode,
+                        rowPattern.strategy,
+                        termToAst(rowPattern.pattern),
+                        rowPattern.subset,
+                        rowPattern.define.map: define =>
+                            SqlRowPatternDefineItem(define.name, exprToAst(define.expr))
+                    )
+                val recognizeAst =
+                    SqlMatchRecognize(
+                        partitionBy.map(exprToAst),
+                        orderBy.map(orderingItemToAst),
+                        measures.map: measure =>
+                            SqlRowPatternMeasureItem(exprToAst(measure.expr), measure.alias),
+                        rowsMode,
+                        rowPatternAst,
+                        Some(SqlTableAlias(fetchAlias(r), columnAliases))
+                    )
+                attachMatchRecognize(tableToAst(source), recognizeAst)
+            case IrTable.PatternVariable(name) =>
+                SqlTable.Ident(name, None, None, None, None)
+
+    private def dmlTableToAst(table: IrTable.Ident, needAlias: Boolean): SqlTable.Ident =
+        if needAlias then
+            SqlTable.Ident(table.name, tableAliasToAst(fetchAlias(table), Nil), None, None, None)
+        else
+            SqlTable.Ident(table.name, None, None, None, None)
+
+    private def exprToAst(expr: IrExpr): SqlExpr =
+        expr match
+            case IrExpr.Native(expr) =>
+                expr
+            case IrExpr.Column(table, name) =>
+                val tableAlias =
+                    table match
+                        case Some(IrTable.PatternVariable(name)) =>
+                            Some(name)
+                        case _ =>
+                            table.map(fetchAlias)
+                SqlExpr.Column(tableAlias, name)
+            case IrExpr.Tuple(items) =>
+                SqlExpr.Tuple(items.map(exprToAst))
+            case IrExpr.Array(items) =>
+                SqlExpr.Array(items.map(exprToAst))
+            case IrExpr.Unary(SqlUnaryOperator.Not, expr) =>
+                expr match
+                    case IrExpr.Native(SqlExpr.BooleanLiteral(boolean)) =>
+                        SqlExpr.BooleanLiteral(!boolean)
+                    case IrExpr.Binary(left, SqlBinaryOperator.Equal, right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.NotEqual, exprToAst(right))
+                    case IrExpr.Binary(left, SqlBinaryOperator.NotEqual, right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.Equal, exprToAst(right))
+                    case IrExpr.Binary(left, SqlBinaryOperator.Is(not), right) =>
+                        SqlExpr.Binary(exprToAst(left), SqlBinaryOperator.Is(!not), exprToAst(right))
+                    case IrExpr.Like(expr, pattern, not) =>
+                        SqlExpr.Like(exprToAst(expr), exprToAst(pattern), None, !not)
+                    case IrExpr.In(expr, in, withNot) =>
+                        exprToAst(IrExpr.In(expr, in, !withNot))
+                    case IrExpr.Between(expr, between, and, not) =>
+                        SqlExpr.Between(exprToAst(expr), exprToAst(between), exprToAst(and), !not)
+                    case IrExpr.Unary(SqlUnaryOperator.Not, expr) =>
+                        exprToAst(expr)
+                    case IrExpr.JsonTest(expr, nodeType, not) =>
+                        SqlExpr.JsonTest(exprToAst(expr), nodeType, None, !not)
+                    case _ =>
+                        SqlExpr.Unary(SqlUnaryOperator.Not, exprToAst(expr))
+            case IrExpr.Unary(operator, expr) =>
+                SqlExpr.Unary(operator, exprToAst(expr))
+            case IrExpr.Binary(left, SqlBinaryOperator.Div, right) =>
+                SqlExpr.Binary(
+                    SqlExpr.Cast(exprToAst(left), SqlType.Decimal(Some(38, 10))),
+                    SqlBinaryOperator.Div,
+                    SqlExpr.Cast(exprToAst(right), SqlType.Decimal(Some(38, 10)))
+                )
+            case IrExpr.Binary(left, operator, right) =>
+                SqlExpr.Binary(exprToAst(left), operator, exprToAst(right))
+            case IrExpr.In(expr, in, withNot) =>
+                in match
+                    case IrInRightOperand.Values(Nil) =>
+                        val operatorAst =
+                            if withNot then SqlBinaryOperator.NotEqual else SqlBinaryOperator.Equal
+                        SqlExpr.Binary(
+                            SqlExpr.NumberLiteral(1),
+                            operatorAst,
+                            SqlExpr.NumberLiteral(0)
+                        )
+                    case IrInRightOperand.Values(e :: es) =>
+                        SqlExpr.In(
+                            exprToAst(expr),
+                            SqlInRightOperand.Values(NonEmptyList(exprToAst(e), es.map(exprToAst))),
+                            withNot
+                        )
+                    case IrInRightOperand.Subquery(query) =>
+                        SqlExpr.In(exprToAst(expr), SqlInRightOperand.Subquery(queryToAst(query)), withNot)
+            case IrExpr.Between(expr, start, end, withNot) =>
+                SqlExpr.Between(exprToAst(expr), exprToAst(start), exprToAst(end), withNot)
+            case IrExpr.Like(expr, pattern, withNot) =>
+                SqlExpr.Like(exprToAst(expr), exprToAst(pattern), None, withNot)
+            case IrExpr.Case(branches, default) =>
+                SqlExpr.Case(branches.map(caseBranchToAst), default.map(exprToAst))
+            case IrExpr.Coalesce(items) =>
+                SqlExpr.Coalesce(items.map(exprToAst))
+            case IrExpr.NullIf(expr, test) =>
+                SqlExpr.NullIf(exprToAst(expr), exprToAst(test))
+            case IrExpr.Cast(expr, t) =>
+                SqlExpr.Cast(exprToAst(expr), t)
+            case IrExpr.JsonTest(expr, nodeType, withNot) =>
+                SqlExpr.JsonTest(exprToAst(expr), nodeType, None, withNot)
+            case IrExpr.Window(expr, partitionBy, orderBy, frame) =>
+                val partitionByAst = partitionBy.map(exprToAst)
+                val orderByAst = orderBy.map(orderingItemToAst)
+                val frameAst = frame.map(windowFrameToAst)
+                val windowAst = SqlWindow.Inlined(None, partitionByAst, orderByAst, frameAst)
+                SqlExpr.Window(exprToAst(expr), windowAst)
+            case IrExpr.Subquery(query) =>
+                SqlExpr.Subquery(queryToAst(query))
+            case IrExpr.ExistsPredicate(query) =>
+                SqlExpr.ExistsPredicate(queryToAst(query))
+            case IrExpr.QuantifiedComparisonPredicate(expr, operator, quantifier, query) =>
+                SqlExpr.QuantifiedComparisonPredicate(
+                    exprToAst(expr),
+                    operator,
+                    quantifier,
+                    queryToAst(query)
+                )
+            case IrExpr.Grouping(items) =>
+                SqlExpr.Grouping(items.map(exprToAst))
+            case IrExpr.IdentFunc(name) =>
+                SqlExpr.IdentFunc(name)
+            case IrExpr.SubstringFunc(expr, from, forOpt) =>
+                SqlExpr.SubstringFunc(exprToAst(expr), exprToAst(from), forOpt.map(exprToAst))
+            case IrExpr.OverlayFunc(expr, placing, from, forOpt) =>
+                SqlExpr.OverlayFunc(
+                    exprToAst(expr),
+                    exprToAst(placing),
+                    exprToAst(from),
+                    forOpt.map(exprToAst)
+                )
+            case IrExpr.PositionFunc(expr, in) =>
+                SqlExpr.PositionFunc(exprToAst(expr), exprToAst(in))
+            case IrExpr.ExtractFunc(unit, expr) =>
+                SqlExpr.ExtractFunc(unit, exprToAst(expr))
+            case IrExpr.JsonObjectAggFunc(item, filter) =>
+                val itemAst = SqlJsonObjectItem(exprToAst(item.key), exprToAst(item.value))
+                val filterAst = filter.map(exprToAst)
+                SqlExpr.JsonObjectAggFunc(itemAst, None, None, None, filterAst)
+            case IrExpr.JsonArrayAggFunc(value, orderBy, filter) =>
+                val itemAst = SqlJsonArrayItem(exprToAst(value), None)
+                val orderByAst = orderBy.map(orderingItemToAst)
+                val filterAst = filter.map(exprToAst)
+                SqlExpr.JsonArrayAggFunc(itemAst, orderByAst, None, None, filterAst)
+            case IrExpr.JsonSerializeFunc(expr) =>
+                SqlExpr.JsonSerializeFunc(exprToAst(expr), None)
+            case IrExpr.JsonParseFunc(expr) =>
+                SqlExpr.JsonParseFunc(exprToAst(expr), None, None)
+            case IrExpr.JsonQueryFunc(expr, path) =>
+                SqlExpr.JsonQueryFunc(exprToAst(expr), exprToAst(path), Nil, None, None, None, None, None)
+            case IrExpr.JsonValueFunc(expr, path) =>
+                SqlExpr.JsonValueFunc(exprToAst(expr), exprToAst(path), Nil, None, None, None)
+            case IrExpr.JsonExistsFunc(expr, path) =>
+                SqlExpr.JsonExistsFunc(exprToAst(expr), exprToAst(path), Nil, None)
+            case IrExpr.JsonObjectFunc(items) =>
+                SqlExpr.JsonObjectFunc(
+                    items.map(i => SqlJsonObjectItem(exprToAst(i.key), exprToAst(i.value))),
+                    None,
+                    None,
+                    None
+                )
+            case IrExpr.JsonArrayFunc(items) =>
+                SqlExpr.JsonArrayFunc(items.map(i => SqlJsonArrayItem(exprToAst(i), None)), None, None)
+            case IrExpr.CountAsteriskFunc(filter) =>
+                SqlExpr.CountAsteriskFunc(None, filter.map(exprToAst))
+            case IrExpr.ListAggFunc(quantifier, expr, separator, withinGroup, filter) =>
+                val withinGroupAst = withinGroup.map(orderingItemToAst)
+                val filterAst = filter.map(exprToAst)
+                SqlExpr.ListAggFunc(quantifier, exprToAst(expr), exprToAst(separator), None, withinGroupAst, filterAst)
+            case IrExpr.NullsTreatmentFunc(name, args, nullsMode) =>
+                val argsAst = args.map(exprToAst)
+                SqlExpr.NullsTreatmentFunc(name, argsAst, nullsMode)
+            case IrExpr.NthValueFunc(expr, row, fromMode, nullsMode) =>
+                SqlExpr.NthValueFunc(
+                    exprToAst(expr),
+                    exprToAst(row),
+                    fromMode,
+                    nullsMode
+                )
+            case IrExpr.GeneralFunc(quantifier, name, args, orderBy, withinGroup, filter) =>
+                val argsAst = args.map(exprToAst)
+                val orderByAst = orderBy.map(orderingItemToAst)
+                val withinGroupAst = withinGroup.map(orderingItemToAst)
+                val filterAst = filter.map(exprToAst)
+                SqlExpr.GeneralFunc(
+                    quantifier,
+                    name,
+                    argsAst,
+                    orderByAst,
+                    withinGroupAst,
+                    filterAst
+                )
+            case IrExpr.MatchPhase(phase, expr) =>
+                SqlExpr.MatchPhase(phase, exprToAst(expr))
+
+    private def caseBranchToAst(branch: IrCaseBranch): SqlCaseBranch =
+        SqlCaseBranch(exprToAst(branch.when), exprToAst(branch.`then`))
+
+    private def orderingItemToAst(item: IrOrderingItem): SqlOrderingItem =
+        SqlOrderingItem(
+            exprToAst(item.expr),
+            Some(item.ordering),
+            item.nullsOrdering
+        )
+
+    private def windowFrameBoundToAst(bound: IrWindowFrameBound): SqlWindowFrameBound =
+        bound match
+            case IrWindowFrameBound.CurrentRow =>
+                SqlWindowFrameBound.CurrentRow
+            case IrWindowFrameBound.UnboundedPreceding =>
+                SqlWindowFrameBound.UnboundedPreceding
+            case IrWindowFrameBound.Preceding(n) =>
+                SqlWindowFrameBound.Preceding(exprToAst(n))
+            case IrWindowFrameBound.UnboundedFollowing =>
+                SqlWindowFrameBound.UnboundedFollowing
+            case IrWindowFrameBound.Following(n) =>
+                SqlWindowFrameBound.Following(exprToAst(n))
+
+    private def windowFrameToAst(frame: IrWindowFrame): SqlWindowFrame =
+        frame match
+            case IrWindowFrame.Start(unit, start, excludeMode) =>
+                SqlWindowFrame.Start(
+                    Nil,
+                    unit,
+                    windowFrameBoundToAst(start),
+                    excludeMode,
+                    None
+                )
+            case IrWindowFrame.Between(unit, start, end, excludeMode) =>
+                SqlWindowFrame.Between(
+                    Nil,
+                    unit,
+                    windowFrameBoundToAst(start),
+                    windowFrameBoundToAst(end),
+                    excludeMode,
+                    None
+                )
+
+    private def selectItemToAst(item: IrSelectItem): SqlSelectItem =
+        SqlSelectItem.Expr(exprToAst(item.expr), Some(item.alias))
+
+    private def groupingItemToAst(item: IrGroupingItem): SqlGroupingItem =
+        item match
+            case IrGroupingItem.EmptyGroup =>
+                SqlGroupingItem.EmptyGroup
+            case IrGroupingItem.Expr(expr) =>
+                SqlGroupingItem.Expr(exprToAst(expr))
+            case IrGroupingItem.Cube(items) =>
+                SqlGroupingItem.Cube(items.map(exprToAst))
+            case IrGroupingItem.Rollup(items) =>
+                SqlGroupingItem.Rollup(items.map(exprToAst))
+            case IrGroupingItem.GroupingSets(items) =>
+                SqlGroupingItem.GroupingSets(items.map(groupingItemToAst))
+
+    private def limitToAst(limit: IrLimit): SqlLimit =
+        SqlLimit(
+            limit.offset.map(exprToAst),
+            limit.fetch.map: f =>
+                SqlFetch(
+                    exprToAst(f.limit),
+                    f.unit,
+                    f.mode
+                )
+        )
+
+    private def lockToAst(lock: IrLock): SqlLock =
+        def modeToAst(mode: IrLockWaitMode): SqlLockWaitMode =
+            mode match
+                case IrLockWaitMode.NoWait =>
+                    SqlLockWaitMode.NoWait
+                case IrLockWaitMode.SkipLocked =>
+                    SqlLockWaitMode.SkipLocked
+
+        lock match
+            case IrLock.Update(mode) =>
+                SqlLock.Update(mode.map(modeToAst))
+            case IrLock.Share(mode) =>
+                SqlLock.Share(mode.map(modeToAst))
+
+    private def tableAliasToAst(alias: String, columnAliases: List[String]): Option[SqlTableAlias] =
+        Some(SqlTableAlias(alias, columnAliases))
+
+    private def fetchAlias(table: IrTable): String =
+        tableAliasMap.computeIfAbsent(
+            table,
+            _ =>
+                tableIndex += 1
+                s"t$tableIndex"
+        )
+
+    private def freshCteName(): String =
+        cteIndex += 1
+        s"cte$cteIndex"
+
+    /**
+     * Lowers an expression IR to a SQL AST expression.
+     */
+    def toAst(expr: IrExpr): SqlExpr =
+        exprToAst(expr)
+
+    /**
+     * Lowers a query IR to a SQL AST query.
+     */
+    def toAst(query: IrQuery): SqlQuery =
+        queryToAst(query)
+
+    /**
+     * Lowers a statement IR to a SQL AST statement.
+     */
+    def toAst(statement: IrStatement): SqlStatement =
+        statementToAst(statement)

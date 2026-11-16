@@ -23,7 +23,7 @@ import sqala.util.NonEmptyList
 case class SqlMatchRecognize(
     partitionBy: List[SqlExpr],
     orderBy: List[SqlOrderingItem],
-    measures: List[SqlRowPatternMeasureItem],
+    measures: NonEmptyList[SqlRowPatternMeasureItem],
     rowsMode: Option[SqlRecognizePatternRowsMode],
     rowPattern: SqlRowPattern,
     alias: Option[SqlTableAlias]

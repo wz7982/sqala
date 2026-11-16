@@ -1,12 +1,11 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
-import sqala.ast.statement.{SqlStatement, SqlUpdateSetPair}
-import sqala.ast.table.{SqlTable, SqlTableAlias}
-import sqala.metadata.{AsSqlExprs, SqlBoolean, TableMacro}
+import sqala.ir.*
+import sqala.metadata.{AsSqlExprs, Dialect, SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.{NonEmptyList, statementToString}
 
 import scala.compiletime.summonInline
 import scala.deriving.Mirror
@@ -14,7 +13,7 @@ import scala.deriving.Mirror
 /**
  * A column name and update expression pair produced by `:=`.
  */
-final case class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: SqlExpr)
+final class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: IrExpr)
 
 /**
  * Tracks the state of an `UPDATE` builder, restricting which
@@ -36,17 +35,17 @@ final class UpdateSetContext
 /**
   * Represents an `UPDATE` statement.
   */
-final case class UpdateTree(
-    private[sqala] val table: SqlTable.Ident,
-    private[sqala] val setPairs: List[SqlUpdateSetPair],
-    private[sqala] val where: Option[SqlExpr]
+case class UpdateTree(
+    private[sqala] val table: IrTable.Ident,
+    private[sqala] val setPairs: List[IrUpdateSetPair],
+    private[sqala] val where: Option[IrExpr]
 ):
     /**
      * Returns a copy with the given condition added to the `WHERE` clause
      * via `AND`.
      */
-    def addWhere(condition: SqlExpr): UpdateTree =
-        copy(where = where.map(SqlExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
+    def addWhere(condition: IrExpr): UpdateTree =
+        copy(where = where.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
 
 /**
@@ -73,7 +72,7 @@ final class Update[T, S <: UpdateState](
         val updateExpr = pair.updateExpr
         new Update(
             table,
-            tree.copy(setPairs = (tree.setPairs :+ SqlUpdateSetPair(pair.columnName, updateExpr)))
+            tree.copy(setPairs = (tree.setPairs :+ IrUpdateSetPair(pair.columnName, updateExpr)))
         )
 
     /**
@@ -88,39 +87,49 @@ final class Update[T, S <: UpdateState](
      */
     def where[F](f: QueryContext[1] ?=> Table[T, Column, 1] => F)(using
         a: AsExpr[F, 1],
-        b: SqlBoolean[a.R],
+        ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
-        i: CanInFilter[kt.R],
-        refl: S =:= UpdateTable,
+        ci: CanInSimpleClause[kt.R, "where"]
     ): Update[T, UpdateTable] =
-        val condition = a.asExpr(f(table))
-        new Update(table, tree.addWhere(condition.asSqlExpr))
+        val condition = a.asExpr(f(table)).expr
+        new Update(table, tree.addWhere(condition))
 
     /**
      * Returns an `UPDATE` statement.
      */
-    private[sqala] def toSqlStatement: SqlStatement.Update =
-        SqlStatement.Update(
+    private[sqala] def toSqlStatement: IrStatement.Update =
+        require(tree.setPairs.nonEmpty, "Update table must have at least one set column.")
+        IrStatement.Update(
             tree.table,
-            tree.setPairs.toNonEmptyList,
+            NonEmptyList(tree.setPairs.head, tree.setPairs.tail),
             tree.where
         )
 
+    /**
+     * Generates the SQL string for the given dialect.
+     *
+     * `standardEscapeStrings` controls string literal escaping: `true` treats
+     * backslashes literally (standard behavior, e.g. PostgreSQL, Oracle);
+     * `false` uses backslashes as escape characters (e.g. MySQL).
+     *
+     * {{{
+     * val sql = q.sql(PostgresqlDialect, true)
+     * }}}
+     */
+    def sql(dialect: Dialect, standardEscapeStrings: Boolean = true): String =
+        statementToString(ToAst().toAst(toSqlStatement), dialect, standardEscapeStrings)
+
 object Update:
-    given qc: QueryContext[1] = QueryContext(TableIndexRef(0))
+    given qc: QueryContext[1] = QueryContext()
 
     inline def apply[T <: Product]: Update[T, UpdateTable] =
         val metaData = TableMacro.tableMetaData[T]
-        val alias = qc.fetchAlias()
-        val sqlTable: SqlTable.Ident = SqlTable.Ident(
+        val irTable: IrTable.Ident = IrTable.Ident(
             metaData.tableName,
-            Some(SqlTableAlias(alias, Nil)),
-            None,
-            None,
-            None
+            Nil
         )
-        val table = Table[T, Column, 1](alias, metaData)
-        val tree = UpdateTree(sqlTable, Nil, None)
+        val table = Table[T, Column, 1](irTable, metaData)
+        val tree = UpdateTree(irTable, Nil, None)
         new Update(table, tree)
 
     /**
@@ -135,20 +144,19 @@ object Update:
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
         val metaData = TableMacro.tableMetaData[T]
-        val sqlTable: SqlTable.Ident =
-            SqlTable.Ident(
+        val irTable: IrTable.Ident =
+            IrTable.Ident(
                 metaData.tableName,
-                None,
-                None,
-                None,
-                None
+                Nil
             )
-        val table = Table[T, Column, 1](metaData.tableName, metaData)
+        val table = Table[T, Column, 1](irTable, metaData)
         val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
-        val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
-        val updateMetaData = metaData.fields
-            .zip(metaData.columns)
-            .zip(sqlExprs)
+        val irExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+            .asSqlExprs(data)
+            .map(e => IrExpr.Native(e))
+        val updateMetaData = metaData.fields.toList
+            .zip(metaData.columns.toList)
+            .zip(irExprs)
             .map(i => (i._1._1, i._1._2, i._2))
         val updateColumns = updateMetaData
             .filterNot((f, _, _) => metaData.primaryKeyFields.contains(f))
@@ -157,13 +165,13 @@ object Update:
                     case (SqlExpr.Cast(SqlExpr.NullLiteral, _), true) => false
                     case _ => true
             .map: (_, column, expr) =>
-                SqlUpdateSetPair(column, expr)
+                IrUpdateSetPair(column, expr)
         val conditions = updateMetaData
             .filter((f, _, _) => metaData.primaryKeyFields.contains(f))
             .map: (_, column, expr) =>
-                SqlExpr.Binary(SqlExpr.Column(None, column), SqlBinaryOperator.Equal, expr)
+                IrExpr.Binary(IrExpr.Column(None, column), SqlBinaryOperator.Equal, expr)
         val condition =
             if conditions.isEmpty then None
-            else Some(conditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.And, y)))
-        val tree = UpdateTree(sqlTable, updateColumns, condition)
+            else Some(conditions.reduce((x, y) => IrExpr.Binary(x, SqlBinaryOperator.And, y)))
+        val tree = UpdateTree(irTable, updateColumns, condition)
         new Update(table, tree)

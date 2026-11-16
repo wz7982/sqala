@@ -1,10 +1,9 @@
 package sqala.static.dsl
 
-import sqala.static.dsl.table.*
+import sqala.static.dsl.table.{MappedTable, Table}
 
 import java.time.*
 import scala.compiletime.ops.boolean.||
-import scala.compiletime.ops.int.S
 
 /**
  * Wraps a type with constructor if not already wrapped.
@@ -40,21 +39,23 @@ type FlattenUnnest[T] =
         case _ => T
 
 /**
- * Maps an entity field to its expression type, wrapping with
- * `Option` when the entity field is optional.
+ * Maps an entity field to its expression type, wrapping with `Option`
+ * when the entity field is optional. The result keeps the table's kind:
+ * `ColumnExpr` for a `Column` table, `Expr` for other kinds.
  */
 type MapField[X, T, K[_ <: Int] <: ExprKind, L <: Int] =
     T match
-        case Option[_] => Expr[Wrap[X, Option], K[L]]
-        case _ => Expr[X, K[L]]
+        case Option[_] => MapFieldKind[Wrap[X, Option], K, L]
+        case _ => MapFieldKind[X, K, L]
 
 /**
- * Finds the index of a type in a tuple.
+ * Chooses the concrete expression type for an entity field based on its
+ * table kind.
  */
-type Index[T <: Tuple, X, N <: Int] <: Int =
-    T match
-        case X *: xs => N
-        case x *: xs => Index[xs, X, S[N]]
+type MapFieldKind[X, K[_ <: Int] <: ExprKind, L <: Int] =
+    K[L] match
+        case Column[_] => ColumnExpr[X, L]
+        case _ => Expr[X, K[L]]
 
 /**
  * Tests whether a type is `Option`.
@@ -63,6 +64,22 @@ type IsOption[T] <: Boolean =
     T match
         case Option[t] => true
         case _ => false
+
+/**
+ * Maps an entity field to its expression type, wrapping with
+ * `Option` when the entity field is optional.
+ */
+type MapOptionField[T <: Tuple, O <: Boolean] <: Tuple =
+    O match
+        case false => T
+        case true =>
+            T match
+                case ColumnExpr[t, l] *: xs => ColumnExpr[Wrap[t, Option], l] *: MapOptionField[xs, O]
+                case AggExpr[t, ks] *: xs => AggExpr[Wrap[t, Option], ks] *: MapOptionField[xs, O]
+                case Expr[t, k] *: xs => Expr[Wrap[t, Option], k] *: MapOptionField[xs, O]
+                case Table[t, k, l] *: xs => Table[Wrap[t, Option], k, l] *: MapOptionField[xs, O]
+                case MappedTable[n, v, o, l] *: xs => MappedTable[n, v, true, l] *: MapOptionField[xs, O]
+                case EmptyTuple => EmptyTuple
 
 /**
  * Removes duplicate types from a tuple.
@@ -141,33 +158,3 @@ type TimeResult[A, B] =
         case (LocalTime, _, false) => LocalTime
         case (_, LocalTime, true) => Option[LocalTime]
         case (_, LocalTime, false) => LocalTime
-
-/**
- * Flattens nested JSON column names into a flat tuple.
- */
-type JsonColumnNameFlatten[N <: Tuple, V <: Tuple] <: Tuple =
-    (N, V) match
-        case (hn *: tn, hv *: tv) =>
-            hv match
-                case JsonNestedColumns[n, v] =>
-                    Tuple.Concat[JsonColumnNameFlatten[n, v], JsonColumnNameFlatten[tn, tv]]
-                case _ =>
-                    hn *: JsonColumnNameFlatten[tn, tv]
-        case (EmptyTuple, EmptyTuple) => EmptyTuple
-
-/**
- * Flattens nested JSON column types into flat column expressions.
- */
-type JsonColumnFlatten[V <: Tuple, L <: Int] <: Tuple =
-    V match
-        case h *: t =>
-            h match
-                case JsonNestedColumns[_, v] =>
-                    Tuple.Concat[JsonColumnFlatten[v, L], JsonColumnFlatten[t, L]]
-                case JsonOrdinalColumn =>
-                    Expr[Int, Column[L]] *: JsonColumnFlatten[t, L]
-                case JsonPathColumn[pt] =>
-                    Expr[Wrap[pt, Option], Column[L]] *: JsonColumnFlatten[t, L]
-                case JsonExistsColumn =>
-                    Expr[Option[Boolean], Column[L]] *: JsonColumnFlatten[t, L]
-        case EmptyTuple => EmptyTuple

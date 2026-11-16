@@ -3,9 +3,8 @@ package sqala.printer
 import sqala.ast.expr.*
 import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.order.SqlNullsOrdering.{First, Last}
-import sqala.ast.order.SqlOrdering
 import sqala.ast.order.SqlOrdering.{Asc, Desc}
-import sqala.ast.order.SqlOrderingItem
+import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.util.NonEmptyList

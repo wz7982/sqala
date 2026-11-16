@@ -1,13 +1,12 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.SqlExpr
-import sqala.ast.statement.{SqlInsertMode, SqlQuery, SqlStatement}
-import sqala.ast.table.SqlTable
-import sqala.metadata.{AsSqlExprs, TableMacro}
+import sqala.ir.*
+import sqala.metadata.{AsSqlExprs, Dialect, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.table.Table
-import sqala.util.NonEmptyList.toNonEmptyList
+import sqala.util.{NonEmptyList, statementToString}
 
 import scala.compiletime.summonInline
 import scala.deriving.Mirror
@@ -33,11 +32,10 @@ type InsertQuery = InsertState.Query.type
 /**
  * Represents an `INSERT` statement.
  */
-final case class InsertTree(
-    private[sqala] val table: SqlTable.Ident,
+case class InsertTree(
+    private[sqala] val table: IrTable.Ident,
     private[sqala] val columns: List[String],
-    private[sqala] val values: List[List[SqlExpr]],
-    private[sqala] val query: Option[SqlQuery]
+    private[sqala] val insert: List[List[IrExpr]] | IrQuery
 )
 
 /**
@@ -56,15 +54,18 @@ final class Insert[T, S <: InsertState](
     inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsExpr[I, 1]): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val sqlTable: SqlTable.Ident = SqlTable.Ident(tableName, None, None, None, None)
-        val table = Table[T, Column, 1](tableName, metaData)
+        val irTable: IrTable.Ident = IrTable.Ident(tableName, Nil)
+        val table = Table[T, Column, 1](irTable, metaData)
         val insertItems = a.asExprs(f(table))
         val columns = insertItems.map: i =>
             i match
-                case Expr(SqlExpr.Column(_, c)) => c
-                case _ => throw MatchError(i)
+                case c: ColumnExpr[?, ?] =>
+                    c match
+                        case SqlExpr.Column(_, name) => name
+                case _ =>
+                    throw new MatchError("The inserted expression must be a column expression.")
         val tree =
-            InsertTree(sqlTable, columns.toList, Nil, None)
+            InsertTree(irTable, columns.toList, Nil)
         new Insert(tree)
 
     /**
@@ -80,8 +81,8 @@ final class Insert[T, S <: InsertState](
         refl: S =:= InsertTable
     ): Insert[T, InsertValues] =
         val insertValues = rows.toList.map: row =>
-            summonInline[AsSqlExprs[t.R]].asSqlExprs(t.toTuple(row))
-        new Insert(tree.copy(values = insertValues))
+            summonInline[AsSqlExprs[t.R]].asSqlExprs(t.toTuple(row)).map(e => IrExpr.Native(e))
+        new Insert(tree.copy(insert = insertValues))
 
     /**
      * Provides a single row of values for the `INSERT`. Maps to
@@ -109,29 +110,48 @@ final class Insert[T, S <: InsertState](
         rs: r.R =:= T,
         refl: S =:= InsertTable
     ): Insert[T, InsertQuery] =
-        new Insert(tree.copy(query = Some(query.tree)))
+        new Insert(tree.copy(insert = query.tree))
 
     /**
      * Returns an `INSERT` statement.
      */
-    private[sqala] def toSqlStatement: SqlStatement.Insert =
+    private[sqala] def toSqlStatement: IrStatement.Insert =
         val insertData =
-            if tree.query.isDefined then
-                SqlInsertMode.Subquery(tree.query.get)
-            else
-                SqlInsertMode.Values(tree.values.map(_.toNonEmptyList).toNonEmptyList)
-        SqlStatement.Insert(
+            tree.insert match
+                case values: List[List[IrExpr]] =>
+                    require(values.nonEmpty, "Insert table must have at least one row.")
+                    val rows = values.map: row =>
+                        require(row.nonEmpty, "Insert table must have at least one insert column.")
+                        NonEmptyList(row.head, row.tail)
+                    IrInsertMode.Values(NonEmptyList(rows.head, rows.tail))
+                case query: IrQuery =>
+                    IrInsertMode.Subquery(query)
+        IrStatement.Insert(
             tree.table,
             tree.columns,
             insertData
         )
+
+    /**
+     * Generates the SQL string for the given dialect.
+     *
+     * `standardEscapeStrings` controls string literal escaping: `true` treats
+     * backslashes literally (standard behavior, e.g. PostgreSQL, Oracle);
+     * `false` uses backslashes as escape characters (e.g. MySQL).
+     *
+     * {{{
+     * val sql = q.sql(PostgresqlDialect, true)
+     * }}}
+     */
+    def sql(dialect: Dialect, standardEscapeStrings: Boolean = true): String =
+        statementToString(ToAst().toAst(toSqlStatement), dialect, standardEscapeStrings)
 
 object Insert:
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree =
             InsertTree(
-                SqlTable.Ident(tableName, None, None, None, None), Nil, Nil, None
+                IrTable.Ident(tableName, Nil), Nil, Nil
             )
         new Insert(tree)
 
@@ -144,21 +164,22 @@ object Insert:
     ): Insert[T, InsertEntity] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
-        val columns = metaData.columns
-            .zip(metaData.fields)
+        val columns = metaData.columns.toList
+            .zip(metaData.fields.toList)
             .filterNot((_, field) => metaData.incrementField.contains(field))
             .map((c, _) => c)
         val values = entities.map: entity =>
             val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
-            val sqlExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]].asSqlExprs(data)
-            metaData.fields.zip(sqlExprs)
+            val irExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+                .asSqlExprs(data)
+                .map(e => IrExpr.Native(e))
+            metaData.fields.toList.zip(irExprs)
                 .filterNot((field, _) => metaData.incrementField.contains(field))
                 .map((_, expr) => expr)
         new Insert(
             InsertTree(
-                SqlTable.Ident(tableName, None, None, None, None),
+                IrTable.Ident(tableName, Nil),
                 columns,
-                values.toList,
-                None
+                values.toList
             )
         )

@@ -3,6 +3,7 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
+import scala.util.NotGiven
 
 /**
  * Wraps each field of a projection type with `Option` for nullable results.
@@ -22,46 +23,57 @@ object ToOption:
     type Aux[T, O] = ToOption[T]:
         type R = O
 
-    given expr[T, K <: ExprKind]: Aux[Expr[T, K], Expr[Wrap[T, Option], K]] =
-        new ToOption[Expr[T, K]]:
+    given expr[T, K <: ExprKind, E <: Expr[T, K]](using
+        NotGiven[E <:< AggExpr[?, ?]],
+        NotGiven[E <:< ColumnExpr[?, ?]]
+    ): Aux[E, Expr[Wrap[T, Option], K]] =
+        new ToOption[E]:
             type R = Expr[Wrap[T, Option], K]
 
-            def toOption(x: Expr[T, K]): R =
-                Expr(x.asSqlExpr)
+            def toOption(x: E): R =
+                Expr(x.expr)
 
-    given windowFunc[T, KS <: Tuple]: Aux[WindowFunc[T, KS], WindowFunc[Wrap[T, Option], KS]] =
-        new ToOption[WindowFunc[T, KS]]:
-            type R = WindowFunc[Wrap[T, Option], KS]
+    given agg[T, KS <: Tuple]: Aux[AggExpr[T, KS], AggExpr[Wrap[T, Option], KS]] =
+        new ToOption[AggExpr[T, KS]]:
+            type R = AggExpr[Wrap[T, Option], KS]
 
-            def toOption(x: WindowFunc[T, KS]): R =
-                WindowFunc(x.asSqlExpr)
+            def toOption(x: AggExpr[T, KS]): R =
+                AggExpr(x.expr)
+
+    given column[T, L <: Int]: Aux[ColumnExpr[T, L], ColumnExpr[Wrap[T, Option], L]] =
+        new ToOption[ColumnExpr[T, L]]:
+            type R = ColumnExpr[Wrap[T, Option], L]
+
+            def toOption(x: ColumnExpr[T, L]): R =
+                ColumnExpr(x.expr)
+
+    given window[T, KS <: Tuple]: Aux[WindowPart[T, KS], WindowPart[Wrap[T, Option], KS]] =
+        new ToOption[WindowPart[T, KS]]:
+            type R = WindowPart[Wrap[T, Option], KS]
+
+            def toOption(x: WindowPart[T, KS]): R =
+                WindowPart(x.expr)
 
     given table[T, K[_ <: Int] <: ExprKind, L <: Int]: Aux[Table[T, K, L], Table[Wrap[T, Option], K, L]] =
         new ToOption[Table[T, K, L]]:
             type R = Table[Wrap[T, Option], K, L]
 
             def toOption(x: Table[T, K, L]): R =
-                x.copy[Wrap[T, Option], K, L]()
+                Table[Wrap[T, Option], K, L](
+                    x.__table__,
+                    x.__metaData__,
+                    x.__withTable__
+                )
 
-    given mappedTable[N <: Tuple, V <: Tuple, L <: Int](using
-        t: ToOption[V],
-        tt: ToTuple[t.R]
-    ): Aux[MappedTable[N, V, L], MappedTable[N, tt.R, L]] =
-        new ToOption[MappedTable[N, V, L]]:
-            type R = MappedTable[N, tt.R, L]
+    given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int]: Aux[MappedTable[N, V, O, L], MappedTable[N, V, true, L]] =
+        new ToOption[MappedTable[N, V, O, L]]:
+            type R = MappedTable[N, V, true, L]
 
-            def toOption(x: MappedTable[N, V, L]): R =
-                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
-
-    given recursiveTable[N <: Tuple, V <: Tuple, L <: Int](using
-        t: ToOption[V],
-        tt: ToTuple[t.R]
-    ): Aux[RecursiveTable[N, V, L], RecursiveTable[N, tt.R, L]] =
-        new ToOption[RecursiveTable[N, V, L]]:
-            type R = RecursiveTable[N, tt.R, L]
-
-            def toOption(x: RecursiveTable[N, V, L]): R =
-                x.copy[N, tt.R, L](__items__ = tt.toTuple(t.toOption(x.__items__)))
+            def toOption(x: MappedTable[N, V, O, L]): R =
+                MappedTable[N, V, true, L](
+                    x.__items__,
+                    x.__fields__
+                )
 
     given tuple[H, T <: Tuple](using
         h: ToOption[H],

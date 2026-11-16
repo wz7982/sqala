@@ -1,11 +1,10 @@
 package sqala.static.dsl
 
-import sqala.ast.expr.SqlExpr
 import sqala.ast.order.SqlOrdering
+import sqala.ir.IrOrderingItem
 import sqala.metadata.AsSqlExpr
-import sqala.static.dsl.statement.query.Query
 
-import scala.compiletime.ops.int.>
+import scala.util.NotGiven
 
 /**
  * Lifts values, expressions, and subqueries for `sortBy` in
@@ -28,41 +27,30 @@ object AsSortItem:
         AsSortItem[T, S, CL]:
             type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, S <: QuerySize, CL <: Int](using
-        kt: KindToTuple[EK],
-        i: CanInSort[kt.R, S],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
-    ): Aux[Expr[T, EK], S, CL, kt.R] =
-        new AsSortItem[Expr[T, EK], S, CL]:
+    given expr[T, S <: QuerySize, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        i: CanInSortBy[kt.R, S],
+        nv: SortByNotAllowedValue[a.K]
+    ): Aux[T, S, CL, kt.R] =
+        new AsSortItem[T, S, CL]:
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
-                Sort(x, SqlOrdering.Asc, None)
+            def asSort(x: T): Sort[?, ?] =
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
-    given sort[T: AsSqlExpr, EK <: ExprKind, S <: QuerySize, CL <: Int](using
+    given sort[T, EK <: ExprKind, S <: QuerySize, CL <: Int](using
+        as: ValidateArgType[AsSqlExpr, T, "scalar"],
         kt: KindToTuple[EK],
-        i: CanInSort[kt.R, S],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
+        i: CanInSortBy[kt.R, S],
+        nv: SortByNotAllowedValue[EK]
     ): Aux[Sort[T, EK], S, CL, kt.R] =
         new AsSortItem[Sort[T, EK], S, CL]:
             type KS = kt.R
 
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
-
-    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], S <: QuerySize, CL <: Int](using
-        a: AsExpr[T, CL],
-        as: AsSqlExpr[a.R],
-        i: CanInSort[OKS, S],
-        refl: L > CL =:= true
-    ): Aux[Q, S, CL, OKS] =
-        new AsSortItem[Q, S, CL]:
-            type KS = OKS
-
-            def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` in queries. `S` is the query
@@ -130,41 +118,30 @@ object AsGroupedSortItem:
     type Aux[T, CL <: Int, OKS <: Tuple] = AsGroupedSortItem[T, CL]:
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
-        kt: KindToTuple[EK],
-        i: CanInGroupedSort[kt.R],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
-    ): Aux[Expr[T, EK], CL, kt.R] =
-        new AsGroupedSortItem[Expr[T, EK], CL]:
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
+        i: CanInGroupedSortBy[kt.R],
+        nv: SortByNotAllowedValue[a.K]
+    ): Aux[T, CL, kt.R] =
+        new AsGroupedSortItem[T, CL]:
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
-                Sort(x, SqlOrdering.Asc, None)
+            def asSort(x: T): Sort[?, ?] =
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
-    given sort[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+    given sort[T, EK <: ExprKind, CL <: Int](using
+        as: ValidateArgType[AsSqlExpr, T, "scalar"],
         kt: KindToTuple[EK],
-        i: CanInGroupedSort[kt.R],
-        iv: IsKind[EK, Value],
-        nv: iv.R =:= false
+        i: CanInGroupedSortBy[kt.R],
+        nv: SortByNotAllowedValue[EK]
     ): Aux[Sort[T, EK], CL, kt.R] =
         new AsGroupedSortItem[Sort[T, EK], CL]:
             type KS = kt.R
 
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
-
-    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
-        a: AsExpr[T, CL],
-        as: AsSqlExpr[a.R],
-        i: CanInGroupedSort[OKS],
-        refl: L > CL =:= true
-    ): Aux[Q, CL, OKS] =
-        new AsGroupedSortItem[Q, CL]:
-            type KS = OKS
-
-            def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` after `groupBy`. `CL` is the
@@ -221,16 +198,39 @@ trait AsDistinctSortItem[T, CL <: Int]:
     /**
      * Converts the value to a list of `DistinctSort` values.
      */
-    def asSort(x: T): DistinctSort[?, ?]
+    def asSort(x: T): Sort[?, ?]
 
 object AsDistinctSortItem:
-    given expr[T: AsSqlExpr, EL <: Int, CL <: Int](using EL =:= CL): AsDistinctSortItem[Distinct[T, EL], CL] with
-        def asSort(x: Distinct[T, EL]): DistinctSort[?, ?] =
-            DistinctSort(Expr(x.expr), SqlOrdering.Asc, None)
+    given expr[T, EL <: Int, CL <: Int](using
+        ValidateArgType[AsSqlExpr, T, "scalar"],
+        CanInDistinctSortBy[Expr[T, Distinct[EL]], CL]
+    ): AsDistinctSortItem[Expr[T, Distinct[EL]], CL] with
+        def asSort(x: Expr[T, Distinct[EL]]): Sort[?, ?] =
+            Sort(IrOrderingItem(x.expr, SqlOrdering.Asc, None))
 
-    given sort[T: AsSqlExpr, EL <: Int, CL <: Int](using EL =:= CL): AsDistinctSortItem[DistinctSort[T, EL], CL] with
-        def asSort(x: DistinctSort[T, EL]): DistinctSort[?, ?] =
+    given sort[T, EL <: Int, CL <: Int](using
+        ValidateArgType[AsSqlExpr, T, "scalar"],
+        CanInDistinctSortBy[Sort[T, Distinct[EL]], CL]
+    ): AsDistinctSortItem[Sort[T, Distinct[EL]], CL] with
+        def asSort(x: Sort[T, Distinct[EL]]): Sort[?, ?] =
             x
+
+    given wrongExpr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        i: CanInDistinctSortBy[T, CL],
+        n: NotGiven[a.K <:< Distinct[?]]
+    ): AsDistinctSortItem[T, CL] with
+        def asSort(x: T): Sort[?, ?] =
+            Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
+
+    given wrongSort[T, K <: ExprKind, CL <: Int](using
+        ValidateArgType[AsSqlExpr, T, "scalar"],
+        CanInDistinctSortBy[Sort[T, K], CL],
+        NotGiven[K <:< Distinct[?]]
+    ): AsDistinctSortItem[Sort[T, K], CL] with
+        def asSort(x: Sort[T, K]): Sort[?, ?] =
+            Sort(IrOrderingItem(x.ordering.expr, x.ordering.ordering, x.ordering.nullsOrdering))
 
 /**
  * Collects distinct sort items for `sortBy` after `mapDistinct`.
@@ -240,24 +240,24 @@ trait AsDistinctSort[T, CL <: Int]:
     /**
      * Converts the value to a list of `DistinctSort` values.
      */
-    def asSorts(x: T): List[DistinctSort[?, ?]]
+    def asSorts(x: T): List[Sort[?, ?]]
 
 object AsDistinctSort:
     given item[T, CL <: Int](using a: AsDistinctSortItem[T, CL]): AsDistinctSort[T, CL] with
-        def asSorts(x: T): List[DistinctSort[?, ?]] =
+        def asSorts(x: T): List[Sort[?, ?]] =
             a.asSort(x) :: Nil
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsDistinctSortItem[H, CL],
         t: AsDistinctSort[T, CL]
     ): AsDistinctSort[H *: T, CL] with
-        def asSorts(x: H *: T): List[DistinctSort[?, ?]] =
+        def asSorts(x: H *: T): List[Sort[?, ?]] =
             h.asSort(x.head) :: t.asSorts(x.tail)
 
     given tuple1[H, CL <: Int](using
         h: AsDistinctSortItem[H, CL]
     ): AsDistinctSort[H *: EmptyTuple, CL] with
-        def asSorts(x: H *: EmptyTuple): List[DistinctSort[?, ?]] =
+        def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
             h.asSort(x.head) :: Nil
 
 /**
@@ -286,19 +286,22 @@ object AsOverSortItem:
 
         type KS = OKS
 
-    given expr[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
-        kt: KindToTuple[EK],
+    given expr[T, CL <: Int](using
+        a: AsExpr[T, CL],
+        as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
+        kt: KindToTuple[a.K],
         i: CanInWindow[kt.R]
-    ): Aux[Expr[T, EK], CL, T, kt.R] =
-        new AsOverSortItem[Expr[T, EK], CL]:
-            type R = T
+    ): Aux[T, CL, a.R, kt.R] =
+        new AsOverSortItem[T, CL]:
+            type R = a.R
 
             type KS = kt.R
 
-            def asSort(x: Expr[T, EK]): Sort[?, ?] =
-                Sort(x, SqlOrdering.Asc, None)
+            def asSort(x: T): Sort[?, ?] =
+                Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
-    given sort[T: AsSqlExpr, EK <: ExprKind, CL <: Int](using
+    given sort[T, EK <: ExprKind, CL <: Int](using
+        as: ValidateArgType[AsSqlExpr, T, "scalar"],
         kt: KindToTuple[EK],
         i: CanInWindow[kt.R]
     ): Aux[Sort[T, EK], CL, T, kt.R] =
@@ -309,20 +312,6 @@ object AsOverSortItem:
 
             def asSort(x: Sort[T, EK]): Sort[?, ?] =
                 x
-
-    given query[T, OKS <: Tuple, L <: Int, Q <: Query[T, OKS, L, OneRow], CL <: Int](using
-        a: AsExpr[T, CL],
-        as: AsSqlExpr[a.R],
-        i: CanInWindow[OKS],
-        refl: L > CL =:= true
-    ): Aux[Q, CL, a.R, OKS] =
-        new AsOverSortItem[Q, CL]:
-            type R = a.R
-
-            type KS = OKS
-
-            def asSort(x: Q): Sort[?, ?] =
-                Sort(Expr(SqlExpr.Subquery(x.tree)), SqlOrdering.Asc, None)
 
 /**
  * Collects sort items for `sortBy` in a window `over` clause.
@@ -384,50 +373,3 @@ object AsOverSort:
 
             def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
                 h.asSort(x.head) :: Nil
-
-/**
- * Lifts column expressions for `sortBy` in contexts requiring
- * column-level validation `CL` is the current query context level.
- */
-trait AsColumnSortItem[T, CL <: Int]:
-    /**
-     * Converts the value to a `Sort`.
-     */
-    def asSort(x: T): Sort[?, ?]
-
-object AsColumnSortItem:
-    given expr[T: AsSqlExpr, EL <: Int, CL <: Int](using EL =:= CL): AsColumnSortItem[Expr[T, Column[EL]], CL] with
-        def asSort(x: Expr[T, Column[EL]]): Sort[?, ?] =
-            Sort(x, SqlOrdering.Asc, None)
-
-    given sort[T: AsSqlExpr, EL <: Int, CL <: Int](using EL =:= CL): AsColumnSortItem[Sort[T, Column[EL]], CL] with
-        def asSort(x: Sort[T, Column[EL]]): Sort[?, ?] =
-            x
-
-/**
- * Collects column sort items for `sortBy` in column-level
- * contexts.
- */
-trait AsColumnSort[T, CL <: Int]:
-    /**
-     * Converts the value to a list of `Sort` values.
-     */
-    def asSorts(x: T): List[Sort[?, ?]]
-
-object AsColumnSort:
-    given item[T, CL <: Int](using a: AsColumnSortItem[T, CL]): AsColumnSort[T, CL] with
-        def asSorts(x: T): List[Sort[?, ?]] =
-            a.asSort(x) :: Nil
-
-    given tuple[H, T <: Tuple, CL <: Int](using
-        h: AsColumnSortItem[H, CL],
-        t: AsColumnSort[T, CL]
-    ): AsColumnSort[H *: T, CL] with
-        def asSorts(x: H *: T): List[Sort[?, ?]] =
-            h.asSort(x.head) :: t.asSorts(x.tail)
-
-    given tuple1[H, CL <: Int](using
-        h: AsColumnSortItem[H, CL]
-    ): AsColumnSort[H *: EmptyTuple, CL] with
-        def asSorts(x: H *: EmptyTuple): List[Sort[?, ?]] =
-            h.asSort(x.head) :: Nil

@@ -1,13 +1,14 @@
 package sqala.static.dsl
 
-import sqala.ast.window.{SqlWindowFrame, SqlWindowFrameBound, SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
+import sqala.ast.window.{SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
+import sqala.ir.{IrWindowFrame, IrWindowFrameBound}
 
 /**
  * A window frame bound, produced by `currentRow`,
  * `unboundedPreceding`, `unboundedFollowing`, `n.preceding`,
  * and `n.following`.
  */
-final case class FrameBound[T](private[sqala] val bound: SqlWindowFrameBound)
+final class FrameBound[T, S <: Int, N <: String](private[sqala] val bound: IrWindowFrameBound)
 
 /**
  * An intermediate window specification used in `over` clause.
@@ -17,17 +18,17 @@ final case class FrameBound[T](private[sqala] val bound: SqlWindowFrameBound)
 sealed class Over[KS <: Tuple](
     private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
     private[sqala] val sortBy: List[Sort[?, ?]] = Nil,
-    private[sqala] val frame: Option[SqlWindowFrame] = None
+    private[sqala] val frame: Option[IrWindowFrame] = None
 )(using OverContext)
 
 /**
- * A window specification after `partitionBy`, supporting `sortBy`, 
+ * A window specification after `partitionBy`, supporting `sortBy`,
  * and unbounded frame methods.
  */
-final case class PartitionedOver[KS <: Tuple](
+final class PartitionedOver[KS <: Tuple](
     override private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
     override private[sqala] val sortBy: List[Sort[?, ?]] = Nil,
-    override private[sqala] val frame: Option[SqlWindowFrame] = None
+    override private[sqala] val frame: Option[IrWindowFrame] = None
 )(using OverContext) extends Over[KS](partitionBy, sortBy, frame):
     /**
      * Specifies `ORDER BY` for the window.
@@ -44,155 +45,201 @@ final case class PartitionedOver[KS <: Tuple](
         SortedOver(partitionBy, a.asSorts(sortValue), frame)
 
     /**
-     * Alias of `sortBy`, provided for users familiar with `ORDER BY`.
-     * {{{
-     * .orderBy(p.viewCount.desc)
-     * }}}
-     */
-    def orderBy[T, CL <: Int](sortValue: T)(using
-        qc: QueryContext[CL],
-        a: AsOverSort[T, CL],
-        c: CombineKindTuple[KS, a.KS]
-    ): SortedOver[a.R, c.R] =
-        sortBy(sortValue)
-
-    /**
      * Sets the window frame to `ROWS start`.
-     * 
+     *
      * {{{
      * .rows(currentRow)
      * }}}
      */
-    def rows[CL <: Int](start: FrameBound[Nothing])(using qc: QueryContext[CL]): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, start.bound, None, None))
+    def rows[ST, SS <: Int, SN <: String, CL <: Int](start: FrameBound[ST, SS, SN])(using
+        QueryContext[CL],
+        CanInRowsOrGroupsFrame[ST],
+        ValidateFrame[SS, SN, 3, "current row"]
+    ): BoundedOver[KS] =
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None)
+        )
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .rowsBetween(1.preceding, currentRow)
      * }}}
      */
-    def rowsBetween[CL <: Int](start: FrameBound[Nothing], end: FrameBound[Nothing])(using qc: QueryContext[CL]): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, start.bound, end.bound, None, None))
+    def rowsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
+        start: FrameBound[ST, SS, SN],
+        end: FrameBound[ET, ES, EN]
+    )(using
+        QueryContext[CL],
+        CanInRowsOrGroupsFrame[ST],
+        CanInRowsOrGroupsFrame[ET],
+        ValidateFrame[SS, SN, ES, EN]
+    ): BoundedOver[KS] =
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None)
+        )
 
 /**
  * A window specification after `sortBy`, supporting window frame
  * methods (`rows`, `range`, `groups` and their `between` variants).
  */
-final case class SortedOver[T, KS <: Tuple](
+final class SortedOver[T, KS <: Tuple](
     override private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
     override private[sqala] val sortBy: List[Sort[?, ?]] = Nil,
-    override private[sqala] val frame: Option[SqlWindowFrame] = None
+    override private[sqala] val frame: Option[IrWindowFrame] = None
 )(using OverContext) extends Over[KS](partitionBy, sortBy, frame):
     /**
      * Sets the window frame to `ROWS start`.
-     * 
+     *
      * {{{
      * .rows(currentRow)
      * }}}
      */
-    def rows[S, CL <: Int](start: FrameBound[S])(using
+    def rows[ST, SS <: Int, SN <: String, CL <: Int](start: FrameBound[ST, SS, SN])(using
         QueryContext[CL],
-        CanInRowsOrGroupsFrame[S]
+        CanInRowsOrGroupsFrame[ST],
+        ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Rows, start.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Start(SqlWindowFrameUnit.Rows, start.bound, None)
+        )
 
     /**
      * Sets the window frame to `ROWS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .rowsBetween(1.preceding, currentRow)
      * }}}
      */
-    def rowsBetween[S, E, CL <: Int](start: FrameBound[S], end: FrameBound[E])(using
+    def rowsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
+        start: FrameBound[ST, SS, SN],
+        end: FrameBound[ET, ES, EN]
+    )(using
         QueryContext[CL],
-        CanInRowsOrGroupsFrame[S],
-        CanInRowsOrGroupsFrame[E]
+        CanInRowsOrGroupsFrame[ST],
+        CanInRowsOrGroupsFrame[ET],
+        ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Rows, start.bound, end.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Between(SqlWindowFrameUnit.Rows, start.bound, end.bound, None)
+        )
 
     /**
-     * Sets the window frame to `RANGE start`. 
+     * Sets the window frame to `RANGE start`.
      * The bound must be compatible with the
      * sort key type.
-     * 
+     *
      * {{{
      * .range(currentRow)
      * }}}
      */
-    def range[S, CL <: Int](start: FrameBound[S])(using
+    def range[ST, SS <: Int, SN <: String, CL <: Int](start: FrameBound[ST, SS, SN])(using
         QueryContext[CL],
-        CanInRangeFrame[T, S]
+        CanInRangeFrame[T, ST],
+        ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Range, start.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Start(SqlWindowFrameUnit.Range, start.bound, None)
+        )
 
     /**
      * Sets the window frame to `RANGE BETWEEN start AND end`.
      * The bound must be compatible with the
      * sort key type.
-     * 
+     *
      * {{{
      * .rangeBetween(1.preceding, currentRow)
      * }}}
      */
-    def rangeBetween[S, E, CL <: Int](start: FrameBound[S], end: FrameBound[E])(using
+    def rangeBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
+        start: FrameBound[ST, SS, SN],
+        end: FrameBound[ET, ES, EN]
+    )(using
         QueryContext[CL],
-        CanInRangeFrame[T, S],
-        CanInRangeFrame[T, E]
+        CanInRangeFrame[T, ST],
+        CanInRangeFrame[T, ET],
+        ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Range, start.bound, end.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Between(SqlWindowFrameUnit.Range, start.bound, end.bound, None)
+        )
 
     /**
      * Sets the window frame to `GROUPS start`.
-     * 
+     *
      * {{{
      * .groups(currentRow)
      * }}}
      */
-    def groups[S, CL <: Int](start: FrameBound[S])(using
+    def groups[ST, SS <: Int, SN <: String, CL <: Int](start: FrameBound[ST, SS, SN])(using
         QueryContext[CL],
-        CanInRowsOrGroupsFrame[S]
+        CanInRowsOrGroupsFrame[ST],
+        ValidateFrame[SS, SN, 3, "current row"]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Start(Nil, SqlWindowFrameUnit.Groups, start.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Start(SqlWindowFrameUnit.Groups, start.bound, None)
+        )
 
     /**
      * Sets the window frame to `GROUPS BETWEEN start AND end`.
-     * 
+     *
      * {{{
      * .groupsBetween(1.preceding, currentRow)
      * }}}
      */
-    def groupsBetween[S, E, CL <: Int](start: FrameBound[S], end: FrameBound[E])(using
+    def groupsBetween[ST, SS <: Int, SN <: String, ET, ES <: Int, EN <: String, CL <: Int](
+        start: FrameBound[ST, SS, SN],
+        end: FrameBound[ET, ES, EN]
+    )(using
         QueryContext[CL],
-        CanInRowsOrGroupsFrame[S],
-        CanInRowsOrGroupsFrame[E]
+        CanInRowsOrGroupsFrame[ST],
+        CanInRowsOrGroupsFrame[ET],
+        ValidateFrame[SS, SN, ES, EN]
     ): BoundedOver[KS] =
-        BoundedOver(partitionBy, sortBy, SqlWindowFrame.Between(Nil, SqlWindowFrameUnit.Groups, start.bound, end.bound, None, None))
+        BoundedOver(
+            partitionBy,
+            sortBy,
+            IrWindowFrame.Between(SqlWindowFrameUnit.Groups, start.bound, end.bound, None)
+        )
 
 /**
  * A window specification after the frame has been set, supporting
  * `exclude` methods.
  */
-final case class BoundedOver[KS <: Tuple](
+final class BoundedOver[KS <: Tuple](
     override private[sqala] val partitionBy: List[Expr[?, ?]] = Nil,
     override private[sqala] val sortBy: List[Sort[?, ?]] = Nil,
-    private[sqala] val boundedFrame: SqlWindowFrame
+    private[sqala] val boundedFrame: IrWindowFrame
 )(using OverContext) extends Over[KS](partitionBy, sortBy, Some(boundedFrame)):
     /**
      * Copies the frame with a new exclusion mode.
      */
-    private def setExclude(exclude: SqlWindowFrameExcludeMode): SqlWindowFrame =
+    private def setExclude(exclude: SqlWindowFrameExcludeMode): IrWindowFrame =
         boundedFrame match
-            case s: SqlWindowFrame.Start =>
+            case s: IrWindowFrame.Start =>
                 s.copy(excludeMode = Some(exclude))
-            case b: SqlWindowFrame.Between =>
+            case b: IrWindowFrame.Between =>
                 b.copy(excludeMode = Some(exclude))
 
     /**
      * Excludes the current row from the window frame. Maps to
      * `EXCLUDE CURRENT ROW`.
-     * 
+     *
      * {{{
      * .excludeCurrentRow
      * }}}
@@ -203,7 +250,7 @@ final case class BoundedOver[KS <: Tuple](
     /**
      * Excludes ties from the window frame. Maps to
      * `EXCLUDE TIES`.
-     * 
+     *
      * {{{
      * .excludeTies
      * }}}
@@ -214,7 +261,7 @@ final case class BoundedOver[KS <: Tuple](
     /**
      * Excludes the current group from the window frame. Maps to
      * `EXCLUDE GROUP`.
-     * 
+     *
      * {{{
      * .excludeGroup
      * }}}

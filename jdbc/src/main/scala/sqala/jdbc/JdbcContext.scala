@@ -1,10 +1,10 @@
 package sqala.jdbc
 
-import sqala.metadata.{Dialect, FetchPrimaryKey, InsertMacro}
 import sqala.dynamic.native.NativeSql
-import sqala.static.dsl.{QuerySize, Result}
+import sqala.metadata.{Dialect, FetchPrimaryKey, InsertMacro}
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.{Query, SelectQuery}
+import sqala.static.dsl.{QuerySize, Result}
 import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
@@ -15,8 +15,7 @@ import scala.util.NotGiven
 /**
  * JDBC execution context wrapping a `DataSource` and `Dialect`.
  * Provides typed methods for executing DML statements, fetching
- * query results, pagination, transaction control, and repository
- * method resolution via `applyDynamic`.
+ * query results, pagination, transaction control.
  */
 final class JdbcContext(
     private[sqala] val dataSource: DataSource,
@@ -54,7 +53,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(insert: Insert[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = statementToString(insert.toSqlStatement, dialect, standardEscapeStrings)
+        val sql = insert.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -66,7 +65,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(update: Update[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = statementToString(update.toSqlStatement, dialect, standardEscapeStrings)
+        val sql = update.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -78,7 +77,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(delete: Delete[?])(using ExecuteContext, Logger): Int =
-        val sql = statementToString(delete.tree, dialect, standardEscapeStrings)
+        val sql = delete.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -90,8 +89,7 @@ final class JdbcContext(
      * }}}
      */
     def execute(nativeSql: NativeSql)(using ExecuteContext, Logger): Int =
-        val NativeSql(sql, args) = nativeSql
-        executeDml(sql, args)
+        executeDml(nativeSql.sql, nativeSql.args)
 
     /**
      * Inserts a single entity and returns the affected row count.
@@ -107,7 +105,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
+        val sql = i.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -124,7 +122,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entities)
-        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
+        val sql = i.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -141,7 +139,7 @@ final class JdbcContext(
         l: Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = statementToString(i.toSqlStatement, dialect, standardEscapeStrings)
+        val sql = i.sql(dialect, standardEscapeStrings)
         l.printLog(sql, Array.empty[Any])
         val id = execute(c => jdbcExecReturnKey(c, sql, Array.empty[Any])).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
@@ -168,7 +166,7 @@ final class JdbcContext(
         if u.tree.setPairs.isEmpty then
             0
         else
-            val sql = statementToString(u.toSqlStatement, dialect, standardEscapeStrings)
+            val sql = u.sql(dialect, standardEscapeStrings)
             executeDml(sql, Array.empty[Any])
 
     /**
@@ -187,7 +185,7 @@ final class JdbcContext(
         Logger
     ): Int =
         val s = Save.saveByEntity[A](entity)
-        val sql = statementToString(s.tree, dialect, standardEscapeStrings)
+        val sql = s.sql(dialect, standardEscapeStrings)
         executeDml(sql, Array.empty[Any])
 
     /**
@@ -270,7 +268,7 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        val sql = query.sql(dialect, standardEscapeStrings)
         l.printLog(sql, Array.empty[Any])
         execute(c => jdbcQuery(c, sql, Array.empty[Any]))
 
@@ -303,9 +301,8 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        val NativeSql(sql, args) = nativeSql
-        l.printLog(sql, args)
-        execute(c => jdbcQuery(c, sql, args))
+        l.printLog(nativeSql.sql, nativeSql.args)
+        execute(c => jdbcQuery(c, nativeSql.sql, nativeSql.args))
 
     /**
      * Fetches a native SQL query result as `List[Map[String, Any]]`.
@@ -315,9 +312,8 @@ final class JdbcContext(
      * }}}
      */
     def fetchToMap(nativeSql: NativeSql)(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
-        val NativeSql(sql, args) = nativeSql
-        l.printLog(sql, args)
-        execute(c => jdbcQueryToMap(c, sql, args))
+        l.printLog(nativeSql.sql, nativeSql.args)
+        execute(c => jdbcQueryToMap(c, nativeSql.sql, nativeSql.args))
 
     /**
      * Fetches a raw SQL tuple result using an explicit decoder.
@@ -454,7 +450,7 @@ final class JdbcContext(
      * }}}
      */
     def showSql[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S]): String =
-        queryToString(query.tree, dialect, standardEscapeStrings)
+        query.sql(dialect, standardEscapeStrings)
 
     /**
      * Streams a query result in cursor batches, invoking the callback
@@ -476,7 +472,7 @@ final class JdbcContext(
         d: JdbcDecoder[r.R],
         l: Logger
     )(f: Cursor[r.R] => R): Unit =
-        val sql = queryToString(query.tree, dialect, standardEscapeStrings)
+        val sql = query.sql(dialect, standardEscapeStrings)
         l.printLog(sql, Array.empty[Any])
         execute(c => jdbcCursorQuery(c, sql, Array.empty[Any], fetchSize, f))
 
