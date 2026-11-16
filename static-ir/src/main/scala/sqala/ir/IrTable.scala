@@ -43,7 +43,7 @@ enum IrTable:
         columnAliases: List[String]
     )
     case MatchRecognize(
-        source: IrTable,
+        source: IrTable.MatchRecognizable,
         partitionBy: List[IrExpr],
         orderBy: List[IrOrderingItem],
         measures: NonEmptyList[IrSelectItem],
@@ -52,6 +52,21 @@ enum IrTable:
         columnAliases: List[String]
     )
     case PatternVariable(name: String)
+
+object IrTable:
+    type MatchRecognizable =
+        IrTable.Ident
+        | IrTable.Subquery
+        | IrTable.Func
+        | IrTable.Json
+        | IrTable.Graph
+
+    type SqlMatchRecognizable =
+        SqlTable.Ident
+        | SqlTable.Subquery
+        | SqlTable.Func
+        | SqlTable.Json
+        | SqlTable.Graph
 
 /**
  * A column definition of a JSON table: ordinality, value extraction,

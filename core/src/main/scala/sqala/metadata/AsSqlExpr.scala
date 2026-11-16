@@ -201,16 +201,21 @@ object AsSqlExpr:
 /**
  * Type class that converts a tuple of values into a list of `SqlExpr` literals.
  */
-trait AsSqlExprs[T <: Tuple]:
+trait AsSqlExprs[T]:
     /**
      * Converts the given tuple of values to a list of `SqlExpr` literal nodes.
      */
     def asSqlExprs(values: T): List[SqlExpr]
 
 object AsSqlExprs:
+    given singleton[T: AsSqlExpr as a]: AsSqlExprs[T] with
+        def asSqlExprs(values: T): List[SqlExpr] =
+            List(a.asSqlExpr(values))
+
     given tuple[H, T <: Tuple](using h: AsSqlExpr[H], t: AsSqlExprs[T]): AsSqlExprs[H *: T] with
         def asSqlExprs(values: H *: T): List[SqlExpr] =
             h.asSqlExpr(values.head) :: t.asSqlExprs(values.tail)
 
     given emptyTuple: AsSqlExprs[EmptyTuple] with
-        def asSqlExprs(values: EmptyTuple): List[SqlExpr] = Nil
+        def asSqlExprs(values: EmptyTuple): List[SqlExpr] =
+            Nil
