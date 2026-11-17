@@ -216,7 +216,7 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
             parseComparison()
 
     private def parseComparison(): SqlExpr =
-        val left = parseAdditive()
+        val left = parseConcat()
         if isKeyword("IS") then
             parseIsPredicate(left)
         else
@@ -258,7 +258,7 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
             SqlExpr.Binary(left, SqlBinaryOperator.Is(withNot), SqlExpr.BooleanLiteral(false))
         else if consumeKeyword("DISTINCT") then
             expectKeyword("FROM")
-            SqlExpr.Binary(left, SqlBinaryOperator.IsDistinctFrom(withNot), parseAdditive())
+            SqlExpr.Binary(left, SqlBinaryOperator.IsDistinctFrom(withNot), parseConcat())
         else if consumeKeyword("JSON") then
             parseJsonTest(left, withNot)
         else
@@ -286,9 +286,9 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
 
     private def parseBetween(left: SqlExpr, withNot: Boolean): SqlExpr =
         expectKeyword("BETWEEN")
-        val start = parseAdditive()
+        val start = parseConcat()
         expectKeyword("AND")
-        val end = parseAdditive()
+        val end = parseConcat()
         SqlExpr.Between(left, start, end, withNot)
 
     private def parseIn(left: SqlExpr, withNot: Boolean): SqlExpr =
@@ -305,20 +305,20 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
 
     private def parseLike(left: SqlExpr, withNot: Boolean): SqlExpr =
         expectKeyword("LIKE")
-        val pattern = parseAdditive()
-        val escape = if consumeKeyword("ESCAPE") then Some(parseAdditive()) else None
+        val pattern = parseConcat()
+        val escape = if consumeKeyword("ESCAPE") then Some(parseConcat()) else None
         SqlExpr.Like(left, pattern, escape, withNot)
 
     private def parseSimilarTo(left: SqlExpr, withNot: Boolean): SqlExpr =
         expectKeyword("SIMILAR")
         expectKeyword("TO")
-        val pattern = parseAdditive()
-        val escape = if consumeKeyword("ESCAPE") then Some(parseAdditive()) else None
+        val pattern = parseConcat()
+        val escape = if consumeKeyword("ESCAPE") then Some(parseConcat()) else None
         SqlExpr.SimilarTo(left, pattern, escape, withNot)
 
     private def parseOverlaps(left: SqlExpr): SqlExpr =
         expectKeyword("OVERLAPS")
-        SqlExpr.Binary(left, SqlBinaryOperator.Overlaps, parseAdditive())
+        SqlExpr.Binary(left, SqlBinaryOperator.Overlaps, parseConcat())
 
     private def parseSymbolComparison(left: SqlExpr): SqlExpr =
         if isComparisonSymbol then
@@ -336,7 +336,7 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
                 expectSymbol(")")
                 SqlExpr.QuantifiedComparisonPredicate(left, quantifiedOperatorOf(operator), quantifier, query)
             else
-                SqlExpr.Binary(left, operator, parseAdditive())
+                SqlExpr.Binary(left, operator, parseConcat())
         else
             left
 
@@ -368,6 +368,12 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
             case SqlBinaryOperator.LessThan => SqlQuantifiedComparisonOperator.LessThan
             case SqlBinaryOperator.LessThanEqual => SqlQuantifiedComparisonOperator.LessThanEqual
             case _ => failInvalid("quantified comparison", "expected a comparison operator")
+
+    private def parseConcat(): SqlExpr =
+        var left = parseAdditive()
+        while consumeSymbol("||") do
+            left = SqlExpr.Binary(left, SqlBinaryOperator.Concat, parseAdditive())
+        left
 
     private def parseAdditive(): SqlExpr =
         var left = parseMultiplicative()
@@ -671,9 +677,9 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
         SqlExpr.OverlayFunc(target, placing, from, forExpr)
 
     private def parsePositionBody(): SqlExpr =
-        val first = parseAdditive()
+        val first = parseConcat()
         expectKeyword("IN")
-        val second = parseAdditive()
+        val second = parseConcat()
         expectSymbol(")")
         SqlExpr.PositionFunc(first, second)
 
