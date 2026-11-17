@@ -74,7 +74,7 @@ With sqala, you can:
             .where(column("a") === value(1))
     ```
 
-6. **SQL parser**: the `dynamic` module includes a SQL parser. `unsafeExpr` parses SQL fragments into expressions, which makes migrating existing SQL or handling dynamic query fragments easier (note: only syntax is validated, not semantics, and untrusted input must never be spliced in).
+6. **SQL parser**: the `dynamic` module includes a hand-written recursive descent SQL parser with no third-party parser dependency. `unsafeExpr` parses SQL fragments into expressions, which makes migrating existing SQL or handling dynamic query fragments easier (note: only syntax is validated, not semantics, and untrusted input must never be spliced in).
 
 7. **Extreme performance**: Scala 3's `inline` capability generates high-performance deserialization code, typically several times faster than mainstream reflection-based Java query libraries.
 
