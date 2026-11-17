@@ -6,7 +6,6 @@ import sqala.static.dsl.*
 import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList
 
-import scala.compiletime.constValueTuple
 import scala.compiletime.ops.int.-
 
 /**
@@ -181,30 +180,16 @@ object FromJson:
             t.toTuple(p.asTableParam(table, 1))
         )
 
-    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createAsTable[N, V, TOKS, CL](fields)
-
-    private def createAsTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](
-        fields: List[String]
-    ): AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
+    given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
         new AsTable[FromJson[N, V, TOKS, CL], CL]:
             type R = MappedTable[N, V, false, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromJson[N, V, TOKS, CL]): (R, IrTable) =
-                (MappedTable[N, V, false, CL](x.items, fields), x.table)
+                (new MappedTable[N, V, false, CL](x.items), x.table)
 
-    inline given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
-        e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createAsLateralTable[N, V, TOKS, CL](fields)(using e)
-
-    private def createAsLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](
-        fields: List[String]
-    )(using
+    given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
     ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
         new AsLateralTable[FromJson[N, V, TOKS, CL], CL]:
@@ -214,4 +199,4 @@ object FromJson:
 
             def asTable(x: FromJson[N, V, TOKS, CL]): (R, IrTable) =
                 val table: IrTable.Json = x.table.copy(withLateral = true)
-                (MappedTable[N, V, false, CL - 1](x.items, fields), table)
+                (new MappedTable[N, V, false, CL - 1](x.items), table)

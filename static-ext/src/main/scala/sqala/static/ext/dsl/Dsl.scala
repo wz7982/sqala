@@ -10,7 +10,6 @@ import sqala.static.ext.dsl.table.*
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.constValueTuple
 
 /**
  * Computes the return type of `unnest`.
@@ -289,11 +288,10 @@ extension [CL <: Int](s: String)(using QueryContext[CL])
      * ("a" is g.person)
      * }}}
      */
-    inline infix def is[V, OKS <: Tuple, T <: GraphPatternTerm[V, OKS, CL]](term: T)(using
+    infix def is[V, OKS <: Tuple, T <: GraphPatternTerm[V, OKS, CL]](term: T)(using
         GraphContext
     ): GraphPattern[Tuple1[s.type], Tuple1[T], OKS, CL] =
-        val fields = constValueTuple[Tuple1[s.type]].toArray.toList.map(_.toString)
-        GraphPattern(Tuple1(term), term.asTerm :: Nil, fields)
+        GraphPattern(Tuple1(term), term.asTerm :: Nil)
 
 /**
  * Creates a graph table from a graph schema. Maps to `GRAPH_TABLE`. Used with `matching`
@@ -318,7 +316,7 @@ extension [CL <: Int](s: String)(using QueryContext[CL])
  * )
  * }}}
  */
-inline def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, CL <: Int](using
+def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, CL <: Int](using
     qc: QueryContext[CL]
 )(
     schema: GraphSchema[N, V]
@@ -329,9 +327,7 @@ inline def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: 
     f: GraphContext ?=> Graph[N, tt.R, CL] => FromGraph[TN, TV, TOKS, CL]
 ): FromGraph[TN, TV, TOKS, CL] =
     given GraphContext = GraphContext()
-    val fields = constValueTuple[N].toArray.toList.map(_.toString)
-    val graph =
-        Graph[N, tt.R, CL](schema.name, tt.toTuple(t.transform(schema.items)), fields)
+    val graph = Graph[N, tt.R, CL](schema.name, tt.toTuple(t.transform(schema.items)))
     f(graph)
 
 /**

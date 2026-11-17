@@ -101,9 +101,8 @@ object AsMapItem:
             type KS = kt.R
 
             def transform(x: MappedTable[N, V, O, L]): R =
-                MappedTable(
-                    t.toTuple(a.transform(x.__items__)),
-                    x.__fields__
+                new MappedTable(
+                    t.toTuple(a.transform(x.__items__))
                 )
 
             def offset(x: MappedTable[N, V, O, L]): Int =

@@ -183,7 +183,7 @@ object JdbcDecoder:
             case _ => Nil
         val symbol = tpr.typeSymbol
         val ctor = symbol.primaryConstructor
-        val types = symbol.declaredFields.map: i =>
+        val types = symbol.caseFields.map: i =>
             i.tree match
                 case ValDef(_, _, _) =>
                     tpr.memberType(i).asType

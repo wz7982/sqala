@@ -9,7 +9,6 @@ import sqala.static.dsl.table.{AnyTable, AsTableParam, MappedTable, Table}
 import sqala.static.ext.dsl.{CanInRecognizePartition, CanInRecognizeSort}
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.constValueTuple
 import scala.util.NotGiven
 
 /**
@@ -60,19 +59,10 @@ object AsRecognize:
                 )
                 (table, source)
 
-    inline given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
+    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createSubquery[N, V, TOKS, L, S, Q, CL](fields)(using p, tt)
-
-    private def createSubquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](
-        fields: List[String]
-    )(using
-        p: AsTableParam[V, CL],
-        tt: ToTuple[p.R]
     ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
         new AsRecognize[Q, CL]:
             type R = MappedTable[N, tt.R, false, CL]
@@ -81,7 +71,7 @@ object AsRecognize:
 
             def asRecognizeTable(x: Q): (R, IrTable.MatchRecognizable) =
                 val source: IrTable.Subquery = IrTable.Subquery(false, x.tree, Nil)
-                val table = MappedTable[N, V, false, CL](source, fields)
+                val table = MappedTable[N, V, false, CL](source)
                 (table, source)
 
 /**
@@ -106,9 +96,8 @@ object AliasRecognize:
         r: ReplaceTarget[V]
     ): AliasRecognize[MappedTable[N, V, O, L]] with
         def alias(x: MappedTable[N, V, O, L], name: String): MappedTable[N, V, O, L] =
-            MappedTable(
-                r.replaceTarget(x.__items__, IrTable.PatternVariable(name)),
-                x.__fields__
+            new MappedTable(
+                r.replaceTarget(x.__items__, IrTable.PatternVariable(name))
             )
 
 /**

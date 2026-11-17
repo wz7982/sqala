@@ -401,9 +401,9 @@ object TableQuery:
             val cteRow = p.asTableParam(finalCte, 1)
             val cond = a.asExpr(f(query.params, prior)).expr
             val levelName = s"c${query.tree.select.size + 1}"
-            val sourceFrom = query.tree.from.get
+            val sourceFrom = query.tree.from
             val stepTree = query.tree.copy(
-                from = Some(IrTable.Join(sourceFrom, SqlJoinType.Inner, stepCte, Some(cond))),
+                from = sourceFrom.map(IrTable.Join(_, SqlJoinType.Inner, stepCte, Some(cond))),
                 select = query.tree.select :+ IrSelectItem(
                     IrExpr.Binary(IrExpr.Column(Some(stepCte), levelName), SqlBinaryOperator.Plus, IrExpr.Native(SqlExpr.NumberLiteral(1))),
                     levelName

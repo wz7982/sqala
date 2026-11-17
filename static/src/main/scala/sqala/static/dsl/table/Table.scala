@@ -1,11 +1,10 @@
 package sqala.static.dsl.table
 
 import sqala.ir.{IrExpr, IrTable}
-import sqala.metadata.TableMetaData
+import sqala.metadata.{TableMacroImpl, TableMetaData}
 import sqala.static.dsl.*
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
-import scala.compiletime.constValueTuple
 import scala.quoted.{Quotes, Type, Expr as ScalaExpr}
 
 /**
@@ -31,28 +30,24 @@ final class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
     /**
      * Runtime column accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __metaData__.fields.toList.indexOf(name)
-        val table = if __withTable__ then
-            Some(__table__)
-        else
-            None
-        ColumnExpr(IrExpr.Column(table, __metaData__.columns.toList(index)))
+    inline def selectDynamic(name: String): Any =
+        TableSelectMacro.select[T, K[L]](__table__, __withTable__, __metaData__, name)
 
-    /**
-      * Exclude columns from the table.
-      *
-      * {{{
-      * val q = from(Post).map(p => p.exclude("content"))
-      * }}}
-      */
-    transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?] =
-        ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, K, IsOption[T], L]('__table__, '__metaData__, 'columns) }
+object Table:
+    extension [T, L <: Int](table: Table[T, Column, L])
+        /**
+         * Exclude columns from the table.
+         *
+         * {{{
+         * val q = from(Post).map(p => p.exclude("content"))
+         * }}}
+         */
+        transparent inline def exclude(inline columns: String*): MappedTable[?, ?, ?, ?] =
+            ${ ExcludeMacro.excludeMacro[Unwrap[T, Option], T, IsOption[T], L]('table, 'columns) }
 
 object ExcludeMacro:
-    def excludeMacro[T: Type, OT: Type, K[_ <: Int] <: ExprKind : Type, O <: Boolean : Type, L <: Int : Type](
-        table: ScalaExpr[IrTable],
-        metaData: ScalaExpr[TableMetaData],
+    def excludeMacro[T: Type, OT: Type, O <: Boolean : Type, L <: Int : Type](
+        table: ScalaExpr[Table[?, ?, ?]],
         columns: ScalaExpr[Seq[String]],
     )(using
         q: Quotes
@@ -70,15 +65,24 @@ object ExcludeMacro:
                             report.errorAndAbort("Invalid column names.")
                 case _ =>
                     report.errorAndAbort("Invalid column names.")
+
         val tpe = TypeRepr.of[T]
         val sym = tpe.typeSymbol
-        val fields = sym.caseFields
-        val excludedFields = fields
-            .filterNot(f => columnNames.contains(f.name))
-            .map(f => (f.name, tpe.memberType(f)))
+        val compileTimeMetaData = TableMacroImpl.tableMetaDataMacro[T]
+        val compileTimeFields = compileTimeMetaData.fields.toList
 
-        if excludedFields.isEmpty then
-            report.error("Cannot exclude all fields. At least one field must be retained.")
+        val knownFields = compileTimeFields.toSet
+        val unknownFields = columnNames.filterNot(knownFields.contains)
+
+        if unknownFields.nonEmpty then
+            report.errorAndAbort(s"Unknown fields: ${unknownFields.mkString(", ")}")
+
+        val keepFields = sym.caseFields
+            .filterNot(f => columnNames.contains(f.name))
+            .map(f => (f.name, compileTimeFields.indexOf(f.name), tpe.memberType(f)))
+
+        if keepFields.isEmpty then
+            report.errorAndAbort("Cannot exclude all fields. At least one field must be retained.")
 
         def buildTupleType(types: List[TypeRepr]): TypeRepr =
             types match
@@ -87,27 +91,39 @@ object ExcludeMacro:
                     val consSym = Symbol.requiredClass("scala.*:")
                     AppliedType(consSym.typeRef, List(head, buildTupleType(tail)))
 
-        val names = excludedFields.map(f => ConstantType(StringConstant(f._1)))
+        val names = keepFields.map(_._1).map(name => ConstantType(StringConstant(name)))
         val nameType = buildTupleType(names)
-        val types = excludedFields.map(_._2).map: v =>
-            v.asType match
+        val valueTypes: List[TypeRepr] = keepFields.map: field =>
+            field._3.asType match
                 case '[t] =>
-                    TypeRepr.of[MapField[t, OT, K, L]]
-        val valueType = buildTupleType(types)
-        val fieldNamesExpr =
-            ScalaExpr.ofList(excludedFields.map(_._1).map(n => ScalaExpr(n)))
+                    TypeRepr.of[MapField[t, OT, Column, L]].dealias
+        val valueType = buildTupleType(valueTypes)
 
         (nameType.asType, valueType.asType) match
             case ('[type n <: Tuple; n], '[type v <: Tuple; v]) =>
+                val items = keepFields.zip(valueTypes).map: pair =>
+                    val (fieldName, fieldIndex, _) = pair._1
+                    val elemType = pair._2
+
+                    if fieldIndex < 0 then
+                        report.errorAndAbort(s"Unknown field `$fieldName`.")
+
+                    val columnIndex = ScalaExpr(fieldIndex)
+
+                    elemType.asType match
+                        case '[ColumnExpr[ft, fl]] =>
+                            '{
+                                ColumnExpr[ft, fl](
+                                    IrExpr.Column(
+                                        if $table.__withTable__ then Some($table.__table__) else None,
+                                        $table.__metaData__.columns.toList($columnIndex)
+                                    )
+                                )
+                            }
+                        case _ =>
+                            report.errorAndAbort("Excluded column must be a column expression.")
                 '{
-                    val columns =
-                        $metaData.fields.toList
-                            .zip($metaData.columns.toList)
-                            .filter((f, _) => $fieldNamesExpr.contains(f))
-                            .map((_, c) => ColumnExpr(IrExpr.Column(Some($table), c)))
-                            .toArray
-                    val items = Tuple.fromArray(columns).asInstanceOf[v]
-                    MappedTable[n, v, O, L](items, $fieldNamesExpr)
+                    new MappedTable[n, v, O, L](${ScalaExpr.ofTupleFromSeq(items).asExprOf[v]})
                 }
             case _ =>
                 report.errorAndAbort("Cannot exclude all fields. At least one field must be retained.")
@@ -117,8 +133,7 @@ object ExcludeMacro:
   * mapping entity class fields to typed expressions via `Fields`.
   */
 final class MappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](
-    private[sqala] val __items__ : V,
-    private[sqala] val __fields__ : List[String]
+    private[sqala] val __items__ : V
 ) extends Selectable with AnyTable:
     /**
      * The structural type declaring available columns as a named tuple.
@@ -129,26 +144,92 @@ final class MappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](
     /**
      * Runtime column accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __fields__.indexOf(name)
-        __items__.toList(index)
+    inline def selectDynamic(name: String): Any =
+        TableSelectMacro.selectMapped[N](__items__, name)
 
 object MappedTable:
-    inline def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](items: V): MappedTable[N, V, O, L] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        new MappedTable(items, fields)
-
-    def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](items: V, fields: List[String]): MappedTable[N, V, O, L] =
-        new MappedTable(items, fields)
-
     inline def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](table: IrTable)(using
         p: AsTableParam[V, L],
         t: ToTuple[p.R]
     ): MappedTable[N, t.R, O, L] =
-        MappedTable(t.toTuple(p.asTableParam(table, 1)))
+        new MappedTable(t.toTuple(p.asTableParam(table, 1)))
 
-    def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](table: IrTable, fields: List[String])(using
-        p: AsTableParam[V, L],
-        t: ToTuple[p.R]
-    ): MappedTable[N, t.R, O, L] =
-        new MappedTable(t.toTuple(p.asTableParam(table, 1)), fields)
+/**
+ * Compile-time implementation of `selectDynamic` for `Table` and `MappedTable`.
+ *
+ * A structural selection always passes a literal field name, so the column
+ * name (or tuple index) can be resolved at compile time.
+ */
+object TableSelectMacro:
+    inline def select[T, EK <: ExprKind](
+        table: IrTable,
+        withTable: Boolean,
+        metaData: TableMetaData,
+        inline name: String
+    ): Any =
+        ${ selectImpl[T, EK]('table, 'withTable, 'metaData, 'name) }
+
+    def selectImpl[T: Type, EK <: ExprKind : Type](
+        table: ScalaExpr[IrTable],
+        withTable: ScalaExpr[Boolean],
+        metaData: ScalaExpr[TableMetaData],
+        name: ScalaExpr[String]
+    )(using q: Quotes): ScalaExpr[Any] =
+        import q.reflect.*
+
+        val fieldName = name.valueOrAbort
+        val index = TableMacroImpl.tableMetaDataMacro[T].fields.toList.indexOf(fieldName)
+
+        if index < 0 then
+            report.errorAndAbort(s"Unknown field `$fieldName`.")
+        else
+            val columnIndex = ScalaExpr(index)
+
+            val column: ScalaExpr[IrExpr.Column] = '{
+                IrExpr.Column(
+                    if $withTable then Some($table) else None,
+                    $metaData.columns.toList($columnIndex)
+                )
+            }
+
+            TypeRepr.of[EK].asType match
+                case '[Column[l]] =>
+                    '{ ColumnExpr($column) }
+                case _ =>
+                    '{ Expr($column) }
+
+    inline def selectMapped[N <: Tuple](
+        items: Tuple,
+        inline name: String
+    ): Any =
+        ${ selectMappedImpl[N]('items, 'name) }
+
+    def selectMappedImpl[N <: Tuple: Type](
+        items: ScalaExpr[Tuple],
+        name: ScalaExpr[String]
+    )(using q: Quotes): ScalaExpr[Any] =
+        import q.reflect.*
+
+        def constantName(repr: TypeRepr): String =
+            repr.dealias match
+                case ConstantType(StringConstant(n)) => n
+                case _ => report.errorAndAbort("Mapped table field names must be literal strings.")
+
+        def names(repr: TypeRepr): List[String] =
+            repr.dealias match
+                case AppliedType(cons, args) if cons.typeSymbol == Symbol.requiredClass("scala.*:") =>
+                    constantName(args.head) :: names(args(1))
+                case AppliedType(cons, args) if cons.typeSymbol.name.startsWith("Tuple") =>
+                    args.map(constantName)
+                case t if t =:= TypeRepr.of[EmptyTuple] => Nil
+                case _ => report.errorAndAbort("Mapped table field names must be literal strings.")
+
+        val fieldName = name.valueOrAbort
+        val index = names(TypeRepr.of[N]).indexOf(fieldName)
+
+        if index < 0 then
+            report.errorAndAbort(s"Unknown field `$fieldName`.")
+        else
+            '{
+                $items.productElement(${ScalaExpr(index)})
+            }

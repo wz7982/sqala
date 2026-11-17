@@ -70,9 +70,8 @@ object ToOption:
             type R = MappedTable[N, V, true, L]
 
             def toOption(x: MappedTable[N, V, O, L]): R =
-                MappedTable[N, V, true, L](
-                    x.__items__,
-                    x.__fields__
+                new MappedTable[N, V, true, L](
+                    x.__items__
                 )
 
     given tuple[H, T <: Tuple](using

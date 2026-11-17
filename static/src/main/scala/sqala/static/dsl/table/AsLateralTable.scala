@@ -5,7 +5,6 @@ import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.constValueTuple
 import scala.compiletime.ops.int.-
 
 /**
@@ -37,23 +36,13 @@ object AsLateralTable:
 
         type OKS = OOKS
 
-    inline given subquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](using
+    given subquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL - 1],
         tt: ToTuple[p.R],
         e: ExcludeCurrentLevelColumn[QOKS, CL - 1],
         i: IncludeCurrentLevelColumn[QOKS, CL - 1],
         c: CanInSimpleClause[i.R, "subquery"],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL - 1], e.R] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createSubquery[N, V, QOKS, S, L, Q, CL](fields)(using p, tt, e)
-
-    private def createSubquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](
-        fields: List[String]
-    )(using
-        p: AsTableParam[V, CL - 1],
-        tt: ToTuple[p.R],
-        e: ExcludeCurrentLevelColumn[QOKS, CL - 1]
     ): Aux[Q, CL, MappedTable[N, tt.R, false, CL - 1], e.R] =
         new AsLateralTable[Q, CL]:
             type R = MappedTable[N, tt.R, false, CL - 1]
@@ -67,5 +56,5 @@ object AsLateralTable:
                         x.tree,
                         Nil
                     )
-                val table = MappedTable[N, V, false, CL - 1](irTable, fields)
+                val table = MappedTable[N, V, false, CL - 1](irTable)
                 (table, irTable)
