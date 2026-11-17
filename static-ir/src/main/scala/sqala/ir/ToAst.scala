@@ -306,6 +306,7 @@ class ToAst:
                         rowPattern.define.map: define =>
                             SqlRowPatternDefineItem(define.name, exprToAst(define.expr))
                     )
+                val sourceAst = matchRecognizableToAst(source)
                 val recognizeAst =
                     SqlMatchRecognize(
                         partitionBy.map(exprToAst),
@@ -316,7 +317,7 @@ class ToAst:
                         rowPatternAst,
                         Some(SqlTableAlias(fetchAlias(t), columnAliases))
                     )
-                attachMatchRecognize(matchRecognizableToAst(source), recognizeAst)
+                attachMatchRecognize(sourceAst, recognizeAst)
             case IrTable.PatternVariable(name) =>
                 SqlTable.Ident(name, None, None, None, None)
 
