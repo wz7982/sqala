@@ -11,7 +11,6 @@ import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.constValueTuple
-import scala.language.dynamics
 import scala.quoted.{Expr, Quotes, Type}
 
 /**
@@ -428,7 +427,13 @@ final class RecognizeDefine[N <: Tuple, T, GT, L <: Int](
 )(using
     private[sqala] val __ar__ : AliasRecognize[T],
     private[sqala] val __tr__ : TransformKind.Aux[T, [l <: Int] =>> Grouped[Column[l] *: EmptyTuple], L, GT]
-) extends Dynamic:
+) extends Selectable:
+    /**
+     * The predefined pattern variable names, each mapping to the
+     * transformed expression type `GT`.
+     */
+    type Fields = NamedTuple[N, Tuple.Map[N, [n] =>> GT]]
+
     /**
      * Dynamic member access used in `define` and `measures` clauses,
      * turning `d.<name>` into a grouped column expression aliased to
@@ -445,7 +450,13 @@ final class RecognizePattern[N <: Tuple, T, L <: Int](
 )(using
     private[sqala] val __qc__ : QueryContext[L],
     private[sqala] val __mc__ : MatchRecognizeContext
-) extends Dynamic:
+) extends Selectable:
+    /**
+     * The predefined pattern variable names, each mapping to a row
+     * pattern term.
+     */
+    type Fields = NamedTuple[N, Tuple.Map[N, [n] =>> RecognizePatternTerm[L]]]
+
     /**
      * Dynamic member access used in `pattern` clauses, turning `d.<name>`
      * into a row-pattern term referring to the pattern variable `<name>`.
@@ -456,7 +467,13 @@ final class RecognizePattern[N <: Tuple, T, L <: Int](
 /**
  * Dynamic context for `afterMatchSkipTo` clauses.
  */
-final class RecognizePatternName[N <: Tuple, T, L <: Int] extends Dynamic:
+final class RecognizePatternName[N <: Tuple, T, L <: Int] extends Selectable:
+    /**
+     * The predefined pattern variable names, each mapping to its name
+     * string.
+     */
+    type Fields = NamedTuple[N, Tuple.Map[N, [n] =>> String]]
+
     /**
      * Dynamic member access used in `afterMatchSkipTo`, returning the
      * referenced pattern variable name.
@@ -634,17 +651,11 @@ final class FromRecognize[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
 ) extends AnyTable
 
 object FromRecognize:
-    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromRecognize[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createAsTable[N, V, TOKS, CL](fields)
-
-    private def createAsTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](
-        fields: List[String]
-    ): AsTable.Aux[FromRecognize[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
+    given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromRecognize[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
         new AsTable[FromRecognize[N, V, TOKS, CL], CL]:
             type R = MappedTable[N, V, false, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromRecognize[N, V, TOKS, CL]): (R, IrTable) =
-                (MappedTable[N, V, false, CL](x.items, fields), x.table)
+                (new MappedTable[N, V, false, CL](x.items), x.table)

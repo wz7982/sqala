@@ -51,7 +51,7 @@ object TableMacroImpl:
         import q.reflect.*
 
         val sym = TypeRepr.of[T].typeSymbol
-        val eles = sym.declaredFields
+        val eles = sym.caseFields
         val tableName = tableNameMacro[T]
         val columns = ListBuffer[String]()
         val fields = ListBuffer[String]()

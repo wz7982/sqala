@@ -38,7 +38,7 @@ object FetchPrimaryKey:
         import q.reflect.*
 
         val sym = TypeTree.of[T].symbol
-        val eles = sym.declaredFields
+        val eles = sym.caseFields
         val metaData = TableMacroImpl.tableMetaDataMacro[T]
         val pkFields = metaData.primaryKeyFields
 

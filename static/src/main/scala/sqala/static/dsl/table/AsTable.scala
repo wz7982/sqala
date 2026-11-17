@@ -9,7 +9,7 @@ import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
-import scala.compiletime.{constValueTuple, error, summonInline}
+import scala.compiletime.{error, summonInline}
 import scala.deriving.Mirror
 import scala.util.NotGiven
 
@@ -61,19 +61,10 @@ object AsTable:
                 )
                 (table, irTable)
 
-    inline given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
+    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
         tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createSubquery[N, V, TOKS, L, S, Q, CL](fields)(using p, tt)
-
-    private def createSubquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](
-        fields: List[String]
-    )(using
-        p: AsTableParam[V, CL],
-        tt: ToTuple[p.R]
     ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
         new AsTable[Q, CL]:
             type R = MappedTable[N, tt.R, false, CL]
@@ -87,7 +78,7 @@ object AsTable:
                         x.tree,
                         Nil
                     )
-                val table = MappedTable[N, V, false, CL](irTable, fields)
+                val table = MappedTable[N, V, false, CL](irTable)
                 (table, irTable)
 
     inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =

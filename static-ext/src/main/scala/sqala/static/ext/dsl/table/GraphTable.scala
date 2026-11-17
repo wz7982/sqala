@@ -11,7 +11,6 @@ import sqala.static.ext.dsl.GraphContext
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
-import scala.compiletime.constValueTuple
 import scala.compiletime.ops.int.-
 
 /**
@@ -95,8 +94,7 @@ object TransformGraphSchema:
  */
 final class Graph[N <: Tuple, V <: Tuple, L <: Int](
     private[sqala] val __name__ : String,
-    private[sqala] val __items__ : V,
-    private[sqala] val __fields__ : List[String]
+    private[sqala] val __items__ : V
 ) extends Selectable:
     /**
      * The structural type declaring available vertex and edge labels
@@ -104,20 +102,20 @@ final class Graph[N <: Tuple, V <: Tuple, L <: Int](
      */
     type Fields = NamedTuple[N, V]
 
-    /**
-     * Resolves a vertex or edge label by name, assigning a fresh
-     * alias for use in the graph pattern. Required by `Selectable`.
-     */
-    def selectDynamic(name: String): Any =
-        val index = __fields__.indexOf(name)
-        val item = __items__.toList(index)
+    private[sqala] def asPatternTerm(item: Any): Any =
         item match
             case v: GraphVertex[?, ?] =>
                 v.createNewPatternTerm
             case e: GraphEdge[?, ?, ?] =>
                 e.createNewPatternTerm
-            case _ =>
-                item
+            case other =>
+                other
+
+    /**
+     * Compile-time label accessor. Required by `Selectable`.
+     */
+    inline def selectDynamic(name: String): Any =
+        asPatternTerm(TableSelectMacro.selectMapped[N](__items__, name))
 
     /**
      * Starts a graph pattern match. The pattern is built from
@@ -183,11 +181,10 @@ final class GraphVertex[T, L <: Int](
         GraphVertex(__table__.copy(), __metaData__)
 
     /**
-     * Runtime column accessor. Required by `Selectable`.
+     * Compile-time column accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __metaData__.fields.toList.indexOf(name)
-        ColumnExpr(IrExpr.Column(Some(__table__), __metaData__.columns.toList(index)))
+    inline def selectDynamic(name: String): Any =
+        TableSelectMacro.select[T, Column[L]](__table__, true, __metaData__, name)
 
 /**
  * An edge in a graph pattern. Created by `edge[T]` and accessed
@@ -242,11 +239,10 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
         GraphEdge(__table__.copy(), __metaData__, __where__, __quantifier__)
 
     /**
-     * Runtime column accessor. Required by `Selectable`.
+     * Compile-time column accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __metaData__.fields.toList.indexOf(name)
-        ColumnExpr(IrExpr.Column(Some(__table__), __metaData__.columns.toList(index)))
+    inline def selectDynamic(name: String): Any =
+        TableSelectMacro.select[T, Column[L]](__table__, true, __metaData__, name)
 
     /**
      * Adds a `WHERE` condition to the edge. Maps to the `WHERE`
@@ -424,7 +420,7 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
      * ... |-| ("b" is g.person)
      * }}}
      */
-    inline def |-|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
+    def |-|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
     ): GraphPattern[Tuple.Append[N, PN], Tuple.Concat[V, Tuple1[GraphVertex[PV, L]]], c.R, L] =
@@ -435,11 +431,9 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             case IrGraphPatternTerm.Quantified(e: IrGraphPatternTerm.Edge, q) =>
                 IrGraphPatternTerm.Quantified(e.copy(leftSymbol = leftSymbol, rightSymbol = rightSymbol), q)
             case p => p
-        val fields = constValueTuple[Tuple.Append[N, PN]].toArray.toList.map(_.toString)
         GraphPattern(
             items ++ pattern.__items__,
-            patterns.dropRight(1) ++ (last :: pattern.__patterns__),
-            fields
+            patterns.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
     /**
@@ -450,7 +444,7 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
      * ... |~| ("b" is g.person)
      * }}}
      */
-    inline def |~|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
+    def |~|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
     ): GraphPattern[Tuple.Append[N, PN], Tuple.Concat[V, Tuple1[GraphVertex[PV, L]]], c.R, L] =
@@ -461,11 +455,9 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             case IrGraphPatternTerm.Quantified(e: IrGraphPatternTerm.Edge, q) =>
                 IrGraphPatternTerm.Quantified(e.copy(leftSymbol = leftSymbol, rightSymbol = rightSymbol), q)
             case p => p
-        val fields = constValueTuple[Tuple.Append[N, PN]].toArray.toList.map(_.toString)
         GraphPattern(
             items ++ pattern.__items__,
-            patterns.dropRight(1) ++ (last :: pattern.__patterns__),
-            fields
+            patterns.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
     /**
@@ -476,7 +468,7 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
      * ... |->| ("b" is g.person)
      * }}}
      */
-    inline def |->|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
+    def |->|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
     ): GraphPattern[Tuple.Append[N, PN], Tuple.Concat[V, Tuple1[GraphVertex[PV, L]]], c.R, L] =
@@ -487,11 +479,9 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             case IrGraphPatternTerm.Quantified(e: IrGraphPatternTerm.Edge, q) =>
                 IrGraphPatternTerm.Quantified(e.copy(leftSymbol = leftSymbol, rightSymbol = rightSymbol), q)
             case p => p
-        val fields = constValueTuple[Tuple.Append[N, PN]].toArray.toList.map(_.toString)
         GraphPattern(
             items ++ pattern.__items__,
-            patterns.dropRight(1) ++ (last :: pattern.__patterns__),
-            fields
+            patterns.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
     /**
@@ -503,7 +493,7 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
      * ... |~>| ("b" is g.person)
      * }}}
      */
-    inline def |~>|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
+    def |~>|[PN, PV, POKS <: Tuple](pattern: GraphPattern[Tuple1[PN], Tuple1[GraphVertex[PV, L]], POKS, L])(using
         gc: GraphContext,
         c: CombineKindTuple[OKS, POKS]
     ): GraphPattern[Tuple.Append[N, PN], Tuple.Concat[V, Tuple1[GraphVertex[PV, L]]], c.R, L] =
@@ -514,11 +504,9 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
             case IrGraphPatternTerm.Quantified(e: IrGraphPatternTerm.Edge, q) =>
                 IrGraphPatternTerm.Quantified(e.copy(leftSymbol = leftSymbol, rightSymbol = rightSymbol), q)
             case p => p
-        val fields = constValueTuple[Tuple.Append[N, PN]].toArray.toList.map(_.toString)
         GraphPattern(
             items ++ pattern.__items__,
-            patterns.dropRight(1) ++ (last :: pattern.__patterns__),
-            fields
+            patterns.dropRight(1) ++ (last :: pattern.__patterns__)
         )
 
 /**
@@ -526,8 +514,7 @@ final class GraphPatternPart[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
  */
 final class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
     private[sqala] val __items__ : V,
-    private[sqala] val __patterns__ : List[IrGraphPatternTerm],
-    private[sqala] val __fields__ : List[String]
+    private[sqala] val __patterns__ : List[IrGraphPatternTerm]
 ) extends Selectable:
     /**
      * The structural type declaring matched pattern aliases as a
@@ -536,11 +523,10 @@ final class GraphPattern[N <: Tuple, V <: Tuple, OKS <: Tuple, L <: Int](
     type Fields = NamedTuple[N, V]
 
     /**
-     * Runtime pattern alias accessor. Required by `Selectable`.
+     * Compile-time pattern alias accessor. Required by `Selectable`.
      */
-    def selectDynamic(name: String): Any =
-        val index = __fields__.indexOf(name)
-        __items__.toList(index)
+    inline def selectDynamic(name: String): Any =
+        TableSelectMacro.selectMapped[N](__items__, name)
 
     /**
      * Connects to an edge with a dash symbol. Maps to `-` in
@@ -710,30 +696,16 @@ final class FromGraph[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
 ) extends AnyTable
 
 object FromGraph:
-    inline given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createAsTable[N, V, TOKS, CL](fields)
-
-    private def createAsTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](
-        fields: List[String]
-    ): AsTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
+    given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
         new AsTable[FromGraph[N, V, TOKS, CL], CL]:
             type R = MappedTable[N, V, false, CL]
 
             type OKS = TOKS
 
             def asTable(x: FromGraph[N, V, TOKS, CL]): (R, IrTable) =
-                (MappedTable[N, V, false, CL](x.items, fields), x.table)
+                (new MappedTable[N, V, false, CL](x.items), x.table)
 
-    inline given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
-        e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createAsLateralTable[N, V, TOKS, CL](fields)(using e)
-
-    private def createAsLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](
-        fields: List[String]
-    )(using
+    given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
     ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
         new AsLateralTable[FromGraph[N, V, TOKS, CL], CL]:
@@ -743,4 +715,4 @@ object FromGraph:
 
             def asTable(x: FromGraph[N, V, TOKS, CL]): (R, IrTable) =
                 val table: IrTable.Graph = x.table.copy(withLateral = true)
-                (MappedTable[N, V, false, CL - 1](x.items, fields), table)
+                (new MappedTable[N, V, false, CL - 1](x.items), table)

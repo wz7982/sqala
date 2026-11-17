@@ -4,8 +4,6 @@ import sqala.ir.{IrExpr, IrTable}
 import sqala.metadata.{TableMacro, TableMetaData}
 import sqala.static.dsl.*
 
-import scala.compiletime.constValueTuple
-
 /**
  * Generates column expressions (as `c1`, `c2`, ...) for subquery
  * and table function result items. `CL` is the current query context
@@ -58,16 +56,7 @@ object AsTableParam:
                     metaData.copy(columns = metaData.columns.indices.map(i => s"c${cursor + i}"))
                 )
 
-    inline given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, tt.R, O, CL]] =
-        val fields = constValueTuple[N].toArray.toList.map(_.toString)
-        createMappedTable[N, V, O, L, CL](fields)
-
-    private def createMappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](
-        fields: List[String]
-    )(using
+    given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsTableParam[V, CL],
         tt: ToTuple[a.R]
     ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, tt.R, O, CL]] =
@@ -78,7 +67,7 @@ object AsTableParam:
                 a.offset
 
             def asTableParam(table: IrTable, cursor: Int): R =
-                MappedTable[N, tt.R, O, CL](tt.toTuple(a.asTableParam(table, cursor)), fields)
+                new MappedTable[N, tt.R, O, CL](tt.toTuple(a.asTableParam(table, cursor)))
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsTableParam[H, CL],

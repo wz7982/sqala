@@ -22,7 +22,7 @@ object InsertMacroImpl:
         import q.reflect.*
 
         val tpr = TypeRepr.of[A]
-        val fields = tpr.typeSymbol.declaredFields
+        val fields = tpr.typeSymbol.caseFields
         val ctor = tpr.typeSymbol.primaryConstructor
 
         val terms = fields.map: f =>

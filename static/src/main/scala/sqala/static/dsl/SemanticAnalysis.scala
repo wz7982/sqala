@@ -127,9 +127,8 @@ object TransformKind:
             type R = MappedTable[N, tt.R, O, L]
 
             def transform(x: MappedTable[N, V, O, L]): R =
-                MappedTable(
-                    tt.toTuple(tv.transform(x.__items__)),
-                    x.__fields__
+                new MappedTable(
+                    tt.toTuple(tv.transform(x.__items__))
                 )
 
     given tuple[H, T <: Tuple, K[_ <: Int] <: ExprKind, L <: Int](using

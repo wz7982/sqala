@@ -721,9 +721,8 @@ object Union:
                 a.offset
 
             def unionQueryItems(x: MappedTable[AN, AV, AO, AL], cursor: Int): R =
-                MappedTable[AN, tt.R, AO || BO, CL](
-                    tt.toTuple(u.unionQueryItems(x.__items__, cursor)),
-                    x.__fields__
+                new MappedTable[AN, tt.R, AO || BO, CL](
+                    tt.toTuple(u.unionQueryItems(x.__items__, cursor))
                 )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
