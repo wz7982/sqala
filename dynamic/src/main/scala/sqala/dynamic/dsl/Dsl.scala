@@ -4,6 +4,7 @@ import sqala.ast.expr.*
 import sqala.ast.statement.SqlQuery
 import sqala.ast.window.SqlWindowFrameBound
 import sqala.metadata.{AsSqlExpr, Interval}
+import sqala.parser.SqlParser
 import sqala.util.NonEmptyList
 
 /**
@@ -384,3 +385,25 @@ def orderBy(orders: Order*): Over =
  */
 def orderBy(orders: List[Order]): Over =
     orderBy(orders*)
+
+/**
+ * Parses raw SQL text into a dynamic Expr.
+ *
+ * Only the syntax is validated. This method performs no semantic or type
+ * checking, and it does not verify that referenced tables, columns, or
+ * functions exist.
+ *
+ * ⚠️ This API is explicitly unsafe: the input is trusted SQL text. Never
+ * pass untrusted user input to it. A syntactically valid expression can
+ * still change the meaning of a query (for example `x OR 1 = 1`), so it
+ * remains a SQL injection vector. For user-supplied values, use `value(...)`
+ * or build the expression with the regular DSL instead.
+ *
+ * {{{
+ * val q =
+ *     select(unsafeExpr("""lower("u"."name") || '!'""").as("name"))
+ *         .from(table("user").as("u"))
+ * }}}
+ */
+def unsafeExpr(sql: String): Expr =
+    Expr(SqlParser.parseExpr(sql))
