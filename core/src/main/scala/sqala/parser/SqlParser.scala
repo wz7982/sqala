@@ -15,44 +15,8 @@ import scala.collection.mutable.ListBuffer
 /**
  * A hand-written recursive-descent parser for standard SQL expressions.
  */
-final class Parser(source: String, tokens: Vector[TokenPosition]):
+final class SqlParser(source: String, tokens: Vector[TokenPosition]):
     private var position = 0
-
-    /**
-     * Keywords that the grammar itself treats as syntax. They cannot be used
-     * as unquoted identifiers in expression position; users must quote them.
-     */
-    private val reservedKeywords: Set[String] = Set(
-        "ALL", "AND", "ANY", "ARRAY", "AS", "ASC",
-        "BETWEEN", "BY",
-        "CASE", "CAST", "CURRENT",
-        "DATE", "DAY", "DESC", "DISTINCT",
-        "ELSE", "END", "ERROR", "EXCEPT", "EXCLUDE", "EXISTS", "EXTRACT",
-        "FALSE", "FETCH", "FILTER", "FOLLOWING", "FROM",
-        "GROUP", "GROUPING", "GROUPS",
-        "HAVING", "HOUR",
-        "IN", "INTERSECT", "INTERVAL", "IS",
-        "LIKE", "LIMIT", "LISTAGG",
-        "MINUTE", "MONTH",
-        "NOT", "NULL",
-        "OFFSET", "ON", "OR", "ORDER", "OTHERS", "OVER", "OVERFLOW",
-        "OVERLAPS", "OVERLAY",
-        "PARTITION", "POSITION", "PRECEDING",
-        "RANGE", "RECURSIVE", "ROW", "ROWS",
-        "SECOND", "SELECT", "SIMILAR", "SOME", "SUBSTRING",
-        "THEN", "TIES", "TIME", "TIMESTAMP", "TO", "TRIM", "TRUE",
-        "TRUNCATE",
-        "UNBOUNDED", "UNION",
-        "VALUES",
-        "WHEN", "WHERE", "WITH", "WITHIN", "WITHOUT",
-        "YEAR", "ZONE",
-        "CROSS", "CORRESPONDING", "FOR", "FULL",
-        "INNER", "JOIN", "LATERAL", "LEFT", "MATCH_RECOGNIZE",
-        "NATURAL", "OUTER",
-        "QUALIFY", "RIGHT",
-        "SYSTEM_TIME", "TABLESAMPLE", "UPDATE", "USING",
-        "WINDOW"
-    )
 
     /**
      * Parses a single expression and requires the input to be fully consumed.
@@ -181,7 +145,7 @@ final class Parser(source: String, tokens: Vector[TokenPosition]):
             case _ => failExpected("an identifier")
 
     private def isReservedKeyword(name: String): Boolean =
-        reservedKeywords.contains(name.toUpperCase(java.util.Locale.ROOT))
+        SqlParser.reservedKeywords.contains(name.toUpperCase(java.util.Locale.ROOT))
 
     private def expectStringLiteral(): String =
         current match
@@ -2513,10 +2477,46 @@ object SqlParser:
      * Parses a single standard SQL expression.
      */
     def parseExpr(sql: String): SqlExpr =
-        new Parser(sql, new SqlLexer(sql).tokenize()).parseExpr()
+        new SqlParser(sql, new SqlLexer(sql).tokenize()).parseExpr()
 
     /**
      * Parses a single standard SQL query.
      */
     def parseQuery(sql: String): SqlQuery =
-        new Parser(sql, new SqlLexer(sql).tokenize()).parseQuery()
+        new SqlParser(sql, new SqlLexer(sql).tokenize()).parseQuery()
+
+    /**
+     * Keywords that the grammar itself treats as syntax. They cannot be used
+     * as unquoted identifiers in expression position; users must quote them.
+     */
+    private val reservedKeywords: Set[String] = Set(
+        "ALL", "AND", "ANY", "ARRAY", "AS", "ASC",
+        "BETWEEN", "BY",
+        "CASE", "CAST", "CURRENT",
+        "DATE", "DAY", "DESC", "DISTINCT",
+        "ELSE", "END", "ERROR", "EXCEPT", "EXCLUDE", "EXISTS", "EXTRACT",
+        "FALSE", "FETCH", "FILTER", "FOLLOWING", "FROM",
+        "GROUP", "GROUPING", "GROUPS",
+        "HAVING", "HOUR",
+        "IN", "INTERSECT", "INTERVAL", "IS",
+        "LIKE", "LIMIT", "LISTAGG",
+        "MINUTE", "MONTH",
+        "NOT", "NULL",
+        "OFFSET", "ON", "OR", "ORDER", "OTHERS", "OVER", "OVERFLOW",
+        "OVERLAPS", "OVERLAY",
+        "PARTITION", "POSITION", "PRECEDING",
+        "RANGE", "RECURSIVE", "ROW", "ROWS",
+        "SECOND", "SELECT", "SIMILAR", "SOME", "SUBSTRING",
+        "THEN", "TIES", "TIME", "TIMESTAMP", "TO", "TRIM", "TRUE",
+        "TRUNCATE",
+        "UNBOUNDED", "UNION",
+        "VALUES",
+        "WHEN", "WHERE", "WITH", "WITHIN", "WITHOUT",
+        "YEAR", "ZONE",
+        "CROSS", "CORRESPONDING", "FOR", "FULL",
+        "INNER", "JOIN", "LATERAL", "LEFT", "MATCH_RECOGNIZE",
+        "NATURAL", "OUTER",
+        "QUALIFY", "RIGHT",
+        "SYSTEM_TIME", "TABLESAMPLE", "UPDATE", "USING",
+        "WINDOW"
+    )
