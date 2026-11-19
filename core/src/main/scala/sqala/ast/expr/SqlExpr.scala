@@ -38,7 +38,7 @@ enum SqlExpr:
      *
      * Renders as `42`, `3.14`, etc.
      */
-    case NumberLiteral(number: BigDecimal)
+    case NumberLiteral[N: Numeric](number: N)
 
     /**
      * A boolean literal.
@@ -67,7 +67,7 @@ enum SqlExpr:
      * Renders as the standard form of the wrapped literal, e.g. `'value'`,
      * `42`, `TRUE`, `DATE '2023-01-01'`, or `INTERVAL 'value' field`.
      */
-    case InlinedLiteral(literal: StringLiteral | NumberLiteral | BooleanLiteral | TimeLiteral | IntervalLiteral)
+    case InlinedLiteral(literal: StringLiteral | NumberLiteral[?] | BooleanLiteral | TimeLiteral | IntervalLiteral)
 
     /**
      * A parenthesized tuple of expressions.

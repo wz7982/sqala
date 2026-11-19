@@ -424,9 +424,9 @@ trait StandardSqlPrinter:
                 printInlinedStringLiteralExpr(stringLiteral)
             case stringLiteral: SqlExpr.StringLiteral =>
                 printStringLiteralExpr(stringLiteral)
-            case SqlExpr.InlinedLiteral(numberLiteral: SqlExpr.NumberLiteral) =>
+            case SqlExpr.InlinedLiteral(numberLiteral: SqlExpr.NumberLiteral[?]) =>
                 printInlinedNumberLiteralExpr(numberLiteral)
-            case numberLiteral: SqlExpr.NumberLiteral =>
+            case numberLiteral: SqlExpr.NumberLiteral[?] =>
                 printNumberLiteralExpr(numberLiteral)
             case SqlExpr.InlinedLiteral(booleanLiteral: SqlExpr.BooleanLiteral) =>
                 printInlinedBooleanLiteralExpr(booleanLiteral)
@@ -554,13 +554,13 @@ trait StandardSqlPrinter:
     /**
      * Prints an inlined numeric literal expression.
      */
-    def printInlinedNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
+    def printInlinedNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         sqlBuilder.append(expr.number)
 
     /**
      * Prints a numeric literal expression.
      */
-    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
+    def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         printInlinedNumberLiteralExpr(expr)
 
     /**

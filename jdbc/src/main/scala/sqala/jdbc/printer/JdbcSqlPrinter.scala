@@ -38,7 +38,7 @@ trait JdbcSqlPrinter extends StandardSqlPrinter:
         sqlBuilder.append("?")
         collectedArgs.addOne(expr.string)
 
-    override def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
+    override def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         sqlBuilder.append("?")
         collectedArgs.addOne(expr.number)
 
