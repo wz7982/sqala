@@ -550,8 +550,8 @@ final class RecognizePatternTerm[L <: Int](private[sqala] val pattern: IrRowPatt
         RecognizePatternTerm(
             setQuantifier(
                 IrRowPatternQuantifier.Between(
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(start)))),
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(end)))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(start))))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(end))))),
                     false
                 )
             )
@@ -568,7 +568,7 @@ final class RecognizePatternTerm[L <: Int](private[sqala] val pattern: IrRowPatt
         RecognizePatternTerm(
             setQuantifier(
                 IrRowPatternQuantifier.Between(
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x)))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x))))),
                     None,
                     false
                 )
@@ -587,7 +587,7 @@ final class RecognizePatternTerm[L <: Int](private[sqala] val pattern: IrRowPatt
             setQuantifier(
                 IrRowPatternQuantifier.Between(
                     None,
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x)))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x))))),
                     false
                 )
             )
@@ -604,7 +604,7 @@ final class RecognizePatternTerm[L <: Int](private[sqala] val pattern: IrRowPatt
         RecognizePatternTerm(
             setQuantifier(
                 IrRowPatternQuantifier.Quantity(
-                    IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x)))
+                    IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x))))
                 )
             )
         )

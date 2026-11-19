@@ -21,7 +21,12 @@ import sqala.util.|>
  * backslashes literally (standard behavior, e.g. PostgreSQL, Oracle);
  * `false` uses backslashes as escape characters (e.g. MySQL).
  */
-open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
+trait StandardSqlPrinter:
+    /**
+     * controls string literal escaping
+     */
+    val standardEscapeStrings: Boolean
+
     /**
      * The internal buffer that accumulates the generated output.
      */
@@ -415,14 +420,24 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 printColumnExpr(column)
             case SqlExpr.NullLiteral =>
                 printNullLiteralExpr()
+            case SqlExpr.InlinedLiteral(stringLiteral: SqlExpr.StringLiteral) =>
+                printInlinedStringLiteralExpr(stringLiteral)
             case stringLiteral: SqlExpr.StringLiteral =>
                 printStringLiteralExpr(stringLiteral)
+            case SqlExpr.InlinedLiteral(numberLiteral: SqlExpr.NumberLiteral) =>
+                printInlinedNumberLiteralExpr(numberLiteral)
             case numberLiteral: SqlExpr.NumberLiteral =>
                 printNumberLiteralExpr(numberLiteral)
+            case SqlExpr.InlinedLiteral(booleanLiteral: SqlExpr.BooleanLiteral) =>
+                printInlinedBooleanLiteralExpr(booleanLiteral)
             case booleanLiteral: SqlExpr.BooleanLiteral =>
                 printBooleanLiteralExpr(booleanLiteral)
+            case SqlExpr.InlinedLiteral(timeLiteral: SqlExpr.TimeLiteral) =>
+                printInlinedTimeLiteralExpr(timeLiteral)
             case timeLiteral: SqlExpr.TimeLiteral =>
                 printTimeLiteralExpr(timeLiteral)
+            case SqlExpr.InlinedLiteral(intervalLiteral: SqlExpr.IntervalLiteral) =>
+                printInlinedIntervalLiteralExpr(intervalLiteral)
             case intervalLiteral: SqlExpr.IntervalLiteral =>
                 printIntervalLiteralExpr(intervalLiteral)
             case tuple: SqlExpr.Tuple =>
@@ -525,25 +540,43 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
         sqlBuilder.append("NULL")
 
     /**
+     * Prints an inlined string literal expression.
+     */
+    def printInlinedStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
+        printChars(expr.string)
+
+    /**
      * Prints a string literal expression.
      */
     def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
-        printChars(expr.string)
+        printInlinedStringLiteralExpr(expr)
+
+    /**
+     * Prints an inlined numeric literal expression.
+     */
+    def printInlinedNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
+        sqlBuilder.append(expr.number)
 
     /**
      * Prints a numeric literal expression.
      */
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral): Unit =
-        sqlBuilder.append(expr.number)
+        printInlinedNumberLiteralExpr(expr)
+
+    /**
+     * Prints an inlined boolean literal expression.
+     */
+    def printInlinedBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
+        if expr.boolean then
+            sqlBuilder.append("TRUE")
+        else
+            sqlBuilder.append("FALSE")
 
     /**
      * Prints a boolean literal expression.
      */
     def printBooleanLiteralExpr(expr: SqlExpr.BooleanLiteral): Unit =
-        if expr.boolean then
-            sqlBuilder.append("TRUE")
-        else
-            sqlBuilder.append("FALSE")
+        printInlinedBooleanLiteralExpr(expr)
 
     /**
      * Prints a time type keyword.
@@ -566,12 +599,18 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                     printTimeZoneMode(m)
 
     /**
-     * Prints a time literal expression.
+     * Prints an inlined time literal expression.
      */
-    def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+    def printInlinedTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         printTimeType(expr.`type`)
         sqlBuilder.append(" ")
         printChars(expr.time)
+
+    /**
+     * Prints a time literal expression.
+     */
+    def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+        printInlinedTimeLiteralExpr(expr)
 
     /**
      * Prints a time unit keyword.
@@ -606,13 +645,19 @@ open class StandardSqlPrinter(val standardEscapeStrings: Boolean):
                 printTimeUnit(unit)
 
     /**
-     * Prints an interval literal expression.
+     * Prints an inlined interval literal expression.
      */
-    def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
+    def printInlinedIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
         sqlBuilder.append("INTERVAL ")
         printChars(expr.value)
         sqlBuilder.append(" ")
         printIntervalField(expr.field)
+
+    /**
+     * Prints an interval literal expression.
+     */
+    def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit =
+        printInlinedIntervalLiteralExpr(expr)
 
     /**
      * Prints a tuple expression.

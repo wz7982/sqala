@@ -7,7 +7,7 @@ import sqala.ast.statement.SqlStatement
 /**
  * SQLite dialect printer.
  */
-class SqlitePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
+class SqlitePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
     override def printLimit(limit: SqlLimit): Unit =
         val standardMode = limit.fetch match
             case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>

@@ -62,6 +62,14 @@ enum SqlExpr:
     case IntervalLiteral(value: String, field: SqlIntervalField)
 
     /**
+     * A literal inlined in its standard SQL form.
+     *
+     * Renders as the standard form of the wrapped literal, e.g. `'value'`,
+     * `42`, `TRUE`, `DATE '2023-01-01'`, or `INTERVAL 'value' field`.
+     */
+    case InlinedLiteral(literal: StringLiteral | NumberLiteral | BooleanLiteral | TimeLiteral | IntervalLiteral)
+
+    /**
      * A parenthesized tuple of expressions.
      *
      * Renders as `(expr [, ...])`.

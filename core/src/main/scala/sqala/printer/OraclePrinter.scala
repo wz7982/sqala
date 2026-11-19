@@ -6,17 +6,19 @@ import sqala.ast.table.SqlTableAlias
 /**
  * Oracle dialect printer.
  */
-class OraclePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
+class OraclePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
     override def printCteRecursive(): Unit =
         ()
 
-    override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+    override def printInlinedTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         expr.`type` match
             case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_TIMESTAMP_TZ",
-                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM") :: Nil,
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM")) :: 
+                    Nil,
                     Nil,
                     Nil,
                     None
@@ -26,7 +28,9 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends Standar
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_TIMESTAMP",
-                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9") :: Nil,
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9")) :: 
+                    Nil,
                     Nil,
                     Nil,
                     None
@@ -36,14 +40,16 @@ class OraclePrinter(override val standardEscapeStrings: Boolean) extends Standar
                 val func = SqlExpr.GeneralFunc(
                     None,
                     "TO_DATE",
-                    SqlExpr.StringLiteral(expr.time) :: SqlExpr.StringLiteral("YYYY-MM-DD") :: Nil,
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD")) :: 
+                    Nil,
                     Nil,
                     Nil,
                     None
                 )
                 printExpr(func)
             case _ =>
-                super.printTimeLiteralExpr(expr)
+                super.printInlinedTimeLiteralExpr(expr)
 
     override def printType(`type`: SqlType): Unit =
         `type` match

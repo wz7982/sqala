@@ -386,10 +386,10 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         current match
             case Token.NumberLiteral(value) =>
                 advance()
-                SqlExpr.NumberLiteral(value)
+                SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(value))
             case Token.StringLiteral(value) =>
                 advance()
-                SqlExpr.StringLiteral(value)
+                SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(value))
             case Token.Identifier(name, quoted) =>
                 parseIdentifierPrimary(name, quoted)
             case Token.Symbol("(") =>
@@ -405,10 +405,10 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val upper = if quoted then "" else name.toUpperCase(java.util.Locale.ROOT)
         if !quoted && upper == "TRUE" then
             advance()
-            SqlExpr.BooleanLiteral(true)
+            SqlExpr.InlinedLiteral(SqlExpr.BooleanLiteral(true))
         else if !quoted && upper == "FALSE" then
             advance()
-            SqlExpr.BooleanLiteral(false)
+            SqlExpr.InlinedLiteral(SqlExpr.BooleanLiteral(false))
         else if !quoted && upper == "NULL" then
             advance()
             SqlExpr.NullLiteral
@@ -1304,7 +1304,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 case _ =>
                     failInvalid("time literal", kind)
         validateTimeLiteral(timeType, value, literalPosition)
-        SqlExpr.TimeLiteral(timeType, value)
+        SqlExpr.InlinedLiteral(SqlExpr.TimeLiteral(timeType, value))
 
     private def validateTimeLiteral(
         timeType: SqlTimeType,
@@ -1353,7 +1353,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         catch
             case e: LiteralValidationException =>
                 throw errorAt(s"Invalid INTERVAL literal: ${e.reason}", literalPosition)
-        SqlExpr.IntervalLiteral(value, field)
+        SqlExpr.InlinedLiteral(SqlExpr.IntervalLiteral(value, field))
 
     private def parseTimeUnit(): SqlTimeUnit =
         val name = expectIdentifier().toUpperCase(java.util.Locale.ROOT)

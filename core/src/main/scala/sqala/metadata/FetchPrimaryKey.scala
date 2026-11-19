@@ -20,12 +20,12 @@ trait FetchPrimaryKey[T]:
     /**
      * Builds a `SELECT` query filtered by primary key values.
      */
-    def createQueryTree(x: Seq[Args]): SqlQuery
+    def createQueryTree(x: Seq[Args], inlined: Boolean): SqlQuery
 
     /**
      * Builds a `DELETE` statement filtered by primary key values.
      */
-    def createDeleteTree(x: Seq[Args]): SqlStatement.Delete
+    def createDeleteTree(x: Seq[Args], inlined: Boolean): SqlStatement.Delete
 
 object FetchPrimaryKey:
     type Aux[T, A] = FetchPrimaryKey[T]:
@@ -80,21 +80,21 @@ object FetchPrimaryKey:
         val converter = tpe match
             case '[type t <: Tuple; t] =>
                 val instance = Expr.summon[AsSqlExprs[t]].get
-                '{ (x: t) => $instance.asSqlExprs(x) }
+                '{ (x: t, inlined: Boolean) => $instance.asSqlExprs(x, inlined) }
             case '[t] =>
                 val instance = Expr.summon[AsSqlExpr[t]].get
-                '{ (x: t) => List($instance.asSqlExpr(x)) }
+                '{ (x: t, inlined: Boolean) => List($instance.asSqlExpr(x, inlined)) }
 
         tpe match
             case '[t] =>
-                val typedConverter = converter.asExprOf[t => List[SqlExpr]]
+                val typedConverter = converter.asExprOf[(t, Boolean) => List[SqlExpr]]
                 '{
                     val pk = new FetchPrimaryKey[T]:
                         type Args = t
 
-                        def createInfo(x: Seq[Args]): (SqlExpr, SqlTable.Ident) =
+                        def createInfo(x: Seq[Args], inlined: Boolean): (SqlExpr, SqlTable.Ident) =
                             val sqlConditions = x.map: p =>
-                                val sqlValues = $typedConverter(p)
+                                val sqlValues = $typedConverter(p, inlined)
                                 val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
                                     SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
                                 sqlConditions
@@ -106,8 +106,8 @@ object FetchPrimaryKey:
                             val table: SqlTable.Ident = SqlTable.Ident($tableNameExpr, None, None, None, None)
                             (sqlCondition, table)
 
-                        def createQueryTree(x: Seq[Args]): SqlQuery =
-                            val (sqlCondition, table) = createInfo(x)
+                        def createQueryTree(x: Seq[Args], inlined: Boolean): SqlQuery =
+                            val (sqlCondition, table) = createInfo(x, inlined)
                             val columns = $columnsExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None))
                             SqlQuery.Select(
                                 None,
@@ -123,8 +123,8 @@ object FetchPrimaryKey:
                                 None
                             )
 
-                        def createDeleteTree(x: Seq[t]): SqlStatement.Delete =
-                            val (sqlCondition, table) = createInfo(x)
+                        def createDeleteTree(x: Seq[t], inlined: Boolean): SqlStatement.Delete =
+                            val (sqlCondition, table) = createInfo(x, inlined)
                             SqlStatement.Delete(
                                 table,
                                 Some(sqlCondition)

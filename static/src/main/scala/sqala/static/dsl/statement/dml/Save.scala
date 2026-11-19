@@ -36,7 +36,7 @@ object Save:
         val columns = metaData.columns
         val data: m.MirroredElemTypes = Tuple.fromProductTyped(entity)
         val values = summonInline[AsSqlExprs[m.MirroredElemTypes]]
-            .asSqlExprs(data)
+            .asSqlExprs(data, false)
             .map(e => IrExpr.Native(e))
         val primaryKeys = metaData.columns.toList
             .zip(metaData.fields.toList)

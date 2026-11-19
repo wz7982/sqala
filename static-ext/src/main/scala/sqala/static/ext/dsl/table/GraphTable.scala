@@ -338,8 +338,8 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
             __where__,
             Some(
                 IrGraphQuantifier.Between(
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(start)))),
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(end))))
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(start))))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(end)))))
                 )
             )
         )
@@ -358,7 +358,7 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
             __where__,
             Some(
                 IrGraphQuantifier.Between(
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x)))),
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x))))),
                     None
                 )
             )
@@ -379,7 +379,7 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
             Some(
                 IrGraphQuantifier.Between(
                     None,
-                    Some(IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x))))
+                    Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x)))))
                 )
             )
         )
@@ -398,7 +398,7 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
             __where__,
             Some(
                 IrGraphQuantifier.Quantity(
-                    IrExpr.Native(SqlExpr.NumberLiteral(BigDecimal(x)))
+                    IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.NumberLiteral(BigDecimal(x))))
                 )
             )
         )

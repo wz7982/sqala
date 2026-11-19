@@ -152,7 +152,7 @@ object Update:
         val table = Table[T, Column, 1](irTable, metaData)
         val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
         val irExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]]
-            .asSqlExprs(data)
+            .asSqlExprs(data, false)
             .map(e => IrExpr.Native(e))
         val updateMetaData = metaData.fields.toList
             .zip(metaData.columns.toList)

@@ -42,7 +42,20 @@ def column(columnName: String): Expr =
  * }}}
  */
 def value[V: AsSqlExpr as a](v: V): Expr =
-    Expr(a.asSqlExpr(v))
+    Expr(a.asSqlExpr(v, false))
+
+/**
+ * Lifts a Scala value into an inlined expression through the `AsSqlExpr` type
+ * class. Literal values are escaped automatically when the SQL is
+ * generated.
+ *
+ * {{{
+ * inlinedValue(1)
+ * inlinedValue("Alice")
+ * }}}
+ */
+def inlinedValue[V: AsSqlExpr as a](v: V): Expr =
+    Expr(a.asSqlExpr(v, true))
 
 /**
  * Embeds a query as a scalar subquery expression.

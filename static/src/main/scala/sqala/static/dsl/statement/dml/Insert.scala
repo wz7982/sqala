@@ -119,7 +119,7 @@ final class Insert[T, S <: InsertState](
         refl: S =:= InsertTable
     ): Insert[T, InsertValues] =
         val insertValues = rows.toList.map: row =>
-            a.asSqlExprs(row).map(e => IrExpr.Native(e))
+            a.asSqlExprs(row, false).map(e => IrExpr.Native(e))
         new Insert(tree.copy(insert = insertValues))
 
     /**
@@ -210,7 +210,7 @@ object Insert:
         val values = entities.map: entity =>
             val data: p.MirroredElemTypes = Tuple.fromProductTyped(entity)
             val irExprs = summonInline[AsSqlExprs[p.MirroredElemTypes]]
-                .asSqlExprs(data)
+                .asSqlExprs(data, false)
                 .map(e => IrExpr.Native(e))
             metaData.fields.toList.zip(irExprs)
                 .filterNot((field, _) => metaData.incrementField.contains(field))

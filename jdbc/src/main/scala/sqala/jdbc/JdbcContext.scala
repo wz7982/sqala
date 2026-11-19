@@ -1,11 +1,13 @@
 package sqala.jdbc
 
+import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.dynamic.native.NativeSql
-import sqala.metadata.{Dialect, FetchPrimaryKey, InsertMacro}
+import sqala.ir.{IrQuery, IrStatement, ToAst}
+import sqala.jdbc.dialect.JdbcDialect
+import sqala.metadata.{FetchPrimaryKey, InsertMacro}
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.{Query, SelectQuery}
 import sqala.static.dsl.{QuerySize, Result}
-import sqala.util.{queryToString, statementToString}
 
 import java.sql.Connection
 import javax.sql.DataSource
@@ -19,14 +21,52 @@ import scala.util.NotGiven
  */
 final class JdbcContext(
     private[sqala] val dataSource: DataSource,
-    private[sqala] val dialect: Dialect,
+    private[sqala] val dialect: JdbcDialect,
     private[sqala] val standardEscapeStrings: Boolean
 ):
+    /**
+     * Generates the SQL string and bound parameters for a query AST using
+     * the configured dialect and string escaping mode.
+     *
+     * The returned parameter array matches the `?` placeholders in the SQL
+     * string, in order.
+     */
+    private def renderQuery(query: SqlQuery): (String, Array[Any]) =
+        val printer = dialect.printer(standardEscapeStrings)
+        printer.printQuery(query)
+        printer.sql -> printer.args
+
+    /**
+     * Lowers an IR query to the SQL AST, then generates its SQL string and
+     * bound parameters.
+     */
+    private def renderQuery(query: IrQuery): (String, Array[Any]) =
+        renderQuery(new ToAst().toAst(query))
+
+    /**
+     * Generates the SQL string and bound parameters for a DML statement AST
+     * using the configured dialect and string escaping mode.
+     *
+     * The returned parameter array matches the `?` placeholders in the SQL
+     * string, in order.
+     */
+    private def renderStatement(statement: SqlStatement): (String, Array[Any]) =
+        val printer = dialect.printer(standardEscapeStrings)
+        printer.printStatement(statement)
+        printer.sql -> printer.args
+
+    /**
+     * Lowers an IR statement to the SQL AST, then generates its SQL string
+     * and bound parameters.
+     */
+    private def renderStatement(statement: IrStatement): (String, Array[Any]) =
+        renderStatement(new ToAst().toAst(statement))
+
     /**
      * Obtains a connection and executes a handler. Automatically
      * closes the connection outside of transactions.
      */
-    private[sqala] def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
+    private def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
         var conn: Connection | Null = null
         try
             conn = ec.fetchConnection(this)
@@ -40,7 +80,7 @@ final class JdbcContext(
      * Logs and executes a DML statement, returning the affected
      * row count.
      */
-    private[sqala] def executeDml(sql: String, args: Array[Any])(using ec: ExecuteContext, l: Logger): Int =
+    private def executeDml(sql: String, args: Array[Any])(using ec: ExecuteContext, l: Logger): Int =
         l.printLog(sql, args)
         execute(c => jdbcExec(c, sql, args))
 
@@ -53,8 +93,8 @@ final class JdbcContext(
      * }}}
      */
     def execute(insert: Insert[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = insert.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(insert.toSqlStatement)
+        executeDml(sql, args)
 
     /**
      * Executes a static `update` statement and returns the affected
@@ -65,8 +105,8 @@ final class JdbcContext(
      * }}}
      */
     def execute(update: Update[?, ?])(using ExecuteContext, Logger): Int =
-        val sql = update.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(update.toSqlStatement)
+        executeDml(sql, args)
 
     /**
      * Executes a static `delete` statement and returns the affected
@@ -77,8 +117,8 @@ final class JdbcContext(
      * }}}
      */
     def execute(delete: Delete[?])(using ExecuteContext, Logger): Int =
-        val sql = delete.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(delete.tree)
+        executeDml(sql, args)
 
     /**
      * Executes a native SQL DML statement and returns the affected
@@ -105,8 +145,8 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = i.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(i.toSqlStatement)
+        executeDml(sql, args)
 
     /**
      * Batch-inserts a sequence of entities and returns the total
@@ -122,8 +162,8 @@ final class JdbcContext(
         Logger
     ): Int =
         val i = Insert.insertByEntities[A](entities)
-        val sql = i.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(i.toSqlStatement)
+        executeDml(sql, args)
 
     /**
      * Inserts a single entity and returns the entity with
@@ -139,9 +179,9 @@ final class JdbcContext(
         l: Logger
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
-        val sql = i.sql(dialect, standardEscapeStrings)
-        l.printLog(sql, Array.empty[Any])
-        val id = execute(c => jdbcExecReturnKey(c, sql, Array.empty[Any])).head
+        val (sql, args) = renderStatement(i.toSqlStatement)
+        l.printLog(sql, args)
+        val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
 
     /**
@@ -166,8 +206,8 @@ final class JdbcContext(
         if u.tree.setPairs.isEmpty then
             0
         else
-            val sql = u.sql(dialect, standardEscapeStrings)
-            executeDml(sql, Array.empty[Any])
+            val (sql, args) = renderStatement(u.toSqlStatement)
+            executeDml(sql, args)
 
     /**
      * Upserts an entity by primary key. Inserts if the key does
@@ -185,8 +225,8 @@ final class JdbcContext(
         Logger
     ): Int =
         val s = Save.saveByEntity[A](entity)
-        val sql = s.sql(dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val (sql, args) = renderStatement(s.tree)
+        executeDml(sql, args)
 
     /**
      * Deletes a single row by primary key.
@@ -200,9 +240,9 @@ final class JdbcContext(
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKey: fp.Args): Int =
-        val tree = fp.createDeleteTree(primaryKey :: Nil)
-        val sql = statementToString(tree, dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val tree = fp.createDeleteTree(primaryKey :: Nil, false)
+        val (sql, args) = renderStatement(tree)
+        executeDml(sql, args)
 
     /**
      * Deletes multiple rows by primary keys.
@@ -216,9 +256,9 @@ final class JdbcContext(
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKeys: Seq[fp.Args]): Int =
-        val tree = fp.createDeleteTree(primaryKeys)
-        val sql = statementToString(tree, dialect, standardEscapeStrings)
-        executeDml(sql, Array.empty[Any])
+        val tree = fp.createDeleteTree(primaryKeys, false)
+        val (sql, args) = renderStatement(tree)
+        executeDml(sql, args)
 
     /**
      * Finds a single row by primary key.
@@ -233,10 +273,10 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     )(primaryKey: fp.Args): Option[T] =
-        val tree = fp.createQueryTree(primaryKey :: Nil)
-        val sql = queryToString(tree, dialect, standardEscapeStrings)
-        l.printLog(sql, Array.empty[Any])
-        execute(c => jdbcQuery(c, sql, Array.empty[Any])).headOption
+        val tree = fp.createQueryTree(primaryKey :: Nil, false)
+        val (sql, args) = renderQuery(tree)
+        l.printLog(sql, args)
+        execute(c => jdbcQuery(c, sql, args)).headOption
 
     /**
      * Fetches multiple rows by primary keys.
@@ -251,10 +291,10 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     )(primaryKeys: Seq[fp.Args]): List[T] =
-        val tree = fp.createQueryTree(primaryKeys)
-        val sql = queryToString(tree, dialect, standardEscapeStrings)
-        l.printLog(sql, Array.empty[Any])
-        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
+        val tree = fp.createQueryTree(primaryKeys, false)
+        val (sql, args) = renderQuery(tree)
+        l.printLog(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
 
     /**
      * Fetches a typed query result using an explicit decoder.
@@ -268,9 +308,9 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        val sql = query.sql(dialect, standardEscapeStrings)
-        l.printLog(sql, Array.empty[Any])
-        execute(c => jdbcQuery(c, sql, Array.empty[Any]))
+        val (sql, args) = renderQuery(query.tree)
+        l.printLog(sql, args)
+        execute(c => jdbcQuery(c, sql, args))
 
     /**
      * Fetches a static query result with automatic result type
@@ -449,8 +489,8 @@ final class JdbcContext(
      * db.showSql(from(User))
      * }}}
      */
-    def showSql[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S]): String =
-        query.sql(dialect, standardEscapeStrings)
+    def showSql[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S]): (String, Array[Any]) =
+        renderQuery(query.tree)
 
     /**
      * Streams a query result in cursor batches, invoking the callback
@@ -472,9 +512,9 @@ final class JdbcContext(
         d: JdbcDecoder[r.R],
         l: Logger
     )(f: Cursor[r.R] => R): Unit =
-        val sql = query.sql(dialect, standardEscapeStrings)
-        l.printLog(sql, Array.empty[Any])
-        execute(c => jdbcCursorQuery(c, sql, Array.empty[Any], fetchSize, f))
+        val (sql, args) = renderQuery(query.tree)
+        l.printLog(sql, args)
+        execute(c => jdbcCursorQuery(c, sql, args, fetchSize, f))
 
     /**
      * Executes a block of operations within a database transaction.

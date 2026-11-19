@@ -295,6 +295,20 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL])
     def as[R](using c: Cast[a.R, R], kt: KindToTuple[a.K]): Expr[Option[R], Composite[kt.R]] =
         Expr(IrExpr.Cast(a.asExpr(x).expr, c.castType))
 
+extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsSqlExpr[T])
+    /**
+     * Lifts a value directly to an inline literal expression.
+     *
+     * The value is rendered as an inline literal in the generated SQL,
+     * rather than being parameterized.
+     *
+     * {{{
+     * from(User).filter(u => u.id === 1.asInlinedExpr)
+     * }}}
+     */
+    def asInlinedExpr: Expr[T, Value] =
+        Expr(IrExpr.Native(a.asSqlExpr(x, true)))
+
 extension [CL <: Int](n: Int)(using QueryContext[CL])
     /**
      * Creates an interval of years. Maps to `INTERVAL 'n' YEAR`.

@@ -68,7 +68,7 @@ object AsExpr:
             type K = Value
 
             def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
-                NonEmptyList(Expr(IrExpr.Native(a.asSqlExpr(x))), Nil)
+                NonEmptyList(Expr(IrExpr.Native(a.asSqlExpr(x, false))), Nil)
 
     given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
         a: AsExpr[T, CL],
