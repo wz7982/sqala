@@ -30,8 +30,8 @@ trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
      */
     def fromValue(x: R): T
 
-    def asSqlExpr(x: T): SqlExpr =
-        a.asSqlExpr(toValue(x))
+    def asSqlExpr(x: T, inlined: Boolean): SqlExpr =
+        a.asSqlExpr(toValue(x), inlined)
 
     def sqlType: SqlType =
         a.sqlType

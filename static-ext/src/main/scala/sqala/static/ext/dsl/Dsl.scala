@@ -129,7 +129,7 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     c: CombineKindTuple[EmptyTuple, e.R]
 ): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
     given JsonContext = JsonContext()
-    FromJson(a.asExpr(expr).expr, path.asExpr.expr, columns)
+    FromJson(a.asExpr(expr).expr, path, columns)
 
 /**
  * Creates an ordinality column for `jsonTable`. Maps to
@@ -160,7 +160,7 @@ final class JsonPathColumnPart[T]:
         as: ValidateArgType[AsSqlExpr, T, "scalar"],
         a: AsSqlExpr[T]
     ): JsonPathColumn[T] =
-        JsonPathColumn(path.asExpr.expr, a.sqlType)
+        JsonPathColumn(path, a.sqlType)
 
 /**
  * Creates a path column definition for `jsonTable`. Maps to
@@ -185,7 +185,7 @@ def existsColumn[CL <: Int](path: String)(using
     QueryContext[CL],
     JsonContext,
 ): JsonExistsColumn =
-    JsonExistsColumn(path.asExpr.expr)
+    JsonExistsColumn(path)
 
 /**
  * Defines nested columns at a JSON path for `jsonTable`. Maps to
@@ -206,7 +206,7 @@ def nestedColumns[N <: Tuple, V <: Tuple, CL <: Int](
 )(
     c: JsonContext ?=> NamedTuple[N, V]
 ): JsonNestedColumns[N, V] =
-    JsonNestedColumns(path.asExpr.expr, c.toTuple)
+    JsonNestedColumns(path, c.toTuple)
 
 /**
  * Creates a column list for `jsonTable`. Maps to

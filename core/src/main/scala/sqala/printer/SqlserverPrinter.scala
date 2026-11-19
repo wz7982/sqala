@@ -9,7 +9,7 @@ import sqala.util.NonEmptyList
 /**
  * SQL Server dialect printer.
  */
-class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
+class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
     override val leftQuote: Char = '['
 
     override val rightQuote: Char = ']'
@@ -21,7 +21,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends Stan
         sqlBuilder.append("N")
         printChars(expr.string)
 
-    override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+    override def printInlinedTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
         expr.`type` match
             case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
                 val cast = SqlExpr.Cast(
@@ -42,7 +42,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends Stan
                 )
                 printExpr(cast)
             case _ =>
-                super.printTimeLiteralExpr(expr)
+                super.printInlinedTimeLiteralExpr(expr)
 
     override def printType(`type`: SqlType): Unit =
         `type` match

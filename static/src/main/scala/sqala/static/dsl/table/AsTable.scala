@@ -86,7 +86,7 @@ object AsTable:
         val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
         createValues[T, S, CL](
             metaData,
-            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum))
+            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum), false)
         )
 
     private def createValues[T <: Product, S <: Seq[T], CL <: Int](

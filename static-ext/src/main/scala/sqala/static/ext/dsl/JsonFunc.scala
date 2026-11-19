@@ -50,18 +50,16 @@ def json[A, CL <: Int](x: A)(using
  * from(Log).map(l => jsonValue(json(l.data), "$.name"))
  * }}}
  */
-def jsonValue[A, P, CL <: Int](x: A, path: P)(using
+def jsonValue[A, CL <: Int](x: A, path: String)(using
     qc: QueryContext[CL],
-    aa: AsExpr[A, CL],
-    ap: AsExpr[P, CL],
-    j: ValidateArgType[SqlJson, aa.R, "json"],
-    s: ValidateArgType[SqlString, ap.R, "string"],
-    c: CombineKind[aa.K, ap.K]
-): Expr[Option[String], c.R] =
+    a: AsExpr[A, CL],
+    j: ValidateArgType[SqlJson, a.R, "json"],
+    kt: KindToTuple[a.K]
+): Expr[Option[String], Composite[kt.R]] =
     Expr(
         IrExpr.JsonValueFunc(
-            aa.asExpr(x).expr,
-            ap.asExpr(path).expr
+            a.asExpr(x).expr,
+            path.asInlinedExpr.expr
         )
     )
 
@@ -73,18 +71,16 @@ def jsonValue[A, P, CL <: Int](x: A, path: P)(using
  * from(Log).map(l => jsonQuery(json(l.data), "$.items"))
  * }}}
  */
-def jsonQuery[A, P, CL <: Int](x: A, path: P)(using
+def jsonQuery[A, CL <: Int](x: A, path: String)(using
     qc: QueryContext[CL],
-    aa: AsExpr[A, CL],
-    ap: AsExpr[P, CL],
-    j: ValidateArgType[SqlJson, aa.R, "json"],
-    s: ValidateArgType[SqlString, ap.R, "string"],
-    c: CombineKind[aa.K, ap.K]
-): Expr[Option[Json], c.R] =
+    a: AsExpr[A, CL],
+    j: ValidateArgType[SqlJson, a.R, "json"],
+    kt: KindToTuple[a.K]
+): Expr[Option[Json], Composite[kt.R]] =
     Expr(
         IrExpr.JsonQueryFunc(
-            aa.asExpr(x).expr,
-            ap.asExpr(path).expr
+            a.asExpr(x).expr,
+            path.asInlinedExpr.expr
         )
     )
 
@@ -95,18 +91,16 @@ def jsonQuery[A, P, CL <: Int](x: A, path: P)(using
  * from(Log).filter(l => jsonExists(json(l.data), "$.name"))
  * }}}
  */
-def jsonExists[A, P, CL <: Int](x: A, path: P)(using
+def jsonExists[A, CL <: Int](x: A, path: String)(using
     qc: QueryContext[CL],
-    aa: AsExpr[A, CL],
-    ap: AsExpr[P, CL],
-    j: ValidateArgType[SqlJson, aa.R, "json"],
-    s: ValidateArgType[SqlString, ap.R, "string"],
-    c: CombineKind[aa.K, ap.K]
-): Expr[Option[Boolean], c.R] =
+    a: AsExpr[A, CL],
+    j: ValidateArgType[SqlJson, a.R, "json"],
+    kt: KindToTuple[a.K]
+): Expr[Option[Boolean], Composite[kt.R]] =
     Expr(
         IrExpr.JsonExistsFunc(
-            aa.asExpr(x).expr,
-            ap.asExpr(path).expr
+            a.asExpr(x).expr,
+            path.asInlinedExpr.expr
         )
     )
 

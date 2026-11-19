@@ -1,6 +1,6 @@
 package sqala.static.ext.dsl.table
 
-import sqala.ast.expr.SqlType
+import sqala.ast.expr.{SqlExpr, SqlType}
 import sqala.ir.{IrExpr, IrJsonColumn, IrTable}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.*
@@ -27,20 +27,20 @@ final class JsonOrdinalColumn extends JsonColumn
  * A column extracting a JSON value at a given path.
  */
 final class JsonPathColumn[T](
-    private[sqala] val path: IrExpr,
+    private[sqala] val path: String,
     private[sqala] val `type`: SqlType
 ) extends JsonColumn
 
 /**
  * A column checking existence of a JSON value at a given path.
  */
-final class JsonExistsColumn(private[sqala] val path: IrExpr) extends JsonColumn
+final class JsonExistsColumn(private[sqala] val path: String) extends JsonColumn
 
 /**
  * A nested path with its own column definitions.
  */
 final class JsonNestedColumns[N <: Tuple, V <: Tuple](
-    private[sqala] val path: IrExpr,
+    private[sqala] val path: String,
     private[sqala] val columns: V
 ) extends JsonColumn
 
@@ -86,7 +86,14 @@ object JsonColumnFlatten:
                 1
 
             def toJsonColumns(x: JsonPathColumn[T], cursor: Int): NonEmptyList[IrJsonColumn] =
-                NonEmptyList(IrJsonColumn.Column(s"c$cursor", x.`type`, Some(x.path)), Nil)
+                NonEmptyList(
+                    IrJsonColumn.Column(
+                        s"c$cursor", 
+                        x.`type`, 
+                        Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(x.path))))
+                    ), 
+                    Nil
+                )
 
     given existsColumn[CL <: Int]: Aux[JsonExistsColumn, CL, Expr[Boolean, Column[CL]] *: EmptyTuple] =
         new JsonColumnFlatten[JsonExistsColumn, CL]:
@@ -96,7 +103,14 @@ object JsonColumnFlatten:
                 1
 
             def toJsonColumns(x: JsonExistsColumn, cursor: Int): NonEmptyList[IrJsonColumn] =
-                NonEmptyList(IrJsonColumn.Exists(s"c$cursor", SqlType.Boolean, Some(x.path)), Nil)
+                NonEmptyList(
+                    IrJsonColumn.Exists(
+                        s"c$cursor", 
+                        SqlType.Boolean, 
+                        Some(IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(x.path))))
+                    ), 
+                    Nil
+                )
 
     given nestedColumns[N <: Tuple, V <: Tuple, CL <: Int](using
         f: JsonColumnFlatten[V, CL]
@@ -108,7 +122,14 @@ object JsonColumnFlatten:
                 f.offset(x.columns)
 
             def toJsonColumns(x: JsonNestedColumns[N, V], cursor: Int): NonEmptyList[IrJsonColumn] =
-                NonEmptyList(IrJsonColumn.Nested(x.path, None, f.toJsonColumns(x.columns, cursor)), Nil)
+                NonEmptyList(
+                    IrJsonColumn.Nested(
+                        IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(x.path))), 
+                        None, 
+                        f.toJsonColumns(x.columns, cursor)
+                    ), 
+                    Nil
+                )
 
     given tuple[H, T <: Tuple, CL <: Int](using
         fh: JsonColumnFlatten[H, CL],
@@ -159,7 +180,7 @@ final class FromJson[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
 object FromJson:
     def apply[N <: Tuple, V <: Tuple, OKS <: Tuple, CL <: Int](
         expr: IrExpr,
-        path: IrExpr,
+        path: String,
         columns: JsonColumns[N, V]
     )(using
         f: JsonColumnFlatten[V, CL],
@@ -170,7 +191,7 @@ object FromJson:
         val table: IrTable.Json = IrTable.Json(
             false,
             expr,
-            path,
+            IrExpr.Native(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(path))),
             None,
             irColumns,
             Nil

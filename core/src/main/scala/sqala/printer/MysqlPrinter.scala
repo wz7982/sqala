@@ -12,7 +12,7 @@ import sqala.util.NonEmptyList
 /**
  * MySQL dialect printer.
  */
-class MysqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter(standardEscapeStrings):
+class MysqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
     override val leftQuote: Char = '`'
 
     override val rightQuote: Char = '`'
