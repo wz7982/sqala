@@ -76,7 +76,7 @@ With sqala, you can:
 
 6. **SQL parser**: the `dynamic` module includes a hand-written recursive descent SQL parser with no third-party parser dependency. `unsafeExpr` parses SQL fragments into expressions, which makes migrating existing SQL or handling dynamic query fragments easier (note: only syntax is validated, not semantics, and untrusted input must never be spliced in).
 
-7. **Extreme performance**: Scala 3's `inline` capability generates high-performance deserialization code, typically several times faster than mainstream reflection-based Java query libraries.
+7. **Strong batch decoding performance**: Scala 3's `inline` capability generates decoding code at compile time. For 10,000-row batch queries, decoding throughput is close to hand-written JDBC (about 94%) and is typically higher than reflection/proxy-based frameworks such as MyBatis, Hibernate, and jOOQ.
 
 8. **Transparency**: sqala is not a traditional ORM. The query DSL maps almost 1:1 to the generated query, with no black-box behaviour such as N + 1 queries, so performance is predictable.
 
