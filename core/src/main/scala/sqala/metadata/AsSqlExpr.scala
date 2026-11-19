@@ -27,7 +27,7 @@ object AsSqlExpr:
             SqlType.Int
 
         def asSqlExpr(x: Int, inlined: Boolean): SqlExpr =
-            val expr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(BigDecimal(x.toString))
+            val expr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x)
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
             else
@@ -38,7 +38,7 @@ object AsSqlExpr:
             SqlType.Long
 
         def asSqlExpr(x: Long, inlined: Boolean): SqlExpr =
-            val expr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(BigDecimal(x.toString))
+            val expr: SqlExpr.NumberLiteral[Long] = SqlExpr.NumberLiteral(x)
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
             else
@@ -49,7 +49,7 @@ object AsSqlExpr:
             SqlType.Float
 
         def asSqlExpr(x: Float, inlined: Boolean): SqlExpr =
-            val expr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(BigDecimal(x.toString))
+            val expr: SqlExpr.NumberLiteral[Float] = SqlExpr.NumberLiteral(x)
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
             else
@@ -60,7 +60,7 @@ object AsSqlExpr:
             SqlType.Double
 
         def asSqlExpr(x: Double, inlined: Boolean): SqlExpr =
-            val expr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(BigDecimal(x.toString))
+            val expr: SqlExpr.NumberLiteral[Double] = SqlExpr.NumberLiteral(x)
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
             else
@@ -71,7 +71,7 @@ object AsSqlExpr:
             SqlType.Decimal(Some(38, 10))
 
         def asSqlExpr(x: BigDecimal, inlined: Boolean): SqlExpr =
-            val expr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(BigDecimal(x.toString))
+            val expr: SqlExpr.NumberLiteral[BigDecimal] = SqlExpr.NumberLiteral(x)
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
             else
@@ -186,7 +186,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: Geometry, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -207,7 +207,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: Point, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -228,7 +228,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: LineString, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -249,7 +249,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: Polygon, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -270,7 +270,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: MultiPoint, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -291,7 +291,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: MultiLineString, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -312,7 +312,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: MultiPolygon, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
@@ -333,7 +333,7 @@ object AsSqlExpr:
 
         def asSqlExpr(x: GeometryCollection, inlined: Boolean): SqlExpr =
             val valueExpr: SqlExpr.StringLiteral = SqlExpr.StringLiteral(x.value)
-            val sridExpr: SqlExpr.NumberLiteral = SqlExpr.NumberLiteral(x.srid)
+            val sridExpr: SqlExpr.NumberLiteral[Int] = SqlExpr.NumberLiteral(x.srid)
             val argExprs = 
                 if inlined then
                     SqlExpr.InlinedLiteral(valueExpr) :: SqlExpr.InlinedLiteral(sridExpr) :: Nil
