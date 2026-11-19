@@ -26,6 +26,21 @@ trait JdbcDecoder[T]:
      */
     def decode(data: ResultSet, cursor: Int): T
 
+    /**
+     * Decodes the value as an `Option` without building an intermediate
+     * collection. Scalar decoders override this with a typed getter and
+     * `ResultSet.wasNull`, which avoids fetching the same column twice.
+     */
+    def decodeOption(data: ResultSet, cursor: Int): Option[T] =
+        var index = cursor
+        val end = cursor + offset
+        var nonNull = false
+        while index < end && !nonNull do
+            data.getObject(index)
+            if !data.wasNull() then nonNull = true
+            index += 1
+        if nonNull then Some(decode(data, cursor)) else None
+
 object JdbcDecoder:
     given int: JdbcDecoder[Int] with
         inline def offset: Int =
@@ -34,12 +49,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): Int =
             data.getInt(cursor)
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Int] =
+            val value = data.getInt(cursor)
+            if data.wasNull() then None else Some(value)
+
     given long: JdbcDecoder[Long] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): Long =
             data.getLong(cursor)
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Long] =
+            val value = data.getLong(cursor)
+            if data.wasNull() then None else Some(value)
 
     given float: JdbcDecoder[Float] with
         inline def offset: Int =
@@ -48,12 +71,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): Float =
             data.getFloat(cursor)
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Float] =
+            val value = data.getFloat(cursor)
+            if data.wasNull() then None else Some(value)
+
     given double: JdbcDecoder[Double] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): Double =
             data.getDouble(cursor)
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Double] =
+            val value = data.getDouble(cursor)
+            if data.wasNull() then None else Some(value)
 
     given decimal: JdbcDecoder[BigDecimal] with
         inline def offset: Int =
@@ -62,12 +93,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): BigDecimal =
             data.getBigDecimal(cursor)
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[BigDecimal] =
+            val value = data.getBigDecimal(cursor)
+            if data.wasNull() then None else Some(BigDecimal(value))
+
     given boolean: JdbcDecoder[Boolean] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): Boolean =
             data.getBoolean(cursor)
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Boolean] =
+            val value = data.getBoolean(cursor)
+            if data.wasNull() then None else Some(value)
 
     given string: JdbcDecoder[String] with
         inline def offset: Int =
@@ -76,12 +115,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): String =
             data.getString(cursor)
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[String] =
+            val value = data.getString(cursor)
+            if data.wasNull() then None else Some(value)
+
     given localDate: JdbcDecoder[LocalDate] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): LocalDate =
             data.getObject(cursor, classOf[LocalDate])
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[LocalDate] =
+            val value = data.getObject(cursor, classOf[LocalDate])
+            if data.wasNull() then None else Some(value)
 
     given localDateTime: JdbcDecoder[LocalDateTime] with
         inline def offset: Int =
@@ -90,12 +137,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): LocalDateTime =
             data.getObject(cursor, classOf[LocalDateTime])
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[LocalDateTime] =
+            val value = data.getObject(cursor, classOf[LocalDateTime])
+            if data.wasNull() then None else Some(value)
+
     given localTime: JdbcDecoder[LocalTime] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): LocalTime =
             data.getObject(cursor, classOf[LocalTime])
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[LocalTime] =
+            val value = data.getObject(cursor, classOf[LocalTime])
+            if data.wasNull() then None else Some(value)
 
     given offsetDateTime: JdbcDecoder[OffsetDateTime] with
         inline def offset: Int =
@@ -104,12 +159,20 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): OffsetDateTime =
             data.getObject(cursor, classOf[OffsetDateTime])
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[OffsetDateTime] =
+            val value = data.getObject(cursor, classOf[OffsetDateTime])
+            if data.wasNull() then None else Some(value)
+
     given offsetTime: JdbcDecoder[OffsetTime] with
         inline def offset: Int =
             1
 
         inline def decode(data: ResultSet, cursor: Int): OffsetTime =
             data.getObject(cursor, classOf[OffsetTime])
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[OffsetTime] =
+            val value = data.getObject(cursor, classOf[OffsetTime])
+            if data.wasNull() then None else Some(value)
 
     given json: JdbcDecoder[Json] with
         inline def offset: Int =
@@ -118,14 +181,16 @@ object JdbcDecoder:
         inline def decode(data: ResultSet, cursor: Int): Json =
             Json(data.getString(cursor))
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Json] =
+            val value = data.getString(cursor)
+            if data.wasNull() then None else Some(Json(value))
+
     given option[T](using d: JdbcDecoder[T]): JdbcDecoder[Option[T]] with
         inline def offset: Int =
             d.offset
 
         inline def decode(data: ResultSet, cursor: Int): Option[T] =
-            val slice = for i <- (cursor until cursor + offset) yield
-                data.getObject(i)
-            if slice.map(_ == null).reduce((x, y) => x && y) then None else Some(d.decode(data, cursor))
+            d.decodeOption(data, cursor)
 
     given array[T](using d: JdbcArrayItemDecoder[T], c: ClassTag[T]): JdbcDecoder[Array[T]] with
         inline def offset: Int =
@@ -138,12 +203,20 @@ object JdbcDecoder:
                 .asInstanceOf[Array[?]]
                 .map(i => d.decode(i))
 
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[Array[T]] =
+            val value = data.getArray(cursor)
+            if data.wasNull() then None
+            else Some(value.getArray.asInstanceOf[Array[?]].map(i => d.decode(i)))
+
     given customField[T, R](using c: CustomField[T, R], d: JdbcDecoder[R]): JdbcDecoder[T] with
         inline def offset: Int =
             d.offset
 
         inline def decode(data: ResultSet, cursor: Int): T =
             c.fromValue(d.decode(data, cursor))
+
+        override inline def decodeOption(data: ResultSet, cursor: Int): Option[T] =
+            d.decodeOption(data, cursor).map(c.fromValue)
 
     given tuple[H, T <: Tuple](using headDecoder: JdbcDecoder[H], tailDecoder: JdbcDecoder[T]): JdbcDecoder[H *: T] with
         inline def offset: Int =
