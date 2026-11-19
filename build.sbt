@@ -3,7 +3,7 @@ import xerial.sbt.Sonatype.*
 lazy val commonSettings = Seq(
     scalaVersion := "3.9.0",
 
-    version := "0.8.1",
+    version := "0.8.2",
 
     organization := "com.wz7982",
 
@@ -46,9 +46,38 @@ lazy val commonSettings = Seq(
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
     .aggregate(core, staticIr, static, staticExt, dynamic, jdbc)
+
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
+
 lazy val staticIr = project.in(file("static-ir")).dependsOn(core).settings(commonSettings).settings(name := "sqala-static-ir")
+
 lazy val static = project.in(file("static")).dependsOn(staticIr).settings(commonSettings).settings(name := "sqala-static")
+
 lazy val staticExt = project.in(file("static-ext")).dependsOn(static).settings(commonSettings).settings(name := "sqala-static-ext")
+
 lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
+
 lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(name := "sqala-jdbc")
+
+lazy val benchmark = project
+    .in(file("benchmark"))
+    .dependsOn(jdbc)
+    .enablePlugins(JmhPlugin)
+    .settings(commonSettings)
+    .settings(
+        name := "sqala-benchmark",
+        publish / skip := true,
+        scalacOptions --= Seq("-Yexplicit-nulls"),
+        libraryDependencies ++= Seq(
+            "com.zaxxer" % "HikariCP" % "6.2.1",
+            "org.postgresql" % "postgresql" % "42.7.4",
+            "org.mybatis" % "mybatis" % "3.5.19",
+            "org.hibernate.orm" % "hibernate-core" % "6.6.4.Final",
+            "org.jooq" % "jooq" % "3.19.15",
+            "com.typesafe.slick" %% "slick" % "3.6.1",
+            "com.alibaba" % "druid" % "1.2.23",
+            "org.apache.calcite" % "calcite-core" % "1.38.0",
+            "com.github.jsqlparser" % "jsqlparser" % "5.0",
+            "org.slf4j" % "slf4j-nop" % "2.0.16"
+        )
+    )
