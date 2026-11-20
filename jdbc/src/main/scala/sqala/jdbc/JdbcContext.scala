@@ -9,8 +9,9 @@ import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.{Query, SelectQuery}
 import sqala.static.dsl.{QuerySize, Result}
 
-import java.sql.Connection
+import java.sql.{Connection, Savepoint}
 import javax.sql.DataSource
+import scala.compiletime.summonFrom
 import scala.deriving.Mirror
 import scala.util.NotGiven
 
@@ -553,7 +554,22 @@ final class JdbcContext(
             ignoreFailure(conn.close())
 
     /**
+     * Returns the transaction context of the current transaction.
+     *
+     * {{{
+     * db.executeTransaction:
+     *     val tx = db.currentTransaction
+     *     val savepoint = tx.createSavepoint()
+     *     ...
+     * }}}
+     */
+    def currentTransaction(using tx: JdbcTransactionContext): JdbcTransactionContext =
+        tx
+
+    /**
      * Executes a block of operations within a database transaction.
+     * If an existing transaction context is in scope, the block joins
+     * that transaction; otherwise a new transaction is created.
      * If any exception is thrown, the transaction is rolled back;
      * otherwise it is committed.
      *
@@ -564,14 +580,20 @@ final class JdbcContext(
      * }
      * }}}
      */
-    def executeTransaction[T](
+    inline def executeTransaction[T](
         block: JdbcTransactionContext ?=> T
     ): T =
-        runTransaction(None)(block)
+        summonFrom:
+            case tx: JdbcTransactionContext =>
+                block(using tx)
+            case _ =>
+                runTransaction(None)(block)
 
     /**
      * Executes a block of operations within a database transaction
-     * at the specified isolation level.
+     * at the specified isolation level. If an existing transaction
+     * context is in scope, the block joins that transaction and the
+     * requested isolation level is ignored.
      *
      * {{{
      * db.executeTransactionWithIsolation(TransactionIsolation.Serializable) {
@@ -580,10 +602,14 @@ final class JdbcContext(
      * }
      * }}}
      */
-    def executeTransactionWithIsolation[T](
+    inline def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
     )(block: JdbcTransactionContext ?=> T): T =
-        runTransaction(Some(isolation.jdbcIsolation))(block)
+        summonFrom:
+            case tx: JdbcTransactionContext =>
+                block(using tx)
+            case _ =>
+                runTransaction(Some(isolation.jdbcIsolation))(block)
 
 /**
  * Transaction context providing the underlying JDBC connection
@@ -591,7 +617,30 @@ final class JdbcContext(
  */
 final class JdbcTransactionContext(
     private[sqala] val connection: Connection
-)
+):
+    /**
+     * Creates an unnamed savepoint for the current transaction.
+     */
+    def createSavepoint(): Savepoint =
+        connection.setSavepoint()
+
+    /**
+     * Creates a named savepoint for the current transaction.
+     */
+    def createSavepoint(name: String): Savepoint =
+        connection.setSavepoint(name)
+
+    /**
+     * Rolls the current transaction back to the given savepoint.
+     */
+    def rollbackToSavepoint(savepoint: Savepoint): Unit =
+        connection.rollback(savepoint)
+
+    /**
+     * Releases the given savepoint.
+     */
+    def releaseSavepoint(savepoint: Savepoint): Unit =
+        connection.releaseSavepoint(savepoint)
 
 /**
  * JDBC transaction isolation levels, maps to
