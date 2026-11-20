@@ -12,7 +12,7 @@ import javax.sql.DataSource
  */
 final class SqalaOps(dataSource: DataSource):
 
-    private given Logger = Logger(_ => ())
+    private given Logger = Logger.noop
 
     private val db = JdbcContext(dataSource, PostgresqlJdbcDialect, false)
 

@@ -45,7 +45,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val sqala = (project in file(".")).settings(commonSettings)
-    .aggregate(core, staticIr, static, staticExt, dynamic, jdbc)
+    .aggregate(core, staticIr, static, staticExt, dynamic, jdbc, sqalaSlf4j, springBootStarter)
 
 lazy val core = project.in(file("core")).settings(commonSettings).settings(name := "sqala-core")
 
@@ -58,6 +58,36 @@ lazy val staticExt = project.in(file("static-ext")).dependsOn(static).settings(c
 lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
 
 lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(name := "sqala-jdbc")
+
+lazy val sqalaSlf4j = project
+    .in(file("slf4j"))
+    .dependsOn(jdbc)
+    .settings(commonSettings)
+    .settings(
+        name := "sqala-slf4j",
+        libraryDependencies ++= Seq(
+            "org.slf4j" % "slf4j-api" % "2.0.17" % Provided,
+            "org.slf4j" % "slf4j-simple" % "2.0.17" % Test
+        )
+    )
+
+lazy val springBootStarter = project
+    .in(file("spring-boot-starter"))
+    .dependsOn(sqalaSlf4j)
+    .settings(commonSettings)
+    .settings(
+        name := "sqala-spring-boot-starter",
+        scalacOptions --= Seq("-Yexplicit-nulls"),
+        libraryDependencies ++= Seq(
+            "org.springframework.boot" % "spring-boot-autoconfigure" % "4.2.0" % Provided,
+            "org.springframework" % "spring-context" % "7.1.0" % Provided,
+            "org.springframework" % "spring-jdbc" % "7.1.0" % Provided,
+            "org.springframework" % "spring-tx" % "7.1.0" % Provided,
+            "org.slf4j" % "slf4j-api" % "2.0.17" % Provided,
+            "org.slf4j" % "slf4j-simple" % "2.0.17" % Test,
+            "com.h2database" % "h2" % "2.3.232" % Test
+        )
+    )
 
 lazy val benchmark = project
     .in(file("benchmark"))

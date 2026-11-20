@@ -85,38 +85,38 @@ sbt "benchmark/Jmh/run -bm avgt -rf json -rff benchmark/target/jmh-result-pg-mt-
 
 ### 1. 随机主键点查 + 反序列化
 
-| 实现 | 吞吐 (ops/s) | 相对纯 JDBC | 8 线程延迟 (µs/op) |
+| 实现 | 吞吐 (ops/s) | 相对 sqala | 8 线程延迟 (µs/op) |
 | --- | ---: | ---: | ---: |
-| 纯 JDBC | 184,453 | 1.00x | 44.661 |
-| **sqala** | **163,960** | **0.89x** | **49.842** |
-| Hibernate | 162,893 | 0.88x | 49.843 |
-| MyBatis | 144,305 | 0.78x | 52.845 |
-| jOOQ | 131,174 | 0.71x | 59.990 |
-| Slick | 122,490 | 0.66x | 66.066 |
+| 纯 JDBC | 184,453 | 1.13x | 44.661 |
+| **sqala** | **163,960** | **1.00x** | **49.842** |
+| Hibernate | 162,893 | 0.99x | 49.843 |
+| MyBatis | 144,305 | 0.88x | 52.845 |
+| jOOQ | 131,174 | 0.80x | 59.990 |
+| Slick | 122,490 | 0.75x | 66.066 |
 
 ### 2. 随机范围查询 10,000 行 + 反序列化
 
-| 实现 | 吞吐 (ops/s) | 相对纯 JDBC | 行吞吐 (行/s) | 8 线程延迟 (ms/op) |
+| 实现 | 吞吐 (ops/s) | 相对 sqala | 行吞吐 (行/s) | 8 线程延迟 (ms/op) |
 | --- | ---: | ---: | ---: | ---: |
-| 纯 JDBC | 1,013.4 | 1.00x | 10,134,000 | 7.930 |
-| **sqala** | **956.1** | **0.94x** | **9,561,000** | **8.285** |
-| Slick | 846.5 | 0.84x | 8,465,000 | 9.352 |
-| MyBatis | 625.8 | 0.62x | 6,258,000 | 12.754 |
-| Hibernate | 486.6 | 0.48x | 4,866,000 | 15.953 |
-| jOOQ | 440.6 | 0.43x | 4,406,000 | 17.886 |
+| 纯 JDBC | 1,013.4 | 1.06x | 10,134,000 | 7.930 |
+| **sqala** | **956.1** | **1.00x** | **9,561,000** | **8.285** |
+| Slick | 846.5 | 0.89x | 8,465,000 | 9.352 |
+| MyBatis | 625.8 | 0.65x | 6,258,000 | 12.754 |
+| Hibernate | 486.6 | 0.51x | 4,866,000 | 15.953 |
+| jOOQ | 440.6 | 0.46x | 4,406,000 | 17.886 |
 
 ### 3. SQL 解析器
 
-| 解析器 | 吞吐 (ops/s) | 相对 Druid | 8 线程延迟 (µs/op) |
+| 解析器 | 吞吐 (ops/s) | 相对 sqala | 8 线程延迟 (µs/op) |
 | --- | ---: | ---: | ---: |
-| Alibaba Druid | 2,258,798 | 1.00x | 3.554 |
-| **sqala 内置解析器** | **1,098,332** | **0.49x** | **7.258** |
-| Apache Calcite | 193,177 | 0.09x | 42.819 |
-| JSqlParser | 7,646 | 0.003x | 1,055.507 |
+| Alibaba Druid | 2,258,798 | 2.06x | 3.554 |
+| **sqala 内置解析器** | **1,098,332** | **1.00x** | **7.258** |
+| Apache Calcite | 193,177 | 0.18x | 42.819 |
+| JSqlParser | 7,646 | 0.007x | 1,055.507 |
 
 ## 图表
 
-`benchmark/scripts/plot-jmh.ps1` 根据最新结果生成以下柱状图：
+`benchmark/scripts/plot-jmh.ps1` 根据最新结果生成以下柱状图（中文版输出到 `benchmark/charts`，英文版输出到 `benchmark/charts/en`）：
 
 ### 吞吐量（越高越好）
 
@@ -137,7 +137,11 @@ sbt "benchmark/Jmh/run -bm avgt -rf json -rff benchmark/target/jmh-result-pg-mt-
 重新生成：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1
+# 中文图表
+powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1 -Language zh
+
+# 英文图表
+powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1 -Language en
 ```
 
 ## 单线程到 8 线程扩展

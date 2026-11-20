@@ -87,4 +87,4 @@ sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala
 
 12. **标准兼容**：内置兼容`ISO/IEC 9075` SQL 2023和`ISO/IEC 13249` SQL空间扩展的抽象语法树和通用SQL生成器，只需少量代码即可兼容更多数据库方言。
 
-13. **0依赖**：sqala只依赖Scala、Java标准库，没有任何第三方依赖。
+13. **0依赖**：sqala的核心模块只依赖Scala、Java标准库，没有任何第三方依赖；只有`sqala-slf4j`和`sqala-spring-boot-starter`等可选集成模块会按需引入对应框架。

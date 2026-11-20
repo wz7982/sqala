@@ -1,13 +1,55 @@
 # Generates bar charts for the latest PostgreSQL multi-threaded JMH run.
-# Usage: powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1
+# Usage:
+#   powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1
+#   powershell -ExecutionPolicy Bypass -File benchmark/scripts/plot-jmh.ps1 -Language en
+
+param(
+    [ValidateSet("zh", "en")]
+    [string]$Language = "zh"
+)
 
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Drawing
 
 $benchmarkRoot = Split-Path -Parent $PSScriptRoot
 $targetDir = Join-Path $benchmarkRoot "target"
+$isEn = $Language -eq "en"
 $chartDir = Join-Path $benchmarkRoot "charts"
+if ($isEn) { $chartDir = Join-Path $chartDir "en" }
 New-Item -ItemType Directory -Force -Path $chartDir | Out-Null
+
+$text = if ($isEn) {
+    @{
+        PointThroughputTitle = "Point Query Throughput (PostgreSQL, 8 threads)"
+        PointLatencyTitle = "Point Query Average Latency (PostgreSQL, 8 threads)"
+        RangeThroughputTitle = "Range Query Throughput (10,000 rows, PostgreSQL, 8 threads)"
+        RangeLatencyTitle = "Range Query Average Latency (10,000 rows, PostgreSQL, 8 threads)"
+        ParserThroughputTitle = "SQL Parser Throughput (8 threads)"
+        ParserLatencyTitle = "SQL Parser Average Latency (8 threads)"
+        Higher = "8 threads; higher is better"
+        Lower = "8 threads; lower is better"
+        ThroughputAxis = "Throughput (ops/s)"
+        LatencyUsAxis = "Average latency (µs/op)"
+        LatencyMsAxis = "Average latency (ms/op)"
+        PlainJdbc = "Plain JDBC"
+    }
+}
+else {
+    @{
+        PointThroughputTitle = "随机主键点查吞吐（PostgreSQL，8 线程）"
+        PointLatencyTitle = "随机主键点查平均延迟（PostgreSQL，8 线程）"
+        RangeThroughputTitle = "随机范围查询吞吐（10,000 行，PostgreSQL，8 线程）"
+        RangeLatencyTitle = "随机范围查询平均延迟（10,000 行，PostgreSQL，8 线程）"
+        ParserThroughputTitle = "SQL 解析器吞吐（8 线程）"
+        ParserLatencyTitle = "SQL 解析器平均延迟（8 线程）"
+        Higher = "8 线程；越高越好"
+        Lower = "8 线程；越低越好"
+        ThroughputAxis = "吞吐量 (ops/s)"
+        LatencyUsAxis = "平均延迟 (µs/op)"
+        LatencyMsAxis = "平均延迟 (ms/op)"
+        PlainJdbc = "纯 JDBC"
+    }
+}
 
 $throughputPath = Join-Path $targetDir "jmh-result-pg-mt-thrpt.json"
 $latencyPath = Join-Path $targetDir "jmh-result-pg-mt.json"
@@ -251,7 +293,7 @@ function Draw-HorizontalLinearChart {
 
 # ---------- Point query ----------
 $pointKeys = @("plainJdbc", "sqala", "hibernate", "myBatis", "jooq", "slick")
-$pointLabels = @("纯 JDBC", "sqala", "Hibernate", "MyBatis", "jOOQ", "Slick")
+$pointLabels = @($text.PlainJdbc, "sqala", "Hibernate", "MyBatis", "jOOQ", "Slick")
 $pointThroughput = @()
 $pointLatency = @()
 foreach ($k in $pointKeys) {
@@ -260,26 +302,26 @@ foreach ($k in $pointKeys) {
 }
 
 Draw-VerticalChart `
-    -Title "随机主键点查吞吐（PostgreSQL，8 线程）" `
-    -Subtitle "8 线程；越高越好" `
+    -Title $text.PointThroughputTitle `
+    -Subtitle $text.Higher `
     -Keys $pointKeys -Labels $pointLabels -Values $pointThroughput `
     -ValueFormat 'param($v) "{0:N0}" -f $v' `
-    -AxisLabel "吞吐量 (ops/s)" -YMax 220000 -TickStep 50000 `
+    -AxisLabel $text.ThroughputAxis -YMax 220000 -TickStep 50000 `
     -TickFormat 'param($v) if ($v -ge 1000) { "{0:N0}k" -f ($v / 1000) } else { "0" }' `
     -OutputPath (Join-Path $chartDir "01-point-throughput.png")
 
 Draw-VerticalChart `
-    -Title "随机主键点查平均延迟（PostgreSQL，8 线程）" `
-    -Subtitle "8 线程；越低越好" `
+    -Title $text.PointLatencyTitle `
+    -Subtitle $text.Lower `
     -Keys $pointKeys -Labels $pointLabels -Values $pointLatency `
     -ValueFormat 'param($v) "{0:N2}" -f $v' `
-    -AxisLabel "平均延迟 (µs/op)" -YMax 75 -TickStep 15 `
+    -AxisLabel $text.LatencyUsAxis -YMax 75 -TickStep 15 `
     -TickFormat 'param($v) "{0:N0}" -f $v' `
     -OutputPath (Join-Path $chartDir "02-point-latency.png")
 
 # ---------- Range query ----------
 $rangeKeys = @("plainJdbc", "sqala", "slick", "myBatis", "hibernate", "jooq")
-$rangeLabels = @("纯 JDBC", "sqala", "Slick", "MyBatis", "Hibernate", "jOOQ")
+$rangeLabels = @($text.PlainJdbc, "sqala", "Slick", "MyBatis", "Hibernate", "jOOQ")
 $rangeThroughput = @()
 $rangeLatency = @()
 foreach ($k in $rangeKeys) {
@@ -288,20 +330,20 @@ foreach ($k in $rangeKeys) {
 }
 
 Draw-VerticalChart `
-    -Title "随机范围查询吞吐（10,000 行，PostgreSQL，8 线程）" `
-    -Subtitle "8 线程；越高越好" `
+    -Title $text.RangeThroughputTitle `
+    -Subtitle $text.Higher `
     -Keys $rangeKeys -Labels $rangeLabels -Values $rangeThroughput `
     -ValueFormat 'param($v) "{0:N0}" -f $v' `
-    -AxisLabel "吞吐量 (ops/s)" -YMax 1200 -TickStep 200 `
+    -AxisLabel $text.ThroughputAxis -YMax 1200 -TickStep 200 `
     -TickFormat 'param($v) "{0:N0}" -f $v' `
     -OutputPath (Join-Path $chartDir "03-range-throughput.png")
 
 Draw-VerticalChart `
-    -Title "随机范围查询平均延迟（10,000 行，PostgreSQL，8 线程）" `
-    -Subtitle "8 线程；越低越好" `
+    -Title $text.RangeLatencyTitle `
+    -Subtitle $text.Lower `
     -Keys $rangeKeys -Labels $rangeLabels -Values $rangeLatency `
     -ValueFormat 'param($v) "{0:N2}" -f $v' `
-    -AxisLabel "平均延迟 (ms/op)" -YMax 20 -TickStep 4 `
+    -AxisLabel $text.LatencyMsAxis -YMax 20 -TickStep 4 `
     -TickFormat 'param($v) "{0:N0}" -f $v' `
     -OutputPath (Join-Path $chartDir "04-range-latency.png")
 
@@ -316,20 +358,20 @@ foreach ($k in $parserKeys) {
 }
 
 Draw-HorizontalLinearChart `
-    -Title "SQL 解析器吞吐（8 线程）" `
-    -Subtitle "8 线程；越高越好" `
+    -Title $text.ParserThroughputTitle `
+    -Subtitle $text.Higher `
     -Keys $parserKeys -Labels $parserLabels -Values $parserThroughput `
     -ValueFormat 'param($v) "{0:N0}" -f $v' `
-    -AxisLabel "吞吐量 (ops/s)" -AxisMax 2500000 -TickStep 500000 `
+    -AxisLabel $text.ThroughputAxis -AxisMax 2500000 -TickStep 500000 `
     -TickFormat 'param($v) if ($v -ge 1000000) { "{0:N1}M" -f ($v / 1000000) } else { "{0:N0}" -f $v }' `
     -OutputPath (Join-Path $chartDir "05-parser-throughput.png")
 
 Draw-HorizontalLinearChart `
-    -Title "SQL 解析器平均延迟（8 线程）" `
-    -Subtitle "8 线程；越低越好" `
+    -Title $text.ParserLatencyTitle `
+    -Subtitle $text.Lower `
     -Keys $parserKeys -Labels $parserLabels -Values $parserLatency `
     -ValueFormat 'param($v) "{0:N2}" -f $v' `
-    -AxisLabel "平均延迟 (µs/op)" -AxisMax 1200 -TickStep 200 `
+    -AxisLabel $text.LatencyUsAxis -AxisMax 1200 -TickStep 200 `
     -TickFormat 'param($v) "{0:N0}" -f $v' `
     -OutputPath (Join-Path $chartDir "06-parser-latency.png")
 
