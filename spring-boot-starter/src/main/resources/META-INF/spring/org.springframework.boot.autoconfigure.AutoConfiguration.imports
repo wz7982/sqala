@@ -1,0 +1,2 @@
+sqala.spring.boot.SqalaLoggingAutoConfiguration
+sqala.spring.boot.SqalaTransactionAutoConfiguration
