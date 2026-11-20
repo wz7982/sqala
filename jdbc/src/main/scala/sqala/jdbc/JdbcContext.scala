@@ -9,8 +9,9 @@ import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
 import sqala.static.dsl.statement.query.{Query, SelectQuery}
 import sqala.static.dsl.{QuerySize, Result}
 
-import java.sql.Connection
+import java.sql.{Connection, Savepoint}
 import javax.sql.DataSource
+import scala.compiletime.summonFrom
 import scala.deriving.Mirror
 import scala.util.NotGiven
 
@@ -63,25 +64,18 @@ final class JdbcContext(
         renderStatement(new ToAst().toAst(statement))
 
     /**
-     * Obtains a connection and executes a handler. Automatically
-     * closes the connection outside of transactions.
+     * Obtains a connection and executes a handler. The context determines
+     * whether the connection is borrowed from the pool and released
+     * afterwards, or reused from the current transaction.
      */
     private def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
-        var conn: Connection | Null = null
-        try
-            conn = ec.fetchConnection(this)
-            val result = handler(conn)
-            result
-        finally
-            if !ec.inTransaction && conn != null then
-                conn.close()
+        ec.withConnection(this)(handler)
 
     /**
      * Logs and executes a DML statement, returning the affected
      * row count.
      */
     private def executeDml(sql: String, args: Array[Any])(using ec: ExecuteContext, l: Logger): Int =
-        l.printLog(sql, args)
         execute(c => jdbcExec(c, sql, args))
 
     /**
@@ -180,7 +174,6 @@ final class JdbcContext(
     ): A =
         val i = Insert.insertByEntities[A](entity :: Nil)
         val (sql, args) = renderStatement(i.toSqlStatement)
-        l.printLog(sql, args)
         val id = execute(c => jdbcExecReturnKey(c, sql, args)).head
         InsertMacro.bindGeneratedPrimaryKey[A](id, entity)
 
@@ -275,7 +268,6 @@ final class JdbcContext(
     )(primaryKey: fp.Args): Option[T] =
         val tree = fp.createQueryTree(primaryKey :: Nil, false)
         val (sql, args) = renderQuery(tree)
-        l.printLog(sql, args)
         execute(c => jdbcQuery(c, sql, args)).headOption
 
     /**
@@ -293,7 +285,6 @@ final class JdbcContext(
     )(primaryKeys: Seq[fp.Args]): List[T] =
         val tree = fp.createQueryTree(primaryKeys, false)
         val (sql, args) = renderQuery(tree)
-        l.printLog(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     /**
@@ -309,7 +300,6 @@ final class JdbcContext(
         l: Logger
     ): List[T] =
         val (sql, args) = renderQuery(query.tree)
-        l.printLog(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     /**
@@ -341,7 +331,6 @@ final class JdbcContext(
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
-        l.printLog(nativeSql.sql, nativeSql.args)
         execute(c => jdbcQuery(c, nativeSql.sql, nativeSql.args))
 
     /**
@@ -352,7 +341,6 @@ final class JdbcContext(
      * }}}
      */
     def fetchToMap(nativeSql: NativeSql)(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
-        l.printLog(nativeSql.sql, nativeSql.args)
         execute(c => jdbcQueryToMap(c, nativeSql.sql, nativeSql.args))
 
     /**
@@ -368,7 +356,6 @@ final class JdbcContext(
         l: Logger
     ): List[T] =
         val (sql, args) = nativeSql
-        l.printLog(sql, args)
         execute(c => jdbcQuery(c, sql, args))
 
     /**
@@ -380,7 +367,6 @@ final class JdbcContext(
      */
     def fetchToMap(nativeSql: (String, Array[Any]))(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
         val (sql, args) = nativeSql
-        l.printLog(sql, args)
         execute(c => jdbcQueryToMap(c, sql, args))
 
     /**
@@ -400,13 +386,29 @@ final class JdbcContext(
         JdbcDecoder[T],
         Logger
     ): Page[T] =
-        val data = if pageSize == 0 then Nil
-            else fetchTo[T](query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize))
-        val count = if returnCount then fetch(query.size).head else 0L
-        val total = if count == 0 || pageSize == 0 then 0
-            else if count % pageSize == 0 then (count / pageSize).toInt
-            else (count / pageSize + 1).toInt
-        Page(total, count, pageSize, pageNo, data)
+        execute: c =>
+            val data =
+                if pageSize == 0 then
+                    Nil
+                else
+                    val dataQuery = query.drop(if pageNo <= 1 then 0 else pageSize * (pageNo - 1)).take(pageSize)
+                    val (sql, args) = renderQuery(dataQuery.tree)
+                    jdbcQuery(c, sql, args)
+            val count =
+                if returnCount then
+                    val sizeQuery = query.size
+                    val (sql, args) = renderQuery(sizeQuery.tree)
+                    jdbcQuery[Long](c, sql, args).head
+                else
+                    0L
+            val total =
+                if count == 0 || pageSize == 0 then
+                    0
+                else if count % pageSize == 0 then
+                    (count / pageSize).toInt
+                else
+                    (count / pageSize + 1).toInt
+            Page(total, count, pageSize, pageNo, data)
 
     /**
      * Paginates a static query result with automatic result type
@@ -513,13 +515,64 @@ final class JdbcContext(
         l: Logger
     )(f: Cursor[r.R] => R): Unit =
         val (sql, args) = renderQuery(query.tree)
-        l.printLog(sql, args)
         execute(c => jdbcCursorQuery(c, sql, args, fetchSize, f))
+
+    private def ignoreFailure(body: => Unit): Unit =
+        try
+            body
+        catch
+            case _: Throwable =>
+                ()
+
+    /**
+     * Runs a block in a JDBC transaction, restoring the connection's
+     * previous auto-commit and isolation state before returning it.
+     */
+    private[sqala] def runTransaction[T](
+        isolation: Option[Int]
+    )(block: JdbcTransactionContext ?=> T): T =
+        val conn = dataSource.getConnection()
+        var previousAutoCommit = true
+        var previousIsolation = Connection.TRANSACTION_NONE
+        try
+            previousAutoCommit = conn.getAutoCommit()
+            previousIsolation = conn.getTransactionIsolation()
+            conn.setAutoCommit(false)
+            isolation.foreach(i => conn.setTransactionIsolation(i))
+            given JdbcTransactionContext =
+                JdbcTransactionContext(conn)
+            val result = block
+            conn.commit()
+            result
+        catch
+            case e: Throwable =>
+                ignoreFailure(conn.rollback())
+                throw e
+        finally
+            ignoreFailure(conn.setTransactionIsolation(previousIsolation))
+            ignoreFailure(conn.setAutoCommit(previousAutoCommit))
+            ignoreFailure(conn.close())
+
+    /**
+     * Returns the transaction context of the current transaction.
+     *
+     * {{{
+     * db.executeTransaction:
+     *     val tx = db.currentTransaction
+     *     val savepoint = tx.createSavepoint()
+     *     ...
+     * }}}
+     */
+    def currentTransaction(using tx: JdbcTransactionContext): JdbcTransactionContext =
+        tx
 
     /**
      * Executes a block of operations within a database transaction.
-     * If any exception is thrown, the transaction is rolled back;
-     * otherwise it is committed.
+     * If an existing transaction context is in scope, the block joins
+     * that transaction. Otherwise the current `ExecuteContext` decides
+     * whether to create a native transaction or join a framework-managed
+     * transaction. A native transaction is rolled back if an exception
+     * is thrown, and committed otherwise.
      *
      * {{{
      * db.executeTransaction {
@@ -528,27 +581,21 @@ final class JdbcContext(
      * }
      * }}}
      */
-    def executeTransaction[T](
+    inline def executeTransaction[T](
         block: JdbcTransactionContext ?=> T
-    ): T =
-        val conn = dataSource.getConnection()
-        conn.setAutoCommit(false)
-        try
-            given JdbcTransactionContext =
-                JdbcTransactionContext(conn)
-            val result = block
-            conn.commit()
-            result
-        catch case e: Exception =>
-            conn.rollback()
-            throw e
-        finally
-            conn.setAutoCommit(true)
-            conn.close()
+    )(using ec: ExecuteContext): T =
+        summonFrom:
+            case tx: JdbcTransactionContext =>
+                block(using tx)
+            case _ =>
+                ec.withTransaction(this, None)(block)
 
     /**
      * Executes a block of operations within a database transaction
-     * at the specified isolation level.
+     * at the specified isolation level. If an existing transaction
+     * context is in scope, the block joins that transaction and the
+     * requested isolation level is ignored. Otherwise the current
+     * `ExecuteContext` decides how the transaction is created.
      *
      * {{{
      * db.executeTransactionWithIsolation(TransactionIsolation.Serializable) {
@@ -557,24 +604,14 @@ final class JdbcContext(
      * }
      * }}}
      */
-    def executeTransactionWithIsolation[T](
+    inline def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
-    )(block: JdbcTransactionContext ?=> T): T =
-        val conn = dataSource.getConnection()
-        conn.setAutoCommit(false)
-        conn.setTransactionIsolation(isolation.jdbcIsolation)
-        try
-            given JdbcTransactionContext =
-                JdbcTransactionContext(conn)
-            val result = block
-            conn.commit()
-            result
-        catch case e: Exception =>
-            conn.rollback()
-            throw e
-        finally
-            conn.setAutoCommit(true)
-            conn.close()
+    )(block: JdbcTransactionContext ?=> T)(using ec: ExecuteContext): T =
+        summonFrom:
+            case tx: JdbcTransactionContext =>
+                block(using tx)
+            case _ =>
+                ec.withTransaction(this, Some(isolation.jdbcIsolation))(block)
 
 /**
  * Transaction context providing the underlying JDBC connection
@@ -582,7 +619,30 @@ final class JdbcContext(
  */
 final class JdbcTransactionContext(
     private[sqala] val connection: Connection
-)
+):
+    /**
+     * Creates an unnamed savepoint for the current transaction.
+     */
+    def createSavepoint(): Savepoint =
+        connection.setSavepoint()
+
+    /**
+     * Creates a named savepoint for the current transaction.
+     */
+    def createSavepoint(name: String): Savepoint =
+        connection.setSavepoint(name)
+
+    /**
+     * Rolls the current transaction back to the given savepoint.
+     */
+    def rollbackToSavepoint(savepoint: Savepoint): Unit =
+        connection.rollback(savepoint)
+
+    /**
+     * Releases the given savepoint.
+     */
+    def releaseSavepoint(savepoint: Savepoint): Unit =
+        connection.releaseSavepoint(savepoint)
 
 /**
  * JDBC transaction isolation levels, maps to
@@ -596,36 +656,41 @@ enum TransactionIsolation(private[sqala] val jdbcIsolation: Int):
     case Serializable extends TransactionIsolation(Connection.TRANSACTION_SERIALIZABLE)
 
 /**
- * Context for obtaining JDBC connections, resolved automatically
- * depending on whether the current scope is inside a transaction
- * or not.
+ * Provides a connection for a JDBC operation. Implementations decide
+ * whether the connection is borrowed from the pool and released after
+ * the operation, or reused from the current transaction.
  */
 trait ExecuteContext:
     /**
-     * Returns `true` if the current scope is inside a transaction,
-     * so the connection is reused rather than closed after each
-     * operation.
+     * Runs `f` with a connection. The context owns the connection
+     * lifecycle and is responsible for releasing it when appropriate.
      */
-    def inTransaction: Boolean
+    def withConnection[T](context: JdbcContext)(f: Connection => T): T
 
     /**
-     * Obtains a JDBC connection. Inside a transaction this returns
-     * the shared transaction connection; outside a transaction it
-     * obtains a new connection from the data source.
+     * Runs `block` in a transaction. The default implementation
+     * creates a JDBC transaction. Integration modules can override
+     * this to join an existing framework-managed transaction.
      */
-    def fetchConnection(context: JdbcContext): Connection
+    def withTransaction[T](
+        context: JdbcContext,
+        isolation: Option[Int]
+    )(block: JdbcTransactionContext ?=> T): T =
+        context.runTransaction(isolation)(block)
 
 object ExecuteContext:
     given withTransaction(using c: JdbcTransactionContext): ExecuteContext with
-        def inTransaction: Boolean =
-            true
-
-        def fetchConnection(context: JdbcContext): Connection =
-            c.connection
+        def withConnection[T](context: JdbcContext)(f: Connection => T): T =
+            f(c.connection)
 
     given withoutTransaction(using NotGiven[JdbcTransactionContext]): ExecuteContext with
-        def inTransaction: Boolean =
-            false
-
-        def fetchConnection(context: JdbcContext): Connection =
-            context.dataSource.getConnection()
+        def withConnection[T](context: JdbcContext)(f: Connection => T): T =
+            val conn = context.dataSource.getConnection()
+            try
+                f(conn)
+            finally
+                try
+                    conn.close()
+                catch
+                    case _: Throwable =>
+                        ()
