@@ -80,7 +80,7 @@ With sqala, you can:
 
 8. **Transparency**: sqala is not a traditional ORM. The query DSL maps almost 1:1 to the generated query, with no black-box behaviour such as N + 1 queries, so performance is predictable.
 
-9. **Multi-dialect support**: PostgreSQL, MySQL, Oracle, SQL Server and other dialects are supported. The same query expression generates different SQL when a different dialect parameter is passed in, and the query documentation lists the tested support level of the latest version of each database in detail.
+9. **Multi-dialect support**: PostgreSQL, MySQL, Oracle and other dialects are supported. The same query expression generates different SQL when a different dialect parameter is passed in, and the query documentation lists the tested support level of the latest version of each database in detail.
 
 10. **Powerful query features**: beyond CRUD, sqala supports multidimensional grouping, `LATERAL` subqueries, recursive queries, row pattern recognition, JSON tables, property graph queries and other advanced features. From simple scenarios to complex data analysis, sqala provides a one-stop solution.
 
