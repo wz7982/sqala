@@ -6,35 +6,46 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.unsafeNulls
 
+private def safeClose(closeable: AutoCloseable | Null): Unit =
+    if closeable != null then
+        try closeable.close()
+        catch case _: Throwable => ()
+
+private def bindParameters(stmt: PreparedStatement, args: Array[Any]): Unit =
+    var i = 1
+    while i <= args.length do
+        val arg = args(i - 1)
+        arg match
+            case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
+            case n: Int => stmt.setInt(i, n)
+            case n: Long => stmt.setLong(i, n)
+            case n: Float => stmt.setFloat(i, n)
+            case n: Double => stmt.setDouble(i, n)
+            case b: Boolean => stmt.setBoolean(i, b)
+            case s: String => stmt.setString(i, s)
+            case _ => stmt.setObject(i, arg)
+        i += 1
+
 /**
  * Executes a query and decodes the result set into a list of
  * typed values using the given `JdbcDecoder`. Parameters are
  * bound by their Scala type to the appropriate JDBC setter.
  */
-private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T]): List[T] =
+private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T], l: Logger): List[T] =
+    l.printLog(sql, args)
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
     try
         stmt = conn.prepareStatement(sql)
-        for i <- 1 to args.length do
-            val arg = args(i - 1)
-            arg match
-                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-                case n: Int => stmt.setInt(i, n)
-                case n: Long => stmt.setLong(i, n)
-                case n: Float => stmt.setFloat(i, n)
-                case n: Double => stmt.setDouble(i, n)
-                case b: Boolean => stmt.setBoolean(i, b)
-                case s: String => stmt.setString(i, s)
-                case _ => stmt.setObject(i, arg)
+        bindParameters(stmt, args)
         rs = stmt.executeQuery()
         while rs.next() do
             result.addOne(decoder.decode(rs, 1))
         result.toList
     finally
-        if rs != null then rs.close()
-        if stmt != null then stmt.close()
+        safeClose(rs)
+        safeClose(stmt)
 
 /**
  * Streams a query result in cursor batches using a forward‑only
@@ -48,7 +59,8 @@ private[sqala] def jdbcCursorQuery[T, R](
     args: Array[Any],
     size: Int,
     f: Cursor[T] => R
-)(using decoder: JdbcDecoder[T]): Unit =
+)(using decoder: JdbcDecoder[T], l: Logger): Unit =
+    l.printLog(sql, args)
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
@@ -60,17 +72,7 @@ private[sqala] def jdbcCursorQuery[T, R](
             ResultSet.CONCUR_READ_ONLY
         )
         stmt.setFetchSize(size)
-        for i <- 1 to args.length do
-            val arg = args(i - 1)
-            arg match
-                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-                case n: Int => stmt.setInt(i, n)
-                case n: Long => stmt.setLong(i, n)
-                case n: Float => stmt.setFloat(i, n)
-                case n: Double => stmt.setDouble(i, n)
-                case b: Boolean => stmt.setBoolean(i, b)
-                case s: String => stmt.setString(i, s)
-                case _ => stmt.setObject(i, arg)
+        bindParameters(stmt, args)
         rs = stmt.executeQuery()
         while rs.next() do
             result.addOne(decoder.decode(rs, 1))
@@ -81,8 +83,8 @@ private[sqala] def jdbcCursorQuery[T, R](
         if result.nonEmpty then
             f(Cursor(batchNo, size, result.toList))
     finally
-        if rs != null then rs.close()
-        if stmt != null then stmt.close()
+        safeClose(rs)
+        safeClose(stmt)
 
 /**
  * Executes a query and decodes the result set into a list of
@@ -90,23 +92,14 @@ private[sqala] def jdbcCursorQuery[T, R](
  * Column nullability is reflected by wrapping nullable values
  * in `Option`.
  */
-private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any]): List[Map[String, Any]] =
+private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Map[String, Any]] =
+    l.printLog(sql, args)
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[Map[String, Any]]()
     try
         stmt = conn.prepareStatement(sql)
-        for i <- 1 to args.length do
-            val arg = args(i - 1)
-            arg match
-                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-                case n: Int => stmt.setInt(i, n)
-                case n: Long => stmt.setLong(i, n)
-                case n: Float => stmt.setFloat(i, n)
-                case n: Double => stmt.setDouble(i, n)
-                case b: Boolean => stmt.setBoolean(i, b)
-                case s: String => stmt.setString(i, s)
-                case _ => stmt.setObject(i, arg)
+        bindParameters(stmt, args)
         rs = stmt.executeQuery()
         val metaData = stmt.getMetaData()
         val columnCount = metaData.getColumnCount()
@@ -141,56 +134,40 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
             result.addOne(map.toMap)
         result.toList
     finally
-        if rs != null then rs.close()
-        if stmt != null then stmt.close()
+        safeClose(rs)
+        safeClose(stmt)
 
 /**
  * Executes a DML statement and returns the affected row count.
  */
-private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any]): Int =
+private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any])(using l: Logger): Int =
+    l.printLog(sql, args)
     var stmt: PreparedStatement = null
     try
         stmt = conn.prepareStatement(sql)
-        for i <- 1 to args.length do
-            val arg = args(i - 1)
-            arg match
-                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-                case n: Int => stmt.setInt(i, n)
-                case n: Long => stmt.setLong(i, n)
-                case n: Float => stmt.setFloat(i, n)
-                case n: Double => stmt.setDouble(i, n)
-                case b: Boolean => stmt.setBoolean(i, b)
-                case s: String => stmt.setString(i, s)
-                case _ => stmt.setObject(i, arg)
+        bindParameters(stmt, args)
         stmt.executeUpdate()
     finally
-        if stmt != null then stmt.close()
+        safeClose(stmt)
 
 /**
  * Executes a DML statement and returns the generated keys as a
  * list of `Long` values. Used for retrieving auto‑increment
  * primary keys after inserts.
  */
-private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any]): List[Long] =
+private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Long] =
+    l.printLog(sql, args)
     var stmt: PreparedStatement = null
+    var resultSet: ResultSet = null
     val result = ListBuffer[Long]()
     try
         stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
-        for i <- 1 to args.length do
-            val arg = args(i - 1)
-            arg match
-                case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-                case n: Int => stmt.setInt(i, n)
-                case n: Long => stmt.setLong(i, n)
-                case n: Float => stmt.setFloat(i, n)
-                case n: Double => stmt.setDouble(i, n)
-                case b: Boolean => stmt.setBoolean(i, b)
-                case s: String => stmt.setString(i, s)
-                case _ => stmt.setObject(i, arg)
+        bindParameters(stmt, args)
         stmt.executeUpdate()
-        val resultSet = stmt.getGeneratedKeys
+        resultSet = stmt.getGeneratedKeys
         while resultSet.next() do
             result += resultSet.getLong(1)
         result.toList
     finally
-        if stmt != null then stmt.close()
+        safeClose(resultSet)
+        safeClose(stmt)
