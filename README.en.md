@@ -4,7 +4,7 @@
 
 sqala is a type-safe SQL query library designed for Scala 3. It combines the expressiveness of Scala with the power of SQL, and uses Scala 3's powerful type system to keep database operations efficient and safe. Its name comes from the combination of Scala and SQL.
 
-Documentation: https://wz7982.github.io/sqala-doc/
+Documentation: https://wz7982.github.io/sqala-doc/en/
 
 With sqala, you can:
 
