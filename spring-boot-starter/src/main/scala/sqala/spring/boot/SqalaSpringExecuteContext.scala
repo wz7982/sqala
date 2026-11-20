@@ -14,7 +14,7 @@ import javax.sql.DataSource
  * by Spring's `DataSourceTransactionManager` or `@Transactional`.
  */
 final class SqalaSpringExecuteContext(dataSource: DataSource) extends JdbcExecuteContext:
-    given givenExecuteContext: JdbcExecuteContext = this
+    given sqalaExecuteContext: JdbcExecuteContext = this
 
     def withConnection[T](context: JdbcContext)(f: Connection => T): T =
         val connection = DataSourceUtils.getConnection(dataSource)
