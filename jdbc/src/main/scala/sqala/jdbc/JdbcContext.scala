@@ -528,7 +528,7 @@ final class JdbcContext(
      * Runs a block in a JDBC transaction, restoring the connection's
      * previous auto-commit and isolation state before returning it.
      */
-    private def runTransaction[T](
+    private[sqala] def runTransaction[T](
         isolation: Option[Int]
     )(block: JdbcTransactionContext ?=> T): T =
         val conn = dataSource.getConnection()
@@ -569,9 +569,10 @@ final class JdbcContext(
     /**
      * Executes a block of operations within a database transaction.
      * If an existing transaction context is in scope, the block joins
-     * that transaction; otherwise a new transaction is created.
-     * If any exception is thrown, the transaction is rolled back;
-     * otherwise it is committed.
+     * that transaction. Otherwise the current `ExecuteContext` decides
+     * whether to create a native transaction or join a framework-managed
+     * transaction. A native transaction is rolled back if an exception
+     * is thrown, and committed otherwise.
      *
      * {{{
      * db.executeTransaction {
@@ -582,18 +583,19 @@ final class JdbcContext(
      */
     inline def executeTransaction[T](
         block: JdbcTransactionContext ?=> T
-    ): T =
+    )(using ec: ExecuteContext): T =
         summonFrom:
             case tx: JdbcTransactionContext =>
                 block(using tx)
             case _ =>
-                runTransaction(None)(block)
+                ec.withTransaction(this, None)(block)
 
     /**
      * Executes a block of operations within a database transaction
      * at the specified isolation level. If an existing transaction
      * context is in scope, the block joins that transaction and the
-     * requested isolation level is ignored.
+     * requested isolation level is ignored. Otherwise the current
+     * `ExecuteContext` decides how the transaction is created.
      *
      * {{{
      * db.executeTransactionWithIsolation(TransactionIsolation.Serializable) {
@@ -604,12 +606,12 @@ final class JdbcContext(
      */
     inline def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
-    )(block: JdbcTransactionContext ?=> T): T =
+    )(block: JdbcTransactionContext ?=> T)(using ec: ExecuteContext): T =
         summonFrom:
             case tx: JdbcTransactionContext =>
                 block(using tx)
             case _ =>
-                runTransaction(Some(isolation.jdbcIsolation))(block)
+                ec.withTransaction(this, Some(isolation.jdbcIsolation))(block)
 
 /**
  * Transaction context providing the underlying JDBC connection
@@ -664,6 +666,17 @@ trait ExecuteContext:
      * lifecycle and is responsible for releasing it when appropriate.
      */
     def withConnection[T](context: JdbcContext)(f: Connection => T): T
+
+    /**
+     * Runs `block` in a transaction. The default implementation
+     * creates a JDBC transaction. Integration modules can override
+     * this to join an existing framework-managed transaction.
+     */
+    def withTransaction[T](
+        context: JdbcContext,
+        isolation: Option[Int]
+    )(block: JdbcTransactionContext ?=> T): T =
+        context.runTransaction(isolation)(block)
 
 object ExecuteContext:
     given withTransaction(using c: JdbcTransactionContext): ExecuteContext with

@@ -26,13 +26,55 @@ private def bindParameters(stmt: PreparedStatement, args: Array[Any]): Unit =
             case _ => stmt.setObject(i, arg)
         i += 1
 
+private def logSuccess(
+    logger: Logger,
+    operation: LogOperation,
+    sql: String,
+    args: Array[Any],
+    start: Long,
+    rowCount: Option[Int]
+): Unit =
+    val level = logger.logLevel
+    if logger.enabled(level) then
+        logger.log(
+            LogEvent(
+                level,
+                operation,
+                sql,
+                args,
+                System.nanoTime() - start,
+                rowCount
+            )
+        )
+
+private def logFailure(
+    logger: Logger,
+    operation: LogOperation,
+    sql: String,
+    args: Array[Any],
+    start: Long,
+    error: Throwable
+): Unit =
+    if logger.enabled(LogLevel.Error) then
+        logger.log(
+            LogEvent(
+                LogLevel.Error,
+                operation,
+                sql,
+                args,
+                System.nanoTime() - start,
+                None,
+                Some(error)
+            )
+        )
+
 /**
  * Executes a query and decodes the result set into a list of
  * typed values using the given `JdbcDecoder`. Parameters are
  * bound by their Scala type to the appropriate JDBC setter.
  */
 private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T], l: Logger): List[T] =
-    l.printLog(sql, args)
+    val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
@@ -42,7 +84,12 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
         rs = stmt.executeQuery()
         while rs.next() do
             result.addOne(decoder.decode(rs, 1))
-        result.toList
+        val rows = result.toList
+        logSuccess(l, LogOperation.Query, sql, args, start, Some(rows.size))
+        rows
+    catch case e: Throwable =>
+        logFailure(l, LogOperation.Query, sql, args, start, e)
+        throw e
     finally
         safeClose(rs)
         safeClose(stmt)
@@ -60,11 +107,12 @@ private[sqala] def jdbcCursorQuery[T, R](
     size: Int,
     f: Cursor[T] => R
 )(using decoder: JdbcDecoder[T], l: Logger): Unit =
-    l.printLog(sql, args)
+    val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[T]()
     var batchNo = 1
+    var totalRows = 0
     try
         stmt = conn.prepareStatement(
             sql,
@@ -76,12 +124,17 @@ private[sqala] def jdbcCursorQuery[T, R](
         rs = stmt.executeQuery()
         while rs.next() do
             result.addOne(decoder.decode(rs, 1))
+            totalRows += 1
             if result.size == size then
                 f(Cursor(batchNo, size, result.toList))
                 result.clear()
                 batchNo += 1
         if result.nonEmpty then
             f(Cursor(batchNo, size, result.toList))
+        logSuccess(l, LogOperation.Cursor, sql, args, start, Some(totalRows))
+    catch case e: Throwable =>
+        logFailure(l, LogOperation.Cursor, sql, args, start, e)
+        throw e
     finally
         safeClose(rs)
         safeClose(stmt)
@@ -93,7 +146,7 @@ private[sqala] def jdbcCursorQuery[T, R](
  * in `Option`.
  */
 private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Map[String, Any]] =
-    l.printLog(sql, args)
+    val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
     val result = ListBuffer[Map[String, Any]]()
@@ -132,7 +185,12 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
                     case (_, false) => rs.getObject(i)
                 map.put(key, value)
             result.addOne(map.toMap)
-        result.toList
+        val rows = result.toList
+        logSuccess(l, LogOperation.Query, sql, args, start, Some(rows.size))
+        rows
+    catch case e: Throwable =>
+        logFailure(l, LogOperation.Query, sql, args, start, e)
+        throw e
     finally
         safeClose(rs)
         safeClose(stmt)
@@ -141,12 +199,17 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
  * Executes a DML statement and returns the affected row count.
  */
 private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any])(using l: Logger): Int =
-    l.printLog(sql, args)
+    val start = System.nanoTime()
     var stmt: PreparedStatement = null
     try
         stmt = conn.prepareStatement(sql)
         bindParameters(stmt, args)
-        stmt.executeUpdate()
+        val count = stmt.executeUpdate()
+        logSuccess(l, LogOperation.Update, sql, args, start, Some(count))
+        count
+    catch case e: Throwable =>
+        logFailure(l, LogOperation.Update, sql, args, start, e)
+        throw e
     finally
         safeClose(stmt)
 
@@ -156,7 +219,7 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any])(usi
  * primary keys after inserts.
  */
 private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Long] =
-    l.printLog(sql, args)
+    val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var resultSet: ResultSet = null
     val result = ListBuffer[Long]()
@@ -167,7 +230,12 @@ private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[
         resultSet = stmt.getGeneratedKeys
         while resultSet.next() do
             result += resultSet.getLong(1)
-        result.toList
+        val rows = result.toList
+        logSuccess(l, LogOperation.Update, sql, args, start, Some(rows.size))
+        rows
+    catch case e: Throwable =>
+        logFailure(l, LogOperation.Update, sql, args, start, e)
+        throw e
     finally
         safeClose(resultSet)
         safeClose(stmt)
