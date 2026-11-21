@@ -68,14 +68,14 @@ final class JdbcContext(
      * whether the connection is borrowed from the pool and released
      * afterwards, or reused from the current transaction.
      */
-    private def execute[T](handler: Connection => T)(using ec: ExecuteContext): T =
+    private def execute[T](handler: Connection => T)(using ec: JdbcExecutionContext): T =
         ec.withConnection(this)(handler)
 
     /**
      * Logs and executes a DML statement, returning the affected
      * row count.
      */
-    private def executeDml(sql: String, args: Array[Any])(using ec: ExecuteContext, l: Logger): Int =
+    private def executeDml(sql: String, args: Array[Any])(using ec: JdbcExecutionContext, l: Logger): Int =
         execute(c => jdbcExec(c, sql, args))
 
     /**
@@ -86,7 +86,7 @@ final class JdbcContext(
      * db.execute(insert[User](u => (u.id, u.name)).values((1, "Alice")))
      * }}}
      */
-    def execute(insert: Insert[?, ?])(using ExecuteContext, Logger): Int =
+    def execute(insert: Insert[?, ?])(using JdbcExecutionContext, Logger): Int =
         val (sql, args) = renderStatement(insert.toSqlStatement)
         executeDml(sql, args)
 
@@ -98,7 +98,7 @@ final class JdbcContext(
      * db.execute(update[User].set(u => u.name := "Bob").where(u => u.id == 1))
      * }}}
      */
-    def execute(update: Update[?, ?])(using ExecuteContext, Logger): Int =
+    def execute(update: Update[?, ?])(using JdbcExecutionContext, Logger): Int =
         val (sql, args) = renderStatement(update.toSqlStatement)
         executeDml(sql, args)
 
@@ -110,7 +110,7 @@ final class JdbcContext(
      * db.execute(delete[User].where(u => u.id == 1))
      * }}}
      */
-    def execute(delete: Delete[?])(using ExecuteContext, Logger): Int =
+    def execute(delete: Delete[?])(using JdbcExecutionContext, Logger): Int =
         val (sql, args) = renderStatement(delete.tree)
         executeDml(sql, args)
 
@@ -122,7 +122,7 @@ final class JdbcContext(
      * db.execute(sql"DELETE FROM user WHERE id = $id")
      * }}}
      */
-    def execute(nativeSql: NativeSql)(using ExecuteContext, Logger): Int =
+    def execute(nativeSql: NativeSql)(using JdbcExecutionContext, Logger): Int =
         executeDml(nativeSql.sql, nativeSql.args)
 
     /**
@@ -134,7 +134,7 @@ final class JdbcContext(
      * }}}
      */
     inline def insert[A <: Product](entity: A)(using
-        ExecuteContext,
+        JdbcExecutionContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -151,7 +151,7 @@ final class JdbcContext(
      * }}}
      */
     inline def insertBatch[A <: Product](entities: Seq[A])(using
-        ExecuteContext,
+        JdbcExecutionContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -168,7 +168,7 @@ final class JdbcContext(
      * }}}
      */
     inline def insertAndReturn[A <: Product](entity: A)(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         m: Mirror.ProductOf[A],
         l: Logger
     ): A =
@@ -191,7 +191,7 @@ final class JdbcContext(
         entity: A,
         skipNone: Boolean = false
     )(using
-        ExecuteContext,
+        JdbcExecutionContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -213,7 +213,7 @@ final class JdbcContext(
     inline def save[A <: Product](
         entity: A
     )(using
-        ExecuteContext,
+        JdbcExecutionContext,
         Mirror.ProductOf[A],
         Logger
     ): Int =
@@ -229,7 +229,7 @@ final class JdbcContext(
      * }}}
      */
     def deleteByPrimaryKey[T](using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKey: fp.Args): Int =
@@ -245,7 +245,7 @@ final class JdbcContext(
      * }}}
      */
     def deleteByPrimaryKeys[T](using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         fp: FetchPrimaryKey[T],
         l: Logger
     )(primaryKeys: Seq[fp.Args]): Int =
@@ -261,7 +261,7 @@ final class JdbcContext(
      * }}}
      */
     def findByPrimaryKey[T](using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -278,7 +278,7 @@ final class JdbcContext(
      * }}}
      */
     def fetchByPrimaryKeys[T](using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         fp: FetchPrimaryKey[T],
         d: JdbcDecoder[T],
         l: Logger
@@ -295,7 +295,7 @@ final class JdbcContext(
      * }}}
      */
     def fetchTo[T](query: Query[?, ?, ?, ?])(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -312,7 +312,7 @@ final class JdbcContext(
      * }}}
      */
     def fetch[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -327,7 +327,7 @@ final class JdbcContext(
      * }}}
      */
     def fetchTo[T](nativeSql: NativeSql)(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -340,7 +340,7 @@ final class JdbcContext(
      * db.fetchToMap(sql"SELECT * FROM user")
      * }}}
      */
-    def fetchToMap(nativeSql: NativeSql)(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: NativeSql)(using ec: JdbcExecutionContext, l: Logger): List[Map[String, Any]] =
         execute(c => jdbcQueryToMap(c, nativeSql.sql, nativeSql.args))
 
     /**
@@ -351,7 +351,7 @@ final class JdbcContext(
      * }}}
      */
     def fetchTo[T](nativeSql: (String, Array[Any]))(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         d: JdbcDecoder[T],
         l: Logger
     ): List[T] =
@@ -365,7 +365,10 @@ final class JdbcContext(
      * db.fetchToMap[User]("SELECT * FROM user", Array.empty[Any])
      * }}}
      */
-    def fetchToMap(nativeSql: (String, Array[Any]))(using ec: ExecuteContext, l: Logger): List[Map[String, Any]] =
+    def fetchToMap(nativeSql: (String, Array[Any]))(using 
+        ec: JdbcExecutionContext, 
+        l: Logger
+    ): List[Map[String, Any]] =
         val (sql, args) = nativeSql
         execute(c => jdbcQueryToMap(c, sql, args))
 
@@ -382,7 +385,7 @@ final class JdbcContext(
         pageNo: Int,
         returnCount: Boolean = true
     )(using
-        ExecuteContext,
+        JdbcExecutionContext,
         JdbcDecoder[T],
         Logger
     ): Page[T] =
@@ -424,7 +427,7 @@ final class JdbcContext(
         pageNo: Int,
         returnCount: Boolean = true
     )(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -439,7 +442,7 @@ final class JdbcContext(
      * }}}
      */
     def findTo[T](query: SelectQuery[?, ?, ?, ?])(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         d: JdbcDecoder[T],
         l: Logger
     ): Option[T] =
@@ -454,7 +457,7 @@ final class JdbcContext(
      * }}}
      */
     def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: SelectQuery[T, OKS, L, S])(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -468,7 +471,10 @@ final class JdbcContext(
      * db.fetchCount(from(User))
      * }}}
      */
-    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using ExecuteContext, Logger): Long =
+    def fetchCount[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using 
+        JdbcExecutionContext, 
+        Logger
+    ): Long =
         val sizeQuery = query.size
         fetch(sizeQuery).head
 
@@ -479,7 +485,10 @@ final class JdbcContext(
      * db.fetchExists(from(User).filter(u => u.id == 1))
      * }}}
      */
-    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using ExecuteContext, Logger): Boolean =
+    def fetchExists[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using 
+        JdbcExecutionContext, 
+        Logger
+    ): Boolean =
         val existsQuery = query.exists
         fetch(existsQuery).head
 
@@ -509,7 +518,7 @@ final class JdbcContext(
         query: Query[T, OKS, L, S],
         fetchSize: Int
     )(using
-        ec: ExecuteContext,
+        ec: JdbcExecutionContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
         l: Logger
@@ -569,7 +578,7 @@ final class JdbcContext(
     /**
      * Executes a block of operations within a database transaction.
      * If an existing transaction context is in scope, the block joins
-     * that transaction. Otherwise the current `ExecuteContext` decides
+     * that transaction. Otherwise the current `JdbcExecutionContext` decides
      * whether to create a native transaction or join a framework-managed
      * transaction. A native transaction is rolled back if an exception
      * is thrown, and committed otherwise.
@@ -583,7 +592,7 @@ final class JdbcContext(
      */
     inline def executeTransaction[T](
         block: JdbcTransactionContext ?=> T
-    )(using ec: ExecuteContext): T =
+    )(using ec: JdbcExecutionContext): T =
         summonFrom:
             case tx: JdbcTransactionContext =>
                 block(using tx)
@@ -595,7 +604,7 @@ final class JdbcContext(
      * at the specified isolation level. If an existing transaction
      * context is in scope, the block joins that transaction and the
      * requested isolation level is ignored. Otherwise the current
-     * `ExecuteContext` decides how the transaction is created.
+     * `JdbcExecutionContext` decides how the transaction is created.
      *
      * {{{
      * db.executeTransactionWithIsolation(TransactionIsolation.Serializable) {
@@ -606,7 +615,7 @@ final class JdbcContext(
      */
     inline def executeTransactionWithIsolation[T](
         isolation: TransactionIsolation
-    )(block: JdbcTransactionContext ?=> T)(using ec: ExecuteContext): T =
+    )(block: JdbcTransactionContext ?=> T)(using ec: JdbcExecutionContext): T =
         summonFrom:
             case tx: JdbcTransactionContext =>
                 block(using tx)
@@ -615,7 +624,7 @@ final class JdbcContext(
 
 /**
  * Transaction context providing the underlying JDBC connection
- * to `ExecuteContext` during a transaction block.
+ * to `JdbcExecutionContext` during a transaction block.
  */
 final class JdbcTransactionContext(
     private[sqala] val connection: Connection
@@ -660,7 +669,7 @@ enum TransactionIsolation(private[sqala] val jdbcIsolation: Int):
  * whether the connection is borrowed from the pool and released after
  * the operation, or reused from the current transaction.
  */
-trait ExecuteContext:
+trait JdbcExecutionContext:
     /**
      * Runs `f` with a connection. The context owns the connection
      * lifecycle and is responsible for releasing it when appropriate.
@@ -678,12 +687,12 @@ trait ExecuteContext:
     )(block: JdbcTransactionContext ?=> T): T =
         context.runTransaction(isolation)(block)
 
-object ExecuteContext:
-    given withTransaction(using c: JdbcTransactionContext): ExecuteContext with
+object JdbcExecutionContext:
+    given withTransaction(using c: JdbcTransactionContext): JdbcExecutionContext with
         def withConnection[T](context: JdbcContext)(f: Connection => T): T =
             f(c.connection)
 
-    given withoutTransaction(using NotGiven[JdbcTransactionContext]): ExecuteContext with
+    given withoutTransaction(using NotGiven[JdbcTransactionContext]): JdbcExecutionContext with
         def withConnection[T](context: JdbcContext)(f: Connection => T): T =
             val conn = context.dataSource.getConnection()
             try

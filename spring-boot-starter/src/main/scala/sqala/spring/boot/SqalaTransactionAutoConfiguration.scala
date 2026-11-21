@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.jdbc.datasource.{DataSourceTransactionManager, DataSourceUtils}
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import sqala.jdbc.ExecuteContext as JdbcExecuteContext
+import sqala.jdbc.JdbcExecutionContext
 
 import javax.sql.DataSource
 
@@ -27,10 +27,10 @@ import javax.sql.DataSource
 ))
 class SqalaTransactionAutoConfiguration:
     @Bean
-    @ConditionalOnMissingBean(Array(classOf[JdbcExecuteContext]))
+    @ConditionalOnMissingBean(Array(classOf[JdbcExecutionContext]))
     @ConditionalOnBean(Array(classOf[DataSource]))
-    def sqalaSpringExecuteContext(dataSource: DataSource): SqalaSpringExecuteContext =
-        SqalaSpringExecuteContext(dataSource)
+    def sqalaSpringExecutionContext(dataSource: DataSource): SqalaSpringExecutionContext =
+        SqalaSpringExecutionContext(dataSource)
 
     @Bean
     @ConditionalOnMissingBean(Array(classOf[PlatformTransactionManager]))
