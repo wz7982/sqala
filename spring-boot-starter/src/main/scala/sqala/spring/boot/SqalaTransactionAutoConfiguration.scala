@@ -1,7 +1,11 @@
 package sqala.spring.boot
 
 import org.springframework.boot.autoconfigure.AutoConfiguration
-import org.springframework.boot.autoconfigure.condition.{ConditionalOnBean, ConditionalOnClass, ConditionalOnMissingBean}
+import org.springframework.boot.autoconfigure.condition.{
+    ConditionalOnClass,
+    ConditionalOnMissingBean,
+    ConditionalOnSingleCandidate
+}
 import org.springframework.context.annotation.Bean
 import org.springframework.jdbc.datasource.{DataSourceTransactionManager, DataSourceUtils}
 import org.springframework.transaction.PlatformTransactionManager
@@ -28,12 +32,11 @@ import javax.sql.DataSource
 class SqalaTransactionAutoConfiguration:
     @Bean
     @ConditionalOnMissingBean(Array(classOf[JdbcExecutionContext]))
-    @ConditionalOnBean(Array(classOf[DataSource]))
-    def sqalaSpringExecutionContext(dataSource: DataSource): SqalaExecutionContext =
-        SqalaExecutionContext(dataSource)
+    def sqalaSpringExecutionContext(): SqalaExecutionContext =
+        SqalaExecutionContext()
 
     @Bean
+    @ConditionalOnSingleCandidate(classOf[DataSource])
     @ConditionalOnMissingBean(Array(classOf[PlatformTransactionManager]))
-    @ConditionalOnBean(Array(classOf[DataSource]))
     def sqalaTransactionManager(dataSource: DataSource): PlatformTransactionManager =
         DataSourceTransactionManager(dataSource)

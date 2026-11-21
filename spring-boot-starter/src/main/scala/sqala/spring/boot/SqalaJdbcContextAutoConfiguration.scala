@@ -13,7 +13,7 @@ import sqala.jdbc.JdbcContext
 import javax.sql.DataSource
 
 /**
- * Registers a `JdbcContext` backed by the application's `DataSource`.
+ * Registers a `JdbcContext` backed by the single or `@Primary` `DataSource`.
  */
 @AutoConfiguration(afterName = Array(
     "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
