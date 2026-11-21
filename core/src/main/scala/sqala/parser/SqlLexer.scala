@@ -3,9 +3,9 @@ package sqala.parser
 /**
  * A hand-written lexer for standard SQL text.
  *
- * It skips whitespace, `--` line comments, and block comments, and reports
- * positions for diagnostics. Statement terminators (`;`) are rejected
- * because the parser only accepts a single query or expression.
+ * It skips whitespace and rejects SQL comments, reporting positions for
+ * diagnostics. Statement terminators (`;`) are rejected because the parser
+ * only accepts a single query or expression.
  */
 final class SqlLexer(source: String):
     private var offset = 0
@@ -56,23 +56,9 @@ final class SqlLexer(source: String):
             if c.isWhitespace then
                 advance()
             else if c == '-' && peek(1) == '-' then
-                while offset < source.length && current != '\n' do advance()
+                fail("Line comments are not supported", offset, line, column)
             else if c == '/' && peek(1) == '*' then
-                val startOffset = offset
-                val startLine = line
-                val startColumn = column
-                advance()
-                advance()
-                var closed = false
-                while !closed && offset < source.length do
-                    if current == '*' && peek(1) == '/' then
-                        advance()
-                        advance()
-                        closed = true
-                    else
-                        advance()
-                if !closed then
-                    fail("Invalid block comment: unterminated", startOffset, startLine, startColumn)
+                fail("Block comments are not supported", offset, line, column)
             else
                 continue = false
 

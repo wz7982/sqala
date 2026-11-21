@@ -181,35 +181,49 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
 
     private def parseComparison(): SqlExpr =
         val left = parseConcat()
-        if isKeyword("IS") then
-            parseIsPredicate(left)
-        else
-            val withNot =
-                if isKeyword("NOT") && isPredicateStart(1) then
-                    advance()
-                    true
-                else
-                    false
-            if isKeyword("BETWEEN") then
-                parseBetween(left, withNot)
-            else if isKeyword("IN") then
-                parseIn(left, withNot)
-            else if isKeyword("LIKE") then
-                parseLike(left, withNot)
-            else if isKeyword("SIMILAR") && isKeywordAt(1, "TO") then
-                parseSimilarTo(left, withNot)
-            else if isKeyword("OVERLAPS") then
-                parseOverlaps(left)
-            else if withNot then
-                failExpected("BETWEEN, IN, LIKE, or SIMILAR TO after NOT")
+        val predicate =
+            if isKeyword("IS") then
+                parseIsPredicate(left)
             else
-                parseSymbolComparison(left)
+                val withNot =
+                    if isKeyword("NOT") && isPredicateStart(1) then
+                        advance()
+                        true
+                    else
+                        false
+                if isKeyword("BETWEEN") then
+                    parseBetween(left, withNot)
+                else if isKeyword("IN") then
+                    parseIn(left, withNot)
+                else if isKeyword("LIKE") then
+                    parseLike(left, withNot)
+                else if isKeyword("SIMILAR") && isKeywordAt(1, "TO") then
+                    parseSimilarTo(left, withNot)
+                else if isKeyword("OVERLAPS") then
+                    parseOverlaps(left)
+                else if withNot then
+                    failExpected("BETWEEN, IN, LIKE, or SIMILAR TO after NOT")
+                else
+                    parseSymbolComparison(left)
+        if isBooleanIsStart then parseIsPredicate(predicate) else predicate
 
     private def isPredicateStart(n: Int): Boolean =
         isKeywordAt(n, "BETWEEN") ||
         isKeywordAt(n, "IN") ||
         isKeywordAt(n, "LIKE") ||
         isKeywordAt(n, "SIMILAR")
+
+    private def isBooleanIsStart: Boolean =
+        isKeyword("IS") && (
+            isKeywordAt(1, "TRUE") ||
+            isKeywordAt(1, "FALSE") ||
+            isKeywordAt(1, "NULL") ||
+            (isKeywordAt(1, "NOT") && (
+                isKeywordAt(2, "TRUE") ||
+                isKeywordAt(2, "FALSE") ||
+                isKeywordAt(2, "NULL")
+            ))
+        )
 
     private def parseIsPredicate(left: SqlExpr): SqlExpr =
         expectKeyword("IS")
@@ -250,10 +264,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
 
     private def parseBetween(left: SqlExpr, withNot: Boolean): SqlExpr =
         expectKeyword("BETWEEN")
+        val (start, end) = parseBetweenBounds()
+        SqlExpr.Between(left, start, end, withNot)
+
+    private def parseBetweenBounds(): (SqlExpr, SqlExpr) =
         val start = parseConcat()
         expectKeyword("AND")
         val end = parseConcat()
-        SqlExpr.Between(left, start, end, withNot)
+        (start, end)
 
     private def parseIn(left: SqlExpr, withNot: Boolean): SqlExpr =
         expectKeyword("IN")
@@ -921,9 +939,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
             if isJsonBehaviorStart() then
                 val value = parseJsonBehaviorValue()
                 expectKeyword("ON")
+                val targetPosition = currentPosition
                 if consumeKeyword("EMPTY") then
+                    if onEmpty.isDefined then
+                        throw errorAt("Duplicate JSON_QUERY ON EMPTY behavior", targetPosition)
                     onEmpty = Some(jsonQueryEmptyBehavior(value))
                 else if consumeKeyword("ERROR") then
+                    if onError.isDefined then
+                        throw errorAt("Duplicate JSON_QUERY ON ERROR behavior", targetPosition)
                     onError = Some(jsonQueryErrorBehavior(value))
                 else
                     failExpected("EMPTY or ERROR after ON")
@@ -955,9 +978,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
             if isJsonBehaviorStart() then
                 val value = parseJsonBehaviorValue()
                 expectKeyword("ON")
+                val targetPosition = currentPosition
                 if consumeKeyword("EMPTY") then
+                    if onEmpty.isDefined then
+                        throw errorAt("Duplicate JSON_VALUE ON EMPTY behavior", targetPosition)
                     onEmpty = Some(jsonValueEmptyBehavior(value))
                 else if consumeKeyword("ERROR") then
+                    if onError.isDefined then
+                        throw errorAt("Duplicate JSON_VALUE ON ERROR behavior", targetPosition)
                     onError = Some(jsonValueErrorBehavior(value))
                 else
                     failExpected("EMPTY or ERROR after ON")
@@ -1197,9 +1225,6 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
             upper match
                 case "VARCHAR" =>
                     SqlType.Varchar(parseOptionalLength())
-                case "CHAR" | "CHARACTER" =>
-                    consumeKeyword("VARYING")
-                    SqlType.Varchar(parseOptionalLength())
                 case "INT" | "INTEGER" =>
                     SqlType.Int
                 case "BIGINT" =>
@@ -1263,6 +1288,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         current match
             case Token.NumberLiteral(value) =>
                 if !value.isWhole then failExpected("an integer")
+                if !value.isValidInt then failInvalid("integer", s"$value is out of range")
                 advance()
                 value.toInt
             case _ =>
@@ -1370,7 +1396,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
 
     private def parseQueryInternal(): SqlQuery =
         if isKeyword("WITH") then parseWithQuery()
-        else parseQueryTail(parseSetExpression(0))
+        else parseSetExpression(0)
 
     private def parseWithQuery(): SqlQuery =
         expectKeyword("WITH")
@@ -1410,6 +1436,8 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                     val quantifier = parseQuantifier()
                     val corresponding = parseSetCorresponding()
                     val right = parseSetExpression(setOperatorPrecedence(keyword) + 1)
+                    if hasLock(left) || hasLock(right) then
+                        failInvalid("lock clause", "not allowed in a set operation")
                     left = SqlQuery.Set(
                         left,
                         setOperatorOf(keyword, quantifier),
@@ -1421,6 +1449,11 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 case _ =>
                     continue = false
         left
+
+    private def hasLock(query: SqlQuery): Boolean =
+        query match
+            case select: SqlQuery.Select => select.lock.isDefined
+            case _ => false
 
     private def setOperatorKeyword(): Option[String] =
         if isKeyword("UNION") then Some("UNION")
@@ -1459,14 +1492,60 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         else if isKeyword("VALUES") then
             parseValuesQuery()
         else if isSymbol("(") then
-            advance()
-            val query = parseQueryInternal()
-            expectSymbol(")")
-            query
+            parseParenthesizedQuery()
         else
             failExpected("a query")
 
-    private def parseSelectQuery(): SqlQuery =
+    private def parseParenthesizedQuery(): SqlQuery =
+        expectSymbol("(")
+        val query = parseQueryInternal()
+        expectSymbol(")")
+        val orderBy = parseOrderByClause()
+        val limit = parseLimitClause()
+        val lock =
+            query match
+                case _: SqlQuery.Select => parseLockClause()
+                case _ => None
+        if orderBy.isEmpty && limit.isEmpty && lock.isEmpty then
+            query
+        else
+            query match
+                case select: SqlQuery.Select =>
+                    if orderBy.nonEmpty && select.orderBy.nonEmpty then
+                        failInvalid("ORDER BY clause", "duplicate ORDER BY")
+                    if limit.isDefined && select.limit.isDefined then
+                        failInvalid("LIMIT clause", "duplicate LIMIT")
+                    if lock.isDefined && select.lock.isDefined then
+                        failInvalid("locking clause", "duplicate locking clause")
+                    select.copy(
+                        orderBy = if orderBy.nonEmpty then orderBy else select.orderBy,
+                        limit = limit.orElse(select.limit),
+                        lock = lock.orElse(select.lock)
+                    )
+                case set: SqlQuery.Set =>
+                    if orderBy.nonEmpty && set.orderBy.nonEmpty then
+                        failInvalid("ORDER BY clause", "duplicate ORDER BY")
+                    if limit.isDefined && set.limit.isDefined then
+                        failInvalid("LIMIT clause", "duplicate LIMIT")
+                    set.copy(
+                        orderBy = if orderBy.nonEmpty then orderBy else set.orderBy,
+                        limit = limit.orElse(set.limit)
+                    )
+                case values: SqlQuery.Values =>
+                    if orderBy.nonEmpty && values.orderBy.nonEmpty then
+                        failInvalid("ORDER BY clause", "duplicate ORDER BY")
+                    if limit.isDefined && values.limit.isDefined then
+                        failInvalid("LIMIT clause", "duplicate LIMIT")
+                    values.copy(
+                        orderBy = if orderBy.nonEmpty then orderBy else values.orderBy,
+                        limit = limit.orElse(values.limit)
+                    )
+                case _ =>
+                    if orderBy.nonEmpty || limit.isDefined || lock.isDefined then
+                        failInvalid("clause", "cannot apply ORDER BY, LIMIT, or locking to this query")
+                    query
+
+    private def parseSelectQuery(): SqlQuery.Select =
         expectKeyword("SELECT")
         val quantifier = parseQuantifier()
         val select = parseSelectItems()
@@ -1481,6 +1560,9 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val having = if consumeKeyword("HAVING") then Some(parseOr()) else None
         val window = if consumeKeyword("WINDOW") then parseWindowItems() else Nil
         val qualify = if consumeKeyword("QUALIFY") then Some(parseOr()) else None
+        val orderBy = parseOrderByClause()
+        val limit = parseLimitClause()
+        val lock = parseLockClause()
         SqlQuery.Select(
             quantifier,
             select,
@@ -1490,9 +1572,9 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
             having,
             window,
             qualify,
-            Nil,
-            None,
-            None
+            orderBy,
+            limit,
+            lock
         )
 
     private def parseSelectItems(): NonEmptyList[SqlSelectItem] =
@@ -1576,80 +1658,53 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val window = parseInlinedWindow()
         SqlWindowItem(name, window)
 
-    private def parseQueryTail(query: SqlQuery): SqlQuery =
-        val orderBy =
-            if consumeKeyword("ORDER") then
-                expectKeyword("BY")
-                parseOrderingList()
-            else
-                Nil
-        val limit = parseLimitClause()
-        val lock = parseLockClause()
-        query match
-            case select: SqlQuery.Select =>
-                select.copy(
-                    orderBy = if orderBy.nonEmpty then orderBy else select.orderBy,
-                    limit = limit.orElse(select.limit),
-                    lock = lock.orElse(select.lock)
-                )
-            case set: SqlQuery.Set =>
-                if lock.isDefined then
-                    failInvalid("lock clause", "only allowed on a SELECT query")
-                set.copy(
-                    orderBy = if orderBy.nonEmpty then orderBy else set.orderBy,
-                    limit = limit.orElse(set.limit)
-                )
-            case values: SqlQuery.Values =>
-                if lock.isDefined then
-                    failInvalid("lock clause", "only allowed on a SELECT query")
-                values.copy(
-                    orderBy = if orderBy.nonEmpty then orderBy else values.orderBy,
-                    limit = limit.orElse(values.limit)
-                )
-            case _ =>
-                if orderBy.nonEmpty || limit.isDefined || lock.isDefined then
-                    failInvalid("clause", "cannot apply ORDER BY, LIMIT, or locking to this query")
-                query
+    private def parseOrderByClause(): List[SqlOrderingItem] =
+        if consumeKeyword("ORDER") then
+            expectKeyword("BY")
+            parseOrderingList()
+        else
+            Nil
 
     private def parseLimitClause(): Option[SqlLimit] =
         var offset: Option[SqlExpr] = None
         var fetch: Option[SqlFetch] = None
-        var continue = true
-        while continue do
-            if consumeKeyword("LIMIT") then
-                if consumeKeyword("ALL") then
-                    fetch = None
-                else
-                    val first = parseOr()
-                    if consumeSymbol(",") then
-                        offset = Some(first)
-                        fetch = Some(SqlFetch(parseOr(), SqlFetchUnit.RowCount, SqlFetchMode.Only))
-                    else
-                        fetch = Some(SqlFetch(first, SqlFetchUnit.RowCount, SqlFetchMode.Only))
-            else if consumeKeyword("OFFSET") then
-                offset = Some(parseOr())
-                if !consumeKeyword("ROW") then consumeKeyword("ROWS")
-            else if consumeKeyword("FETCH") then
-                if !consumeKeyword("FIRST") then expectKeyword("NEXT")
-                val limit =
-                    if isKeyword("ROW") || isKeyword("ROWS") || isKeyword("PERCENT") then
-                        SqlExpr.NumberLiteral(1)
-                    else
-                        parseOr()
-                val unit =
-                    if consumeKeyword("PERCENT") then SqlFetchUnit.Percentage
-                    else SqlFetchUnit.RowCount
-                if !consumeKeyword("ROW") then consumeKeyword("ROWS")
-                val mode =
-                    if consumeKeyword("ONLY") then SqlFetchMode.Only
-                    else if consumeKeyword("WITH") then
-                        expectKeyword("TIES")
-                        SqlFetchMode.WithTies
-                    else
-                        SqlFetchMode.Only
-                fetch = Some(SqlFetch(limit, unit, mode))
+        if consumeKeyword("LIMIT") then
+            if consumeKeyword("ALL") then ()
             else
-                continue = false
+                val first = parseOr()
+                if consumeSymbol(",") then
+                    offset = Some(first)
+                    fetch = Some(SqlFetch(parseOr(), SqlFetchUnit.RowCount, SqlFetchMode.Only))
+                else
+                    fetch = Some(SqlFetch(first, SqlFetchUnit.RowCount, SqlFetchMode.Only))
+        if consumeKeyword("OFFSET") then
+            if offset.isDefined then
+                failInvalid("OFFSET clause", "duplicate OFFSET")
+            offset = Some(parseOr())
+            if !consumeKeyword("ROW") then consumeKeyword("ROWS")
+        if consumeKeyword("FETCH") then
+            if fetch.isDefined then
+                failInvalid("FETCH clause", "duplicate LIMIT or FETCH")
+            if !consumeKeyword("FIRST") then expectKeyword("NEXT")
+            val limit =
+                if isKeyword("ROW") || isKeyword("ROWS") || isKeyword("PERCENT") then
+                    SqlExpr.NumberLiteral(1)
+                else
+                    parseOr()
+            val unit =
+                if consumeKeyword("PERCENT") then SqlFetchUnit.Percentage
+                else SqlFetchUnit.RowCount
+            if !consumeKeyword("ROW") && !consumeKeyword("ROWS") then
+                failExpected("ROW or ROWS")
+            val mode =
+                if consumeKeyword("ONLY") then
+                    SqlFetchMode.Only
+                else if consumeKeyword("WITH") then
+                    expectKeyword("TIES")
+                    SqlFetchMode.WithTies
+                else
+                    failExpected("ONLY or WITH TIES")
+            fetch = Some(SqlFetch(limit, unit, mode))
         if offset.isDefined || fetch.isDefined then Some(SqlLimit(offset, fetch)) else None
 
     private def parseLockClause(): Option[SqlLock] =
@@ -1672,12 +1727,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         else
             None
 
-    private def parseValuesQuery(): SqlQuery =
+    private def parseValuesQuery(): SqlQuery.Values =
         expectKeyword("VALUES")
         val head = parseValuesRow()
         val tail = ListBuffer[NonEmptyList[SqlExpr]]()
         while consumeSymbol(",") do tail += parseValuesRow()
-        SqlQuery.Values(NonEmptyList(head, tail.toList), Nil, None)
+        val orderBy = parseOrderByClause()
+        val limit = parseLimitClause()
+        SqlQuery.Values(NonEmptyList(head, tail.toList), orderBy, limit)
 
     private def parseValuesRow(): NonEmptyList[SqlExpr] =
         expectSymbol("(")
@@ -1742,54 +1799,100 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         SqlTable.Join(left, joinType, right, condition)
 
     private def parseTablePrimary(): SqlTable =
-        val lateral = consumeKeyword("LATERAL")
-        if isSymbol("(") then
-            advance()
-            if isQueryStart() then
-                val query = parseQueryInternal()
-                expectSymbol(")")
-                val alias = parseOptionalTableAlias()
-                val matchRecognize = parseOptionalMatchRecognize()
-                SqlTable.Subquery(lateral, query, alias, matchRecognize)
+        val lateralPosition =
+            if isKeyword("LATERAL") then
+                val position = currentPosition
+                advance()
+                Some(position)
             else
-                val table = parseTable()
-                expectSymbol(")")
+                None
+        val lateral = lateralPosition.isDefined
+        val table =
+            if isSymbol("(") then
+                advance()
+                if isQueryStart() then
+                    val query = parseQueryInternal()
+                    expectSymbol(")")
+                    val alias = parseOptionalTableAlias()
+                    val matchRecognize = parseOptionalMatchRecognize()
+                    SqlTable.Subquery(lateral, query, alias, matchRecognize)
+                else if isSymbol("(") && isNestedQueryStart() then
+                    val startPosition = position
+                    val queryAttempt =
+                        try
+                            val query = parseQueryInternal()
+                            expectSymbol(")")
+                            Some(query)
+                        catch
+                            case _: ParseException =>
+                                None
+                    queryAttempt match
+                        case Some(query) =>
+                            val alias = parseOptionalTableAlias()
+                            val matchRecognize = parseOptionalMatchRecognize()
+                            SqlTable.Subquery(lateral, query, alias, matchRecognize)
+                        case None =>
+                            position = startPosition
+                            val table = parseTable()
+                            expectSymbol(")")
+                            table
+                else
+                    val table = parseTable()
+                    expectSymbol(")")
+                    table
+            else
+                current match
+                    case Token.Identifier(name, quoted) =>
+                        val upper = if quoted then "" else name.toUpperCase(java.util.Locale.ROOT)
+                        if !quoted && upper == "JSON_TABLE" && isSymbolAt(1, "(") then
+                            parseJsonTable(lateral)
+                        else if !quoted && upper == "GRAPH_TABLE" && isSymbolAt(1, "(") then
+                            parseGraphTable(lateral)
+                        else if isSymbolAt(1, "(") then
+                            if !quoted && isReservedKeyword(name) then
+                                failExpected("a table reference")
+                            advance()
+                            expectSymbol("(")
+                            val args = if isSymbol(")") then Nil else parseExprList().toList
+                            expectSymbol(")")
+                            val withOrdinality =
+                                if consumeKeyword("WITH") then
+                                    expectKeyword("ORDINALITY")
+                                    true
+                                else
+                                    false
+                            val alias = parseOptionalTableAlias()
+                            val matchRecognize = parseOptionalMatchRecognize()
+                            SqlTable.Func(lateral, name, args, withOrdinality, alias, matchRecognize)
+                        else
+                            if !quoted && isReservedKeyword(name) then
+                                failExpected("a table reference")
+                            advance()
+                            val period = parseOptionalTablePeriod()
+                            val alias = parseOptionalTableAlias()
+                            val matchRecognize = parseOptionalMatchRecognize()
+                            val sample = parseOptionalTableSample()
+                            SqlTable.Ident(name, alias, period, matchRecognize, sample)
+                    case _ =>
+                        failExpected("a table reference")
+        applyLateral(table, lateralPosition)
+
+    private def applyLateral(table: SqlTable, position: Option[TokenPosition]): SqlTable =
+        position match
+            case None =>
                 table
-        else
-            current match
-                case Token.Identifier(name, quoted) =>
-                    val upper = if quoted then "" else name.toUpperCase(java.util.Locale.ROOT)
-                    if !quoted && upper == "JSON_TABLE" && isSymbolAt(1, "(") then
-                        parseJsonTable(lateral)
-                    else if !quoted && upper == "GRAPH_TABLE" && isSymbolAt(1, "(") then
-                        parseGraphTable(lateral)
-                    else if isSymbolAt(1, "(") then
-                        if !quoted && isReservedKeyword(name) then
-                            failExpected("a table reference")
-                        advance()
-                        expectSymbol("(")
-                        val args = if isSymbol(")") then Nil else parseExprList().toList
-                        expectSymbol(")")
-                        val withOrdinality =
-                            if consumeKeyword("WITH") then
-                                expectKeyword("ORDINALITY")
-                                true
-                            else
-                                false
-                        val alias = parseOptionalTableAlias()
-                        val matchRecognize = parseOptionalMatchRecognize()
-                        SqlTable.Func(lateral, name, args, withOrdinality, alias, matchRecognize)
-                    else
-                        if !quoted && isReservedKeyword(name) then
-                            failExpected("a table reference")
-                        advance()
-                        val period = parseOptionalTablePeriod()
-                        val alias = parseOptionalTableAlias()
-                        val matchRecognize = parseOptionalMatchRecognize()
-                        val sample = parseOptionalTableSample()
-                        SqlTable.Ident(name, alias, period, matchRecognize, sample)
-                case _ =>
-                    failExpected("a table reference")
+            case Some(p) =>
+                table match
+                    case t: SqlTable.Func =>
+                        t.copy(withLateral = true)
+                    case t: SqlTable.Subquery =>
+                        t.copy(withLateral = true)
+                    case t: SqlTable.Json =>
+                        t.copy(withLateral = true)
+                    case t: SqlTable.Graph =>
+                        t.copy(withLateral = true)
+                    case _ =>
+                        throw errorAt("LATERAL is only allowed for subqueries and table functions", p)
 
     private def parseOptionalTablePeriod(): Option[SqlTablePeriodForMode] =
         if isKeyword("FOR") && isKeywordAt(1, "SYSTEM_TIME") then
@@ -1808,9 +1911,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 if consumeKeyword("ASYMMETRIC") then Some(SqlTablePeriodBetweenMode.Asymmetric)
                 else if consumeKeyword("SYMMETRIC") then Some(SqlTablePeriodBetweenMode.Symmetric)
                 else None
-            val start = parseOr()
-            expectKeyword("AND")
-            val end = parseOr()
+            val (start, end) = parseBetweenBounds()
             SqlTablePeriodForMode.SystemTimeBetween(mode, start, end)
         else if consumeKeyword("FROM") then
             val from = parseOr()
@@ -2467,7 +2568,28 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
     // --------------------------------------------------------------- subquery
 
     private def isQueryStart(): Boolean =
-        isKeyword("SELECT") || isKeyword("WITH") || isKeyword("VALUES")
+        isQueryStartAt(position)
+
+    private def isQueryStartAt(index: Int): Boolean =
+        if index >= tokens.length then
+            false
+        else
+            tokens(index).token match
+                case Token.Identifier(name, false) =>
+                    name.equalsIgnoreCase("SELECT") ||
+                    name.equalsIgnoreCase("WITH") ||
+                    name.equalsIgnoreCase("VALUES")
+                case _ =>
+                    false
+
+    private def isNestedQueryStart(): Boolean =
+        var index = position
+        while index < tokens.length && (tokens(index).token match
+            case Token.Symbol("(") => true
+            case _ => false
+        ) do
+            index += 1
+        isQueryStartAt(index)
 
     private def parseSubquery(): SqlQuery =
         parseQueryInternal()

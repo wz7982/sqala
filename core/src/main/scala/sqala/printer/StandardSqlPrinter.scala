@@ -294,6 +294,11 @@ trait StandardSqlPrinter:
             printSpace()
             printLimit(l)
 
+        for l <- query.lock do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLock(l)
+
     /**
      * Prints a set operator keyword.
      */
@@ -750,7 +755,10 @@ trait StandardSqlPrinter:
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
             child match
                 case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence < parent.operator.precedence || operator.precedence == 0 =>
+                    if operator.precedence < parent.operator.precedence ||
+                        operator.precedence == parent.operator.precedence && operator.precedence <= SqlBinaryOperator.Equal.precedence ||
+                        operator.precedence == 0
+                    =>
                         true
                 case SqlExpr.In(_, _, _)
                     if SqlBinaryOperator.Equal.precedence < parent.operator.precedence =>
@@ -862,7 +870,7 @@ trait StandardSqlPrinter:
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
         def hasBrackets(expr: SqlExpr): Boolean =
             expr match
-                case SqlExpr.Binary(_, SqlBinaryOperator.And, _) =>
+                case SqlExpr.Binary(_, op, _) if op.precedence <= SqlBinaryOperator.And.precedence =>
                     true
                 case SqlExpr.Binary(left, _, right) =>
                     hasBrackets(left) || hasBrackets(right)
@@ -2116,15 +2124,31 @@ trait StandardSqlPrinter:
                 sqlBuilder.append("FOR SYSTEM_TIME AS OF ")
                 printExpr(expr)
             case SqlTablePeriodForMode.SystemTimeBetween(mode, start, end) =>
+                def hasBrackets(expr: SqlExpr): Boolean =
+                    expr match
+                        case SqlExpr.Binary(_, op, _) if op.precedence <= SqlBinaryOperator.And.precedence =>
+                            true
+                        case SqlExpr.Binary(left, _, right) =>
+                            hasBrackets(left) || hasBrackets(right)
+                        case _ =>
+                            false
+
                 sqlBuilder.append("FOR SYSTEM_TIME BETWEEN ")
 
                 for m <- mode do
                     printTablePeriodBetweenMode(m)
                     sqlBuilder.append(" ")
-
+                if hasBrackets(start) then
+                    sqlBuilder.append("(")
                 printExpr(start)
+                if hasBrackets(start) then
+                    sqlBuilder.append(")")
                 sqlBuilder.append(" AND ")
+                if hasBrackets(end) then
+                    sqlBuilder.append("(")
                 printExpr(end)
+                if hasBrackets(end) then
+                    sqlBuilder.append(")")
             case SqlTablePeriodForMode.SystemTimeFrom(from, to) =>
                 sqlBuilder.append("FOR SYSTEM_TIME FROM ")
                 printExpr(from)
