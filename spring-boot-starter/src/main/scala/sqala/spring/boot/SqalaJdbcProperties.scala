@@ -15,7 +15,7 @@ import sqala.jdbc.dialect.{
 class SqalaJdbcProperties:
     private var dialect: String = "postgresql"
 
-    private var standardEscapeStrings: Boolean = false
+    private var standardEscapeStrings: Boolean = true
 
     def getDialect: String = dialect
 
