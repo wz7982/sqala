@@ -26,8 +26,11 @@ object TableMacro:
 
 object TableMacroImpl:
     private val annoNameTable = "table"
+
     private val annoNameColumn = "column"
+
     private val annoNamePrimaryKey = "primaryKey"
+    
     private val annoNameAutoInc = "autoInc"
 
     def tableNameMacro[T](using q: Quotes, t: Type[T]): String =
