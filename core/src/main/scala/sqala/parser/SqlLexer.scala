@@ -14,7 +14,7 @@ final class SqlLexer(source: String):
 
     private var column = 1
 
-    private val tokens = List.newBuilder[TokenPosition]
+    private val tokens = Vector.newBuilder[TokenPosition]
 
     /**
      * Tokenizes the whole input and appends a Token.EndOfInput token.
@@ -25,7 +25,7 @@ final class SqlLexer(source: String):
             if offset < source.length then
                 tokens += readToken()
         tokens += TokenPosition(Token.EndOfInput, offset, line, column)
-        tokens.result().toVector
+        tokens.result()
 
     private def readToken(): TokenPosition =
         val startOffset = offset
@@ -168,17 +168,48 @@ final class SqlLexer(source: String):
                 fail("Invalid numeric literal", startOffset, startLine, startColumn)
 
     private def readSymbol(startOffset: Int, startLine: Int, startColumn: Int): Token =
-        val two = peek(0).toString + peek(1).toString
-        if two == "<>" || two == "!=" || two == ">=" || two == "<=" || two == "||" then
-            advance()
-            advance()
-            Token.Symbol(two)
-        else
-            val c = current
-            if "()[]{},.*+-/%=<>|^$?!&~".indexOf(c) >= 0 then
+        val c = current
+        c match
+            case '<' =>
+                if peek(1) == '>' then
+                    advance()
+                    advance()
+                    Token.Symbol("<>")
+                else if peek(1) == '=' then
+                    advance()
+                    advance()
+                    Token.Symbol("<=")
+                else
+                    advance()
+                    Token.Symbol("<")
+            case '>' =>
+                if peek(1) == '=' then
+                    advance()
+                    advance()
+                    Token.Symbol(">=")
+                else
+                    advance()
+                    Token.Symbol(">")
+            case '!' =>
+                if peek(1) == '=' then
+                    advance()
+                    advance()
+                    Token.Symbol("!=")
+                else
+                    advance()
+                    Token.Symbol("!")
+            case '|' =>
+                if peek(1) == '|' then
+                    advance()
+                    advance()
+                    Token.Symbol("||")
+                else
+                    advance()
+                    Token.Symbol("|")
+            case '(' | ')' | '[' | ']' | '{' | '}' | ',' | '.' | '*' | '+' | '-' | '/' | '%' | '=' | '^' | '$' | '?' | '&' | '~' =>
                 advance()
                 Token.Symbol(c.toString)
-            else
+            case _ =>
                 fail(s"Invalid character '$c'", startOffset, startLine, startColumn)
 
     private def current: Char =

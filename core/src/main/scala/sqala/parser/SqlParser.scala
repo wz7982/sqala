@@ -1501,47 +1501,47 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val query = parseQueryInternal()
         expectSymbol(")")
         val orderBy = parseOrderByClause()
-        val limit = parseLimitClause()
+        val (limit, hasPagination) = parseLimitClause()
         val lock =
             query match
                 case _: SqlQuery.Select => parseLockClause()
                 case _ => None
-        if orderBy.isEmpty && limit.isEmpty && lock.isEmpty then
+        if orderBy.isEmpty && !hasPagination && lock.isEmpty then
             query
         else
             query match
                 case select: SqlQuery.Select =>
                     if orderBy.nonEmpty && select.orderBy.nonEmpty then
                         failInvalid("ORDER BY clause", "duplicate ORDER BY")
-                    if limit.isDefined && select.limit.isDefined then
+                    if hasPagination && select.limit.isDefined then
                         failInvalid("LIMIT clause", "duplicate LIMIT")
                     if lock.isDefined && select.lock.isDefined then
                         failInvalid("locking clause", "duplicate locking clause")
                     select.copy(
                         orderBy = if orderBy.nonEmpty then orderBy else select.orderBy,
-                        limit = limit.orElse(select.limit),
+                        limit = if hasPagination then limit else select.limit,
                         lock = lock.orElse(select.lock)
                     )
                 case set: SqlQuery.Set =>
                     if orderBy.nonEmpty && set.orderBy.nonEmpty then
                         failInvalid("ORDER BY clause", "duplicate ORDER BY")
-                    if limit.isDefined && set.limit.isDefined then
+                    if hasPagination && set.limit.isDefined then
                         failInvalid("LIMIT clause", "duplicate LIMIT")
                     set.copy(
                         orderBy = if orderBy.nonEmpty then orderBy else set.orderBy,
-                        limit = limit.orElse(set.limit)
+                        limit = if hasPagination then limit else set.limit
                     )
                 case values: SqlQuery.Values =>
                     if orderBy.nonEmpty && values.orderBy.nonEmpty then
                         failInvalid("ORDER BY clause", "duplicate ORDER BY")
-                    if limit.isDefined && values.limit.isDefined then
+                    if hasPagination && values.limit.isDefined then
                         failInvalid("LIMIT clause", "duplicate LIMIT")
                     values.copy(
                         orderBy = if orderBy.nonEmpty then orderBy else values.orderBy,
-                        limit = limit.orElse(values.limit)
+                        limit = if hasPagination then limit else values.limit
                     )
                 case _ =>
-                    if orderBy.nonEmpty || limit.isDefined || lock.isDefined then
+                    if orderBy.nonEmpty || hasPagination || lock.isDefined then
                         failInvalid("clause", "cannot apply ORDER BY, LIMIT, or locking to this query")
                     query
 
@@ -1561,7 +1561,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val window = if consumeKeyword("WINDOW") then parseWindowItems() else Nil
         val qualify = if consumeKeyword("QUALIFY") then Some(parseOr()) else None
         val orderBy = parseOrderByClause()
-        val limit = parseLimitClause()
+        val (limit, _) = parseLimitClause()
         val lock = parseLockClause()
         SqlQuery.Select(
             quantifier,
@@ -1665,10 +1665,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         else
             Nil
 
-    private def parseLimitClause(): Option[SqlLimit] =
+    private def parseLimitClause(): (Option[SqlLimit], Boolean) =
         var offset: Option[SqlExpr] = None
         var fetch: Option[SqlFetch] = None
+        var hasLimit = false
+        var hasPagination = false
         if consumeKeyword("LIMIT") then
+            hasLimit = true
+            hasPagination = true
             if consumeKeyword("ALL") then ()
             else
                 val first = parseOr()
@@ -1678,12 +1682,14 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 else
                     fetch = Some(SqlFetch(first, SqlFetchUnit.RowCount, SqlFetchMode.Only))
         if consumeKeyword("OFFSET") then
+            hasPagination = true
             if offset.isDefined then
                 failInvalid("OFFSET clause", "duplicate OFFSET")
             offset = Some(parseOr())
             if !consumeKeyword("ROW") then consumeKeyword("ROWS")
         if consumeKeyword("FETCH") then
-            if fetch.isDefined then
+            hasPagination = true
+            if fetch.isDefined || hasLimit then
                 failInvalid("FETCH clause", "duplicate LIMIT or FETCH")
             if !consumeKeyword("FIRST") then expectKeyword("NEXT")
             val limit =
@@ -1705,7 +1711,8 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 else
                     failExpected("ONLY or WITH TIES")
             fetch = Some(SqlFetch(limit, unit, mode))
-        if offset.isDefined || fetch.isDefined then Some(SqlLimit(offset, fetch)) else None
+        val limit = if offset.isDefined || fetch.isDefined then Some(SqlLimit(offset, fetch)) else None
+        (limit, hasPagination)
 
     private def parseLockClause(): Option[SqlLock] =
         if consumeKeyword("FOR") then
@@ -1733,7 +1740,7 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         val tail = ListBuffer[NonEmptyList[SqlExpr]]()
         while consumeSymbol(",") do tail += parseValuesRow()
         val orderBy = parseOrderByClause()
-        val limit = parseLimitClause()
+        val (limit, _) = parseLimitClause()
         SqlQuery.Values(NonEmptyList(head, tail.toList), orderBy, limit)
 
     private def parseValuesRow(): NonEmptyList[SqlExpr] =
