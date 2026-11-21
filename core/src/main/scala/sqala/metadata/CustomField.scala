@@ -35,3 +35,42 @@ trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
 
     def sqlType: SqlType =
         a.sqlType
+
+object CustomField:
+    /**
+     * Derives a `CustomField` instance for a parameterless Scala 3 enum,
+     * reading the database values from `@enumValue` or `@enumName`.
+     *
+     * The storage type must be written explicitly, because it decides which
+     * annotations are valid and which `JdbcDecoder` is used:
+     *
+     * {{{
+     * enum DataState:
+     *     @enumValue(1) case Active
+     *     @enumValue(0) case Deleted
+     *
+     * object DataState:
+     *     given CustomField[DataState, Int] = CustomField.derived
+     * }}}
+     *
+     * {{{
+     * enum Status:
+     *     @enumName("ACTIVE") case Active
+     *     case Deleted
+     *
+     * object Status:
+     *     given CustomField[Status, String] = CustomField.derived
+     * }}}
+     *
+     * The macro rejects:
+     *
+     *   - enums with type parameters or case parameters
+     *   - integer-mapped cases without `@enumValue`
+     *   - annotations that do not match the storage type
+     *   - duplicate database values
+     *   - non-literal annotation arguments
+     *
+     * Decoding an unknown database value throws `EnumDecodeException`.
+     */
+    inline def derived[T, R]: CustomField[T, R] =
+        ${ CustomFieldMacro.derive[T, R] }
