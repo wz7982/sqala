@@ -1,6 +1,6 @@
 package bench
 
-import sqala.jdbc.{JdbcContext, Logger}
+import sqala.jdbc.*
 import sqala.jdbc.dialect.PostgresqlJdbcDialect
 import sqala.static.dsl.*
 
