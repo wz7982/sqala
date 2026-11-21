@@ -29,8 +29,8 @@ class SqalaTransactionAutoConfiguration:
     @Bean
     @ConditionalOnMissingBean(Array(classOf[JdbcExecutionContext]))
     @ConditionalOnBean(Array(classOf[DataSource]))
-    def sqalaSpringExecutionContext(dataSource: DataSource): SqalaSpringExecutionContext =
-        SqalaSpringExecutionContext(dataSource)
+    def sqalaSpringExecutionContext(dataSource: DataSource): SqalaExecutionContext =
+        SqalaExecutionContext(dataSource)
 
     @Bean
     @ConditionalOnMissingBean(Array(classOf[PlatformTransactionManager]))

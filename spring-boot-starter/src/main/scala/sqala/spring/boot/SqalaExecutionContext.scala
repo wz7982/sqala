@@ -13,7 +13,7 @@ import javax.sql.DataSource
  * `DataSourceUtils`, so sqala operations join a transaction started
  * by Spring's `DataSourceTransactionManager` or `@Transactional`.
  */
-final class SqalaSpringExecutionContext(dataSource: DataSource) extends JdbcExecutionContext:
+final class SqalaExecutionContext(dataSource: DataSource) extends JdbcExecutionContext:
     given executeContext: JdbcExecutionContext = this
 
     def withConnection[T](context: JdbcContext)(f: Connection => T): T =
