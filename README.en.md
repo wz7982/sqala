@@ -8,7 +8,7 @@ Documentation: https://wz7982.github.io/sqala-doc/en/
 
 With sqala, you can:
 
-1. **Build queries in an object-oriented, collection-like way**: the type-safe query builder filters out most invalid SQL at compile time and infers the result type automatically:
+1. **Build queries in an object-oriented, collection-like way**: the type-safe query builder checks fields, operators, and result types at compile time, rejecting errors such as unknown fields or incompatible types on either side of a comparison operator, and infers the result type automatically:
 
     ```scala
     case class User(id: Int, name: String)
@@ -42,7 +42,7 @@ With sqala, you can:
     val result = db.findByPrimaryKey[User](1)
     ```
 
-4. **Extreme type safety**: sqala models SQL semantics with the type system, so its type checks catch not only simple errors such as unknown fields or incompatible types on either side of a comparison operator, but also deeper semantic errors:
+4. **SQL semantic safety**: sqala also models SQL semantics with the type system, so it catches SQL semantic errors that go beyond ordinary type checking. Here "safety" refers only to SQL semantics that can be decided at compile time; it does not cover dynamic queries, native SQL, `unsafeExpr`, database schema drift, or runtime data problems:
 
     ```scala
     val q1 =
