@@ -49,3 +49,7 @@ project/plugins/project/
 .metals/
 .bloop/
 project/**/metals.sbt
+# codegen sbt plugin build files
+!codegen-sbt/project/
+!codegen-sbt/project/build.properties
+!codegen-sbt/project/plugins.sbt
