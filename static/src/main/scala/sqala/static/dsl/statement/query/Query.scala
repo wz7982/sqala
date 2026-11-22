@@ -3,7 +3,7 @@ package sqala.static.dsl.statement.query
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.*
 import sqala.ir.*
-import sqala.metadata.Dialect
+import sqala.dialect.Dialect
 import sqala.static.dsl.*
 import sqala.util.{NonEmptyList, queryToString}
 

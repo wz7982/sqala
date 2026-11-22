@@ -1,18 +1,18 @@
 package sqala.util
 
 import sqala.ast.statement.{SqlQuery, SqlStatement}
-import sqala.metadata.Dialect
+import sqala.dialect.Dialect
 
 /**
  * Recursively converts a CamelCase character list to snake_case.
  */
-private[sqala] def camelListToSnakeList(s: List[Char]): List[Char] = 
+def camelListToSnakeList(s: List[Char]): List[Char] =
     s match
-        case x :: y :: t if y.isUpper => 
+        case x :: y :: t if y.isUpper =>
             x.toLower :: '_' :: camelListToSnakeList(y :: t)
-        case h :: t => 
+        case h :: t =>
             h.toLower :: camelListToSnakeList(t)
-        case Nil => 
+        case Nil =>
             Nil
 
 /**
@@ -22,7 +22,7 @@ private[sqala] def camelListToSnakeList(s: List[Char]): List[Char] =
  * camelToSnake("userId") // "user_id"
  * }}}
  */
-private[sqala] def camelToSnake(s: String): String =
+def camelToSnake(s: String): String =
     camelListToSnakeList(s.toList).mkString
 
 /**
@@ -33,7 +33,7 @@ private[sqala] def camelToSnake(s: String): String =
  * }}}
  */
 extension [A, B](a: A)
-    private[sqala] def |>(f: A => B): B = f(a)
+    def |>(f: A => B): B = f(a)
 
 /**
  * Converts a query AST to a dialect-specific SQL string.

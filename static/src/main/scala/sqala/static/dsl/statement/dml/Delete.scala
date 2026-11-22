@@ -1,7 +1,8 @@
 package sqala.static.dsl.statement.dml
 
+import sqala.dialect.Dialect
 import sqala.ir.{IrStatement, IrTable, ToAst}
-import sqala.metadata.{Dialect, SqlBoolean, TableMacro}
+import sqala.metadata.{SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
 import sqala.util.statementToString
