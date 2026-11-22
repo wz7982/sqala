@@ -523,7 +523,7 @@ final class MappedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySize](
      * from(User).mapDistinct(u => (name = u.name)).sortBy(u => u.name.desc)
      * }}}
      */
-    def sortBy[SS](f: D => SS)(using
+    def sortBy[SS](f: QueryContext[L] ?=> D => SS)(using
         a: AsDistinctSort[SS, L]
     ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         val sort = a.asSorts(f(distinctExprs))
@@ -551,7 +551,7 @@ final class MappedSortedDistinctQuery[M, D, OKS <: Tuple, L <: Int, S <: QuerySi
      * from(User).mapDistinct(u => (id = u.id, name = u.name)).sortBy(u => u.id).sortBy(u => u.name.desc)
      * }}}
      */
-    def sortBy[SS](f: D => SS)(using
+    def sortBy[SS](f: QueryContext[L] ?=> D => SS)(using
         a: AsDistinctSort[SS, L]
     ): MappedSortedDistinctQuery[M, D, OKS, L, S] =
         val sort = a.asSorts(f(distinctExprs))
