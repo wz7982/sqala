@@ -213,16 +213,27 @@ def jsonArray[A, CL <: Int](items: A)(using
  * are rejected at compile time.
  *
  * {{{
- * from(Post).groupBy(p => p.authorId).map((g, p) => jsonObjectAgg(p.id value p.title))
+ * from(Post).groupBy(p => p.authorId).map((g, p) => jsonObjectAgg(p.id -> p.title))
  * }}}
  */
-def jsonObjectAgg[KS <: Tuple, CL <: Int](pair: JsonObjectPair[KS])(using
+def jsonObjectAgg[K, V, CL <: Int](pair: (K, V))(using
     qc: QueryContext[CL],
-    i: CanInAgg[KS]
-): AggExpr[Option[Json], KS] =
+    knt: NotGiven[K <:< Tuple],
+    vnt: NotGiven[V <:< Tuple],
+    ak: AsExpr[K, CL],
+    av: AsExpr[V, CL],
+    ask: ValidateArgType[AsSqlExpr, ak.R, "scalar"],
+    asv: ValidateArgType[AsSqlExpr, av.R, "scalar"],
+    ktk: KindToTuple[ak.K],
+    ktv: KindToTuple[av.K],
+    c: CombineKindTuple[ktk.R, ktv.R],
+    i: CanInAgg[c.R]
+): AggExpr[Option[Json], c.R] =
+    val key = ak.asExpr(pair._1).expr
+    val value = av.asExpr(pair._2).expr
     AggExpr(
         IrExpr.JsonObjectAggFunc(
-            IrJsonObjectItem(pair.key, pair.value),
+            IrJsonObjectItem(key, value),
             None
         )
     )
