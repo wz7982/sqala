@@ -9,17 +9,6 @@ import sqala.printer.PostgresqlPrinter
 class PostgresqlJdbcPrinter(
     override val standardEscapeStrings: Boolean
 ) extends PostgresqlPrinter(standardEscapeStrings) with JdbcSqlPrinter:
-    override def printTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
-        val time = SqlExpr.StringLiteral(expr.time)
-        val `type` = expr.`type` match
-            case SqlTimeType.Date =>
-                SqlType.Date
-            case SqlTimeType.Time(mode) =>
-                SqlType.Time(mode)
-            case SqlTimeType.Timestamp(mode) =>
-                SqlType.Timestamp(mode)
-        printExpr(SqlExpr.Cast(time, `type`))
-
     override def printIntervalLiteralExpr(expr: SqlExpr.IntervalLiteral): Unit = 
         def makeInterval(args: List[SqlExpr]): SqlExpr =
             SqlExpr.GeneralFunc(

@@ -2,7 +2,6 @@ package sqala.jdbc
 
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.dynamic.dsl.Query as DynamicQuery
-import sqala.dynamic.native.NativeSql
 import sqala.ir.{IrQuery, IrStatement, ToAst}
 import sqala.jdbc.dialect.JdbcDialect
 import sqala.metadata.{FetchPrimaryKey, InsertMacro}
@@ -33,7 +32,7 @@ final class JdbcContext(
      * The returned parameter array matches the `?` placeholders in the SQL
      * string, in order.
      */
-    private def renderQuery(query: SqlQuery): (String, Array[Any]) =
+    private def renderQuery(query: SqlQuery): (String, Array[JdbcArg[?]]) =
         val printer = dialect.printer(standardEscapeStrings)
         printer.printQuery(query)
         printer.sql -> printer.args
@@ -42,7 +41,7 @@ final class JdbcContext(
      * Lowers an IR query to the SQL AST, then generates its SQL string and
      * bound parameters.
      */
-    private def renderQuery(query: IrQuery): (String, Array[Any]) =
+    private def renderQuery(query: IrQuery): (String, Array[JdbcArg[?]]) =
         renderQuery(new ToAst().toAst(query))
 
     /**
@@ -52,7 +51,7 @@ final class JdbcContext(
      * The returned parameter array matches the `?` placeholders in the SQL
      * string, in order.
      */
-    private def renderStatement(statement: SqlStatement): (String, Array[Any]) =
+    private def renderStatement(statement: SqlStatement): (String, Array[JdbcArg[?]]) =
         val printer = dialect.printer(standardEscapeStrings)
         printer.printStatement(statement)
         printer.sql -> printer.args
@@ -61,7 +60,7 @@ final class JdbcContext(
      * Lowers an IR statement to the SQL AST, then generates its SQL string
      * and bound parameters.
      */
-    private def renderStatement(statement: IrStatement): (String, Array[Any]) =
+    private def renderStatement(statement: IrStatement): (String, Array[JdbcArg[?]]) =
         renderStatement(new ToAst().toAst(statement))
 
     /**
@@ -76,7 +75,7 @@ final class JdbcContext(
      * Logs and executes a DML statement, returning the affected
      * row count.
      */
-    private def executeDml(sql: String, args: Array[Any])(using ec: JdbcExecutionContext, l: Logger): Int =
+    private def executeDml(sql: String, args: Array[JdbcArg[?]])(using ec: JdbcExecutionContext, l: Logger): Int =
         execute(c => jdbcExec(c, sql, args))
 
     /**
@@ -371,35 +370,6 @@ final class JdbcContext(
         execute(c => jdbcQueryToMap(c, nativeSql.sql, nativeSql.args))
 
     /**
-     * Fetches a raw SQL tuple result using an explicit decoder.
-     *
-     * {{{
-     * db.fetchTo[User]("SELECT * FROM user", Array.empty[Any])
-     * }}}
-     */
-    def fetchTo[T](nativeSql: (String, Array[Any]))(using
-        ec: JdbcExecutionContext,
-        d: JdbcDecoder[T],
-        l: Logger
-    ): List[T] =
-        val (sql, args) = nativeSql
-        execute(c => jdbcQuery(c, sql, args))
-
-    /**
-     * Fetches a raw SQL tuple result as `List[Map[String, Any]]`.
-     *
-     * {{{
-     * db.fetchToMap[User]("SELECT * FROM user", Array.empty[Any])
-     * }}}
-     */
-    def fetchToMap(nativeSql: (String, Array[Any]))(using 
-        ec: JdbcExecutionContext, 
-        l: Logger
-    ): List[Map[String, Any]] =
-        val (sql, args) = nativeSql
-        execute(c => jdbcQueryToMap(c, sql, args))
-
-    /**
      * Paginates a query result using an explicit decoder.
      *
      * {{{
@@ -528,7 +498,8 @@ final class JdbcContext(
      * }}}
      */
     def showSql[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S]): (String, Array[Any]) =
-        renderQuery(query.tree)
+        val (sql, args) = renderQuery(query.tree)
+        sql -> args.map(arg => arg.value: Any)
 
     /**
      * Streams a query result in cursor batches, invoking the callback

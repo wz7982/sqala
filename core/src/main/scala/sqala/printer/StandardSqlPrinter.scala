@@ -431,6 +431,16 @@ trait StandardSqlPrinter:
                 printStringLiteralExpr(stringLiteral)
             case SqlExpr.InlinedLiteral(numberLiteral: SqlExpr.NumberLiteral[?]) =>
                 printInlinedNumberLiteralExpr(numberLiteral)
+            case SqlExpr.NumberLiteral(n: Int) =>
+                printIntLiteralExpr(n)
+            case SqlExpr.NumberLiteral(n: Long) =>
+                printLongLiteralExpr(n)
+            case SqlExpr.NumberLiteral(n: Float) =>
+                printFloatLiteralExpr(n)
+            case SqlExpr.NumberLiteral(n: Double) =>
+                printDoubleLiteralExpr(n)
+            case SqlExpr.NumberLiteral(n: BigDecimal) =>
+                printBigDecimalLiteralExpr(n)
             case numberLiteral: SqlExpr.NumberLiteral[?] =>
                 printNumberLiteralExpr(numberLiteral)
             case SqlExpr.InlinedLiteral(booleanLiteral: SqlExpr.BooleanLiteral) =>
@@ -563,7 +573,40 @@ trait StandardSqlPrinter:
         sqlBuilder.append(expr.number)
 
     /**
+     * Prints an `Int` literal expression.
+     */
+    def printIntLiteralExpr(n: Int): Unit =
+        printNumberLiteralExpr(SqlExpr.NumberLiteral(n))
+
+    /**
+     * Prints a `Long` literal expression.
+     */
+    def printLongLiteralExpr(n: Long): Unit =
+        printNumberLiteralExpr(SqlExpr.NumberLiteral(n))
+
+    /**
+     * Prints a `Float` literal expression.
+     */
+    def printFloatLiteralExpr(n: Float): Unit =
+        printNumberLiteralExpr(SqlExpr.NumberLiteral(n))
+
+    /**
+     * Prints a `Double` literal expression.
+     */
+    def printDoubleLiteralExpr(n: Double): Unit =
+        printNumberLiteralExpr(SqlExpr.NumberLiteral(n))
+
+    /**
+     * Prints a `BigDecimal` literal expression.
+     */
+    def printBigDecimalLiteralExpr(n: BigDecimal): Unit =
+        printNumberLiteralExpr(SqlExpr.NumberLiteral(n))
+
+    /**
      * Prints a numeric literal expression.
+     *
+     * This is the fallback for numeric types that do not have a dedicated
+     * method, such as `Short`, `Byte`, and `BigInt`.
      */
     def printNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
         printInlinedNumberLiteralExpr(expr)

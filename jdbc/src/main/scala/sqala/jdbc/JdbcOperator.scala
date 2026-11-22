@@ -11,26 +11,17 @@ private def safeClose(closeable: AutoCloseable | Null): Unit =
         try closeable.close()
         catch case _: Throwable => ()
 
-private def bindParameters(stmt: PreparedStatement, args: Array[Any]): Unit =
-    var i = 1
-    while i <= args.length do
-        val arg = args(i - 1)
-        arg match
-            case n: BigDecimal => stmt.setBigDecimal(i, n.bigDecimal)
-            case n: Int => stmt.setInt(i, n)
-            case n: Long => stmt.setLong(i, n)
-            case n: Float => stmt.setFloat(i, n)
-            case n: Double => stmt.setDouble(i, n)
-            case b: Boolean => stmt.setBoolean(i, b)
-            case s: String => stmt.setString(i, s)
-            case _ => stmt.setObject(i, arg)
+private def bindParameters(stmt: PreparedStatement, args: Array[JdbcArg[?]]): Unit =
+    var i = 0
+    while i < args.length do
+        args(i).bind(stmt, i + 1)
         i += 1
 
 private def logSuccess(
     logger: Logger,
     operation: LogOperation,
     sql: String,
-    args: Array[Any],
+    args: Array[JdbcArg[?]],
     start: Long,
     rowCount: Option[Int]
 ): Unit =
@@ -41,7 +32,7 @@ private def logSuccess(
                 level,
                 operation,
                 sql,
-                args,
+                args.map(arg => arg.value: Any),
                 System.nanoTime() - start,
                 rowCount
             )
@@ -51,7 +42,7 @@ private def logFailure(
     logger: Logger,
     operation: LogOperation,
     sql: String,
-    args: Array[Any],
+    args: Array[JdbcArg[?]],
     start: Long,
     error: Throwable
 ): Unit =
@@ -61,7 +52,7 @@ private def logFailure(
                 LogLevel.Error,
                 operation,
                 sql,
-                args,
+                args.map(arg => arg.value: Any),
                 System.nanoTime() - start,
                 None,
                 Some(error)
@@ -71,9 +62,9 @@ private def logFailure(
 /**
  * Executes a query and decodes the result set into a list of
  * typed values using the given `JdbcDecoder`. Parameters are
- * bound by their Scala type to the appropriate JDBC setter.
+ * bound through their `JdbcEncoder`.
  */
-private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])(using decoder: JdbcDecoder[T], l: Logger): List[T] =
+private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[JdbcArg[?]])(using decoder: JdbcDecoder[T], l: Logger): List[T] =
     val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
@@ -103,7 +94,7 @@ private[sqala] def jdbcQuery[T](conn: Connection, sql: String, args: Array[Any])
 private[sqala] def jdbcCursorQuery[T, R](
     conn: Connection,
     sql: String,
-    args: Array[Any],
+    args: Array[JdbcArg[?]],
     size: Int,
     f: Cursor[T] => R
 )(using decoder: JdbcDecoder[T], l: Logger): Unit =
@@ -145,7 +136,7 @@ private[sqala] def jdbcCursorQuery[T, R](
  * Column nullability is reflected by wrapping nullable values
  * in `Option`.
  */
-private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Map[String, Any]] =
+private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[JdbcArg[?]])(using l: Logger): List[Map[String, Any]] =
     val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var rs: ResultSet = null
@@ -198,7 +189,7 @@ private[sqala] def jdbcQueryToMap[T](conn: Connection, sql: String, args: Array[
 /**
  * Executes a DML statement and returns the affected row count.
  */
-private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any])(using l: Logger): Int =
+private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[JdbcArg[?]])(using l: Logger): Int =
     val start = System.nanoTime()
     var stmt: PreparedStatement = null
     try
@@ -218,7 +209,7 @@ private[sqala] def jdbcExec(conn: Connection, sql: String, args: Array[Any])(usi
  * list of `Long` values. Used for retrieving auto‑increment
  * primary keys after inserts.
  */
-private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[Any])(using l: Logger): List[Long] =
+private[sqala] def jdbcExecReturnKey(conn: Connection, sql: String, args: Array[JdbcArg[?]])(using l: Logger): List[Long] =
     val start = System.nanoTime()
     var stmt: PreparedStatement = null
     var resultSet: ResultSet = null

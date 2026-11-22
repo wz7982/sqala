@@ -128,7 +128,7 @@ object AsSqlExpr:
             SqlType.Time(None)
 
         def asSqlExpr(x: LocalTime, inlined: Boolean): SqlExpr =
-            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.nnnnnnnnn")
             val expr: SqlExpr.TimeLiteral = SqlExpr.TimeLiteral(SqlTimeType.Time(None), formatter.format(x))
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
@@ -152,7 +152,7 @@ object AsSqlExpr:
             SqlType.Time(Some(SqlTimeZoneMode.With))
 
         def asSqlExpr(x: OffsetTime, inlined: Boolean): SqlExpr =
-            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss XXX")
+            val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.nnnnnnnnn XXX")
             val expr: SqlExpr.TimeLiteral = SqlExpr.TimeLiteral(SqlTimeType.Time(Some(SqlTimeZoneMode.With)), formatter.format(x))
             if inlined then
                 SqlExpr.InlinedLiteral(expr)
