@@ -29,7 +29,7 @@ def count[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Long, kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -56,7 +56,7 @@ def countDistinct[T, CL <: Int](x: T)(using
     qc: QueryContext[CL],
     a: AsExpr[T, CL],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Long, kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -85,7 +85,7 @@ def sum[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -116,7 +116,7 @@ def avg[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[BigDecimal], kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -144,7 +144,7 @@ def max[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -175,7 +175,7 @@ def min[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -207,7 +207,7 @@ def anyValue[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -238,7 +238,7 @@ def stddevPop[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[BigDecimal], kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -266,7 +266,7 @@ def stddevSamp[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[BigDecimal], kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -294,7 +294,7 @@ def varPop[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[BigDecimal], kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -322,7 +322,7 @@ def varSamp[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[BigDecimal], kt.R] =
     AggExpr(
         IrExpr.GeneralFunc(
@@ -354,8 +354,8 @@ def covarPop[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -388,8 +388,8 @@ def covarSamp[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -421,8 +421,8 @@ def corr[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -455,8 +455,8 @@ def regrSlope[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -489,8 +489,8 @@ def regrIntercept[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -523,8 +523,8 @@ def regrCount[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Long, c.R] =
     AggExpr(
@@ -557,8 +557,8 @@ def regrR2[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -591,8 +591,8 @@ def regrAvgx[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -625,8 +625,8 @@ def regrAvgy[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -659,8 +659,8 @@ def regrSxx[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -693,8 +693,8 @@ def regrSyy[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -727,8 +727,8 @@ def regrSxy[A, B, CL <: Int](x: A, y: B)(using
     nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktb: KindToTuple[ab.K],
-    ia: CanInAgg[kta.R],
-    ib: CanInAgg[ktb.R],
+    ia: CanInAgg[kta.R, CL],
+    ib: CanInAgg[ktb.R, CL],
     c: CombineKindTuple[kta.R, ktb.R]
 ): AggExpr[Option[BigDecimal], c.R] =
     AggExpr(
@@ -761,8 +761,8 @@ def percentileCont[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
     ns: ValidateArgType[SqlNumber, ST, "numeric"],
     kt: KindToTuple[at.K],
     kts: KindToTuple[SK],
-    it: CanInAgg[kt.R],
-    is: CanInAgg[kts.R],
+    it: CanInAgg[kt.R, CL],
+    is: CanInAgg[kts.R, CL],
     c: CombineKindTuple[kt.R, kts.R],
     to: ToOption[AggExpr[ST, c.R]]
 ): to.R =
@@ -798,8 +798,8 @@ def percentileDisc[T, ST, SK <: ExprKind, CL <: Int](x: T, withinGroup: Sort[ST,
     ns: ValidateArgType[SqlNumber, ST, "numeric"],
     kt: KindToTuple[at.K],
     kts: KindToTuple[SK],
-    it: CanInAgg[kt.R],
-    is: CanInAgg[kts.R],
+    it: CanInAgg[kt.R, CL],
+    is: CanInAgg[kts.R, CL],
     c: CombineKindTuple[kt.R, kts.R],
     to: ToOption[AggExpr[ST, c.R]]
 ): to.R =
@@ -836,9 +836,9 @@ def listAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGroup
     kt: KindToTuple[at.K],
     kts: KindToTuple[as.K],
     ktw: KindToTuple[SK],
-    it: CanInAgg[kt.R],
-    is: CanInAgg[kts.R],
-    iw: CanInAgg[ktw.R],
+    it: CanInAgg[kt.R, CL],
+    is: CanInAgg[kts.R, CL],
+    iw: CanInAgg[ktw.R, CL],
     cs: CombineKindTuple[kt.R, kts.R],
     c: CombineKindTuple[cs.R, ktw.R]
 ): AggExpr[Option[String], c.R] =
@@ -867,9 +867,9 @@ def stringAgg[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinGro
     kt: KindToTuple[at.K],
     kts: KindToTuple[as.K],
     ktw: KindToTuple[SK],
-    it: CanInAgg[kt.R],
-    is: CanInAgg[kts.R],
-    iw: CanInAgg[ktw.R],
+    it: CanInAgg[kt.R, CL],
+    is: CanInAgg[kts.R, CL],
+    iw: CanInAgg[ktw.R, CL],
     cs: CombineKindTuple[kt.R, kts.R],
     c: CombineKindTuple[cs.R, ktw.R]
 ): AggExpr[Option[String], c.R] =
@@ -890,9 +890,9 @@ def groupConcat[T, S, ST, SK <: ExprKind, CL <: Int](x: T, separator: S, withinG
     kt: KindToTuple[at.K],
     kts: KindToTuple[as.K],
     ktw: KindToTuple[SK],
-    it: CanInAgg[kt.R],
-    is: CanInAgg[kts.R],
-    iw: CanInAgg[ktw.R],
+    it: CanInAgg[kt.R, CL],
+    is: CanInAgg[kts.R, CL],
+    iw: CanInAgg[ktw.R, CL],
     cs: CombineKindTuple[kt.R, kts.R],
     c: CombineKindTuple[cs.R, ktw.R]
 ): AggExpr[Option[String], c.R] =

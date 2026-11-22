@@ -197,8 +197,7 @@ object CombineKind:
 
     given [A <: ExprKind, B <: ExprKind](using
         ta: KindToTuple[A],
-        tb: KindToTuple[B],
-        c: CanCombineKindTuple[Tuple.Concat[ta.R, tb.R]]
+        tb: KindToTuple[B]
     ): Aux[A, B, Composite[TupleDistinct[Tuple.Concat[ta.R, tb.R]]]] =
         new CombineKind[A, B]:
             type R = Composite[TupleDistinct[Tuple.Concat[ta.R, tb.R]]]
@@ -216,52 +215,9 @@ object CombineKindTuple:
     type Aux[A <: Tuple, B <: Tuple, O <: Tuple] = CombineKindTuple[A, B]:
         type R = O
 
-    given [A <: Tuple, B <: Tuple](using
-        c: CanCombineKindTuple[Tuple.Concat[A, B]]
-    ): Aux[A, B, TupleDistinct[Tuple.Concat[A, B]]] =
+    given [A <: Tuple, B <: Tuple]: Aux[A, B, TupleDistinct[Tuple.Concat[A, B]]] =
         new CombineKindTuple[A, B]:
             type R = TupleDistinct[Tuple.Concat[A, B]]
-
-/**
- * Determines whether two expression kinds can be
- * combined.
- */
-trait CanCombineKind[A <: ExprKind, B <: ExprKind]
-
-object CanCombineKind:
-    given ungrouped[L <: Int]: CanCombineKind[UngroupedColumn[L], UngroupedColumn[L]]()
-
-    given ungroupedAndValue[L <: Int]: CanCombineKind[UngroupedColumn[L], Value]()
-
-    given valueAndUngrouped[L <: Int]: CanCombineKind[Value, UngroupedColumn[L]]()
-
-    given other[A <: ExprKind, B <: ExprKind](using
-        NotGiven[A <:< UngroupedColumn[?]],
-        NotGiven[B <:< UngroupedColumn[?]],
-        NotGiven[A <:< Distinct[?]],
-        NotGiven[B <:< Distinct[?]]
-    ): CanCombineKind[A, B]()
-
-    inline given fallback[A <: ExprKind, B <: ExprKind](using
-        NotGiven[CanCombineKind[A, B]]
-    ): CanCombineKind[A, B] =
-        error("Expressions cannot be combined.")
-
-/**
- * Determines whether all elements of a kind tuple can be
- * combined.
- */
-trait CanCombineKindTuple[KS <: Tuple]
-
-object CanCombineKindTuple:
-    given tuple[A <: ExprKind, B <: ExprKind, T <: Tuple](using
-        CanCombineKind[A, B],
-        CanCombineKindTuple[B *: T]
-    ): CanCombineKindTuple[A *: B *: T]()
-
-    given tuple1[A <: ExprKind]: CanCombineKindTuple[A *: EmptyTuple]()
-
-    given emptyTuple: CanCombineKindTuple[EmptyTuple]()
 
 /**
  * Removes columns at the current context level (`CL`) from a kind
@@ -652,21 +608,49 @@ object IsNotVariable:
         error("Argument must not contain variables.")
 
 /**
- * Validates that a kind tuple can legally appear inside an
- * aggregate function.
+ * Validates that the expression is not a window function.
  */
-trait CanInAgg[KS <: Tuple]
+trait AggNotAllowedWindow[KS <: Tuple]
 
-object CanInAgg:
+object AggNotAllowedWindow:
     given validate[KS <: Tuple](using
         hw: HasKind[KS, Window[?]],
         nw: hw.R =:= false
-    ): CanInAgg[KS]()
+    ): AggNotAllowedWindow[KS]()
 
     inline given fallback[KS <: Tuple](using
-        NotGiven[CanInAgg[KS]]
-    ): CanInAgg[KS] =
+        NotGiven[AggNotAllowedWindow[KS]]
+    ): AggNotAllowedWindow[KS] =
         error("Aggregate function calls cannot contain window function calls.")
+
+/**
+ * Validates that the expression is not a ungrouped column from the outer queries.
+ */
+trait AggNotAllowedOuterQueryUngroupedColumn[KS <: Tuple, CL <: Int]
+
+object AggNotAllowedOuterQueryUngroupedColumn:
+    given validate[KS <: Tuple, CL <: Int](using
+        e: ExcludeCurrentLevelColumn[KS, CL],
+        hu: HasKind[e.R, UngroupedColumn[?]],
+        nu: hu.R =:= false
+    ): AggNotAllowedOuterQueryUngroupedColumn[KS, CL]()
+
+    inline given fallback[KS <: Tuple, CL <: Int](using
+        NotGiven[AggNotAllowedOuterQueryUngroupedColumn[KS, CL]]
+    ): AggNotAllowedOuterQueryUngroupedColumn[KS, CL] =
+        error("Do not aggregate ungrouped columns from the outer queries.")
+
+/**
+ * Validates that a kind tuple can legally appear inside an
+ * aggregate function.
+ */
+trait CanInAgg[KS <: Tuple, CL <: Int]
+
+object CanInAgg:
+    given validate[KS <: Tuple, CL <: Int](using
+        AggNotAllowedWindow[KS],
+        AggNotAllowedOuterQueryUngroupedColumn[KS, CL]
+    ): CanInAgg[KS, CL]()
 
 /**
  * Validates that a kind tuple contains no window functions nested.

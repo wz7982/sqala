@@ -227,7 +227,7 @@ def jsonObjectAgg[K, V, CL <: Int](pair: (K, V))(using
     ktk: KindToTuple[ak.K],
     ktv: KindToTuple[av.K],
     c: CombineKindTuple[ktk.R, ktv.R],
-    i: CanInAgg[c.R]
+    i: CanInAgg[c.R, CL]
 ): AggExpr[Option[Json], c.R] =
     val key = ak.asExpr(pair._1).expr
     val value = av.asExpr(pair._2).expr
@@ -252,7 +252,7 @@ def jsonArrayAgg[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R]
+    i: CanInAgg[kt.R, CL]
 ): AggExpr[Option[Json], kt.R] =
     AggExpr(
         IrExpr.JsonArrayAggFunc(

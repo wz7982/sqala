@@ -56,7 +56,7 @@ def first[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -89,8 +89,8 @@ def first[A, N, CL <: Int](x: A, n: N)(using
     nn: ValidateArgType[SqlNumber, an.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
-    ia: CanInAgg[kta.R],
-    in: CanInAgg[ktn.R],
+    ia: CanInAgg[kta.R, CL],
+    in: CanInAgg[ktn.R, CL],
     c: CombineKindTuple[kta.R, ktn.R],
     to: ToOption[AggExpr[aa.R, c.R]]
 ): to.R =
@@ -121,7 +121,7 @@ def last[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -154,8 +154,8 @@ def last[A, N, CL <: Int](x: A, n: N)(using
     nn: ValidateArgType[SqlNumber, an.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
-    ia: CanInAgg[kta.R],
-    in: CanInAgg[ktn.R],
+    ia: CanInAgg[kta.R, CL],
+    in: CanInAgg[ktn.R, CL],
     c: CombineKindTuple[kta.R, ktn.R],
     to: ToOption[AggExpr[aa.R, c.R]]
 ): to.R =
@@ -186,7 +186,7 @@ def prev[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -219,8 +219,8 @@ def prev[A, N, CL <: Int](x: A, n: N)(using
     nn: ValidateArgType[SqlNumber, an.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
-    ia: CanInAgg[kta.R],
-    in: CanInAgg[ktn.R],
+    ia: CanInAgg[kta.R, CL],
+    in: CanInAgg[ktn.R, CL],
     c: CombineKindTuple[kta.R, ktn.R],
     to: ToOption[AggExpr[aa.R, c.R]]
 ): to.R =
@@ -251,7 +251,7 @@ def next[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R],
+    i: CanInAgg[kt.R, CL],
     to: ToOption[AggExpr[a.R, kt.R]]
 ): to.R =
     to.toOption(
@@ -284,8 +284,8 @@ def next[A, N, CL <: Int](x: A, n: N)(using
     nn: ValidateArgType[SqlNumber, an.R, "numeric"],
     kta: KindToTuple[aa.K],
     ktn: KindToTuple[an.K],
-    ia: CanInAgg[kta.R],
-    in: CanInAgg[ktn.R],
+    ia: CanInAgg[kta.R, CL],
+    in: CanInAgg[ktn.R, CL],
     c: CombineKindTuple[kta.R, ktn.R],
     to: ToOption[AggExpr[aa.R, c.R]]
 ): to.R =
