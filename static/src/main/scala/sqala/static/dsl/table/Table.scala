@@ -31,7 +31,7 @@ final class Table[T, K[_ <: Int] <: ExprKind, L <: Int](
      * Runtime column accessor. Required by `Selectable`.
      */
     inline def selectDynamic(name: String): Any =
-        TableSelectMacro.select[T, K[L]](__table__, __withTable__, __metaData__, name)
+        TableSelectMacro.select[Unwrap[T, Option], K[L]](__table__, __withTable__, __metaData__, name)
 
 object Table:
     extension [T, L <: Int](table: Table[T, Column, L])

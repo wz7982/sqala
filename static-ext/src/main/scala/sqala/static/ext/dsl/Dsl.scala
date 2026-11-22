@@ -1,7 +1,6 @@
 package sqala.static.ext.dsl
 
 import sqala.ast.expr.SqlMatchPhase
-import sqala.ast.table.SqlRecognizePatternRowsMode
 import sqala.ir.{IrExpr, IrRowPatternTerm, IrTable}
 import sqala.metadata.{AsSqlExpr, TableMacro, TableMetaData}
 import sqala.static.dsl.*
@@ -465,104 +464,13 @@ extension [T, CL <: Int](table: T)(using
      * }}}
      */
     def matchRecognize[N <: Tuple, V <: Tuple](
-        f: MatchRecognizeContext ?=> r.R => FinalRecognize[N, V, CL]
+        f: MatchRecognizeContext ?=> RecognizeSource[r.R, CL] => FinalRecognize[N, V, CL]
     ): FromRecognize[N, V, r.OKS, CL] =
+        given MatchRecognizeContext = new MatchRecognizeContext
         val (initialTable, source) = r.asRecognizeTable(table)
-        given MatchRecognizeContext = MatchRecognizeContext(source)
-        val recognize = f(initialTable)
+        val recognizeSource = RecognizeSource(initialTable, source)
+        val recognize = f(recognizeSource)
         FromRecognize(recognize.table, recognize.items)
-
-extension [T, CL <: Int](table: T)(using
-    qc: QueryContext[CL],
-    mc: MatchRecognizeContext
-)
-    /**
-     * Specifies `PARTITION BY` for `matchRecognize`.
-     *
-     * {{{
-     * s.partitionBy(s.stockSymbol)
-     * }}}
-     */
-    def partitionBy[P](partitionValue: P)(using
-        a: AsRecognizePartition[P, CL]
-    ): RecognizePredefine[T, CL] =
-        RecognizePredefine(
-            table,
-            mc.table,
-            RecognizeInitSpec(
-                a.asExprs(partitionValue).map(_.expr),
-                Nil,
-                None,
-                None,
-                None,
-                Nil
-            )
-        )
-
-    /**
-     * Specifies `ORDER BY` for `matchRecognize`.
-     *
-     * {{{
-     * s.sortBy(s.tradeTime)
-     * }}}
-     */
-    def sortBy[S](sortValue: S)(using
-        a: AsRecognizeSort[S, CL]
-    ): RecognizePredefine[T, CL] =
-        new RecognizePredefine(
-            table,
-            mc.table,
-            RecognizeInitSpec(
-                Nil,
-                a.asSorts(sortValue).map(_.ordering),
-                None,
-                None,
-                None,
-                Nil
-            )
-        )
-
-    /**
-     * Returns one row per match. Maps to `ONE ROW PER MATCH`.
-     *
-     * {{{
-     * s.oneRowPerMatch
-     * }}}
-     */
-    def oneRowPerMatch: RecognizePredefine[T, CL] =
-        new RecognizePredefine(
-            table,
-            mc.table,
-            RecognizeInitSpec(
-                Nil,
-                Nil,
-                Some(SqlRecognizePatternRowsMode.OneRow),
-                None,
-                None,
-                Nil
-            )
-        )
-
-    /**
-     * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
-     *
-     * {{{
-     * s.allRowsPerMatch
-     * }}}
-     */
-    def allRowsPerMatch: RecognizePredefine[T, CL] =
-        new RecognizePredefine(
-            table,
-            mc.table,
-            RecognizeInitSpec(
-                Nil,
-                Nil,
-                Some(SqlRecognizePatternRowsMode.AllRows(None)),
-                None,
-                None,
-                Nil
-            )
-        )
 
 /**
  * Creates a custom table function that can be used as a table source

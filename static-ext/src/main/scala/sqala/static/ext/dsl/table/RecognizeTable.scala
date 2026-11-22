@@ -54,6 +54,103 @@ case class RecognizePatternedSpec(
     pattern: IrRowPatternTerm
 )
 
+final class RecognizeSource[T, L <: Int](
+    private[sqala] val table: T,
+    private[sqala] val source: IrTable.MatchRecognizable
+)(using
+    private[sqala] val qc: QueryContext[L],
+    private[sqala] val mc: MatchRecognizeContext
+):
+    /**
+     * Specifies `PARTITION BY` for `matchRecognize`.
+     *
+     * {{{
+     * s.partitionBy(t => t.stockSymbol)
+     * }}}
+     */
+    def partitionBy[P](f: T => P)(using
+        a: AsRecognizePartition[P, L]
+    ): RecognizePredefine[T, L] =
+        val partition = f(table)
+        RecognizePredefine(
+            table,
+            source,
+            RecognizeInitSpec(
+                a.asExprs(partition).map(_.expr),
+                Nil,
+                None,
+                None,
+                None,
+                Nil
+            )
+        )
+
+    /**
+     * Specifies `ORDER BY` for `matchRecognize`.
+     *
+     * {{{
+     * s.sortBy(t => t.tradeTime)
+     * }}}
+     */
+    def sortBy[S](f: T => S)(using
+        a: AsRecognizeSort[S, L]
+    ): RecognizePredefine[T, L] =
+        val sort = f(table)
+        new RecognizePredefine(
+            table,
+            source,
+            RecognizeInitSpec(
+                Nil,
+                a.asSorts(sort).map(_.ordering),
+                None,
+                None,
+                None,
+                Nil
+            )
+        )
+
+    /**
+     * Returns one row per match. Maps to `ONE ROW PER MATCH`.
+     *
+     * {{{
+     * s.oneRowPerMatch
+     * }}}
+     */
+    def oneRowPerMatch: RecognizePredefine[T, L] =
+        new RecognizePredefine(
+            table,
+            source,
+            RecognizeInitSpec(
+                Nil,
+                Nil,
+                Some(SqlRecognizePatternRowsMode.OneRow),
+                None,
+                None,
+                Nil
+            )
+        )
+
+    /**
+     * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
+     *
+     * {{{
+     * s.allRowsPerMatch
+     * }}}
+     */
+    def allRowsPerMatch: RecognizePredefine[T, L] =
+        new RecognizePredefine(
+            table,
+            source,
+            RecognizeInitSpec(
+                Nil,
+                Nil,
+                Some(SqlRecognizePatternRowsMode.AllRows(None)),
+                None,
+                None,
+                Nil
+            )
+        )
+
 /**
  * Intermediate builder after `partitionBy` and `sortBy` in
  * `matchRecognize`.
@@ -71,12 +168,12 @@ final class RecognizePredefine[T, L <: Int](
      * value must be a column expression.
      *
      * {{{
-     * s.sortBy(s.tradeTime)
+     * s.sortBy(t => t.tradeTime)
      * }}}
      */
-    def sortBy[S](sortValue: S)(using a: AsRecognizeSort[S, L]): RecognizePredefine[T, L] =
-        val sort = a.asSorts(sortValue).map(_.ordering)
-        RecognizePredefine(table, source, spec.copy(orderBy = spec.orderBy ++ sort))
+    def sortBy[S](f: T => S)(using a: AsRecognizeSort[S, L]): RecognizePredefine[T, L] =
+        val sort = f(table)
+        RecognizePredefine(table, source, spec.copy(orderBy = spec.orderBy ++ a.asSorts(sort).map(_.ordering)))
 
     /**
      * Returns one row per match. Maps to `ONE ROW PER MATCH`.

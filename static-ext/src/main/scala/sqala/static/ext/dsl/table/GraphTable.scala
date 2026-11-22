@@ -184,7 +184,7 @@ final class GraphVertex[T, L <: Int](
      * Compile-time column accessor. Required by `Selectable`.
      */
     inline def selectDynamic(name: String): Any =
-        TableSelectMacro.select[T, Column[L]](__table__, true, __metaData__, name)
+        TableSelectMacro.select[Unwrap[T, Option], Column[L]](__table__, true, __metaData__, name)
 
 /**
  * An edge in a graph pattern. Created by `edge[T]` and accessed
@@ -242,7 +242,7 @@ final class GraphEdge[T, OKS <: Tuple, L <: Int](
      * Compile-time column accessor. Required by `Selectable`.
      */
     inline def selectDynamic(name: String): Any =
-        TableSelectMacro.select[T, Column[L]](__table__, true, __metaData__, name)
+        TableSelectMacro.select[Unwrap[T, Option], Column[L]](__table__, true, __metaData__, name)
 
     /**
      * Adds a `WHERE` condition to the edge. Maps to the `WHERE`

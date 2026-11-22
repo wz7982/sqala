@@ -65,7 +65,7 @@ final class Update[T, S <: UpdateState](
      * update[User].set(u => u.name := "Alice")
      * }}}
      */
-    def set(f: UpdateSetContext ?=> Table[T, Column, 1] => UpdatePair)(using
+    def set(f: UpdateSetContext ?=> QueryContext[1] ?=> Table[T, Column, 1] => UpdatePair)(using
         S =:= UpdateTable
     ): Update[T, UpdateTable] =
         given UpdateSetContext = new UpdateSetContext
