@@ -39,13 +39,14 @@ final class column(columnName: String) extends StaticAnnotation
 final class primaryKey extends StaticAnnotation
 
 /**
- * Marks a field as an auto-increment primary key.
+ * Marks a field as an auto-increment column.
  *
- * Auto-increment columns are excluded from `INSERT` statements and are
- * implicitly treated as part of the primary key.
+ * Auto-increment columns are excluded from `INSERT` statements. This
+ * annotation does not by itself make the field a primary key; annotate the
+ * field with `@primaryKey` as well when it is the primary key.
  *
  * {{{
- * case class User(@autoInc id: Int, name: String)
+ * case class User(@primaryKey @autoInc id: Int, name: String)
  * }}}
  */
 @scala.annotation.meta.field
