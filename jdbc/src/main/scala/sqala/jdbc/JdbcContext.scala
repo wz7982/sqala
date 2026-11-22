@@ -1,6 +1,7 @@
 package sqala.jdbc
 
 import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.dynamic.dsl.Query as DynamicQuery
 import sqala.dynamic.native.NativeSql
 import sqala.ir.{IrQuery, IrStatement, ToAst}
 import sqala.jdbc.dialect.JdbcDialect
@@ -301,6 +302,32 @@ final class JdbcContext(
     ): List[T] =
         val (sql, args) = renderQuery(query.tree)
         execute(c => jdbcQuery(c, sql, args))
+
+    /**
+     * Fetches a dynamically built query result using an explicit decoder.
+     *
+     * {{{
+     * db.fetchTo[User](query)
+     * }}}
+     */
+    def fetchTo[T](query: DynamicQuery)(using
+        ec: JdbcExecutionContext,
+        d: JdbcDecoder[T],
+        l: Logger
+    ): List[T] =
+        val (sql, args) = renderQuery(query.tree)
+        execute(c => jdbcQuery(c, sql, args))
+
+    /**
+     * Fetches a dynamically built query result as `List[Map[String, Any]]`.
+     *
+     * {{{
+     * db.fetchToMap(query)
+     * }}}
+     */
+    def fetchToMap(query: DynamicQuery)(using ec: JdbcExecutionContext, l: Logger): List[Map[String, Any]] =
+        val (sql, args) = renderQuery(query.tree)
+        execute(c => jdbcQueryToMap(c, sql, args))
 
     /**
      * Fetches a static query result with automatic result type
