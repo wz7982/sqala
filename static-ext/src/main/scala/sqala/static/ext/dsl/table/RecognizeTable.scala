@@ -54,6 +54,9 @@ case class RecognizePatternedSpec(
     pattern: IrRowPatternTerm
 )
 
+/**
+ * Initialized `MATCH_RECOGNIZE` source.
+ */
 final class RecognizeSource[T, L <: Int](
     private[sqala] val table: T,
     private[sqala] val source: IrTable.MatchRecognizable
