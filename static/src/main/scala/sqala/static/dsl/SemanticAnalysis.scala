@@ -760,6 +760,11 @@ object CanCallOver:
             def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
                 x.expr
 
+    inline given expr[T, K <: ExprKind, E <: Expr[T, K]](using
+        NotGiven[E <:< AggExpr[?, ?]]
+    ): Aux[E, T, EmptyTuple] =
+        error("Over specified, but this expression is not a window function nor an aggregate function.")
+
     inline given fallback[T](using
         NotGiven[CanCallOver[T]]
     ): Aux[T, T, EmptyTuple] =
