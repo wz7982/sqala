@@ -4,6 +4,8 @@ import sqala.ir.{IrExpr, IrJsonObjectItem}
 import sqala.metadata.{AsSqlExpr, Json, SqlJson, SqlString}
 import sqala.static.dsl.*
 
+import scala.util.NotGiven
+
 /**
  * Serializes a JSON expression as a string expression. Maps to `JSON_SERIALIZE(expr)`.
  *
@@ -109,28 +111,6 @@ def jsonExists[A, CL <: Int](x: A, path: String)(using
  */
 final class JsonObjectPair[KS <: Tuple](private[sqala] val key: IrExpr, private[sqala] val value: IrExpr)
 
-extension [K, CL <: Int](key: K)(using
-    qc: QueryContext[CL],
-    ak: AsExpr[K, CL],
-    ask: ValidateArgType[AsSqlExpr, ak.R, "scalar"],
-    ktk: KindToTuple[ak.K]
-)
-    /**
-     * Pairs a key with a value for `jsonObject`. Maps to
-     * `key VALUE value`.
-     *
-     * {{{
-     * jsonObject(p.id value p.title)
-     * }}}
-     */
-    infix def value[V](value: V)(using
-        av: AsExpr[V, CL],
-        asv: ValidateArgType[AsSqlExpr, av.R, "scalar"],
-        ktv: KindToTuple[av.K],
-        c: CombineKindTuple[ktk.R, ktv.R]
-    ): JsonObjectPair[c.R] =
-        JsonObjectPair(ak.asExpr(key).expr, av.asExpr(value).expr)
-
 /**
  * Converts key and value pairs into the argument list for
  * `jsonObject`.
@@ -150,38 +130,50 @@ object AsJsonObject:
     type Aux[T, OKS <: Tuple] = AsJsonObject[T]:
         type KS = OKS
 
-    given pair[EKS <: Tuple]: Aux[JsonObjectPair[EKS], EKS] =
-        new AsJsonObject[JsonObjectPair[EKS]]:
-            type KS = EKS
-
-            def asJsonObjects(x: JsonObjectPair[EKS]): List[JsonObjectPair[?]] =
-                x :: Nil
-
-    given tuple[EKS <: Tuple, T <: Tuple](using
-        j: AsJsonObject[T],
-        c: CombineKindTuple[EKS, j.KS]
-    ): Aux[JsonObjectPair[EKS] *: T, c.R] =
-        new AsJsonObject[JsonObjectPair[EKS] *: T]:
+    given pair[K, V, CL <: Int](using
+        qc: QueryContext[CL],
+        knt: NotGiven[K <:< Tuple],
+        vnt: NotGiven[V <:< Tuple],
+        ak: AsExpr[K, CL],
+        av: AsExpr[V, CL],
+        ask: ValidateArgType[AsSqlExpr, ak.R, "scalar"],
+        asv: ValidateArgType[AsSqlExpr, av.R, "scalar"],
+        ktk: KindToTuple[ak.K],
+        ktv: KindToTuple[av.K],
+        c: CombineKindTuple[ktk.R, ktv.R]
+    ): Aux[(K, V), c.R] =
+        new AsJsonObject[(K, V)]:
             type KS = c.R
 
-            def asJsonObjects(x: JsonObjectPair[EKS] *: T): List[JsonObjectPair[?]] =
-                x.head :: j.asJsonObjects(x.tail)
+            def asJsonObjects(x: (K, V)): List[JsonObjectPair[?]] =
+                JsonObjectPair(ak.asExpr(x._1).expr, av.asExpr(x._2).expr) :: Nil
 
-    given tuple1[EKS <: Tuple](using
-        c: CombineKindTuple[EKS, EmptyTuple]
-    ): Aux[JsonObjectPair[EKS] *: EmptyTuple, c.R] =
-        new AsJsonObject[JsonObjectPair[EKS] *: EmptyTuple]:
+    given tuple[HK, HV, T <: Tuple](using
+        h: AsJsonObject[(HK, HV)],
+        t: AsJsonObject[T],
+        c: CombineKindTuple[h.KS, t.KS]
+    ): Aux[(HK, HV) *: T, c.R] =
+        new AsJsonObject[(HK, HV) *: T]:
             type KS = c.R
 
-            def asJsonObjects(x: JsonObjectPair[EKS] *: EmptyTuple): List[JsonObjectPair[?]] =
-                x.head :: Nil
+            def asJsonObjects(x: (HK, HV) *: T): List[JsonObjectPair[?]] =
+                h.asJsonObjects(x.head) ++ t.asJsonObjects(x.tail)
+
+    given tuple1[HK, HV](using
+        h: AsJsonObject[(HK, HV)]
+    ): Aux[(HK, HV) *: EmptyTuple, h.KS] =
+        new AsJsonObject[(HK, HV) *: EmptyTuple]:
+            type KS = h.KS
+
+            def asJsonObjects(x: (HK, HV) *: EmptyTuple): List[JsonObjectPair[?]] =
+                h.asJsonObjects(x.head)
 
 /**
  * Constructs a JSON object from key and value pairs. Maps to
  * `JSON_OBJECT(key VALUE value, ...)`.
  *
  * {{{
- * from(Post).map(p => jsonObject(p.id.value(p.title)))
+ * from(Post).map(p => jsonObject((p.id, p.title)))
  * }}}
  */
 def jsonObject[T, CL <: Int](items: T)(using
