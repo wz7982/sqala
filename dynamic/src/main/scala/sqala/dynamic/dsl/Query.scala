@@ -4,7 +4,7 @@ import sqala.ast.group.{SqlGroup, SqlGroupingItem}
 import sqala.ast.limit.{SqlFetch, SqlFetchMode, SqlFetchUnit, SqlLimit}
 import sqala.ast.quantifier.SqlQuantifier
 import sqala.ast.statement.{SqlQuery, SqlSetOperator}
-import sqala.metadata.Dialect
+import sqala.dialect.Dialect
 import sqala.util.{NonEmptyList, queryToString}
 
 /**

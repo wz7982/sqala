@@ -1,7 +1,8 @@
 package sqala.static.dsl.statement.dml
 
+import sqala.dialect.Dialect
 import sqala.ir.*
-import sqala.metadata.{AsSqlExprs, Dialect, TableMacro}
+import sqala.metadata.{AsSqlExprs, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.table.Table

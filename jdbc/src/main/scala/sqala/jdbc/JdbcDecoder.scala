@@ -1,6 +1,6 @@
 package sqala.jdbc
 
-import sqala.metadata.*
+import sqala.metadata.{CustomField, Json}
 
 import java.sql.ResultSet
 import java.time.*

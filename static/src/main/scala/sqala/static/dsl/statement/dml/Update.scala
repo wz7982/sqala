@@ -1,8 +1,9 @@
 package sqala.static.dsl.statement.dml
 
 import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.dialect.Dialect
 import sqala.ir.*
-import sqala.metadata.{AsSqlExprs, Dialect, SqlBoolean, TableMacro}
+import sqala.metadata.{AsSqlExprs, SqlBoolean, TableMacro}
 import sqala.static.dsl.*
 import sqala.static.dsl.table.Table
 import sqala.util.{NonEmptyList, statementToString}

@@ -5,10 +5,10 @@ import sqala.util.NonEmptyList
 /**
  * Metadata extracted from an entity case class, describing its mapping to a database table.
  */
-private[sqala] final case class TableMetaData(
-    private[sqala] val tableName: String,
-    private[sqala] val primaryKeyFields: List[String],
-    private[sqala] val incrementField: Option[String],
-    private[sqala] val columns: NonEmptyList[String],
-    private[sqala] val fields: NonEmptyList[String]
+final case class TableMetaData(
+    val tableName: String,
+    val primaryKeyFields: List[String],
+    val incrementField: Option[String],
+    val columns: NonEmptyList[String],
+    val fields: NonEmptyList[String]
 )

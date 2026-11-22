@@ -1,7 +1,8 @@
 package sqala.static.dsl.statement.dml
 
+import sqala.dialect.Dialect
 import sqala.ir.{IrExpr, IrStatement, IrTable, ToAst}
-import sqala.metadata.{AsSqlExprs, Dialect, TableMacro}
+import sqala.metadata.{AsSqlExprs, TableMacro}
 import sqala.util.{NonEmptyList, statementToString}
 
 import scala.compiletime.summonInline

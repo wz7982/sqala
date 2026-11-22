@@ -1,4 +1,4 @@
-package sqala.metadata
+package sqala.dialect
 
 import sqala.printer.*
 

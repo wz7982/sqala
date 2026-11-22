@@ -1,7 +1,7 @@
 package sqala.jdbc.dialect
 
+import sqala.dialect.Dialect
 import sqala.jdbc.printer.*
-import sqala.metadata.Dialect
 
 /**
  * A JDBC database dialect.

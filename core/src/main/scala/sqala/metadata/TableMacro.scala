@@ -30,18 +30,18 @@ object TableMacroImpl:
     private val annoNameColumn = "column"
 
     private val annoNamePrimaryKey = "primaryKey"
-    
+
     private val annoNameAutoInc = "autoInc"
 
     def tableNameMacro[T](using q: Quotes, t: Type[T]): String =
         import q.reflect.*
 
         val sym = TypeTree.of[T].symbol
-        val tableName = sym.annotations.map {
+        val tableName = sym.annotations.map:
             case Apply(Select(New(TypeIdent(name)), _), Literal(v) :: Nil) if name == annoNameTable =>
                 v.value.toString
             case _ => ""
-        }.find(_ != "") match
+        .find(_ != "") match
             case None => camelToSnake(sym.name)
             case Some(value) => value
 
