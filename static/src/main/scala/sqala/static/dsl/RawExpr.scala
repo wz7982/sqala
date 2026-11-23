@@ -19,7 +19,7 @@ final class RawExpr[L <: Int](private val tokens: List[SqlUnsafeCustomToken]):
      * rawExpr"MATCH(${p.title}) AGAINST(${word})".as[Boolean]
      * }}}
      */
-    def as[T: AsSqlExpr as a](using QueryContext[L]): Expr[Wrap[T, Option], Value] =
+    def as[T: AsSqlExpr as a](using QueryContext[L]): Expr[Wrap[T, Option], Composite[EmptyTuple]] =
         Expr(IrExpr.Native(SqlExpr.UnsafeCustom(tokens)))
 
 object RawExpr:
