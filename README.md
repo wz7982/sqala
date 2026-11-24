@@ -4,7 +4,7 @@
 
 sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala的表达力与SQL的强大功能，通过Scala3强大的类型系统保障数据库操作的高效与安全。其名称源自Scala与SQL的结合。
 
-文档地址：https://wz7982.github.io/sqala-doc/
+文档地址：https://sqala.cn/
 
 使用sqala，你可以：
 
