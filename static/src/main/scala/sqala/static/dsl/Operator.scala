@@ -544,7 +544,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def &&[B](that: B)(using
         ab: AsExpr[B, CL],
         ba: ValidateArgType[SqlBoolean, aa.R, "boolean"],
-        bb: ValidateArgType[SqlBoolean, aa.R, "boolean"],
+        bb: ValidateArgType[SqlBoolean, ab.R, "boolean"],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -569,7 +569,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def ||[B](that: B)(using
         ab: AsExpr[B, CL],
         ba: ValidateArgType[SqlBoolean, aa.R, "boolean"],
-        bb: ValidateArgType[SqlBoolean, aa.R, "boolean"],
+        bb: ValidateArgType[SqlBoolean, ab.R, "boolean"],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -632,7 +632,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def like[B](that: B)(using
         ab: AsExpr[B, CL],
         sa: ValidateArgType[SqlString, aa.R, "string"],
-        sb: ValidateArgType[SqlString, aa.R, "string"],
+        sb: ValidateArgType[SqlString, ab.R, "string"],
         r: Relation[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =
@@ -820,7 +820,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def ++[B](that: B)(using
         ab: AsExpr[B, CL],
         sa: ValidateArgType[SqlString, aa.R, "string"],
-        sb: ValidateArgType[SqlString, aa.R, "string"],
+        sb: ValidateArgType[SqlString, ab.R, "string"],
         r: Return[aa.R, ab.R],
         c: CombineKind[aa.K, ab.K]
     ): Expr[r.R, c.R] =

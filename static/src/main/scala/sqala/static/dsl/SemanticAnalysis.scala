@@ -7,7 +7,7 @@ import sqala.static.dsl.table.{MappedTable, Table}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.error
 import scala.compiletime.ops.boolean.{&&, ||}
-import scala.compiletime.ops.int.{<, >}
+import scala.compiletime.ops.int.{<=, >}
 import scala.quoted.{Quotes, Type}
 import scala.util.NotGiven
 
@@ -241,77 +241,77 @@ object ExcludeCurrentLevelColumn:
             type R = t.R
 
     given columnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: HL =:= CL
+        p: HL =:= CL,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Column[HL] *: T, CL, t.R] =
         new ExcludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = t.R
 
     given outerColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: CL > HL =:= true
+        p: CL > HL =:= true,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Column[HL] *: T, CL, Column[HL] *: t.R] =
         new ExcludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = Column[HL] *: t.R
 
     given aggHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Agg[HS] *: T, CL, t.R] =
         new ExcludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = t.R
 
     given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Agg[HS] *: T, CL, Agg[h.R] *: t.R] =
         new ExcludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = Agg[h.R] *: t.R
 
     given windowHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Window[HS] *: T, CL, t.R] =
         new ExcludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = t.R
 
     given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Window[HS] *: T, CL, Tuple.Concat[h.R, t.R]] =
         new ExcludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = Tuple.Concat[h.R, t.R]
 
     given groupedHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Grouped[HS] *: T, CL, t.R] =
         new ExcludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = t.R
 
     given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: ExcludeCurrentLevelColumn[HS, CL],
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[Grouped[HS] *: T, CL, Grouped[h.R] *: t.R] =
         new ExcludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = Grouped[h.R] *: t.R
 
     given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: HL =:= CL
+        p: HL =:= CL,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[UngroupedColumn[HL] *: T, CL, t.R] =
         new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = t.R
 
     given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: ExcludeCurrentLevelColumn[T, CL],
-        refl: CL > HL =:= true
+        p: CL > HL =:= true,
+        t: ExcludeCurrentLevelColumn[T, CL]
     ): Aux[UngroupedColumn[HL] *: T, CL, UngroupedColumn[HL] *: t.R] =
         new ExcludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = UngroupedColumn[HL] *: t.R
@@ -342,77 +342,77 @@ object IncludeCurrentLevelColumn:
             type R = t.R
 
     given columnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: HL =:= CL
+        p: HL =:= CL,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Column[HL] *: T, CL, Column[HL] *: t.R] =
         new IncludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = Column[HL] *: t.R
 
     given outerColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: CL > HL =:= true
+        p: CL > HL =:= true,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Column[HL] *: T, CL, t.R] =
         new IncludeCurrentLevelColumn[Column[HL] *: T, CL]:
             type R = t.R
 
     given aggHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Agg[HS] *: T, CL, t.R] =
         new IncludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = t.R
 
     given aggOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Agg[HS] *: T, CL, Agg[h.R] *: t.R] =
         new IncludeCurrentLevelColumn[Agg[HS] *: T, CL]:
             type R = Agg[h.R] *: t.R
 
     given windowHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Window[HS] *: T, CL, t.R] =
         new IncludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = t.R
 
     given windowOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Window[HS] *: T, CL, Window[h.R] *: t.R] =
         new IncludeCurrentLevelColumn[Window[HS] *: T, CL]:
             type R = Window[h.R] *: t.R
 
     given groupedHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: h.R =:= EmptyTuple
+        p: h.R =:= EmptyTuple,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Grouped[HS] *: T, CL, t.R] =
         new IncludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = t.R
 
     given groupedOuterHeadTuple[HS <: Tuple, T <: Tuple, CL <: Int](using
         h: IncludeCurrentLevelColumn[HS, CL],
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: NotGiven[h.R =:= EmptyTuple]
+        p: NotGiven[h.R =:= EmptyTuple],
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[Grouped[HS] *: T, CL, Grouped[h.R] *: t.R] =
         new IncludeCurrentLevelColumn[Grouped[HS] *: T, CL]:
             type R = Grouped[h.R] *: t.R
 
     given ungroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: HL =:= CL
+        p: HL =:= CL,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[UngroupedColumn[HL] *: T, CL, UngroupedColumn[HL] *: t.R] =
         new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = UngroupedColumn[HL] *: t.R
 
     given outerUngroupedColumnHeadTuple[HL <: Int, T <: Tuple, CL <: Int](using
-        t: IncludeCurrentLevelColumn[T, CL],
-        refl: CL > HL =:= true
+        p: CL > HL =:= true,
+        t: IncludeCurrentLevelColumn[T, CL]
     ): Aux[UngroupedColumn[HL] *: T, CL, t.R] =
         new IncludeCurrentLevelColumn[UngroupedColumn[HL] *: T, CL]:
             type R = t.R
@@ -458,13 +458,13 @@ object HasKind:
         type R = O
 
     given windowHeadTuple[KS <: Tuple, T <: Tuple, TK <: ExprKind](using
+        nw: NotGiven[TK <:< Window[?]],
         h: HasKind[KS, TK],
-        t: HasKind[T, TK],
-        nw: NotGiven[TK <:< Window[?]]
+        t: HasKind[T, TK]
     ): Aux[Window[KS] *: T, TK, h.R || t.R] =
         new HasKind[Window[KS] *: T, TK]:
             type R = h.R || t.R
-
+    
     given tuple[H <: ExprKind, T <: Tuple, TK <: ExprKind](using
         h: IsKind[H, TK],
         t: HasKind[T, TK]
@@ -693,11 +693,11 @@ trait ValidateFrame[SS <: Int, SN <: String, ES <: Int, EN <: String]
 
 object ValidateFrame:
     given validate[SS <: Int, SN <: String, ES <: Int, EN <: String](using
-        SS < ES =:= true
+        SS <= ES =:= true
     ): ValidateFrame[SS, SN, ES, EN]()
 
     inline given fallback[SS <: Int, SN <: String, ES <: Int, EN <: String](using
-        SS < ES =:= false
+        SS <= ES =:= false
     ): ValidateFrame[SS, SN, ES, EN] =
         ${ errorMacro[SN, EN] }
 
@@ -760,7 +760,7 @@ object CanCallOver:
             def asIrExpr(x: WindowPart[T, EKS]): IrExpr =
                 x.expr
 
-    inline given expr[T, K <: ExprKind, E <: Expr[T, K]](using
+    inline given wrongExpr[T, K <: ExprKind, E <: Expr[T, K]](using
         NotGiven[E <:< AggExpr[?, ?]]
     ): Aux[E, T, EmptyTuple] =
         error("Over specified, but this expression is not a window function nor an aggregate function.")
@@ -947,13 +947,13 @@ object CanInMap:
             type R = OneRow
 
     given manyRowsRefOuterLayer[KS <: Tuple, OKS <: Tuple](using
+        n: NotGiven[OKS =:= EmptyTuple],
         ha: HasKind[KS, Agg[?]],
         ia: ha.R =:= true,
         hc: HasKind[KS, Column[?]],
         nc: hc.R =:= false,
         hu: HasKind[KS, UngroupedColumn[?]],
-        nu: hu.R =:= false,
-        n: NotGiven[OKS =:= EmptyTuple]
+        nu: hu.R =:= false
     ): Aux[KS, OKS, ManyRows] =
         new CanInMap[KS, OKS]:
             type R = ManyRows

@@ -117,7 +117,7 @@ final class Insert[T, S <: InsertState](
      */
     def values(rows: Seq[T])(using
         a: AsSqlExprs[T],
-        refl: S =:= InsertTable
+        p: S =:= InsertTable
     ): Insert[T, InsertValues] =
         val insertValues = rows.toList.map: row =>
             a.asSqlExprs(row, false).map(e => IrExpr.Native(e))
@@ -148,7 +148,7 @@ final class Insert[T, S <: InsertState](
     def query[QT](query: Query[QT, ?, ?, ?])(using
         r: Result[QT],
         rs: r.R =:= T,
-        refl: S =:= InsertTable
+        p: S =:= InsertTable
     ): Insert[T, InsertQuery] =
         new Insert(tree.copy(insert = query.tree))
 

@@ -267,7 +267,7 @@ object Plus:
         new Plus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
-    inline given fallback[A, B](using NotGiven[Plus[A, B]]): Plus[A, B] =
+    inline given fallback[A, B](using NotGiven[Plus[A, B]]): Aux[A, B, Nothing] =
         ${ errorMacro[A, B] }
 
     def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
@@ -327,7 +327,7 @@ object Minus:
         new Minus[A, B]:
             type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
 
-    inline given fallback[A, B](using NotGiven[Minus[A, B]]): Minus[A, B] =
+    inline given fallback[A, B](using NotGiven[Minus[A, B]]): Aux[A, B, Nothing] =
         ${ errorMacro[A, B] }
 
     def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
@@ -488,7 +488,7 @@ object Return:
         new Return[Option[Array[A]], Option[Array[B]]]:
             type R = Option[Array[r.R]]
 
-    inline given fallback[A, B](using NotGiven[Return[A, B]]): Return[A, B] =
+    inline given fallback[A, B](using NotGiven[Return[A, B]]): Aux[A, B, Nothing] =
         ${ errorMacro[A, B] }
 
     def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
@@ -513,15 +513,15 @@ object CoalesceReturn:
         type R = O
 
     given nonEmpty[A, B](using
-        r: Return[A, B],
-        n: NotGiven[B <:< Option[?]]
+        n: NotGiven[B <:< Option[?]],
+        r: Return[A, B]
     ): Aux[A, B, Unwrap[r.R, Option]] =
         new CoalesceReturn[A, B]:
             type R = Unwrap[r.R, Option]
 
     given empty[A, B](using
-        r: Return[A, B],
-        n: B <:< Option[?]
+        n: B <:< Option[?],
+        r: Return[A, B]
     ): Aux[A, B, r.R] =
         new CoalesceReturn[A, B]:
             type R = r.R
@@ -729,7 +729,7 @@ object Union:
     given table[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
         mb: Mirror.ProductOf[B],
-        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+        p: ma.MirroredElemTypes =:= mb.MirroredElemTypes
     ): Aux[Table[A, Column, AL], Table[B, Column, BL], CL, Table[A, Column, CL]] =
         new Union[Table[A, Column, AL], Table[B, Column, BL], CL]:
             type R = Table[A, Column, CL]
@@ -745,7 +745,7 @@ object Union:
     given tableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
         mb: Mirror.ProductOf[B],
-        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+        p: ma.MirroredElemTypes =:= mb.MirroredElemTypes
     ): Aux[Table[A, Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
         new Union[Table[A, Column, AL], Table[Option[B], Column, BL], CL]:
             type R = Table[Option[A], Column, CL]
@@ -761,7 +761,7 @@ object Union:
     given optionTableAndTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
         mb: Mirror.ProductOf[B],
-        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+        p: ma.MirroredElemTypes =:= mb.MirroredElemTypes
     ): Aux[Table[Option[A], Column, AL], Table[B, Column, BL], CL, Table[Option[A], Column, CL]] =
         new Union[Table[Option[A], Column, AL], Table[B, Column, BL], CL]:
             type R = Table[Option[A], Column, CL]
@@ -777,7 +777,7 @@ object Union:
     given optionTableAndOptionTable[A, AL <: Int, B, BL <: Int, CL <: Int](using
         ma: Mirror.ProductOf[A],
         mb: Mirror.ProductOf[B],
-        refl: ma.MirroredElemTypes =:= mb.MirroredElemTypes
+        p: ma.MirroredElemTypes =:= mb.MirroredElemTypes
     ): Aux[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL, Table[Option[A], Column, CL]] =
         new Union[Table[Option[A], Column, AL], Table[Option[B], Column, BL], CL]:
             type R = Table[Option[A], Column, CL]

@@ -479,7 +479,7 @@ object PatternedRecognize:
             t: ToTuple[p.R],
             i: CanInGroupedMap[m.KS],
             e: ExcludeCurrentLevelColumn[m.KS, L],
-            refl: e.R =:= EmptyTuple,
+            pe: e.R =:= EmptyTuple,
             an: AggNotNested[m.KS]
         ): FinalRecognize[N, t.R, L] =
             val items = m.asSelectItems(f(RecognizeDefine[N, T, tr.R, L](recognize.table)), 1)

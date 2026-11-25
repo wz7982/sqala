@@ -217,17 +217,17 @@ object AsDistinctSortItem:
 
     given wrongExpr[T, CL <: Int](using
         a: AsExpr[T, CL],
+        n: NotGiven[a.K <:< Distinct[?]],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
-        i: CanInDistinctSortBy[T, CL],
-        n: NotGiven[a.K <:< Distinct[?]]
+        i: CanInDistinctSortBy[T, CL]
     ): AsDistinctSortItem[T, CL] with
         def asSort(x: T): Sort[?, ?] =
             Sort(IrOrderingItem(a.asExpr(x).expr, SqlOrdering.Asc, None))
 
     given wrongSort[T, K <: ExprKind, CL <: Int](using
+        NotGiven[K <:< Distinct[?]],
         ValidateArgType[AsSqlExpr, T, "scalar"],
-        CanInDistinctSortBy[Sort[T, K], CL],
-        NotGiven[K <:< Distinct[?]]
+        CanInDistinctSortBy[Sort[T, K], CL]
     ): AsDistinctSortItem[Sort[T, K], CL] with
         def asSort(x: Sort[T, K]): Sort[?, ?] =
             Sort(IrOrderingItem(x.ordering.expr, x.ordering.ordering, x.ordering.nullsOrdering))

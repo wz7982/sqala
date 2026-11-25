@@ -729,7 +729,6 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], co: CanCallOver[T])
      * }}}
      */
     def over[OKS <: Tuple](over: OverContext ?=> Over[OKS])(using
-        i: CanInWindow[OKS],
         c: CombineKindTuple[co.KS, OKS]
     ): Expr[co.R, Window[c.R]] =
         given OverContext = OverContext()

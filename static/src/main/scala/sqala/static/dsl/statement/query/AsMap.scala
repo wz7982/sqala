@@ -47,11 +47,11 @@ object AsMapItem:
         type KS = OKS
 
     given expr[T, CL <: Int](using
+        nt: NotGiven[T <:< Table[?, ?, ?]],
+        nmt: NotGiven[T <:< MappedTable[?, ?, ?, ?]],
         a: AsExpr[T, CL],
         as: ValidateArgType[AsSqlExpr, a.R, "scalar"],
-        kt: KindToTuple[a.K],
-        nt: NotGiven[T <:< Table[?, ?, ?]],
-        nmt: NotGiven[T <:< MappedTable[?, ?, ?, ?]]
+        kt: KindToTuple[a.K]
     ): Aux[T, CL, Expr[a.R, Column[CL]], kt.R] =
         new AsMapItem[T, CL]:
             type R = Expr[a.R, Column[CL]]
