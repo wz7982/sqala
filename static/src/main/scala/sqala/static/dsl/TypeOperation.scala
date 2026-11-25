@@ -39,7 +39,7 @@ type WrapToTuple[T] <: Tuple =
         case _ => Tuple1[T]
 
 /**
- * Wraps a type to tuple.
+ * Wraps a value to tuple.
  */
 def wrapToTuple[T](x: T): WrapToTuple[T] =
     val result = x match
