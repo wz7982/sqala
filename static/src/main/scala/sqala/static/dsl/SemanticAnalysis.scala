@@ -120,27 +120,25 @@ object TransformKind:
                 Table(x.__table__, x.__metaData__)
 
     given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, K[_ <: Int] <: ExprKind, L <: Int](using
-        tv: TransformKind[V, K, L],
-        tt: ToTuple[tv.R]
-    ): Aux[MappedTable[N, V, O, L], K, L, MappedTable[N, tt.R, O, L]] =
+        tv: TransformKind[V, K, L]
+    ): Aux[MappedTable[N, V, O, L], K, L, MappedTable[N, WrapToTuple[tv.R], O, L]] =
         new TransformKind[MappedTable[N, V, O, L], K, L]:
-            type R = MappedTable[N, tt.R, O, L]
+            type R = MappedTable[N, WrapToTuple[tv.R], O, L]
 
             def transform(x: MappedTable[N, V, O, L]): R =
                 new MappedTable(
-                    tt.toTuple(tv.transform(x.__items__))
+                    wrapToTuple(tv.transform(x.__items__))
                 )
 
     given tuple[H, T <: Tuple, K[_ <: Int] <: ExprKind, L <: Int](using
         h: TransformKind[H, K, L],
-        t: TransformKind[T, K, L],
-        tt: ToTuple[t.R]
-    ): Aux[H *: T, K, L, h.R *: tt.R] =
+        t: TransformKind[T, K, L]
+    ): Aux[H *: T, K, L, h.R *: WrapToTuple[t.R]] =
         new TransformKind[H *: T, K, L]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             def transform(x: H *: T): R =
-                h.transform(x.head) *: tt.toTuple(t.transform(x.tail))
+                h.transform(x.head) *: wrapToTuple(t.transform(x.tail))
 
     given tuple1[H, K[_ <: Int] <: ExprKind, L <: Int](using
         h: TransformKind[H, K, L]
@@ -152,14 +150,13 @@ object TransformKind:
                 h.transform(x.head) *: EmptyTuple
 
     given namedTuple[N <: Tuple, V <: Tuple, K[_ <: Int] <: ExprKind, L <: Int](using
-        tv: TransformKind[V, K, L],
-        tt: ToTuple[tv.R]
-    ): Aux[NamedTuple[N, V], K, L, NamedTuple[N, tt.R]] =
+        tv: TransformKind[V, K, L]
+    ): Aux[NamedTuple[N, V], K, L, NamedTuple[N, WrapToTuple[tv.R]]] =
         new TransformKind[NamedTuple[N, V], K, L]:
-            type R = NamedTuple[N, tt.R]
+            type R = NamedTuple[N, WrapToTuple[tv.R]]
 
             def transform(x: NamedTuple[N, V]): R =
-                NamedTuple(tt.toTuple(tv.transform(x.toTuple)))
+                NamedTuple(wrapToTuple(tv.transform(x.toTuple)))
 
 /**
  * Converts an expression kind to its tuple representation.

@@ -351,11 +351,10 @@ object AsOverSort:
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsOverSortItem[H, CL],
         t: AsOverSort[T, CL],
-        tt: ToTuple[t.R],
         c: CombineKindTuple[h.KS, t.KS]
-    ): Aux[H *: T, CL, h.R *: tt.R, c.R] =
+    ): Aux[H *: T, CL, h.R *: WrapToTuple[t.R], c.R] =
         new AsOverSort[H *: T, CL]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             type KS = c.R
 

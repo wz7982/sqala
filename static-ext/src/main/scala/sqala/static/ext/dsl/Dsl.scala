@@ -121,12 +121,11 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     a: AsExpr[E, CL],
     f: JsonColumnFlatten[V, CL],
     p: AsTableParam[f.R, CL],
-    t: ToTuple[p.R],
     kt: KindToTuple[a.K],
     i: CanInSimpleClause[kt.R, "jsonTable"],
     e: ExcludeCurrentLevelColumn[kt.R, CL],
     c: CombineKindTuple[EmptyTuple, e.R]
-): FromJson[JsonColumnNameFlatten[N, V], t.R, c.R, CL] =
+): FromJson[JsonColumnNameFlatten[N, V], WrapToTuple[p.R], c.R, CL] =
     given JsonContext = JsonContext()
     FromJson(a.asExpr(expr).expr, path, columns)
 
@@ -320,13 +319,12 @@ def graphTable[N <: Tuple, V <: Tuple, TN <: Tuple, TV <: Tuple, TOKS <: Tuple, 
 )(
     schema: GraphSchema[N, V]
 )(using
-    t: TransformGraphSchema[V, CL],
-    tt: ToTuple[t.R]
+    t: TransformGraphSchema[V, CL]
 )(
-    f: GraphContext ?=> Graph[N, tt.R, CL] => FromGraph[TN, TV, TOKS, CL]
+    f: GraphContext ?=> Graph[N, WrapToTuple[t.R], CL] => FromGraph[TN, TV, TOKS, CL]
 ): FromGraph[TN, TV, TOKS, CL] =
     given GraphContext = GraphContext()
-    val graph = Graph[N, tt.R, CL](schema.name, tt.toTuple(t.transform(schema.items)))
+    val graph = Graph[N, WrapToTuple[t.R], CL](schema.name, wrapToTuple(t.transform(schema.items)))
     f(graph)
 
 /**

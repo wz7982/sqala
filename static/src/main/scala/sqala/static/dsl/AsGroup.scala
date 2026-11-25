@@ -103,16 +103,15 @@ object AsGroup:
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsGroupItem[H, CL],
         t: AsGroup[T, CL],
-        tt: ToTuple[t.R],
         c: CombineKindTuple[h.KS, t.KS]
-    ): Aux[H *: T, CL, h.R *: tt.R, c.R] =
+    ): Aux[H *: T, CL, h.R *: WrapToTuple[t.R], c.R] =
         new AsGroup[H *: T, CL]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             type KS = c.R
 
             def asGroup(x: H *: T): R =
-                h.asGroup(x.head) *: tt.toTuple(t.asGroup(x.tail))
+                h.asGroup(x.head) *: wrapToTuple(t.asGroup(x.tail))
 
             def asExprs(x: H *: T): NonEmptyList[Expr[?, ?]] =
                 h.asExprs(x.head) ++ t.asExprs(x.tail)
@@ -133,16 +132,15 @@ object AsGroup:
                 h.asExprs(x.head)
 
     given namedTuple[N <: Tuple, V <: Tuple, CL <: Int](using
-        a: AsGroup[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[NamedTuple[N, V], CL, NamedTuple[N, tt.R], a.KS] =
+        a: AsGroup[V, CL]
+    ): Aux[NamedTuple[N, V], CL, NamedTuple[N, WrapToTuple[a.R]], a.KS] =
         new AsGroup[NamedTuple[N, V], CL]:
-            type R = NamedTuple[N, tt.R]
+            type R = NamedTuple[N, WrapToTuple[a.R]]
 
             type KS = a.KS
 
             def asGroup(x: NamedTuple[N, V]): R =
-                NamedTuple(tt.toTuple(a.asGroup(x.toTuple)))
+                NamedTuple(wrapToTuple(a.asGroup(x.toTuple)))
 
             def asExprs(x: NamedTuple[N, V]): NonEmptyList[Expr[?, ?]] =
                 a.asExprs(x.toTuple)

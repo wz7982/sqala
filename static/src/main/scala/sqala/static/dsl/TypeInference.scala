@@ -792,34 +792,32 @@ object Union:
 
     given mappedTable[AN <: Tuple, AV <: Tuple, AO <: Boolean, AL <: Int, BN <: Tuple, BV <: Tuple, BO <: Boolean, BL <: Int, CL <: Int](using
         u: Union[AV, BV, CL],
-        tt: ToTuple[u.R],
         a: AsTableParam[AV, CL]
-    ): Aux[MappedTable[AN, AV, AO, AL], MappedTable[BN, BV, BO, BL], CL, MappedTable[AN, tt.R, AO || BO, CL]] =
+    ): Aux[MappedTable[AN, AV, AO, AL], MappedTable[BN, BV, BO, BL], CL, MappedTable[AN, WrapToTuple[u.R], AO || BO, CL]] =
         new Union[MappedTable[AN, AV, AO, AL], MappedTable[BN, BV, BO, BL], CL]:
-            type R = MappedTable[AN, tt.R, AO || BO, CL]
+            type R = MappedTable[AN, WrapToTuple[u.R], AO || BO, CL]
 
             def offset(x: MappedTable[AN, AV, AO, AL]): Int =
                 a.offset
 
             def unionQueryItems(x: MappedTable[AN, AV, AO, AL], cursor: Int): R =
-                new MappedTable[AN, tt.R, AO || BO, CL](
-                    tt.toTuple(u.unionQueryItems(x.__items__, cursor))
+                new MappedTable[AN, WrapToTuple[u.R], AO || BO, CL](
+                    wrapToTuple(u.unionQueryItems(x.__items__, cursor))
                 )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
         h: Union[AH, BH, CL],
-        t: Union[AT, BT, CL],
-        tt: ToTuple[t.R]
-    ): Aux[AH *: AT, BH *: BT, CL, h.R *: tt.R] =
+        t: Union[AT, BT, CL]
+    ): Aux[AH *: AT, BH *: BT, CL, h.R *: WrapToTuple[t.R]] =
         new Union[AH *: AT, BH *: BT, CL]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             def offset(x: AH *: AT): Int =
                 h.offset(x.head) + t.offset(x.tail)
 
             def unionQueryItems(x: AH *: AT, cursor: Int): R =
                 h.unionQueryItems(x.head, cursor) *:
-                    tt.toTuple(t.unionQueryItems(x.tail, cursor + h.offset(x.head)))
+                wrapToTuple(t.unionQueryItems(x.tail, cursor + h.offset(x.head)))
 
     given tuple1[AH, BH, CL <: Int](using
         h: Union[AH, BH, CL]
@@ -834,30 +832,28 @@ object Union:
                 h.unionQueryItems(x.head, cursor) *: EmptyTuple
 
     given namedTuple[AN <: Tuple, AV <: Tuple, BN <: Tuple, BV <: Tuple, CL <: Int](using
-        u: Union[AV, BV, CL],
-        t: ToTuple[u.R]
-    ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, t.R]] =
+        u: Union[AV, BV, CL]
+    ): Aux[NamedTuple[AN, AV], NamedTuple[BN, BV], CL, NamedTuple[AN, WrapToTuple[u.R]]] =
         new Union[NamedTuple[AN, AV], NamedTuple[BN, BV], CL]:
-            type R = NamedTuple[AN, t.R]
+            type R = NamedTuple[AN, WrapToTuple[u.R]]
 
             def offset(x: NamedTuple[AN, AV]): Int =
                 u.offset(x.toTuple)
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
-                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+                NamedTuple(wrapToTuple(u.unionQueryItems(x.toTuple, cursor)))
 
     given namedTupleAndTuple[AN <: Tuple, AV <: Tuple, BV <: Tuple, CL <: Int](using
         u: Union[AV, BV, CL],
-        t: ToTuple[u.R]
-    ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, t.R]] =
+    ): Aux[NamedTuple[AN, AV], BV, CL, NamedTuple[AN, WrapToTuple[u.R]]] =
         new Union[NamedTuple[AN, AV], BV, CL]:
-            type R = NamedTuple[AN, t.R]
+            type R = NamedTuple[AN, WrapToTuple[u.R]]
 
             def offset(x: NamedTuple[AN, AV]): Int =
                 u.offset(x.toTuple)
 
             def unionQueryItems(x: NamedTuple[AN, AV], cursor: Int): R =
-                NamedTuple(t.toTuple(u.unionQueryItems(x.toTuple, cursor)))
+                NamedTuple(wrapToTuple(u.unionQueryItems(x.toTuple, cursor)))
 
     inline given fallback[A, B, CL <: Int](using NotGiven[Union[A, B, CL]]): Aux[A, B, CL, A] =
         ${ errorMacro[A, B] }

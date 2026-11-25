@@ -324,13 +324,12 @@ final class TableQuery[T, OKS <: Tuple, L <: Int](
         a: AsGroup[G, L],
         e: ExcludeCurrentLevelColumn[a.KS, L],
         c: CombineKindTuple[OKS, e.R],
-        tu: TransformKind[T, UngroupedColumn, L],
-        tt: ToTuple[tu.R]
-    ): Grouping[a.R *: tt.R, c.R, L] =
+        tu: TransformKind[T, UngroupedColumn, L]
+    ): Grouping[a.R *: WrapToTuple[tu.R], c.R, L] =
         val group = f(params)
         val groupExprs = a.asExprs(group)
         Grouping(
-            a.asGroup(group) *: tt.toTuple(tu.transform(params)),
+            a.asGroup(group) *: wrapToTuple(tu.transform(params)),
             tree.copy(
                 groupBy = Some(
                     IrGroup(None, groupExprs.map(g => IrGroupingItem.Expr(g.expr)))
@@ -357,15 +356,14 @@ final class TableQuery[T, OKS <: Tuple, L <: Int](
         c: CombineKindTuple[OKS, e.R],
         to: ToOption[a.R],
         tot: ToOption[T],
-        tu: TransformKind[tot.R, UngroupedColumn, L],
-        tt: ToTuple[tu.R]
+        tu: TransformKind[tot.R, UngroupedColumn, L]
     )(g: QueryContext[L] ?=> a.R => S)(using
         s: AsMultidimensionalGrouping[S]
-    ): Grouping[to.R *: tt.R, c.R, L] =
+    ): Grouping[to.R *: WrapToTuple[tu.R], c.R, L] =
         val group = a.asGroup(f(params))
         val groupingItems = s.asIrGroupingItems(g(group))
         Grouping(
-            to.toOption(group) *: tt.toTuple(tu.transform(tot.toOption(params))),
+            to.toOption(group) *: wrapToTuple(tu.transform(tot.toOption(params))),
             tree.copy(
                 groupBy = Some(
                     IrGroup(None, groupingItems)

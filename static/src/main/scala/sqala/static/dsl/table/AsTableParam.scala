@@ -57,32 +57,30 @@ object AsTableParam:
                 )
 
     given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
-        a: AsTableParam[V, CL],
-        tt: ToTuple[a.R]
-    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, tt.R, O, CL]] =
+        a: AsTableParam[V, CL]
+    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, WrapToTuple[a.R], O, CL]] =
         new AsTableParam[MappedTable[N, V, O, L], CL]:
-            type R = MappedTable[N, tt.R, O, CL]
+            type R = MappedTable[N, WrapToTuple[a.R], O, CL]
 
             def offset: Int =
                 a.offset
 
             def asTableParam(table: IrTable, cursor: Int): R =
-                new MappedTable[N, tt.R, O, CL](tt.toTuple(a.asTableParam(table, cursor)))
+                new MappedTable[N, WrapToTuple[a.R], O, CL](wrapToTuple(a.asTableParam(table, cursor)))
 
     given tuple[H, T <: Tuple, CL <: Int](using
         h: AsTableParam[H, CL],
-        t: AsTableParam[T, CL],
-        tt: ToTuple[t.R]
-    ): Aux[H *: T, CL, h.R *: tt.R] =
+        t: AsTableParam[T, CL]
+    ): Aux[H *: T, CL, h.R *: WrapToTuple[t.R]] =
         new AsTableParam[H *: T, CL]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             def offset: Int =
                 h.offset + t.offset
 
             def asTableParam(table: IrTable, cursor: Int): R =
                 h.asTableParam(table, cursor) *:
-                tt.toTuple(t.asTableParam(table, cursor + h.offset))
+                wrapToTuple(t.asTableParam(table, cursor + h.offset))
 
     given tuple1[H, CL <: Int](using h: AsTableParam[H, CL]): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple] =
         new AsTableParam[H *: EmptyTuple, CL]:

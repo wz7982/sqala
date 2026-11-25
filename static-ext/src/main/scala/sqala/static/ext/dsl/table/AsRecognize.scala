@@ -61,11 +61,10 @@ object AsRecognize:
 
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
-        tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, WrapToTuple[p.R], false, CL], TOKS] =
         new AsRecognize[Q, CL]:
-            type R = MappedTable[N, tt.R, false, CL]
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL]
 
             type OKS = TOKS
 

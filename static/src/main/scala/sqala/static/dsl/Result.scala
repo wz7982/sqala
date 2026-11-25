@@ -40,19 +40,17 @@ object Result:
 
     given tuple[H, T <: Tuple](using
         hr: Result[H],
-        tr: Result[T],
-        tt: ToTuple[tr.R]
-    ): Aux[H *: T, hr.R *: tt.R] =
+        tr: Result[T]
+    ): Aux[H *: T, hr.R *: WrapToTuple[tr.R]] =
         new Result[H *: T]:
-            type R = hr.R *: tt.R
+            type R = hr.R *: WrapToTuple[tr.R]
 
     given tuple1[H](using hr: Result[H]): Aux[H *: EmptyTuple, hr.R *: EmptyTuple] =
         new Result[H *: EmptyTuple]:
             type R = hr.R *: EmptyTuple
 
     given namedTuple[N <: Tuple, V <: Tuple](using
-        r: Result[V],
-        tt: ToTuple[r.R]
-    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+        r: Result[V]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, WrapToTuple[r.R]]] =
         new Result[NamedTuple[N, V]]:
-            type R = NamedTuple[N, tt.R]
+            type R = NamedTuple[N, WrapToTuple[r.R]]

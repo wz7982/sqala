@@ -69,11 +69,10 @@ object AsInsertColumns:
 
     given tuple[H, T <: Tuple](using
         ah: AsInsertColumns[H],
-        at: AsInsertColumns[T],
-        tt: ToTuple[at.R]
-    ): Aux[H *: T, ah.R *: tt.R] =
+        at: AsInsertColumns[T]
+    ): Aux[H *: T, ah.R *: WrapToTuple[at.R]] =
         new AsInsertColumns[H *: T]:
-            type R = ah.R *: tt.R
+            type R = ah.R *: WrapToTuple[at.R]
 
             def columnNames(x: H *: T): List[String] =
                 ah.columnNames(x.head) ++ at.columnNames(x.tail)

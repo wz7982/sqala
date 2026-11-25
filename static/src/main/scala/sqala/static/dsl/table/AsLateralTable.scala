@@ -38,14 +38,13 @@ object AsLateralTable:
 
     given subquery[N <: Tuple, V <: Tuple, QOKS <: Tuple, S <: QuerySize, L <: Int, Q <: Query[NamedTuple[N, V], QOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL - 1],
-        tt: ToTuple[p.R],
         e: ExcludeCurrentLevelColumn[QOKS, CL - 1],
         i: IncludeCurrentLevelColumn[QOKS, CL - 1],
         c: CanInSimpleClause[i.R, "subquery"],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL - 1], e.R] =
+    ): Aux[Q, CL, MappedTable[N, WrapToTuple[p.R], false, CL - 1], e.R] =
         new AsLateralTable[Q, CL]:
-            type R = MappedTable[N, tt.R, false, CL - 1]
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL - 1]
 
             type OKS = e.R
 

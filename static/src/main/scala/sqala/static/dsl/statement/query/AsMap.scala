@@ -92,17 +92,16 @@ object AsMapItem:
 
     given mappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int, CL <: Int](using
         a: AsMap[V, L],
-        t: ToTuple[a.R],
         kt: KindToTuple[Column[L]]
-    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, t.R, O, L], kt.R] =
+    ): Aux[MappedTable[N, V, O, L], CL, MappedTable[N, WrapToTuple[a.R], O, L], kt.R] =
         new AsMapItem[MappedTable[N, V, O, L], CL]:
-            type R = MappedTable[N, t.R, O, L]
+            type R = MappedTable[N, WrapToTuple[a.R], O, L]
 
             type KS = kt.R
 
             def transform(x: MappedTable[N, V, O, L]): R =
                 new MappedTable(
-                    t.toTuple(a.transform(x.__items__))
+                    wrapToTuple(a.transform(x.__items__))
                 )
 
             def offset(x: MappedTable[N, V, O, L]): Int =
@@ -168,16 +167,15 @@ object AsMap:
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsMapItem[H, CL],
         at: AsMap[T, CL],
-        tt: ToTuple[at.R],
         c: CombineKindTuple[ah.KS, at.KS]
-    ): Aux[H *: T, CL, ah.R *: tt.R, c.R] =
+    ): Aux[H *: T, CL, ah.R *: WrapToTuple[at.R], c.R] =
         new AsMap[H *: T, CL]:
-            type R = ah.R *: tt.R
+            type R = ah.R *: WrapToTuple[at.R]
 
             type KS = c.R
 
             def transform(x: H *: T): R =
-                ah.transform(x.head) *: tt.toTuple(at.transform(x.tail))
+                ah.transform(x.head) *: wrapToTuple(at.transform(x.tail))
 
             def offset(x: H *: T): Int =
                 ah.offset(x.head) + at.offset(x.tail)
@@ -204,16 +202,15 @@ object AsMap:
                 ah.asSelectItems(x.head, cursor)
 
     given namedTuple[N <: Tuple, V <: Tuple, CL <: Int](using
-        a: AsMap[V, CL],
-        t: ToTuple[a.R]
-    ): Aux[NamedTuple[N, V], CL, NamedTuple[N, t.R], a.KS] =
+        a: AsMap[V, CL]
+    ): Aux[NamedTuple[N, V], CL, NamedTuple[N, WrapToTuple[a.R]], a.KS] =
         new AsMap[NamedTuple[N, V], CL]:
-            type R = NamedTuple[N, t.R]
+            type R = NamedTuple[N, WrapToTuple[a.R]]
 
             type KS = a.KS
 
             def transform(x: NamedTuple[N, V]): R =
-                t.toTuple(a.transform(x.toTuple))
+                wrapToTuple(a.transform(x.toTuple))
 
             def offset(x: NamedTuple[N, V]): Int =
                 a.offset(x.toTuple)

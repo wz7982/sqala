@@ -476,12 +476,11 @@ object PatternedRecognize:
             ar: AliasRecognize[T],
             m: AsMap[MV, L],
             p: AsTableParam[m.R, L],
-            t: ToTuple[p.R],
             i: CanInGroupedMap[m.KS],
             e: ExcludeCurrentLevelColumn[m.KS, L],
             pe: e.R =:= EmptyTuple,
             an: AggNotNested[m.KS]
-        ): FinalRecognize[N, t.R, L] =
+        ): FinalRecognize[N, WrapToTuple[p.R], L] =
             val items = m.asSelectItems(f(RecognizeDefine[N, T, tr.R, L](recognize.table)), 1)
             val node: IrTable.MatchRecognize =
                 IrTable.MatchRecognize(
@@ -499,9 +498,9 @@ object PatternedRecognize:
                     ),
                     Nil
                 )
-            FinalRecognize[N, t.R, L](
+            FinalRecognize[N, WrapToTuple[p.R], L](
                 node,
-                t.toTuple(p.asTableParam(node, 1))
+                wrapToTuple(p.asTableParam(node, 1))
             )(using
                 recognize.qc,
                 recognize.mc

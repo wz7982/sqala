@@ -184,9 +184,8 @@ object FromJson:
         columns: JsonColumns[N, V]
     )(using
         f: JsonColumnFlatten[V, CL],
-        p: AsTableParam[f.R, CL],
-        t: ToTuple[p.R]
-    ): FromJson[JsonColumnNameFlatten[N, V], t.R, OKS, CL] =
+        p: AsTableParam[f.R, CL]
+    ): FromJson[JsonColumnNameFlatten[N, V], WrapToTuple[p.R], OKS, CL] =
         val irColumns = f.toJsonColumns(columns.columns, 1)
         val table: IrTable.Json = IrTable.Json(
             false,
@@ -198,7 +197,7 @@ object FromJson:
         )
         new FromJson(
             table,
-            t.toTuple(p.asTableParam(table, 1))
+            wrapToTuple(p.asTableParam(table, 1))
         )
 
     given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =

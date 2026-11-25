@@ -29,6 +29,19 @@ type Unwrap[T, F[_]] =
         case F[t] => Unwrap[t, F]
         case _ => T
 
+type WrapToTuple[T] <: Tuple =
+    T match
+        case x *: xs => x *: xs
+        case EmptyTuple => EmptyTuple
+        case _ => Tuple1[T]
+
+def wrapToTuple[T](x: T): WrapToTuple[T] =
+    val result = x match
+        case v *: vs => v *: vs
+        case EmptyTuple => EmptyTuple
+        case _ => Tuple1(x)
+    result.asInstanceOf[WrapToTuple[T]]
+
 /**
  * Flattens nested `Option` and `Array` wrappers for `unnest`.
  */

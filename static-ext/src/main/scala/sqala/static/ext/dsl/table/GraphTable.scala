@@ -73,14 +73,13 @@ object TransformGraphSchema:
 
     given tuple[H, T <: Tuple, CL <: Int](using
         sh: TransformGraphSchema[H, CL],
-        st: TransformGraphSchema[T, CL],
-        tt: ToTuple[st.R]
-    ): Aux[H *: T, CL, sh.R *: tt.R] =
+        st: TransformGraphSchema[T, CL]
+    ): Aux[H *: T, CL, sh.R *: WrapToTuple[st.R]] =
         new TransformGraphSchema[H *: T, CL]:
-            type R = sh.R *: tt.R
+            type R = sh.R *: WrapToTuple[st.R]
 
             def transform(x: H *: T): R =
-                sh.transform(x.head) *: tt.toTuple(st.transform(x.tail))
+                sh.transform(x.head) *: wrapToTuple(st.transform(x.tail))
 
     given emptyTuple[CL <: Int]: Aux[EmptyTuple, CL, EmptyTuple] = new
         TransformGraphSchema[EmptyTuple, CL]:
@@ -632,11 +631,10 @@ final class GraphMatch[T, OKS <: Tuple, L <: Int](
         gc: GraphContext,
         m: AsMap[MV, L],
         p: AsTableParam[m.R, L],
-        tt: ToTuple[p.R],
         i: CanInSimpleClause[m.KS, "columns"],
         e: ExcludeCurrentLevelColumn[m.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): FromGraph[MN, tt.R, c.R, L] =
+    ): FromGraph[MN, WrapToTuple[p.R], c.R, L] =
         val columnsValue = f(pattern).toTuple
         val columnItems = m.asSelectItems(columnsValue, 1)
         val table: IrTable.Graph = IrTable.Graph(
@@ -658,7 +656,7 @@ final class GraphMatch[T, OKS <: Tuple, L <: Int](
         )
         FromGraph(
             table,
-            tt.toTuple(p.asTableParam(table, 1))
+            wrapToTuple(p.asTableParam(table, 1))
         )
 
     /**

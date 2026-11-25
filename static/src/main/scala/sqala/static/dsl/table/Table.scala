@@ -149,10 +149,9 @@ final class MappedTable[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](
 
 object MappedTable:
     inline def apply[N <: Tuple, V <: Tuple, O <: Boolean, L <: Int](table: IrTable)(using
-        p: AsTableParam[V, L],
-        t: ToTuple[p.R]
-    ): MappedTable[N, t.R, O, L] =
-        new MappedTable(t.toTuple(p.asTableParam(table, 1)))
+        p: AsTableParam[V, L]
+    ): MappedTable[N, WrapToTuple[p.R], O, L] =
+        new MappedTable(wrapToTuple(p.asTableParam(table, 1)))
 
 /**
  * Compile-time implementation of `selectDynamic` for `Table` and `MappedTable`.

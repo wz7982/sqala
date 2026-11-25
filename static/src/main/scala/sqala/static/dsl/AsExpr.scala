@@ -91,11 +91,10 @@ object AsExpr:
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsExpr[H, CL],
         at: AsExpr[T, CL],
-        tt: ToTuple[at.R],
         ck: CombineKind[ah.K, at.K]
-    ): Aux[H *: T, CL, ah.R *: tt.R, ck.R] =
+    ): Aux[H *: T, CL, ah.R *: WrapToTuple[at.R], ck.R] =
         new AsExpr[H *: T, CL]:
-            type R = ah.R *: tt.R
+            type R = ah.R *: WrapToTuple[at.R]
 
             type K = ck.R
 

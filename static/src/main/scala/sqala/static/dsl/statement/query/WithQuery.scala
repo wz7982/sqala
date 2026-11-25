@@ -123,21 +123,18 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
         seed: QueryContext[L] ?=> T => NamedTuple[N, V]
     )(using
         a: AsMap[NamedTuple[N, V], L],
-        p: AsTableParam[V, L],
-        t: ToTuple[p.R]
+        p: AsTableParam[V, L]
     )(
-        step: QueryContext[L] ?=> (T, MappedTable[N, t.R, false, L], Expr[Int, Column[L]]) => NamedTuple[UN, UV]
+        step: QueryContext[L] ?=> (T, MappedTable[N, WrapToTuple[p.R], false, L], Expr[Int, Column[L]]) => NamedTuple[UN, UV]
     )(using
         au: AsMap[NamedTuple[UN, UV], L],
         u: Union[V, UV, L],
-        tu: ToTuple[u.R],
-        up: AsTableParam[tu.R, L],
-        tup: ToTuple[up.R]
-    ): ConnectBy[T, MappedTable[N, tup.R, false, L], OKS, L] =
+        up: AsTableParam[WrapToTuple[u.R], L]
+    ): ConnectBy[T, MappedTable[N, WrapToTuple[up.R], false, L], OKS, L] =
         val seedItems = a.asSelectItems(seed(row), 1)
         val levelName = s"c${seedItems.size + 1}"
         val stepPrior = MappedTable[N, V, false, L](stepCte)
-        val finalRow = MappedTable[N, tu.R, false, L](finalCte)
+        val finalRow = MappedTable[N, WrapToTuple[u.R], false, L](finalCte)
         val stepItems = au.asSelectItems(
             step(
                 row,

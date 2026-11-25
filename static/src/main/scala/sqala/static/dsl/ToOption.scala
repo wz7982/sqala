@@ -76,14 +76,13 @@ object ToOption:
 
     given tuple[H, T <: Tuple](using
         h: ToOption[H],
-        t: ToOption[T],
-        tt: ToTuple[t.R]
-    ): Aux[H *: T, h.R *: tt.R] =
+        t: ToOption[T]
+    ): Aux[H *: T, h.R *: WrapToTuple[t.R]] =
         new ToOption[H *: T]:
-            type R = h.R *: tt.R
+            type R = h.R *: WrapToTuple[t.R]
 
             def toOption(x: H *: T): R =
-                h.toOption(x.head) *: tt.toTuple(t.toOption(x.tail))
+                h.toOption(x.head) *: wrapToTuple(t.toOption(x.tail))
 
     given tuple1[H](using
         h: ToOption[H]
@@ -95,11 +94,10 @@ object ToOption:
                 h.toOption(x.head) *: EmptyTuple
 
     given namedTuple[N <: Tuple, V <: Tuple](using
-        v: ToOption[V],
-        tt: ToTuple[v.R]
-    ): Aux[NamedTuple[N, V], NamedTuple[N, tt.R]] =
+        v: ToOption[V]
+    ): Aux[NamedTuple[N, V], NamedTuple[N, WrapToTuple[v.R]]] =
         new ToOption[NamedTuple[N, V]]:
-            type R = NamedTuple[N, tt.R]
+            type R = NamedTuple[N, WrapToTuple[v.R]]
 
             def toOption(x: NamedTuple[N, V]): R =
-                tt.toTuple(v.toOption(x.toTuple))
+                wrapToTuple(v.toOption(x.toTuple))

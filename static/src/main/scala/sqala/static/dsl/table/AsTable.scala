@@ -63,11 +63,10 @@ object AsTable:
 
     given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
         p: AsTableParam[V, CL],
-        tt: ToTuple[p.R],
         vss: ValidateSubqueryScope[L, CL]
-    ): Aux[Q, CL, MappedTable[N, tt.R, false, CL], TOKS] =
+    ): Aux[Q, CL, MappedTable[N, WrapToTuple[p.R], false, CL], TOKS] =
         new AsTable[Q, CL]:
-            type R = MappedTable[N, tt.R, false, CL]
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL]
 
             type OKS = TOKS
 
@@ -123,18 +122,17 @@ object AsTable:
     given tuple[H, T <: Tuple, CL <: Int](using
         ah: AsTable[H, CL],
         at: AsTable[T, CL],
-        t: ToTuple[at.R],
         c: CombineKindTuple[ah.OKS, at.OKS]
-    ): Aux[H *: T, CL, ah.R *: t.R, c.R] =
+    ): Aux[H *: T, CL, ah.R *: WrapToTuple[at.R], c.R] =
         new AsTable[H *: T, CL]:
-            type R = ah.R *: t.R
+            type R = ah.R *: WrapToTuple[at.R]
 
             type OKS = c.R
 
             def asTable(x: H *: T): (R, IrTable) =
                 val (headParam, headTable) = ah.asTable(x.head)
                 val (tailParam, tailTable) = at.asTable(x.tail)
-                val param = headParam *: t.toTuple(tailParam)
+                val param = headParam *: wrapToTuple(tailParam)
                 val table = IrTable.Join(headTable, SqlJoinType.Cross, tailTable, None)
                 (param, table)
 
