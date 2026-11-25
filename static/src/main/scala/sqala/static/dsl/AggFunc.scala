@@ -85,19 +85,16 @@ def sum[T, CL <: Int](x: T)(using
     a: AsExpr[T, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K],
-    i: CanInAgg[kt.R, CL],
-    to: ToOption[AggExpr[a.R, kt.R]]
-): to.R =
-    to.toOption(
-        AggExpr(
-            IrExpr.GeneralFunc(
-                None,
-                "SUM",
-                a.asExpr(x).expr :: Nil,
-                Nil,
-                Nil,
-                None
-            )
+    i: CanInAgg[kt.R, CL]
+): AggExpr[Option[BigDecimal], kt.R] =
+    AggExpr(
+        IrExpr.GeneralFunc(
+            None,
+            "SUM",
+            a.asExpr(x).expr :: Nil,
+            Nil,
+            Nil,
+            None
         )
     )
 
