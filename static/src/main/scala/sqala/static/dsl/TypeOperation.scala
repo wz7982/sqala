@@ -29,12 +29,18 @@ type Unwrap[T, F[_]] =
         case F[t] => Unwrap[t, F]
         case _ => T
 
+/**
+ * Wraps a type to tuple.
+ */
 type WrapToTuple[T] <: Tuple =
     T match
         case x *: xs => x *: xs
         case EmptyTuple => EmptyTuple
         case _ => Tuple1[T]
 
+/**
+ * Wraps a type to tuple.
+ */
 def wrapToTuple[T](x: T): WrapToTuple[T] =
     val result = x match
         case v *: vs => v *: vs
