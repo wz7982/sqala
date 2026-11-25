@@ -22,14 +22,19 @@ object SqlNumber:
 
     given option[T: SqlNumber]: SqlNumber[Option[T]]()
 
+trait SqlDate[T]
+
+object SqlDate:
+    given localDate: SqlDate[LocalDate]()
+
+    given option[T: SqlDate]: SqlDate[Option[T]]()
+
 /**
  * Marker trait that constrains an expression type to date-time types.
  */
 trait SqlDateTime[T]
 
 object SqlDateTime:
-    given localDate: SqlDateTime[LocalDate]()
-
     given localDateTime: SqlDateTime[LocalDateTime]()
 
     given offsetDateTime: SqlDateTime[OffsetDateTime]()
