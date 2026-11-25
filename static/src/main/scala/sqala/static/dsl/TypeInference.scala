@@ -22,6 +22,8 @@ trait CanCompare[A, B]
 object CanCompare:
     given number[A: SqlNumber, B: SqlNumber]: CanCompare[A, B]()
 
+    given date[A: SqlDate, B: SqlDate]: CanCompare[A, B]()
+
     given dateTime[A: SqlDateTime, B: SqlDateTime]: CanCompare[A, B]()
 
     given time[A: SqlTime, B: SqlTime]: CanCompare[A, B]()
@@ -35,6 +37,10 @@ object CanCompare:
     given geometry[A: SqlGeometry, B: SqlGeometry]: CanCompare[A, B]()
 
     given interval[A: SqlInterval, B: SqlInterval]: CanCompare[A, B]()
+
+    given dateAndString[A: SqlDate, B: SqlString]: CanCompare[A, B]()
+
+    given stringAndDate[A: SqlString, B: SqlDate]: CanCompare[A, B]()
 
     given dateTimeAndString[A: SqlDateTime, B: SqlString]: CanCompare[A, B]()
 
@@ -50,9 +56,13 @@ object CanCompare:
         CustomField[T, R]
     ): CanCompare[T, Option[T]]()
 
-    given optionCustom[T, R](using
+    given optionCustomAndCustom[T, R](using
         CustomField[T, R]
     ): CanCompare[Option[T], T]()
+
+    given optionCustom[T, R](using
+        CustomField[T, R]
+    ): CanCompare[Option[T], Option[T]]()
 
     given array[A, B](using
         CanCompare[A, B]
@@ -245,6 +255,10 @@ object Plus:
         new Plus[A, B]:
             type R = NumericResult[A, B]
 
+    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]] =
+        new Plus[A, B]:
+            type R = WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]
+
     given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
         new Plus[A, B]:
             type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
@@ -281,13 +295,29 @@ object Minus:
         new Minus[A, B]:
             type R = NumericResult[A, B]
 
+    given date[A: SqlDate, B: SqlDate]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
+
     given dateTime[A: SqlDateTime, B: SqlDateTime]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
+
+    given dateAndDateTime[A: SqlDate, B: SqlDateTime]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
+
+    given dateTimeAndDate[A: SqlDateTime, B: SqlDate]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
         new Minus[A, B]:
             type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
     given time[A: SqlTime, B: SqlTime]: Aux[A, B, WrapIf[Interval, IsOption[A] || IsOption[B], Option]] =
         new Minus[A, B]:
             type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
+
+    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]] =
+        new Minus[A, B]:
+            type R = WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]
 
     given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
         new Minus[A, B]:
@@ -366,13 +396,33 @@ object Return:
         new Return[A, B]:
             type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
+    given date[A: SqlDate, B: SqlDate]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
+
     given dateTime[A: SqlDateTime, B: SqlDateTime]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
+
+    given dateAndDateTime[A: SqlDate, B: SqlDateTime]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
+
+    given dateTimeAndDate[A: SqlDateTime, B: SqlDate]: Aux[A, B, DateTimeResult[A, B]] =
         new Return[A, B]:
             type R = DateTimeResult[A, B]
 
     given time[A: SqlTime, B: SqlTime]: Aux[A, B, TimeResult[A, B]] =
         new Return[A, B]:
             type R = TimeResult[A, B]
+
+    given dateAndString[A: SqlDate, B: SqlString]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
+
+    given stringAndDate[A: SqlString, B: SqlDate]: Aux[A, B, DateTimeResult[A, B]] =
+        new Return[A, B]:
+            type R = DateTimeResult[A, B]
 
     given dateTimeAndString[A: SqlDateTime, B: SqlString]: Aux[A, B, DateTimeResult[A, B]] =
         new Return[A, B]:
@@ -406,6 +456,12 @@ object Return:
         CustomField[T, R]
     ): Aux[Option[T], T, Option[T]] =
         new Return[Option[T], T]:
+            type R = Option[T]
+
+    given optionCustom[T, R](using
+        CustomField[T, R]
+    ): Aux[Option[T], Option[T], Option[T]] =
+        new Return[Option[T], Option[T]]:
             type R = Option[T]
 
     given array[A, B](using
@@ -517,6 +573,8 @@ trait CanInRangeFrame[S, T]
 object CanInRangeFrame:
     given number[S: SqlNumber, N: SqlNumber]: CanInRangeFrame[S, N]()
 
+    given date[T: SqlDate, I: SqlInterval]: CanInRangeFrame[T, I]()
+
     given dateTime[T: SqlDateTime, I: SqlInterval]: CanInRangeFrame[T, I]()
 
     given time[T: SqlTime, I: SqlInterval]: CanInRangeFrame[T, I]()
@@ -586,19 +644,19 @@ object Cast:
         report.errorAndAbort(s"Cannot convert type $aType to type $bType.")
 
 /**
- * Constrains the types that can be used with `year`, `month`, etc.
+ * Constrains the types that can be used with `year`, `month`, `day`.
  * extract functions.
  */
-trait ExtractArg[T]
+trait ExtractDate[T]
 
-object ExtractArg:
-    given dateTime[T: SqlDateTime]: ExtractArg[T]()
+object ExtractDate:
+    given date[T: SqlDate]: ExtractDate[T]()
 
-    given time[T: SqlTime]: ExtractArg[T]()
+    given dateTime[T: SqlDateTime]: ExtractDate[T]()
 
-    given interval[T: SqlInterval]: ExtractArg[T]()
+    given interval[T: SqlInterval]: ExtractDate[T]()
 
-    inline given fallback[T](using NotGiven[ExtractArg[T]]): ExtractArg[T] =
+    inline given fallback[T](using NotGiven[ExtractDate[T]]): ExtractDate[T] =
         ${ errorMacro[T] }
 
     def errorMacro[T: Type](using q: Quotes): Nothing =
@@ -606,7 +664,30 @@ object ExtractArg:
 
         val typeName = Type.show[T]
 
-        report.errorAndAbort(s"The argument type should be a date/time or interval type, but got $typeName.")
+        report.errorAndAbort(s"The argument type should be a date/datetime or interval type, but got $typeName.")
+
+/**
+ * Constrains the types that can be used with `hour`, `minute`, `second`.
+ * extract functions.
+ */
+trait ExtractTime[T]
+
+object ExtractTime:
+    given dateTime[T: SqlDateTime]: ExtractTime[T]()
+
+    given time[T: SqlTime]: ExtractTime[T]()
+
+    given interval[T: SqlInterval]: ExtractTime[T]()
+
+    inline given fallback[T](using NotGiven[ExtractTime[T]]): ExtractTime[T] =
+        ${ errorMacro[T] }
+
+    def errorMacro[T: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+
+        val typeName = Type.show[T]
+
+        report.errorAndAbort(s"The argument type should be a time/datetime or interval type, but got $typeName.")
 
 /**
  * Maps union query items, producing column expressions

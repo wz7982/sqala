@@ -370,7 +370,12 @@ extension [CL <: Int](n: Int)(using QueryContext[CL])
     def second: Interval =
         Interval(n.toString, SqlTimeUnit.Second)
 
-extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt: KindToTuple[a.K], e: ExtractArg[a.R])
+extension [T, CL <: Int](x: T)(using 
+    qc: QueryContext[CL], 
+    a: AsExpr[T, CL], 
+    kt: KindToTuple[a.K], 
+    e: ExtractDate[a.R]
+)
     /**
      * Extracts the year from a datetime expression. Maps to
      * `EXTRACT(YEAR FROM expr)`.
@@ -419,6 +424,12 @@ extension [T, CL <: Int](x: T)(using qc: QueryContext[CL], a: AsExpr[T, CL], kt:
             )
         )
 
+extension [T, CL <: Int](x: T)(using 
+    qc: QueryContext[CL], 
+    a: AsExpr[T, CL], 
+    kt: KindToTuple[a.K], 
+    e: ExtractTime[a.R]
+)
     /**
      * Extracts the hour from a datetime expression. Maps to
      * `EXTRACT(HOUR FROM expr)`.
