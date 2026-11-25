@@ -46,7 +46,7 @@ class SqlitePrinter(override val standardEscapeStrings: Boolean) extends Standar
                 expr.expr :: expr.separator :: Nil,
                 expr.withinGroup,
                 Nil,
-                None
+                expr.filter
             )
             printExpr(func)
 

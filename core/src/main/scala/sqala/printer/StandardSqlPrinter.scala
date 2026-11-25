@@ -332,7 +332,7 @@ trait StandardSqlPrinter:
         printSpace()
         printSetOperator(query.operator)
         for c <- query.corresponding do
-            sqlBuilder.append("CORRESPONDING")
+            sqlBuilder.append(" CORRESPONDING")
             if c.columnNames.nonEmpty then
                 sqlBuilder.append(" BY (")
                 printList(c.columnNames.toList)(printIdent)
@@ -539,6 +539,25 @@ trait StandardSqlPrinter:
                 printUnsafeCustomExpr(custom)
 
     /**
+     * Prints an operand, wrapping it in parentheses when it binds no tighter
+     * than `boundary`.
+     *
+     * `boundary` is the precedence of the surrounding construct: the comparison
+     * tier for predicate subjects and patterns, the `=` tier for `BETWEEN`
+     * bounds. The test is `<=` rather than `<` because an operand at the same
+     * precedence would otherwise be absorbed by the surrounding operator, as in
+     * `a BETWEEN 1 AND 2 + z`, or left adjacent to a non-associative comparison,
+     * as in `a IN (1, 2) = z`.
+     */
+    private def printOperand(child: SqlExpr, boundary: Int): Unit =
+        if child.precedence <= boundary then
+            sqlBuilder.append("(")
+            printExpr(child)
+            sqlBuilder.append(")")
+        else
+            printExpr(child)
+
+    /**
      * Prints a column reference expression.
      */
     def printColumnExpr(expr: SqlExpr.Column): Unit =
@@ -570,7 +589,13 @@ trait StandardSqlPrinter:
      * Prints an inlined numeric literal expression.
      */
     def printInlinedNumberLiteralExpr(expr: SqlExpr.NumberLiteral[?]): Unit =
-        sqlBuilder.append(expr.number)
+        expr.number match
+            case d: Double if d.isNaN || d.isInfinite =>
+                throw new PrintException(s"Non-finite number cannot be printed as a SQL literal: $d.")
+            case f: Float if f.isNaN || f.isInfinite =>
+                throw new PrintException(s"Non-finite number cannot be printed as a SQL literal: $f.")
+            case n =>
+                sqlBuilder.append(n)
 
     /**
      * Prints an `Int` literal expression.
@@ -796,47 +821,9 @@ trait StandardSqlPrinter:
      */
     def printBinaryExpr(expr: SqlExpr.Binary): Unit =
         def hasBracketsLeft(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence < parent.operator.precedence ||
-                        operator.precedence == parent.operator.precedence && operator.precedence <= SqlBinaryOperator.Equal.precedence ||
-                        operator.precedence == 0
-                    =>
-                        true
-                case SqlExpr.In(_, _, _)
-                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence =>
-                        true
-                case SqlExpr.Like(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence =>
-                        true
-                case SqlExpr.SimilarTo(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence =>
-                        true
-                case SqlExpr.QuantifiedComparisonPredicate(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence < parent.operator.precedence =>
-                        true
-                case _ =>
-                    false
-
-        def hasBracketsRight(parent: SqlExpr.Binary, child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence <= parent.operator.precedence =>
-                        true
-                case SqlExpr.In(_, _, _)
-                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence =>
-                        true
-                case SqlExpr.Like(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence =>
-                        true
-                case SqlExpr.SimilarTo(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence =>
-                        true
-                case SqlExpr.QuantifiedComparisonPredicate(_, _, _, _)
-                    if SqlBinaryOperator.Equal.precedence <= parent.operator.precedence =>
-                        true
-                case _ =>
-                    false
+            child.precedence < parent.operator.precedence ||
+            child.precedence == parent.operator.precedence &&
+                parent.operator.precedence <= SqlBinaryOperator.Equal.precedence
 
         if hasBracketsLeft(expr, expr.left) then
             sqlBuilder.append("(")
@@ -849,12 +836,7 @@ trait StandardSqlPrinter:
         printBinaryOperator(expr.operator)
         sqlBuilder.append(" ")
 
-        if hasBracketsRight(expr, expr.right) then
-            sqlBuilder.append("(")
-            printExpr(expr.right)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.right)
+        printOperand(expr.right, expr.operator.precedence)
 
     /**
      * Prints a JSON node type keyword.
@@ -874,7 +856,7 @@ trait StandardSqlPrinter:
      * Prints a JSON test expression.
      */
     def printJsonTestExpr(expr: SqlExpr.JsonTest): Unit =
-        printExpr(expr.expr)
+        printOperand(expr.expr, SqlBinaryOperator.Equal.precedence)
         if expr.withNot then sqlBuilder.append(" IS NOT JSON")
         else sqlBuilder.append(" IS JSON")
 
@@ -894,15 +876,19 @@ trait StandardSqlPrinter:
             case SqlInRightOperand.Values(values) =>
                 printExpr(SqlExpr.Tuple(values))
             case SqlInRightOperand.Subquery(query) =>
-                sqlBuilder.append("(")
+                push()
+                sqlBuilder.append("(\n")
                 printQuery(query)
+                pull()
+                sqlBuilder.append("\n")
+                printSpace()
                 sqlBuilder.append(")")
 
     /**
      * Prints an in expression.
      */
     def printInExpr(expr: SqlExpr.In): Unit =
-        printExpr(expr.expr)
+        printOperand(expr.expr, SqlBinaryOperator.Equal.precedence)
         if expr.withNot then sqlBuilder.append(" NOT")
         sqlBuilder.append(" IN ")
         printInRightOperand(expr.in)
@@ -911,71 +897,21 @@ trait StandardSqlPrinter:
      * Prints a between expression.
      */
     def printBetweenExpr(expr: SqlExpr.Between): Unit =
-        def hasBrackets(expr: SqlExpr): Boolean =
-            expr match
-                case SqlExpr.Binary(_, op, _) if op.precedence <= SqlBinaryOperator.And.precedence =>
-                    true
-                case SqlExpr.Binary(left, _, right) =>
-                    hasBrackets(left) || hasBrackets(right)
-                case _ =>
-                    false
-
-        printExpr(expr.expr)
+        printOperand(expr.expr, SqlBinaryOperator.Equal.precedence)
         if expr.withNot then sqlBuilder.append(" NOT")
         sqlBuilder.append(" BETWEEN ")
 
-        if hasBrackets(expr.start) then
-            sqlBuilder.append("(")
-            printExpr(expr.start)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.start)
+        printOperand(expr.start, SqlBinaryOperator.Equal.precedence)
 
         sqlBuilder.append(" AND ")
 
-        if hasBrackets(expr.end) then
-            sqlBuilder.append("(")
-            printExpr(expr.end)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.end)
+        printOperand(expr.end, SqlBinaryOperator.Equal.precedence)
 
     /**
      * Prints a like expression.
      */
     def printLikeExpr(expr: SqlExpr.Like): Unit =
-        val precedence = SqlBinaryOperator.Equal.precedence
-
-        def hasBracketsLeft(child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence < precedence || operator.precedence == 0 =>
-                        true
-                case _ =>
-                    false
-
-        def hasBracketsRight(child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence <= precedence =>
-                        true
-                case SqlExpr.In(_, _, _) =>
-                    true
-                case SqlExpr.Like(_, _, _, _) =>
-                    true
-                case SqlExpr.SimilarTo(_, _, _, _) =>
-                    true
-                case SqlExpr.QuantifiedComparisonPredicate(_, _, _, _) =>
-                    true
-                case _ =>
-                    false
-
-        if hasBracketsLeft(expr.expr) then
-            sqlBuilder.append("(")
-            printExpr(expr.expr)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.expr)
+        printOperand(expr.expr, SqlBinaryOperator.Equal.precedence)
 
         sqlBuilder.append(" ")
         if expr.withNot then
@@ -983,12 +919,7 @@ trait StandardSqlPrinter:
         sqlBuilder.append("LIKE")
         sqlBuilder.append(" ")
 
-        if hasBracketsRight(expr.pattern) then
-            sqlBuilder.append("(")
-            printExpr(expr.pattern)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.pattern)
+        printOperand(expr.pattern, SqlBinaryOperator.Equal.precedence)
 
         for e <- expr.escape do
             sqlBuilder.append(" ESCAPE ")
@@ -998,38 +929,7 @@ trait StandardSqlPrinter:
      * Prints a similar-to expression.
      */
     def printSimilarToExpr(expr: SqlExpr.SimilarTo): Unit =
-        val precedence = SqlBinaryOperator.Equal.precedence
-
-        def hasBracketsLeft(child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence < precedence || operator.precedence == 0 =>
-                        true
-                case _ =>
-                    false
-
-        def hasBracketsRight(child: SqlExpr): Boolean =
-            child match
-                case SqlExpr.Binary(_, operator, _)
-                    if operator.precedence <= precedence =>
-                        true
-                case SqlExpr.In(_, _, _) =>
-                    true
-                case SqlExpr.Like(_, _, _, _) =>
-                    true
-                case SqlExpr.SimilarTo(_, _, _, _) =>
-                    true
-                case SqlExpr.QuantifiedComparisonPredicate(_, _, _, _) =>
-                    true
-                case _ =>
-                    false
-
-        if hasBracketsLeft(expr.expr) then
-            sqlBuilder.append("(")
-            printExpr(expr.expr)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.expr)
+        printOperand(expr.expr, SqlBinaryOperator.Equal.precedence)
 
         sqlBuilder.append(" ")
         if expr.withNot then
@@ -1037,12 +937,7 @@ trait StandardSqlPrinter:
         sqlBuilder.append("SIMILAR TO")
         sqlBuilder.append(" ")
 
-        if hasBracketsRight(expr.pattern) then
-            sqlBuilder.append("(")
-            printExpr(expr.pattern)
-            sqlBuilder.append(")")
-        else
-            printExpr(expr.pattern)
+        printOperand(expr.pattern, SqlBinaryOperator.Equal.precedence)
 
         for e <- expr.escape do
             sqlBuilder.append(" ESCAPE ")
@@ -1306,6 +1201,7 @@ trait StandardSqlPrinter:
 
                 for n <- window.existingWindowName do
                     printIdent(n)
+                    if window.partitionBy.nonEmpty || window.orderBy.nonEmpty || window.frame.nonEmpty then
                     sqlBuilder.append(" ")
 
                 if window.partitionBy.nonEmpty then
@@ -1370,7 +1266,7 @@ trait StandardSqlPrinter:
             case SqlQuantifiedComparisonOperator.LessThanEqual =>
                 sqlBuilder.append("<=")
             case SqlQuantifiedComparisonOperator.UnsafeCustom(tokens) =>
-                printList(tokens)(printUnsafeCustomToken)
+                printList(tokens, " ")(printUnsafeCustomToken)
 
     /**
      * Prints a subquery quantifier keyword.
@@ -1386,7 +1282,7 @@ trait StandardSqlPrinter:
      * Prints a quantified comparison predicate expression.
      */
     def printQuantifiedComparisonPredicateExpr(expr: SqlExpr.QuantifiedComparisonPredicate): Unit =
-        printExpr(expr.expr)
+        printOperand(expr.expr, expr.operator.precedence)
         sqlBuilder.append(" ")
         printQuantifiedCompareOperator(expr.operator)
         sqlBuilder.append(" ")
@@ -1405,7 +1301,7 @@ trait StandardSqlPrinter:
      * Prints an identity function expression.
      */
     def printIdentFuncExpr(expr: SqlExpr.IdentFunc): Unit =
-        printIdentWithoutQuote(expr.name)
+        printFuncName(expr.name)
 
     /**
      * Prints a substring function expression.
@@ -2023,7 +1919,7 @@ trait StandardSqlPrinter:
      * Prints a nulls treatment function expression.
      */
     def printNullsTreatmentFuncExpr(expr: SqlExpr.NullsTreatmentFunc): Unit =
-        printIdentWithoutQuote(expr.name)
+        printFuncName(expr.name)
         sqlBuilder.append("(")
         printList(expr.args)(printExpr)
         sqlBuilder.append(")")
@@ -2062,7 +1958,7 @@ trait StandardSqlPrinter:
      * Prints a general function expression.
      */
     def printGeneralFuncExpr(expr: SqlExpr.GeneralFunc): Unit =
-        printIdentWithoutQuote(expr.name)
+        printFuncName(expr.name)
         sqlBuilder.append("(")
 
         expr.quantifier.foreach: q =>
@@ -2167,31 +2063,15 @@ trait StandardSqlPrinter:
                 sqlBuilder.append("FOR SYSTEM_TIME AS OF ")
                 printExpr(expr)
             case SqlTablePeriodForMode.SystemTimeBetween(mode, start, end) =>
-                def hasBrackets(expr: SqlExpr): Boolean =
-                    expr match
-                        case SqlExpr.Binary(_, op, _) if op.precedence <= SqlBinaryOperator.And.precedence =>
-                            true
-                        case SqlExpr.Binary(left, _, right) =>
-                            hasBrackets(left) || hasBrackets(right)
-                        case _ =>
-                            false
-
                 sqlBuilder.append("FOR SYSTEM_TIME BETWEEN ")
 
                 for m <- mode do
                     printTablePeriodBetweenMode(m)
                     sqlBuilder.append(" ")
-                if hasBrackets(start) then
-                    sqlBuilder.append("(")
-                printExpr(start)
-                if hasBrackets(start) then
-                    sqlBuilder.append(")")
+
+                printOperand(start, SqlBinaryOperator.Equal.precedence)
                 sqlBuilder.append(" AND ")
-                if hasBrackets(end) then
-                    sqlBuilder.append("(")
-                printExpr(end)
-                if hasBrackets(end) then
-                    sqlBuilder.append(")")
+                printOperand(end, SqlBinaryOperator.Equal.precedence)
             case SqlTablePeriodForMode.SystemTimeFrom(from, to) =>
                 sqlBuilder.append("FOR SYSTEM_TIME FROM ")
                 printExpr(from)
@@ -2225,7 +2105,7 @@ trait StandardSqlPrinter:
      */
     def printFuncTable(table: SqlTable.Func): Unit =
         if table.withLateral then sqlBuilder.append("LATERAL ")
-        printIdentWithoutQuote(table.name)
+        printFuncName(table.name)
         sqlBuilder.append("(")
         printList(table.args)(printExpr)
         sqlBuilder.append(")")
@@ -2316,6 +2196,7 @@ trait StandardSqlPrinter:
                 printExpr(nested.path)
 
                 for a <- nested.pathAlias do
+                    sqlBuilder.append(" AS ")
                     printIdent(a)
 
                 sqlBuilder.append(" COLUMNS(\n")
@@ -2785,7 +2666,6 @@ trait StandardSqlPrinter:
                 push()
                 printSpace()
                 printTable(table.right)
-                printSpace()
                 pull()
                 sqlBuilder.append("\n")
                 printSpace()
@@ -3257,6 +3137,9 @@ trait StandardSqlPrinter:
      * Prints a quoted identifier with proper escaping.
      */
     def printIdent(ident: String): Unit =
+        if ident.isEmpty then
+            throw new PrintException("An identifier cannot be empty.")
+
         sqlBuilder.append(leftQuote)
 
         for c <- ident do
@@ -3268,12 +3151,20 @@ trait StandardSqlPrinter:
         sqlBuilder.append(rightQuote)
 
     /**
-     * Prints a identifier without quotes.
+     * Prints a function name.
      */
-    def printIdentWithoutQuote(ident: String): Unit =
-        for c <- ident do
-            if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' then
-                sqlBuilder.append(c)
+    private def printFuncName(ident: String): Unit =
+        if ident.isEmpty then
+            throw new PrintException("An identifier cannot be empty.")
+
+        val plainStart = (c: Char) =>
+            (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'
+        val plainRest = (c: Char) => plainStart(c) || (c >= '0' && c <= '9')
+ 
+        if plainStart(ident.head) && ident.tail.forall(plainRest) then
+            sqlBuilder.append(ident)
+        else
+            printIdent(ident)
 
     /**
      * Prints a quoted string literal with single-quote and backslash escaping.

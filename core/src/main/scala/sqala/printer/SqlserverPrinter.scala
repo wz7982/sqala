@@ -17,7 +17,7 @@ class SqlserverPrinter(override val standardEscapeStrings: Boolean) extends Stan
     override def printCteRecursive(): Unit =
         ()
 
-    override def printStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
+    override def printInlinedStringLiteralExpr(expr: SqlExpr.StringLiteral): Unit =
         sqlBuilder.append("N")
         printChars(expr.string)
 

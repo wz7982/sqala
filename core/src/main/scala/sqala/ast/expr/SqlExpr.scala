@@ -9,8 +9,10 @@ import sqala.util.NonEmptyList
 
 /**
  * An expression enum.
+ * 
+ * Each operator carries an integer precedence, where higher values bind tighter.
  */
-enum SqlExpr:
+enum SqlExpr(val precedence: Int = 100):
     /**
      * A qualified or unqualified column reference.
      *
@@ -88,7 +90,7 @@ enum SqlExpr:
      *
      * Renders as `operator(expr)`, e.g. `NOT(expr)`, `+(expr)`, `-(expr)`.
      */
-    case Unary(operator: SqlUnaryOperator, expr: SqlExpr)
+    case Unary(operator: SqlUnaryOperator, expr: SqlExpr) extends SqlExpr(operator.precedence)
 
     /**
      * A binary operation between two expressions.
@@ -97,7 +99,7 @@ enum SqlExpr:
      *
      * Parentheses are added automatically based on operator precedence.
      */
-    case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr)
+    case Binary(left: SqlExpr, operator: SqlBinaryOperator, right: SqlExpr) extends SqlExpr(operator.precedence)
 
     /**
      * An `IS JSON` or `IS NOT JSON` predicate.
@@ -109,35 +111,35 @@ enum SqlExpr:
         nodeType: Option[SqlJsonNodeType],
         uniquenessMode: Option[SqlJsonUniquenessMode],
         withNot: Boolean
-    )
+    ) extends SqlExpr(30)
 
     /**
      * An `IN` predicate.
      * 
      * Renders as `expr [NOT] IN (expr [, ...])|(query)`.
      */
-    case In(expr: SqlExpr, in: SqlInRightOperand, withNot: Boolean)
+    case In(expr: SqlExpr, in: SqlInRightOperand, withNot: Boolean) extends SqlExpr(30)
 
     /**
      * A `BETWEEN` predicate.
      *
      * Renders as `expr [NOT] BETWEEN expr AND expr`.
      */
-    case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, withNot: Boolean)
+    case Between(expr: SqlExpr, start: SqlExpr, end: SqlExpr, withNot: Boolean) extends SqlExpr(30)
 
     /**
      * A `LIKE` pattern-matching predicate.
      *
      * Renders as `expr [NOT] LIKE pattern [ESCAPE expr]`.
      */
-    case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean)
+    case Like(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean) extends SqlExpr(30)
 
     /**
      * A `SIMILAR TO` pattern-matching predicate.
      *
      * Renders as `expr [NOT] SIMILAR TO pattern [ESCAPE expr]`.
      */
-    case SimilarTo(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean)
+    case SimilarTo(expr: SqlExpr, pattern: SqlExpr, escape: Option[SqlExpr], withNot: Boolean) extends SqlExpr(30)
 
     /**
      * A searched `CASE` expression.
@@ -194,7 +196,7 @@ enum SqlExpr:
      *
      * Renders as `EXISTS (query)`.
      */
-    case ExistsPredicate(query: SqlQuery)
+    case ExistsPredicate(query: SqlQuery) extends SqlExpr(30)
 
     /**
      * A quantified comparison predicate.
@@ -206,7 +208,7 @@ enum SqlExpr:
         operator: SqlQuantifiedComparisonOperator,
         quantifier: SqlSubqueryQuantifier,
         query: SqlQuery
-    )
+    ) extends SqlExpr(operator.precedence)
 
     /**
      * A `GROUPING` expression: returns 1 if a column is being aggregated

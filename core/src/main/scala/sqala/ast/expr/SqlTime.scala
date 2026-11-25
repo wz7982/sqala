@@ -52,7 +52,7 @@ enum SqlTimeUnit:
      * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
      * ⚠️ Do not pass user input directly!
      *
-     * Renders as `(tokens(0) tokens(1) ... tokens(n))`.
+     * Renders as `tokens(0) tokens(1) ... tokens(n)`.
      */
     case UnsafeCustom(tokens: List[SqlUnsafeCustomToken])
 

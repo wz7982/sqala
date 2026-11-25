@@ -14,6 +14,6 @@ package sqala.metadata
 final class EnumDecodeException(
     val enumName: String,
     val value: Any
-) extends RuntimeException(
+) extends Exception(
     s"Unknown value '$value' for enum $enumName."
 )

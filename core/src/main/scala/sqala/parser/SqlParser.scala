@@ -584,6 +584,10 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
             parseJsonObjectAggBody()
         else if upper == "JSON_ARRAYAGG" then
             parseJsonArrayAggBody()
+        else if upper == "NTH_VALUE" then
+            parseNthValueBody()
+        else if upper == "LAG" || upper == "LEAD" || upper == "FIRST_VALUE" || upper == "LAST_VALUE" then
+            parseNullsTreatmentBody(name)
         else
             parseGeneralBody(name)
 
@@ -601,8 +605,8 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
                 expectSymbol(".")
                 expectSymbol("*")
                 Some(table)
-        val filter = parseFilterClause()
         expectSymbol(")")
+        val filter = parseFilterClause()
         SqlExpr.CountAsteriskFunc(tableName, filter)
 
     private def parseSubstringBody(): SqlExpr =
@@ -1136,6 +1140,33 @@ final class SqlParser(source: String, tokens: Vector[TokenPosition]):
         SqlExpr.JsonArrayAggFunc(item, orderBy, nullConstructor, output, filter)
 
     // ----------------------------------------------------------------- window
+
+    private def parseNthValueBody(): SqlExpr =
+        val expr = parseOr()
+        expectSymbol(",")
+        val row = parseOr()
+        expectSymbol(")")
+        val fromMode =
+            if consumeKeyword("FROM") then
+                if consumeKeyword("FIRST") then Some(SqlNthValueFromMode.First)
+                else if consumeKeyword("LAST") then Some(SqlNthValueFromMode.Last)
+                else failExpected("FIRST or LAST after FROM")
+            else None
+        SqlExpr.NthValueFunc(expr, row, fromMode, parseWindowNullsMode())
+
+    private def parseNullsTreatmentBody(name: String): SqlExpr =
+        val args = if isSymbol(")") then Nil else parseExprList().toList
+        expectSymbol(")")
+        SqlExpr.NullsTreatmentFunc(name, args, parseWindowNullsMode())
+
+    private def parseWindowNullsMode(): Option[SqlWindowNullsMode] =
+        if consumeKeyword("RESPECT") then
+            expectKeyword("NULLS")
+            Some(SqlWindowNullsMode.Respect)
+        else if consumeKeyword("IGNORE") then
+            expectKeyword("NULLS")
+            Some(SqlWindowNullsMode.Ignore)
+        else None
 
     private def parseWindow(): SqlWindow =
         if isSymbol("(") then parseInlinedWindow()

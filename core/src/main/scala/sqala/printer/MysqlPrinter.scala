@@ -7,7 +7,7 @@ import sqala.ast.order.SqlOrdering.{Asc, Desc}
 import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.ast.token.SqlUnsafeCustomToken
-import sqala.util.NonEmptyList
+import sqala.util.{NonEmptyList, |>}
 
 /**
  * MySQL dialect printer.
@@ -93,6 +93,17 @@ class MysqlPrinter(override val standardEscapeStrings: Boolean) extends Standard
         printList(query.values.toList.map(SqlExpr.Tuple(_))): v =>
             sqlBuilder.append("ROW")
             printExpr(v)
+
+        if query.orderBy.nonEmpty then
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("ORDER BY\n")
+            printList(query.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+
+        for l <- query.limit do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLimit(l)
 
     override def printType(`type`: SqlType): Unit =
         `type` match
