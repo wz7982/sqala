@@ -118,12 +118,9 @@ object SqlInterval:
     given option[T: SqlInterval]: SqlInterval[Option[T]]()
 
 /**
- * Opaque string type representing a JSON value.
+ * A JSON value.
  */
-opaque type Json = String
-
-object Json:
-    def apply(value: String): Json = value
+case class Json(value: String)
 
 /**
  * An interval quantity paired with a time unit.

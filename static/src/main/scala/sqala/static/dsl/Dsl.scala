@@ -182,7 +182,7 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
         tb: AsLateralTable[B, CL + 1],
         j: Join[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
-    ): FromJoin[j.R, c.R, CL + 1] =
+    ): FromJoin[j.R, c.R, CL] =
         given QueryContext[CL + 1] = QueryContext()
         val (leftTable, leftIrTable) = ta.asTable(a)
         val (rightTable, rightIrTable) = tb.asTable(f(leftTable))
@@ -226,9 +226,9 @@ extension [A, CL <: Int](a: A)(using qc: QueryContext[CL], ta: AsTable[A, CL])
      */
     def leftJoinLateral[B](f: QueryContext[CL + 1] ?=> ta.R => B)(using
         tb: AsLateralTable[B, CL + 1],
-        j: Join[ta.R, tb.R],
+        j: LeftJoin[ta.R, tb.R],
         c: CombineKindTuple[ta.OKS, tb.OKS]
-    ): JoinPart[j.R, c.R, CL + 1] =
+    ): JoinPart[j.R, c.R, CL] =
         given QueryContext[CL + 1] = QueryContext()
         val (leftTable, leftIrTable) = ta.asTable(a)
         val (rightTable, rightIrTable) = tb.asTable(f(leftTable))

@@ -177,7 +177,7 @@ object TableSelectMacro:
         import q.reflect.*
 
         val fieldName = name.valueOrAbort
-        val index = TableMacroImpl.tableMetaDataMacro[T].fields.toList.indexOf(fieldName)
+        val index = TypeTree.of[T].symbol.caseFields.map(_.name).indexOf(fieldName)
 
         if index < 0 then
             report.errorAndAbort(s"Unknown field `$fieldName`.")

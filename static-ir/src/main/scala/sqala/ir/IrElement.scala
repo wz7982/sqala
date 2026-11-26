@@ -7,6 +7,14 @@ import sqala.ast.window.{SqlWindowFrameExcludeMode, SqlWindowFrameUnit}
 import sqala.util.NonEmptyList
 
 /**
+ * ⚠️ A unsafe custom token that can be used in queries.
+ * ⚠️ Do not pass user input directly!
+ */
+enum IrUnsafeToken:
+    case Keyword(keyword: String)
+    case Expr(expr: IrExpr)
+
+/**
  * The right-hand operand of an `IN` predicate.
  */
 enum IrInRightOperand:

@@ -6,6 +6,7 @@ import sqala.ast.limit.{SqlFetch, SqlLimit}
 import sqala.ast.order.SqlOrderingItem
 import sqala.ast.statement.*
 import sqala.ast.table.*
+import sqala.ast.token.SqlUnsafeCustomToken
 import sqala.ast.window.{SqlWindow, SqlWindowFrame, SqlWindowFrameBound}
 import sqala.util.NonEmptyList
 
@@ -500,6 +501,14 @@ class ToAst:
                 )
             case IrExpr.MatchPhase(phase, expr) =>
                 SqlExpr.MatchPhase(phase, exprToAst(expr))
+            case IrExpr.UnsafeCustom(tokens) =>
+                val tokensAst = 
+                    tokens.map:
+                        case IrUnsafeToken.Keyword(keyword) =>
+                            SqlUnsafeCustomToken.Keyword(keyword)
+                        case IrUnsafeToken.Expr(expr) =>
+                            SqlUnsafeCustomToken.Expr(exprToAst(expr))
+                SqlExpr.UnsafeCustom(tokensAst)
 
     private def caseBranchToAst(branch: IrCaseBranch): SqlCaseBranch =
         SqlCaseBranch(exprToAst(branch.when), exprToAst(branch.`then`))

@@ -85,36 +85,9 @@ object CanCompare:
         CanCompare[AT, BT]
     ): CanCompare[AH *: AT, BH *: BT]()
 
-    given tupleAndOptionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        CanCompare[AH, BH],
-        CanCompare[AT, BT]
-    ): CanCompare[AH *: AT, Option[BH *: BT]]()
-
-    given optionTupleAndTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        CanCompare[AH, BH],
-        CanCompare[AT, BT]
-    ): CanCompare[Option[AH *: AT], BH *: BT]()
-
-    given optionTuple[AH, AT <: Tuple, BH, BT <: Tuple](using
-        CanCompare[AH, BH],
-        CanCompare[AT, BT]
-    ): CanCompare[Option[AH *: AT], Option[BH *: BT]]()
-
     given tuple1[AH, BH](using
         CanCompare[AH, BH]
     ): CanCompare[AH *: EmptyTuple, BH *: EmptyTuple]()
-
-    given tuple1AndOptionTuple1[AH, BH](using
-        CanCompare[AH, BH]
-    ): CanCompare[AH *: EmptyTuple, Option[BH *: EmptyTuple]]()
-
-    given optionTuple1AndTuple1[AH, BH](using
-        CanCompare[AH, BH]
-    ): CanCompare[Option[AH *: EmptyTuple], BH *: EmptyTuple]()
-
-    given optionTuple1AndOptionTuple1[AH, BH](using
-        CanCompare[AH, BH]
-    ): CanCompare[Option[AH *: EmptyTuple], Option[BH *: EmptyTuple]]()
 
     inline given fallback[A, B](using NotGiven[CanCompare[A, B]]): CanCompare[A, B] =
         ${ errorMacro[A, B] }
@@ -812,6 +785,8 @@ object Union:
                 )
 
     given tuple[AH, AT <: Tuple, BH, BT <: Tuple, CL <: Int](using
+        an: NotGiven[AT =:= EmptyTuple],
+        bn: NotGiven[BT =:= EmptyTuple],
         h: Union[AH, BH, CL],
         t: Union[AT, BT, CL]
     ): Aux[AH *: AT, BH *: BT, CL, h.R *: WrapToTuple[t.R]] =

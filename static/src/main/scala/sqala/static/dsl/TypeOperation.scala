@@ -81,6 +81,7 @@ type MapFieldKind[X, K[_ <: Int] <: ExprKind, L <: Int] =
  */
 type IsOption[T] <: Boolean =
     T match
+        case x *: xs => IsOption[x] || IsOption[xs]
         case Option[t] => true
         case _ => false
 

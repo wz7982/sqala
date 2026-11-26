@@ -92,3 +92,4 @@ enum IrExpr:
         filter: Option[IrExpr]
     )
     case MatchPhase(phase: SqlMatchPhase, expr: IrExpr)
+    case UnsafeCustom(tokens: List[IrUnsafeToken])
