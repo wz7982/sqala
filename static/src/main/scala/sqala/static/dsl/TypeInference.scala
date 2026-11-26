@@ -10,7 +10,7 @@ import scala.NamedTuple.NamedTuple
 import scala.compiletime.error
 import scala.compiletime.ops.boolean.||
 import scala.deriving.Mirror
-import scala.quoted.{Quotes, Type}
+import scala.quoted.{Quotes, Type, Expr as ScalaExpr}
 import scala.util.NotGiven
 
 /**
@@ -513,14 +513,14 @@ object CoalesceReturn:
         type R = O
 
     given nonEmpty[A, B](using
-        n: NotGiven[B <:< Option[?]],
+        p: NotGiven[B <:< Option[?]],
         r: Return[A, B]
     ): Aux[A, B, Unwrap[r.R, Option]] =
         new CoalesceReturn[A, B]:
             type R = Unwrap[r.R, Option]
 
     given empty[A, B](using
-        n: B <:< Option[?],
+        p: B <:< Option[?],
         r: Return[A, B]
     ): Aux[A, B, r.R] =
         new CoalesceReturn[A, B]:
@@ -536,15 +536,21 @@ object ValidateArgType:
     given validate[F[_], T, N <: String](using F[T]): ValidateArgType[F, T, N]()
 
     inline given fallback[F[_], T, N <: String](using NotGiven[F[T]]): ValidateArgType[F, T, N] =
-        ${ errorMacro[T, N] }
+        ${ errorMacro[F, T, N] }
 
-    def errorMacro[T: Type, N <: String : Type](using q: Quotes): Nothing =
+    def errorMacro[F[_]: Type, T: Type, N <: String : Type](using q: Quotes): ScalaExpr[ValidateArgType[F, T, N]] =
         import q.reflect.*
 
         val typeName = Type.show[T]
-        val needTypeName = Type.show[N].replace("\"", "")
 
-        report.errorAndAbort(s"The arguments type should be $needTypeName, but got $typeName.")
+        if typeName.contains("Nothing") then
+            '{
+                new ValidateArgType[F, T, N] {}
+            }
+        else
+            val needTypeName = Type.show[N].replace("\"", "")
+
+            report.errorAndAbort(s"The arguments type should be $needTypeName, but got $typeName.")
 
 /**
  * Determines whether a type can be used as a `rows` or `groups`
