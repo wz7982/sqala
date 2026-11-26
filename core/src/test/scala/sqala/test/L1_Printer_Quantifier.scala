@@ -90,8 +90,45 @@ class L1_Printer_Quantifier extends munit.FunSuite:
 
     test("unsafe custom token keyword is emitted verbatim"):
         assertCoverage[SqlUnsafeCustomToken]("Keyword", "Expr")
-        assertEquals(createSql(_.printUnsafeCustomToken(SqlUnsafeCustomToken.Keyword("FOO"))), "FOO")
-        assertEquals(createSql(_.printUnsafeCustomToken(SqlUnsafeCustomToken.Keyword("a'b"))), "a'b")
+        assertEquals(createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Keyword("FOO")))), "FOO")
+        assertEquals(createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Keyword("a'b")))), "a'b")
 
     test("unsafe custom token expression delegates to printExpr"):
-        assertEquals(createSql(_.printUnsafeCustomToken(SqlUnsafeCustomToken.Expr(col("a")))), """"a"""")
+        assertEquals(createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Expr(col("a"))))), """"a"""")
+
+    test("unsafe custom tokens keep word boundaries apart"):
+        assertEquals(
+            createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Keyword("NOT"), SqlUnsafeCustomToken.Keyword("NULL")))),
+            "NOT NULL"
+        )
+        assertEquals(
+            createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Keyword("DECIMAL(10,"), SqlUnsafeCustomToken.Keyword("2)")))),
+            "DECIMAL(10, 2)"
+        )
+
+    test("unsafe custom tokens glue punctuation to its operand"):
+        assertEquals(
+            createSql(_.printUnsafeCustomTokens(List(
+                SqlUnsafeCustomToken.Keyword("MATCH("),
+                SqlUnsafeCustomToken.Expr(col("a")),
+                SqlUnsafeCustomToken.Keyword(")"),
+                SqlUnsafeCustomToken.Keyword("AGAINST("),
+                SqlUnsafeCustomToken.Expr(SqlExpr.StringLiteral("x")),
+                SqlUnsafeCustomToken.Keyword(")")
+            ))),
+            """MATCH("a") AGAINST('x')"""
+        )
+        assertEquals(
+            createSql(_.printUnsafeCustomTokens(List(
+                SqlUnsafeCustomToken.Keyword("f("),
+                SqlUnsafeCustomToken.Expr(col("a")),
+                SqlUnsafeCustomToken.Keyword(","),
+                SqlUnsafeCustomToken.Expr(col("b")),
+                SqlUnsafeCustomToken.Keyword(")")
+            ))),
+            """f("a", "b")"""
+        )
+        assertEquals(
+            createSql(_.printUnsafeCustomTokens(List(SqlUnsafeCustomToken.Keyword("f("), SqlUnsafeCustomToken.Keyword(")")))),
+            "f()"
+        )

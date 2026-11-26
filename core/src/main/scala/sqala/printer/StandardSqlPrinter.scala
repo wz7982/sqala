@@ -232,7 +232,7 @@ trait StandardSqlPrinter:
             case SqlQuantifier.Distinct =>
                 sqlBuilder.append("DISTINCT")
             case SqlQuantifier.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a `SELECT` query with all its clause.
@@ -703,7 +703,7 @@ trait StandardSqlPrinter:
             case SqlTimeUnit.Second =>
                 sqlBuilder.append("SECOND")
             case SqlTimeUnit.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints an interval field specification.
@@ -760,7 +760,7 @@ trait StandardSqlPrinter:
             case SqlUnaryOperator.Not =>
                 sqlBuilder.append("NOT")
             case SqlUnaryOperator.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a unary expression.
@@ -814,7 +814,7 @@ trait StandardSqlPrinter:
             case SqlBinaryOperator.Or =>
                 sqlBuilder.append("OR")
             case SqlBinaryOperator.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a binary expression.
@@ -1092,7 +1092,7 @@ trait StandardSqlPrinter:
                 printType(arrayType)
                 sqlBuilder.append("[]")
             case SqlType.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a encoding keyword.
@@ -1106,7 +1106,7 @@ trait StandardSqlPrinter:
             case SqlEncoding.Utf32 =>
                 sqlBuilder.append("UTF32")
             case SqlEncoding.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a window function expression.
@@ -1266,7 +1266,7 @@ trait StandardSqlPrinter:
             case SqlQuantifiedComparisonOperator.LessThanEqual =>
                 sqlBuilder.append("<=")
             case SqlQuantifiedComparisonOperator.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a subquery quantifier keyword.
@@ -2004,7 +2004,7 @@ trait StandardSqlPrinter:
      */
     def printUnsafeCustomExpr(expr: SqlExpr.UnsafeCustom): Unit =
         sqlBuilder.append("(")
-        printList(expr.tokens, " ")(printUnsafeCustomToken)
+        printUnsafeCustomTokens(expr.tokens)
         sqlBuilder.append(")")
 
     /**
@@ -2633,7 +2633,7 @@ trait StandardSqlPrinter:
             case SqlJoinType.Cross =>
                 sqlBuilder.append("CROSS JOIN")
             case SqlJoinType.UnsafeCustom(tokens) =>
-                printList(tokens, " ")(printUnsafeCustomToken)
+                printUnsafeCustomTokens(tokens)
 
     /**
      * Prints a join condition.
@@ -3121,6 +3121,24 @@ trait StandardSqlPrinter:
         printList(pattern.define.toList, ",\n")(printRowPatternDefineItem |> printWithSpace)
 
         pull()
+
+    /**
+     * Prints unsafe custom tokens, gluing punctuation to its operand:
+     * a space is kept only between two word boundaries.
+     */
+    def printUnsafeCustomTokens(tokens: List[SqlUnsafeCustomToken]): Unit =
+        var pendingSpace = false
+        var openEnded = false
+        for token <- tokens do
+            val (closes, opens) = token match
+                case SqlUnsafeCustomToken.Keyword(keyword) =>
+                    (keyword.startsWith(")") || keyword.startsWith(","), keyword.endsWith("("))
+                case SqlUnsafeCustomToken.Expr(_) => (false, false)
+            if pendingSpace && !openEnded && !closes then
+                sqlBuilder.append(" ")
+            printUnsafeCustomToken(token)
+            openEnded = opens
+            pendingSpace = true
 
     /**
      * Prints a unsafe custom token.

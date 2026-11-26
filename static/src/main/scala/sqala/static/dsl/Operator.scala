@@ -41,26 +41,6 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         )
 
     /**
-     * Type-safe equality comparison with `None`. Typically used in `filter`, `on`, and `having`
-     * clause. Maps to SQL `IS NULL`.
-     *
-     * {{{
-     * from(User).filter(u => u.id === None)
-     * }}}
-     */
-    @targetName("equal")
-    def ===(that: None.type)(using
-        kt: KindToTuple[aa.K]
-    ): Expr[Boolean, Composite[kt.R]] =
-        Expr(
-            IrExpr.Binary(
-                aa.asExpr(self).expr,
-                SqlBinaryOperator.Is(false),
-                IrExpr.Native(SqlExpr.NullLiteral)
-            )
-        )
-
-    /**
      * Type-safe null check. Typically used in `filter`, `on`, and `having`
      * clause. Maps to SQL `IS NULL`.
      *
@@ -107,26 +87,6 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     ): Expr[r.R, c.R] =
         Expr(
             ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.NotEqual, that)
-        )
-
-    /**
-     * Type-safe inequality comparison with `None`. Typically used in `filter`, `on`, and `having`
-     * clause. Maps to SQL `IS NOT NULL`.
-     *
-     * {{{
-     * from(User).filter(u => u.id <> None)
-     * }}}
-     */
-    @targetName("notEqual")
-    def <>(that: None.type)(using
-        kt: KindToTuple[aa.K]
-    ): Expr[Boolean, Composite[kt.R]] =
-        Expr(
-            IrExpr.Binary(
-                aa.asExpr(self).expr,
-                SqlBinaryOperator.Is(true),
-                IrExpr.Native(SqlExpr.NullLiteral)
-            )
         )
 
     /**
@@ -346,7 +306,8 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
         as: AsExpr[S, CL],
         ae: AsExpr[E, CL],
         rs: Relation[aa.R, as.R],
-        r: Relation[rs.R, ae.R],
+        re: Relation[aa.R, ae.R],
+        r: Relation[rs.R, re.R],
         cs: CombineKind[aa.K, as.K],
         c: CombineKind[cs.R, ae.K]
     ): Expr[r.R, c.R] =
@@ -796,7 +757,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
     def length(using
         s: ValidateArgType[SqlString, aa.R, "string"],
         kt: KindToTuple[aa.K]
-    ): Expr[aa.R, Composite[kt.R]] =
+    ): Expr[Option[Int], Composite[kt.R]] =
         Expr(
             IrExpr.GeneralFunc(
                 None,

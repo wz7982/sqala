@@ -80,7 +80,7 @@ object AsMultidimensionalGrouping:
             NonEmptyList(h.asIrGroupingItem(x.head), t.asIrGroupingItems(x.tail))
 
     given tuple1[H](using
-        h: AsMultidimensionalGrouping[H]
+        h: AsGroupingItem[H]
     ): AsMultidimensionalGrouping[H *: EmptyTuple] with
         def asIrGroupingItems(x: H *: EmptyTuple): NonEmptyList[IrGroupingItem] =
-            h.asIrGroupingItems(x.head)
+            NonEmptyList(h.asIrGroupingItem(x.head), Nil)

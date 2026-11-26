@@ -14,7 +14,7 @@ import scala.deriving.Mirror
 /**
  * A column name and update expression pair produced by `:=`.
  */
-final class UpdatePair(private[sqala] val columnName: String, private[sqala] val updateExpr: IrExpr)
+final class UpdatePair[KS <: Tuple](private[sqala] val columnName: String, private[sqala] val updateExpr: IrExpr)
 
 /**
  * Tracks the state of an `UPDATE` builder, restricting which
@@ -45,7 +45,7 @@ case class UpdateTree(
      * Returns a copy with the given condition added to the `WHERE` clause
      * via `AND`.
      */
-    def addWhere(condition: IrExpr): UpdateTree =
+    private[sqala] def addWhere(condition: IrExpr): UpdateTree =
         copy(where = where.map(IrExpr.Binary(_, SqlBinaryOperator.And, condition)).orElse(Some(condition)))
 
 
@@ -65,8 +65,9 @@ final class Update[T, S <: UpdateState](
      * update[User].set(u => u.name := "Alice")
      * }}}
      */
-    def set(f: UpdateSetContext ?=> QueryContext[1] ?=> Table[T, Column, 1] => UpdatePair)(using
-        S =:= UpdateTable
+    def set[KS <: Tuple](f: UpdateSetContext ?=> QueryContext[1] ?=> Table[T, Column, 1] => UpdatePair[KS])(using
+        S =:= UpdateTable,
+        CanInSimpleClause[KS, "set"]
     ): Update[T, UpdateTable] =
         given UpdateSetContext = new UpdateSetContext
         val pair = f(table)
@@ -87,6 +88,7 @@ final class Update[T, S <: UpdateState](
      * }}}
      */
     def where[F](f: QueryContext[1] ?=> Table[T, Column, 1] => F)(using
+        p: S =:= UpdateTable,
         a: AsExpr[F, 1],
         ba: ValidateArgType[SqlBoolean, a.R, "boolean"],
         kt: KindToTuple[a.K],
@@ -145,6 +147,7 @@ object Update:
         p: Mirror.ProductOf[T]
     ): Update[T, UpdateEntity] =
         val metaData = TableMacro.tableMetaData[T]
+        require(metaData.primaryKeyFields.nonEmpty, "Update table must have at least one primary key column.")
         val irTable: IrTable.Ident =
             IrTable.Ident(
                 metaData.tableName,
@@ -163,14 +166,14 @@ object Update:
             .filterNot((f, _, _) => metaData.primaryKeyFields.contains(f))
             .filter: (_, _, expr) =>
                 (expr, skipNone) match
-                    case (SqlExpr.Cast(SqlExpr.NullLiteral, _), true) => false
+                    case (IrExpr.Native(SqlExpr.Cast(SqlExpr.NullLiteral, _)), true) => false
                     case _ => true
             .map: (_, column, expr) =>
                 IrUpdateSetPair(column, expr)
         val conditions = updateMetaData
             .filter((f, _, _) => metaData.primaryKeyFields.contains(f))
             .map: (_, column, expr) =>
-                IrExpr.Binary(IrExpr.Column(None, column), SqlBinaryOperator.Equal, expr)
+                IrExpr.Binary(IrExpr.Column(Some(table.__table__), column), SqlBinaryOperator.Equal, expr)
         val condition =
             if conditions.isEmpty then None
             else Some(conditions.reduce((x, y) => IrExpr.Binary(x, SqlBinaryOperator.And, y)))

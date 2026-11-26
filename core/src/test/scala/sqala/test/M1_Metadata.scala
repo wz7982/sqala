@@ -196,8 +196,8 @@ class M1_Metadata extends munit.FunSuite:
         assert(ex.enumName.contains("IntState"), ex.enumName)
         assert(ex.getMessage.contains("9"), ex.getMessage)
 
-    test("Json is an opaque string"):
-        assertEquals(Json("{}").toString, "{}")
+    test("Json exposes its raw text"):
+        assertEquals(Json("{}").value, "{}")
 
     test("TableMetaData keeps its fields"):
         val m = TableMetaData("t", List("id"), Some("id"), NonEmptyList("id", List("name")), NonEmptyList("id", List("name")))

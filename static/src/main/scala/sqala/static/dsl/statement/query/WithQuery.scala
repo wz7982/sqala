@@ -32,7 +32,7 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      *
      * {{{
      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId === None)
+     *     .startWith(c => c.parentId.isEmpty)
      * }}}
      */
     def startWith[F](f: QueryContext[L] ?=> ConnectByContext ?=> T => F)(using
@@ -63,7 +63,7 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
     def maxDepth(n: Int): ConnectBy[T, C, OKS, L] =
         val cond = IrExpr.Binary(
             IrExpr.Column(Some(stepCte), seedTree.select.toList.last.alias),
-            SqlBinaryOperator.LessThan,
+            SqlBinaryOperator.LessThanEqual,
             IrExpr.Native(SqlExpr.NumberLiteral(n))
         )
         ConnectBy(
@@ -71,8 +71,8 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
             cteRow,
             stepCte,
             finalCte,
-            stepTree.addWhere(cond),
-            stepTree
+            seedTree,
+            stepTree.addWhere(cond)
         )
 
     /**
@@ -93,7 +93,7 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      * from(Comment)
      *     .filter(c => c.postId === postId)
      *     .connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId === None)
+     *     .startWith(c => c.parentId.isEmpty)
      *     .preMap(
      *         c => (id = c.id, content = c.content, parentId = c.parentId)
      *     )(
@@ -110,7 +110,7 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      * from(Comment)
      *     .filter(c => c.postId === postId)
      *     .connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId === None)
+     *     .startWith(c => c.parentId.isEmpty)
      *     .preMap(
      *         c => (id = c.id, content = c.content, rootId = c.id)
      *     )(
@@ -169,7 +169,7 @@ final class ConnectBy[T, C, OKS <: Tuple, L <: Int](
      *
      * {{{
      * from(Comment).connectBy((c, prior) => c.parentId === prior.id)
-     *     .startWith(c => c.parentId === None)
+     *     .startWith(c => c.parentId.isEmpty)
      *     .map((c, level) => (id = c.id, content = c.content, level = level))
      * }}}
      */

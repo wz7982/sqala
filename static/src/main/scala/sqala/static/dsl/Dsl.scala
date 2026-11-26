@@ -17,7 +17,7 @@ import scala.compiletime.ops.int.+
  * Starts an `INSERT` statement builder.
  *
  * {{{
- * insert[User](u => (u.id, u.name)).values((1, "Alice"), (2, "Bob"))
+ * insert[User](u => (u.id, u.name)).values(List((1, "Alice"), (2, "Bob")))
  * }}}
  */
 inline def insert[T <: Product]: Insert[T, InsertTable] =
@@ -43,7 +43,7 @@ inline def update[T <: Product]: Update[T, UpdateTable] =
 inline def delete[T <: Product]: Delete[T] =
     Delete.apply[T]
 
-extension [T](expr: ColumnExpr[T, 1])
+extension [T](expr: ColumnExpr[T, 1])(using uc: UpdateSetContext)
     /**
      * Assigns a value to a column in an `UPDATE` statement.
      *
@@ -55,8 +55,8 @@ extension [T](expr: ColumnExpr[T, 1])
     def :=[R](updateExpr: R)(using
         a: AsExpr[R, 1],
         c: CanCompare[T, a.R],
-        uc: UpdateSetContext
-    ): UpdatePair =
+        kt: KindToTuple[a.K]
+    ): UpdatePair[kt.R] =
         UpdatePair(expr.expr.name, a.asExpr(updateExpr).expr)
 
 /**
@@ -925,8 +925,8 @@ extension (s: StringContext)
  * Used to wrap non-standard functions that aren't built into sqala.
  *
  * {{{
- * def left(x: Expr[String, ?], n: Int) =
- *     createFunc[Option[String]]("LEFT", x :: n.asExpr :: Nil)
+ * def left[L <: Int](x: Expr[String, ?], n: Int)(using QueryContext[L]) =
+ *     createFunc[Option[String], L]("LEFT", x :: n.asExpr :: Nil)
  *
  * from(Post).map(p => left(p.title, 10))
  * }}}
@@ -948,9 +948,9 @@ def createFunc[T, CL <: Int](name: String, args: List[Expr[?, ?]])(using QueryCo
  * For non-standard operators that aren't built into sqala.
  *
  * {{{
- * extension (x: Expr[Json, ?])
+ * extension [L <: Int](x: Expr[Json, ?])(using QueryContext[L])
  *     def ->>(k: String) =
- *         createBinaryExpr[Boolean](x, "->>", k.asExpr)
+ *         createBinaryExpr[Boolean, L](x, "->>", k.asExpr)
  *
  * from(Post).map(p => p.data ->> "key")
  * }}}

@@ -970,7 +970,7 @@ def floor[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K]
-): Expr[Option[Long], Composite[kt.R]] =
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         IrExpr.GeneralFunc(
             None,
@@ -994,7 +994,7 @@ def ceil[A, CL <: Int](x: A)(using
     a: AsExpr[A, CL],
     n: ValidateArgType[SqlNumber, a.R, "numeric"],
     kt: KindToTuple[a.K]
-): Expr[Option[Long], Composite[kt.R]] =
+): Expr[Option[BigDecimal], Composite[kt.R]] =
     Expr(
         IrExpr.GeneralFunc(
             None,

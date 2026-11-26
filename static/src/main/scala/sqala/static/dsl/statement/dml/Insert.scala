@@ -89,7 +89,7 @@ object AsInsertColumns:
  */
 final class Insert[T, S <: InsertState](
     private[sqala] val tree: InsertTree
-):
+)(using private[sqala] val qc: QueryContext[1]):
     /**
      * Selects columns to insert.
      *
@@ -97,7 +97,9 @@ final class Insert[T, S <: InsertState](
      * insert[User](u => (u.id, u.name))
      * }}}
      */
-    inline def apply[I](f: Table[T, Column, 1] => I)(using a: AsInsertColumns[I]): Insert[a.R, InsertTable] =
+    inline def apply[I](f: QueryContext[1] ?=> Table[T, Column, 1] => I)(using 
+        a: AsInsertColumns[I]
+    ): Insert[a.R, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val metaData = TableMacro.tableMetaData[T]
         val irTable: IrTable.Ident = IrTable.Ident(tableName, Nil)
@@ -115,8 +117,8 @@ final class Insert[T, S <: InsertState](
      * }}}
      */
     def values(rows: Seq[T])(using
-        a: AsSqlExprs[T],
-        p: S =:= InsertTable
+        p: S =:= InsertTable,
+        a: AsSqlExprs[T]
     ): Insert[T, InsertValues] =
         val insertValues = rows.toList.map: row =>
             a.asSqlExprs(row, false).map(e => IrExpr.Native(e))
@@ -131,23 +133,23 @@ final class Insert[T, S <: InsertState](
      * }}}
      */
     inline def values(row: T)(using
-        AsSqlExprs[T],
-        S =:= InsertTable
+        S =:= InsertTable,
+        AsSqlExprs[T]
     ): Insert[T, InsertValues] =
         values(row :: Nil)
 
     /**
       * Provides a query for the `INSERT`. Maps to
-      * `(SELECT ...)`
+      * `SELECT ...`
       *
       * {{{
      * insert[User](u => (u.id, u.name)).query(from(User).filter(u => u.id == 1).map(u => (u.id, u.name)))
      * }}}
       */
-    def query[QT](query: Query[QT, ?, ?, ?])(using
+    def query[QT](query: QueryContext[1] ?=> Query[QT, ?, ?, ?])(using
+        p: S =:= InsertTable,
         r: Result[QT],
-        rs: r.R =:= T,
-        p: S =:= InsertTable
+        rs: r.R =:= T
     ): Insert[T, InsertQuery] =
         new Insert(tree.copy(insert = query.tree))
 
@@ -186,6 +188,8 @@ final class Insert[T, S <: InsertState](
         statementToString(ToAst().toAst(toSqlStatement), dialect, standardEscapeStrings)
 
 object Insert:
+    given qc: QueryContext[1] = QueryContext()
+
     inline def apply[T <: Product]: Insert[T, InsertTable] =
         val tableName = TableMacro.tableName[T]
         val tree =

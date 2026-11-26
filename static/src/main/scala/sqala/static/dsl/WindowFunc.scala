@@ -72,7 +72,7 @@ def percentRank[CL <: Int]()(using QueryContext[CL]): WindowPart[BigDecimal, Emp
  * from(Post).map(p => cumeDist().over(partitionBy(p.channelId).sortBy(p.viewCount.desc)))
  * }}}
  */
-def cumeDist[CL <: Int]()(using QueryContext[CL]): WindowPart[Long, EmptyTuple] =
+def cumeDist[CL <: Int]()(using QueryContext[CL]): WindowPart[BigDecimal, EmptyTuple] =
     WindowPart(
         IrExpr.GeneralFunc(
             None,

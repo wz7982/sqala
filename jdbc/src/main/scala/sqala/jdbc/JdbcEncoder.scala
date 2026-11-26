@@ -76,7 +76,7 @@ object JdbcEncoder:
 
     given json: JdbcEncoder[Json] with
         inline def encode(stmt: PreparedStatement, index: Int, value: Json): Unit =
-            stmt.setString(index, value.toString)
+            stmt.setString(index, value.value)
 
     given array[T](using e: JdbcArrayItemEncoder[T]): JdbcEncoder[Array[T]] with
         inline def encode(stmt: PreparedStatement, index: Int, value: Array[T]): Unit =

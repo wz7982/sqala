@@ -85,7 +85,7 @@ object AsExpr:
             def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
                 NonEmptyList(Expr(IrExpr.Subquery(x.tree)), Nil)
 
-    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, WindowPart[T, KS], Window[KS]] =
+    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, T, Window[KS]] =
         error("Window function requires an over clause.")
 
     given tuple[H, T <: Tuple, CL <: Int](using

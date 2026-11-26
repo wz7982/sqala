@@ -165,9 +165,9 @@ object AsSqlExpr:
 
         def asSqlExpr(x: Json, inlined: Boolean): SqlExpr =
             if inlined then
-                SqlExpr.Cast(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(x.toString)), SqlType.Json)
+                SqlExpr.Cast(SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(x.value)), SqlType.Json)
             else
-                SqlExpr.Cast(SqlExpr.StringLiteral(x.toString), SqlType.Json)
+                SqlExpr.Cast(SqlExpr.StringLiteral(x.value), SqlType.Json)
 
     given interval: AsSqlExpr[Interval] with
         def sqlType: SqlType =

@@ -12,12 +12,16 @@ object RawMacro:
     /**
       * Converts a sequence of values to a list of `SqlExpr` using the
       */
-    inline def asIrExprs[CL <: Int](inline expr: Seq[Any]): List[IrExpr] =
-        ${ RawMacroImpl.asIrExprs('expr) }
+    inline def asIrExprs[CL <: Int](inline expr: Seq[Any])(using qc: QueryContext[CL]): List[IrExpr] =
+        ${ RawMacroImpl.asIrExprs('expr, 'qc) }
 
 object RawMacroImpl:
-    def asIrExprs[CL <: Int : Type](expr: Expr[Seq[Any]])(using q: Quotes): Expr[List[IrExpr]] =
+    def asIrExprs[CL <: Int : Type](expr: Expr[Seq[Any]], qc: Expr[QueryContext[CL]])(using q: Quotes): Expr[List[IrExpr]] =
         import q.reflect.*
+
+        // Referencing the evidence pins CL to its singleton level; without it
+        // Type[CL] arrives widened to Int and every scope check fails.
+        val _ = qc
 
         def removeInlined(term: Term): Term =
             term match
@@ -34,7 +38,12 @@ object RawMacroImpl:
                 val tpe = term.tpe.widen.asType
                 tpe match
                     case '[t] =>
-                        val instance = Expr.summon[AsExpr[t, CL]].get
+                        val instanceOption = Expr.summon[AsExpr[t, CL]]
+                        val instance =
+                            if instanceOption.isDefined then
+                                instanceOption.get
+                            else
+                                report.errorAndAbort(s"Cannot use ${Type.show[t]} as a rawExpr argument.")
                         '{ $instance.asErasedExpr(${ term.asExprOf[t] }).expr }
 
         Expr.ofList(sqlExprs)
