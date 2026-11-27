@@ -1,6 +1,6 @@
 import xerial.sbt.Sonatype._
 
-ThisBuild / organization := "com.wz7982"
+ThisBuild / organization := "cn.sqala"
 ThisBuild / version := "0.1.0"
 ThisBuild / scalaVersion := "2.12.20"
 
@@ -11,7 +11,7 @@ lazy val root = (project in file("."))
         organizationName := "sqala",
         organizationHomepage := Some(url("http://wz7982.com/")),
         sonatypeCredentialHost := sonatypeCentralHost,
-        sonatypeProfileName := "com.wz7982",
+        sonatypeProfileName := "cn.sqala",
         publishTo := sonatypePublishToBundle.value,
         publishMavenStyle := true,
         licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),

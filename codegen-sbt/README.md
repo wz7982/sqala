@@ -18,7 +18,7 @@ Then in the project that should generate entities:
 
 ```scala
 // project/plugins.sbt
-addSbtPlugin("com.wz7982" % "sqala-sbt-codegen" % "0.1.0")
+addSbtPlugin("cn.sqala" % "sqala-sbt-codegen" % "0.1.0")
 ```
 
 ```scala
@@ -228,7 +228,7 @@ Then use it from another project:
 
 ```scala
 // project/plugins.sbt
-addSbtPlugin("com.wz7982" % "sqala-sbt-codegen" % "0.1.0")
+addSbtPlugin("cn.sqala" % "sqala-sbt-codegen" % "0.1.0")
 ```
 
 ### Maven Central
@@ -250,13 +250,13 @@ sbt sonatypeBundleRelease
 The artifact is published as:
 
 ```text
-com.wz7982:sqala-sbt-codegen_2.12_1.0:<version>
+cn.sqala:sqala-sbt-codegen_2.12_1.0:<version>
 ```
 
 Consumers still reference it through `addSbtPlugin` without the suffix:
 
 ```scala
-addSbtPlugin("com.wz7982" % "sqala-sbt-codegen" % "<version>")
+addSbtPlugin("cn.sqala" % "sqala-sbt-codegen" % "<version>")
 ```
 
 If you publish to a private repository instead, override `publishTo` and add

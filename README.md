@@ -73,7 +73,7 @@ sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala
             .where(column("a") === value(1))
     ```
 
-6. **SQL 解析器**：`dynamic` 模块内置手写的递归下降 SQL 解析器，不依赖任何第三方解析器库。
+6. **SQL 解析器**：`core` 模块内置手写的递归下降 SQL 解析器，不依赖任何第三方解析器库，动态查询 DSL 通过`unsafeExpr`等方法基于它解析SQL片段。
 
 7. **批量解码性能突出**：使用Scala3的`inline`能力在编译期生成解码代码。在10,000行批量查询中，解码吞吐接近手写JDBC（约94%），通常高于MyBatis、Hibernate、jOOQ等基于反射/代理映射的框架。
 

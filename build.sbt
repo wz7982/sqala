@@ -3,9 +3,9 @@ import xerial.sbt.Sonatype.*
 lazy val commonSettings = Seq(
     scalaVersion := "3.9.0",
 
-    version := "0.8.6",
+    version := "0.9.0",
 
-    organization := "com.wz7982",
+    organization := "cn.sqala",
 
     organizationName := "sqala",
 
@@ -17,7 +17,7 @@ lazy val commonSettings = Seq(
 
     publishTo := sonatypePublishToBundle.value,
 
-    sonatypeProfileName := "com.wz7982",
+    sonatypeProfileName := "cn.sqala",
 
     publishMavenStyle := true,
 
