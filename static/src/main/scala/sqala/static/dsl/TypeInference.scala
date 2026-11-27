@@ -5,7 +5,7 @@ import sqala.ir.{IrExpr, IrInRightOperand}
 import sqala.metadata.*
 import sqala.static.dsl.table.{AsTableParam, MappedTable, Table}
 
-import java.time.{LocalDateTime, OffsetDateTime, OffsetTime}
+import java.time.{LocalDateTime, OffsetDateTime}
 import scala.NamedTuple.NamedTuple
 import scala.compiletime.error
 import scala.compiletime.ops.boolean.||

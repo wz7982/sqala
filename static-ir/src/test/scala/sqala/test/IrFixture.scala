@@ -1,6 +1,6 @@
 package sqala.test
 
-import sqala.ast.expr.{SqlExpr, SqlType}
+import sqala.ast.expr.SqlExpr
 import sqala.ast.statement.{SqlQuery, SqlStatement}
 import sqala.dialect.PostgresqlDialect
 import sqala.ir.*
