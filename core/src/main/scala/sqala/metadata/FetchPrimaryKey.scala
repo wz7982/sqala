@@ -79,10 +79,24 @@ object FetchPrimaryKey:
 
         val converter = tpe match
             case '[type t <: Tuple; t] =>
-                val instance = Expr.summon[AsSqlExprs[t]].get
+                val instanceOption = Expr.summon[AsSqlExprs[t]]
+                val instance =
+                    if instanceOption.isDefined then
+                        instanceOption.get
+                    else
+                        report.errorAndAbort(
+                            s"Cannot derive FetchPrimaryKey for ${Type.show[T]}: no AsSqlExprs instance for the primary key type ${Type.show[t]} (columns: ${pkColumnNames.mkString(", ")})."
+                        )
                 '{ (x: t, inlined: Boolean) => $instance.asSqlExprs(x, inlined) }
             case '[t] =>
-                val instance = Expr.summon[AsSqlExpr[t]].get
+                val instanceOption = Expr.summon[AsSqlExpr[t]]
+                val instance =
+                    if instanceOption.isDefined then
+                        instanceOption.get
+                    else
+                        report.errorAndAbort(
+                            s"Cannot derive FetchPrimaryKey for ${Type.show[T]}: cannot use ${Type.show[t]} as the value of primary key column ${pkColumnNames.mkString(", ")}."
+                        )
                 '{ (x: t, inlined: Boolean) => List($instance.asSqlExpr(x, inlined)) }
 
         tpe match

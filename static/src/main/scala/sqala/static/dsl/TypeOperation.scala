@@ -143,7 +143,7 @@ type NumericResult[A, B] =
         case (Int, _, true) => Option[Int]
         case (Int, _, false) => Int
         case (_, Int, true) => Option[Int]
-        case (_, Int, false) => Int
+        case _ => Int
 
 /**
  * Computes the wider datetime result type, wrapping with `Option`
@@ -162,7 +162,7 @@ type DateTimeResult[A, B] =
         case (LocalDate, _, true) => Option[LocalDate]
         case (LocalDate, _, false) => LocalDate
         case (_, LocalDate, true) => Option[LocalDate]
-        case (_, LocalDate, false) => LocalDate
+        case _ => LocalDate
 
 /**
  * Computes the wider time result type, wrapping with `Option` if
@@ -177,4 +177,4 @@ type TimeResult[A, B] =
         case (LocalTime, _, true) => Option[LocalTime]
         case (LocalTime, _, false) => LocalTime
         case (_, LocalTime, true) => Option[LocalTime]
-        case (_, LocalTime, false) => LocalTime
+        case _ => LocalTime

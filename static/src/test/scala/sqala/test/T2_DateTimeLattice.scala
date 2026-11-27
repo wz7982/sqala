@@ -6,31 +6,32 @@ import sqala.static.dsl.*
 import sqala.test.StaticFixture.{expect, lines, sql}
 
 /**
- * The date and time result lattice. Adding an interval promotes a date to
- * a local date-time and a local time to an offset time; subtracting two
- * dates or two times yields an interval. An optional operand makes the
- * result optional.
+ * The date and time result lattice. Adding or subtracting an interval
+ * keeps the operand's own datetime level: a date stays a local date, a
+ * local date-time stays local, a time stays at its original offset level.
+ * Subtracting two dates or two times yields an interval. An optional
+ * operand makes the result optional.
  */
 class T2_DateTimeLattice extends munit.FunSuite:
-    test("adding an interval promotes the operand to its offset-aware form"):
-        from(Times).map(t => expect[LocalDateTime](t.dt + StaticFixture.interval))
+    test("adding an interval keeps the operand datetime level"):
+        from(Times).map(t => expect[LocalDate](t.dt + StaticFixture.interval))
         from(Times).map(t => expect[OffsetDateTime](t.ts + StaticFixture.interval))
-        from(Times).map(t => expect[OffsetDateTime](t.lts + StaticFixture.interval))
+        from(Times).map(t => expect[LocalDateTime](t.lts + StaticFixture.interval))
         from(Times).map(t => expect[OffsetTime](t.tm + StaticFixture.interval))
-        from(Times).map(t => expect[OffsetTime](t.ltm + StaticFixture.interval))
+        from(Times).map(t => expect[LocalTime](t.ltm + StaticFixture.interval))
 
-    test("an optional operand makes the promoted result optional"):
-        from(Times).map(t => expect[Option[LocalDateTime]](t.odt + StaticFixture.interval))
+    test("an optional operand makes the result optional"):
+        from(Times).map(t => expect[Option[LocalDate]](t.odt + StaticFixture.interval))
         from(Times).map(t => expect[Option[OffsetDateTime]](t.ots + StaticFixture.interval))
         from(Times).map(t => expect[Option[OffsetTime]](t.otm + StaticFixture.interval))
-        from(Times).map(t => expect[Option[LocalDateTime]](t.dt + t.oiv))
-        from(Times).map(t => expect[Option[OffsetDateTime]](t.lts + t.oiv))
+        from(Times).map(t => expect[Option[LocalDate]](t.dt + t.oiv))
+        from(Times).map(t => expect[Option[LocalDateTime]](t.lts + t.oiv))
 
-    test("subtracting an interval promotes the operand the same way"):
-        from(Times).map(t => expect[LocalDateTime](t.dt - StaticFixture.interval))
+    test("subtracting an interval keeps the operand datetime level"):
+        from(Times).map(t => expect[LocalDate](t.dt - StaticFixture.interval))
         from(Times).map(t => expect[OffsetDateTime](t.ts - StaticFixture.interval))
         from(Times).map(t => expect[OffsetTime](t.tm - StaticFixture.interval))
-        from(Times).map(t => expect[Option[LocalDateTime]](t.odt - StaticFixture.interval))
+        from(Times).map(t => expect[Option[LocalDate]](t.odt - StaticFixture.interval))
 
     test("subtracting two dates or two date-times yields an interval"):
         from(Times).map(t => expect[Interval](t.dt - t.dt))

@@ -1,7 +1,7 @@
 package sqala.jdbc.printer
 
 import sqala.ast.expr.*
-import sqala.printer.PostgresqlPrinter
+import sqala.printer.{PostgresqlPrinter, PrintException}
 
 /**
  * PostgreSQL dialect printer.
@@ -24,7 +24,12 @@ class PostgresqlJdbcPrinter(
             case SqlIntervalField.To(_, _) =>
                 super.printIntervalLiteralExpr(expr)
             case SqlIntervalField.Single(unit) =>
-                val interval = SqlExpr.StringLiteral(expr.value)
+                val interval =
+                    try
+                        SqlExpr.NumberLiteral(expr.value.toInt)
+                    catch
+                        case e: NumberFormatException =>
+                            throw new PrintException(s"Non-integer interval quantity cannot be printed as a SQL literal.")
                 unit match
                     case SqlTimeUnit.Year =>
                         val args = 
@@ -32,30 +37,30 @@ class PostgresqlJdbcPrinter(
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.Month =>
                         val args = 
-                            SqlExpr.StringLiteral("0") :: interval :: Nil
+                            SqlExpr.NumberLiteral(0) :: interval :: Nil
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.Day =>
                         val args = 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: interval :: Nil
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: interval :: Nil
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.Hour =>
                         val args = 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
                             interval :: Nil
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.Minute =>
                         val args = 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: interval :: Nil
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: interval :: Nil
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.Second =>
                         val args = 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
-                            SqlExpr.StringLiteral("0") :: SqlExpr.StringLiteral("0") :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
+                            SqlExpr.NumberLiteral(0) :: SqlExpr.NumberLiteral(0) :: 
                             interval :: Nil
                         printExpr(makeInterval(args))
                     case SqlTimeUnit.UnsafeCustom(_) =>

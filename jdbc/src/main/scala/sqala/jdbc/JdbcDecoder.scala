@@ -266,7 +266,14 @@ object JdbcDecoder:
             var tmpCursor = cursor
             types.map:
                 case '[t] =>
-                    val decoderExpr = Expr.summon[JdbcDecoder[t]].get
+                    val decoderExprOption = Expr.summon[JdbcDecoder[t]]
+                    val decoderExpr = 
+                        if decoderExprOption.isDefined then
+                            decoderExprOption.get
+                        else
+                            report.errorAndAbort(
+                                s"Cannot find JdbcDecoder for type ${Type.show[t]}. Provide a given JdbcDecoder for it, or a CustomField mapping, to make the row decodable."
+                            )
                     val resultExpr = '{ $decoderExpr.decode($data, $tmpCursor) }
                     tmpCursor = '{ $tmpCursor + $decoderExpr.offset }
                     resultExpr

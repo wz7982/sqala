@@ -228,17 +228,17 @@ object Plus:
         new Plus[A, B]:
             type R = NumericResult[A, B]
 
-    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]] =
+    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, DateTimeResult[A, B]] =
         new Plus[A, B]:
-            type R = WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]
+            type R = DateTimeResult[A, B]
 
-    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
+    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, DateTimeResult[A, B]] =
         new Plus[A, B]:
-            type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
+            type R = DateTimeResult[A, B]
 
-    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
+    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, TimeResult[A, B]] =
         new Plus[A, B]:
-            type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
+            type R = TimeResult[A, B]
 
     inline given fallback[A, B](using NotGiven[Plus[A, B]]): Aux[A, B, Nothing] =
         ${ errorMacro[A, B] }
@@ -288,17 +288,17 @@ object Minus:
         new Minus[A, B]:
             type R = WrapIf[Interval, IsOption[A] || IsOption[B], Option]
 
-    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]] =
+    given dateAndInterval[A: SqlDate, B: SqlInterval]: Aux[A, B, DateTimeResult[A, B]] =
         new Minus[A, B]:
-            type R = WrapIf[LocalDateTime, IsOption[A] || IsOption[B], Option]
+            type R = DateTimeResult[A, B]
 
-    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]] =
+    given dateTimeAndInterval[A: SqlDateTime, B: SqlInterval]: Aux[A, B, DateTimeResult[A, B]] =
         new Minus[A, B]:
-            type R = WrapIf[OffsetDateTime, IsOption[A] || IsOption[B], Option]
+            type R = DateTimeResult[A, B]
 
-    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]] =
+    given timeAndInterval[A: SqlTime, B: SqlInterval]: Aux[A, B, TimeResult[A, B]] =
         new Minus[A, B]:
-            type R = WrapIf[OffsetTime, IsOption[A] || IsOption[B], Option]
+            type R = TimeResult[A, B]
 
     inline given fallback[A, B](using NotGiven[Minus[A, B]]): Aux[A, B, Nothing] =
         ${ errorMacro[A, B] }
