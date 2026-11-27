@@ -21,7 +21,7 @@ jobs:
       - uses: coursier/cache-action@v6
       - uses: sbt/setup-sbt@v1
         with:
-          sbt-version: '1.13.0'
+          sbt-runner-version: '1.13.0'
       - name: Compile
         run: sbt -batch compile
       - name: Test pure modules
@@ -67,7 +67,7 @@ jobs:
       - uses: coursier/cache-action@v6
       - uses: sbt/setup-sbt@v1
         with:
-          sbt-version: '1.13.0'
+          sbt-runner-version: '1.13.0'
       - name: Switch MySQL root to native password auth
         run: >
           docker exec ${{ job.services.mysql.id }} mysql -uroot -p123456 -e
