@@ -200,7 +200,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' YEAR`.
      *
      * {{{
-     * column("create_time") + 1.year
+     * column("create_time") + value(1.year)
      * }}}
      */
     def year: Interval =
@@ -212,7 +212,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' MONTH`.
      *
      * {{{
-     * column("create_time") + 2.month
+     * column("create_time") + value(2.month)
      * }}}
      */
     def month: Interval =
@@ -224,7 +224,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' DAY`.
      *
      * {{{
-     * column("create_time") + 3.day
+     * column("create_time") + value(3.day)
      * }}}
      */
     def day: Interval =
@@ -236,7 +236,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' HOUR`.
      *
      * {{{
-     * column("create_time") + 4.hour
+     * column("create_time") + value(4.hour)
      * }}}
      */
     def hour: Interval =
@@ -248,7 +248,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' MINUTE`.
      *
      * {{{
-     * column("create_time") + 5.minute
+     * column("create_time") + value(5.minute)
      * }}}
      */
     def minute: Interval =
@@ -260,7 +260,7 @@ extension (n: Int)
      * Maps to `INTERVAL 'n' SECOND`.
      *
      * {{{
-     * column("create_time") + 6.second
+     * column("create_time") + value(6.second)
      * }}}
      */
     def second: Interval =

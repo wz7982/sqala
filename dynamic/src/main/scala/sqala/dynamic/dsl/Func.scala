@@ -1477,19 +1477,19 @@ def rowNumber(): Expr =
     )
 
 /**
- * Divides the partition into buckets. Maps to `NTILE()`. Used with
+ * Divides the partition into buckets. Maps to `NTILE(x)`. Used with
  * `over`.
  *
  * {{{
- * ntile().over(orderBy(column("id").asc))
+ * ntile(column("score")).over(orderBy(column("id").asc))
  * }}}
  */
-def ntile(): Expr =
+def ntile(x: Expr): Expr =
     Expr(
         SqlExpr.GeneralFunc(
             None,
             "NTILE",
-            Nil,
+            x.asSqlExpr :: Nil,
             Nil,
             Nil,
             None
