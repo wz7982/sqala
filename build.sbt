@@ -57,7 +57,14 @@ lazy val staticExt = project.in(file("static-ext")).dependsOn(static).settings(c
 
 lazy val dynamic = project.in(file("dynamic")).dependsOn(core).settings(commonSettings).settings(name := "sqala-dynamic")
 
-lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(name := "sqala-jdbc")
+lazy val jdbc = project.in(file("jdbc")).dependsOn(static, dynamic).settings(commonSettings).settings(
+    name := "sqala-jdbc",
+    Test / parallelExecution := false,
+    libraryDependencies ++= Seq(
+        "org.postgresql" % "postgresql" % "42.7.4" % Test,
+        "com.mysql" % "mysql-connector-j" % "9.2.0" % Test
+    )
+)
 
 lazy val slf4j = project
     .in(file("slf4j"))
