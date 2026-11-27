@@ -2,7 +2,7 @@
 
 简体中文 | [English](./README.en.md)
 
-sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala的表达力与SQL的强大功能，通过Scala3强大的类型系统保障数据库操作的高效与安全。其名称源自Scala与SQL的结合。
+sqala是一个专为Scala 3设计的类型安全SQL查询库。它融合了Scala的表达力与SQL的强大功能，通过Scala 3强大的类型系统保障数据库操作的高效与安全。其名称源自Scala与SQL的结合。
 
 文档地址：https://sqala.cn/
 
@@ -22,7 +22,7 @@ sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala
     val result = db.fetch(query)
     ```
 
-2. **使用Scala3新特性命名元组管理查询**：无需为投影、关联结果预先创建DTO，也无需`Map[String, Any]`，使用`.`调用返回字段且类型安全：
+2. **使用Scala 3新特性命名元组管理查询**：无需为投影、关联结果预先创建DTO，也无需`Map[String, Any]`，使用`.`调用返回字段且类型安全：
 
     ```scala
     val query =
@@ -75,7 +75,7 @@ sqala是一个专为 Scala3设计的类型安全SQL查询库。它融合了Scala
 
 6. **SQL 解析器**：`core` 模块内置手写的递归下降 SQL 解析器，不依赖任何第三方解析器库，动态查询 DSL 通过`unsafeExpr`等方法基于它解析SQL片段。
 
-7. **批量解码性能突出**：使用Scala3的`inline`能力在编译期生成解码代码。在10,000行批量查询中，解码吞吐接近手写JDBC（约94%），通常高于MyBatis、Hibernate、jOOQ等基于反射/代理映射的框架。
+7. **批量解码性能突出**：使用Scala 3的`inline`能力在编译期生成解码代码。在10,000行批量查询中，解码吞吐接近手写JDBC（约94%），通常高于MyBatis、Hibernate、jOOQ等基于反射/代理映射的框架。
 
 8. **透明性**：sqala不是传统ORM，查询DSL几乎会1比1生成查询，不会产生诸如N + 1等黑盒操作，性能可预测。
 
