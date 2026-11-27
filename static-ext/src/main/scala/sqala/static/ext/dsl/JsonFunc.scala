@@ -197,7 +197,6 @@ def jsonObject[T, CL <: Int](items: T)(using
 def jsonArray[A, CL <: Int](items: A)(using
     qc: QueryContext[CL],
     a: AsExpr[A, CL],
-    as: AsSqlExpr[a.R],
     kt: KindToTuple[a.K]
 ): Expr[Option[Json], Composite[kt.R]] =
     Expr(

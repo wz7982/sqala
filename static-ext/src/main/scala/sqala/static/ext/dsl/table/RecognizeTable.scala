@@ -68,7 +68,7 @@ final class RecognizeSource[T, L <: Int](
      * Specifies `PARTITION BY` for `matchRecognize`.
      *
      * {{{
-     * s.partitionBy(t => t.stockSymbol)
+     * m.partitionBy(s => s.stockSymbol)
      * }}}
      */
     def partitionBy[P](f: T => P)(using
@@ -92,7 +92,7 @@ final class RecognizeSource[T, L <: Int](
      * Specifies `ORDER BY` for `matchRecognize`.
      *
      * {{{
-     * s.sortBy(t => t.tradeTime)
+     * m.sortBy(s => s.tradeTime)
      * }}}
      */
     def sortBy[S](f: T => S)(using
@@ -116,7 +116,7 @@ final class RecognizeSource[T, L <: Int](
      * Returns one row per match. Maps to `ONE ROW PER MATCH`.
      *
      * {{{
-     * s.oneRowPerMatch
+     * m.oneRowPerMatch
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, L] =
@@ -137,7 +137,7 @@ final class RecognizeSource[T, L <: Int](
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
      *
      * {{{
-     * s.allRowsPerMatch
+     * m.allRowsPerMatch
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, L] =
@@ -171,7 +171,7 @@ final class RecognizePredefine[T, L <: Int](
      * value must be a column expression.
      *
      * {{{
-     * s.sortBy(t => t.tradeTime)
+     * m.sortBy(s => s.tradeTime)
      * }}}
      */
     def sortBy[S](f: T => S)(using a: AsRecognizeSort[S, L]): RecognizePredefine[T, L] =
@@ -182,7 +182,7 @@ final class RecognizePredefine[T, L <: Int](
      * Returns one row per match. Maps to `ONE ROW PER MATCH`.
      *
      * {{{
-     * s.oneRowPerMatch
+     * m.oneRowPerMatch
      * }}}
      */
     def oneRowPerMatch: RecognizePredefine[T, L] =
@@ -192,7 +192,7 @@ final class RecognizePredefine[T, L <: Int](
      * Returns all rows per match. Maps to `ALL ROWS PER MATCH`.
      *
      * {{{
-     * s.allRowsPerMatch
+     * m.allRowsPerMatch
      * }}}
      */
     def allRowsPerMatch: RecognizePredefine[T, L] =
@@ -238,6 +238,9 @@ object RecognizePredefineMacro:
 
         if nameList.isEmpty then
             report.errorAndAbort("Predefine requires at least one name.")
+
+        if nameList.size != nameList.toSet.size then
+            report.errorAndAbort("Predefine names cannot be duplicated.")
 
         def tupleType(names: List[String]): TypeRepr =
             names match
@@ -476,11 +479,12 @@ object PatternedRecognize:
             ar: AliasRecognize[T],
             m: AsMap[MV, L],
             p: AsTableParam[m.R, L],
+            tt: ToTuple[p.R],
             i: CanInGroupedMap[m.KS],
             e: ExcludeCurrentLevelColumn[m.KS, L],
             pe: e.R =:= EmptyTuple,
             an: AggNotNested[m.KS]
-        ): FinalRecognize[N, WrapToTuple[p.R], L] =
+        ): FinalRecognize[MN, tt.R, L] =
             val items = m.asSelectItems(f(RecognizeDefine[N, T, tr.R, L](recognize.table)), 1)
             val node: IrTable.MatchRecognize =
                 IrTable.MatchRecognize(
@@ -498,9 +502,9 @@ object PatternedRecognize:
                     ),
                     Nil
                 )
-            FinalRecognize[N, WrapToTuple[p.R], L](
+            FinalRecognize[MN, tt.R, L](
                 node,
-                wrapToTuple(p.asTableParam(node, 1))
+                tt.toTuple(p.asTableParam(node, 1))
             )(using
                 recognize.qc,
                 recognize.mc

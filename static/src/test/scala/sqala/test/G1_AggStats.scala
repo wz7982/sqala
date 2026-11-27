@@ -4,9 +4,9 @@ import sqala.static.dsl.*
 import sqala.test.StaticFixture.*
 
 /**
- * Statistical aggregates: sample standard deviation, population
- * variance, sample covariance, the regression family, and the
- * `GROUP_CONCAT` alias of `listAgg`.
+ * Aggregates: the basic family (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`,
+ * `ANY_VALUE`), statistical aggregates, the regression family,
+ * ordered-set aggregates, and the `GROUP_CONCAT` alias of `listAgg`.
  */
 class G1_AggStats extends munit.FunSuite:
     test("variance and covariance aggregates print the expected sql"):
@@ -62,6 +62,63 @@ class G1_AggStats extends munit.FunSuite:
         assertEquals(
             sql(from(Wide).map(w => groupConcat(w.name, ",", w.id.asc))),
             sql(from(Wide).map(w => listAgg(w.name, ",", w.id.asc)))
+        )
+
+    test("basic aggregates print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = count(), b = count(w.id), c = countDistinct(w.id), d = sum(w.id), e = avg(w.id), f = min(w.id), g = max(w.id), h = anyValue(w.name)))),
+            lines(
+                "SELECT",
+                """    COUNT(*) AS "c1",""",
+                """    COUNT("t1"."id") AS "c2",""",
+                """    COUNT(DISTINCT "t1"."id") AS "c3",""",
+                """    SUM("t1"."id") AS "c4",""",
+                """    AVG("t1"."id") AS "c5",""",
+                """    MIN("t1"."id") AS "c6",""",
+                """    MAX("t1"."id") AS "c7",""",
+                """    ANY_VALUE("t1"."name") AS "c8"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("population variance and correlation print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = stddevPop(w.id), b = varSamp(w.id), c = covarPop(w.id, w.score), d = corr(w.id, w.score), e = regrSlope(w.id, w.score)))),
+            lines(
+                "SELECT",
+                """    STDDEV_POP("t1"."id") AS "c1",""",
+                """    VAR_SAMP("t1"."id") AS "c2",""",
+                """    COVAR_POP("t1"."id", "t1"."score") AS "c3",""",
+                """    CORR("t1"."id", "t1"."score") AS "c4",""",
+                """    REGR_SLOPE("t1"."id", "t1"."score") AS "c5"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("ordered-set aggregates print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = percentileCont(0.5, w.id.desc), b = percentileDisc(0.5, w.id.desc)))),
+            lines(
+                "SELECT",
+                """    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY "t1"."id" DESC) AS "c1",""",
+                """    PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY "t1"."id" DESC) AS "c2"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("listAgg and stringAgg print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = listAgg(w.name, ",", w.id.asc), b = stringAgg(w.name, ",", w.id.asc)))),
+            lines(
+                "SELECT",
+                """    STRING_AGG("t1"."name", ',' ORDER BY "t1"."id" ASC) AS "c1",""",
+                """    STRING_AGG("t1"."name", ',' ORDER BY "t1"."id" ASC) AS "c2"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
         )
 
     test("statistical aggregates yield an optional decimal"):

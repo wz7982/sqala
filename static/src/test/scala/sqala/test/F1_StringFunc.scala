@@ -4,9 +4,9 @@ import sqala.static.dsl.*
 import sqala.test.StaticFixture.*
 
 /**
- * Padding and trimming functions, regular expression matching, byte
- * length, and the string operators `toLowerCase`, `toUpperCase`,
- * `trim` and `length`.
+ * Substring, padding and trimming functions, overlay, position,
+ * regular expression matching, byte and character length, and the
+ * string operators `toLowerCase`, `toUpperCase`, `trim` and `length`.
  */
 class F1_StringFunc extends munit.FunSuite:
     test("padding and trimming print the expected sql"):
@@ -52,6 +52,48 @@ class F1_StringFunc extends munit.FunSuite:
                 """    LOWER("t1"."name") AS "c1",""",
                 """    UPPER("t1"."name") AS "c2",""",
                 """    TRIM("t1"."name") AS "c3",""",
+                """    CHAR_LENGTH("t1"."name") AS "c4"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("substring and case functions print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = substring(w.name, 1), b = substring(w.name, 1, 5), c = upper(w.name), d = lower(w.name)))),
+            lines(
+                "SELECT",
+                """    SUBSTRING("t1"."name" FROM 1) AS "c1",""",
+                """    SUBSTRING("t1"."name" FROM 1 FOR 5) AS "c2",""",
+                """    UPPER("t1"."name") AS "c3",""",
+                """    LOWER("t1"."name") AS "c4"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("lpad and btrim print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = lpad(w.name, 5), b = lpad(w.name, 5, "x"), c = btrim(w.name), d = btrim(w.name, "x")))),
+            lines(
+                "SELECT",
+                """    LPAD("t1"."name", 5) AS "c1",""",
+                """    LPAD("t1"."name", 5, 'x') AS "c2",""",
+                """    BTRIM("t1"."name") AS "c3",""",
+                """    BTRIM("t1"."name", 'x') AS "c4"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("overlay, position and charLength print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = overlay(w.name, "x", 1), b = overlay(w.name, "x", 1, 3), c = position("x", w.name), d = charLength(w.name)))),
+            lines(
+                "SELECT",
+                """    OVERLAY("t1"."name" PLACING 'x' FROM 1) AS "c1",""",
+                """    OVERLAY("t1"."name" PLACING 'x' FROM 1 FOR 3) AS "c2",""",
+                """    POSITION('x' IN "t1"."name") AS "c3",""",
                 """    CHAR_LENGTH("t1"."name") AS "c4"""",
                 "FROM",
                 """    "wide" AS "t1""""

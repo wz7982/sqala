@@ -2093,7 +2093,6 @@ trait StandardSqlPrinter:
             printTableAlias(a)
 
         for m <- table.matchRecognize do
-            sqlBuilder.append(" ")
             printMatchRecognize(m)
 
         for s <- table.sample do
@@ -2118,7 +2117,6 @@ trait StandardSqlPrinter:
             printTableAlias(a)
 
         for m <- table.matchRecognize do
-            sqlBuilder.append(" ")
             printMatchRecognize(m)
 
     /**
@@ -2139,7 +2137,6 @@ trait StandardSqlPrinter:
             printTableAlias(a)
 
         for m <- table.matchRecognize do
-            sqlBuilder.append(" ")
             printMatchRecognize(m)
 
     /**
@@ -2268,7 +2265,6 @@ trait StandardSqlPrinter:
             printTableAlias(a)
 
         for m <- table.matchRecognize do
-            sqlBuilder.append(" ")
             printMatchRecognize(m)
 
     /**
@@ -2614,7 +2610,6 @@ trait StandardSqlPrinter:
             printTableAlias(a)
 
         for m <- table.matchRecognize do
-            sqlBuilder.append(" ")
             printMatchRecognize(m)
 
     /**

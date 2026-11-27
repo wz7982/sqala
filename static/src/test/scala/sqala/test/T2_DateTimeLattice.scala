@@ -3,7 +3,7 @@ package sqala.test
 import java.time.{LocalDate, LocalDateTime, LocalTime, OffsetDateTime, OffsetTime}
 import sqala.metadata.Interval
 import sqala.static.dsl.*
-import sqala.test.StaticFixture.expect
+import sqala.test.StaticFixture.{expect, lines, sql}
 
 /**
  * The date and time result lattice. Adding an interval promotes a date to
@@ -53,6 +53,27 @@ class T2_DateTimeLattice extends munit.FunSuite:
         from(Times).map(_ => expect[LocalDateTime](localTimestamp()))
         from(Times).map(_ => expect[OffsetTime](currentTime()))
         from(Times).map(_ => expect[LocalTime](localTime()))
+
+    test("the current date and time functions print the expected sql"):
+        assertEquals(
+            sql(from(Times).map(_ => (
+                a = currentDate(),
+                b = currentTime(),
+                c = currentTimestamp(),
+                d = localTime(),
+                e = localTimestamp()
+            ))),
+            lines(
+                "SELECT",
+                """    CURRENT_DATE AS "c1",""",
+                """    CURRENT_TIME AS "c2",""",
+                """    CURRENT_TIMESTAMP AS "c3",""",
+                """    LOCALTIME AS "c4",""",
+                """    LOCALTIMESTAMP AS "c5"""",
+                "FROM",
+                """    "times" AS "t1""""
+            )
+        )
 
     test("extracting a date part yields an optional decimal"):
         from(Times).map(t => expect[Option[BigDecimal]](t.dt.year))

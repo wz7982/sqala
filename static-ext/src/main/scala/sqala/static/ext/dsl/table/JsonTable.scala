@@ -184,8 +184,9 @@ object FromJson:
         columns: JsonColumns[N, V]
     )(using
         f: JsonColumnFlatten[V, CL],
-        p: AsTableParam[f.R, CL]
-    ): FromJson[JsonColumnNameFlatten[N, V], WrapToTuple[p.R], OKS, CL] =
+        p: AsTableParam[f.R, CL],
+        tt: ToTuple[p.R],
+    ): FromJson[JsonColumnNameFlatten[N, V], tt.R, OKS, CL] =
         val irColumns = f.toJsonColumns(columns.columns, 1)
         val table: IrTable.Json = IrTable.Json(
             false,
@@ -197,7 +198,7 @@ object FromJson:
         )
         new FromJson(
             table,
-            wrapToTuple(p.asTableParam(table, 1))
+            tt.toTuple(p.asTableParam(table, 1))
         )
 
     given asTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int]: AsTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL], TOKS] =
@@ -210,13 +211,14 @@ object FromJson:
                 (new MappedTable[N, V, false, CL](x.items), x.table)
 
     given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
+        p: AsTableParam[V, CL - 1],
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
+    ): AsLateralTable.Aux[FromJson[N, V, TOKS, CL], CL, MappedTable[N, WrapToTuple[p.R], false, CL - 1], e.R] =
         new AsLateralTable[FromJson[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, false, CL - 1]
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: FromJson[N, V, TOKS, CL]): (R, IrTable) =
-                val table: IrTable.Json = x.table.copy(withLateral = true)
-                (new MappedTable[N, V, false, CL - 1](x.items), table)
+                val irTable: IrTable.Json = x.table.copy(withLateral = true)
+                (MappedTable[N, V, false, CL - 1](irTable), irTable)

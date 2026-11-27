@@ -411,7 +411,7 @@ def stIntersection[A, B, CL <: Int](x: A, y: B)(using
     ga: ValidateArgType[SqlGeometry, aa.R, "geometry"],
     gb: ValidateArgType[SqlGeometry, ab.R, "geometry"],
     c: CombineKind[aa.K, ab.K]
-): Expr[Option[Boolean], c.R] =
+): Expr[Option[Geometry], c.R] =
     Expr(
         IrExpr.GeneralFunc(
             None,

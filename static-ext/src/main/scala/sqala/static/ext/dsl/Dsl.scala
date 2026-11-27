@@ -121,11 +121,12 @@ def jsonTable[E, N <: Tuple, V <: Tuple, CL <: Int](
     a: AsExpr[E, CL],
     f: JsonColumnFlatten[V, CL],
     p: AsTableParam[f.R, CL],
+    tt: ToTuple[p.R],
     kt: KindToTuple[a.K],
     i: CanInSimpleClause[kt.R, "jsonTable"],
     e: ExcludeCurrentLevelColumn[kt.R, CL],
     c: CombineKindTuple[EmptyTuple, e.R]
-): FromJson[JsonColumnNameFlatten[N, V], WrapToTuple[p.R], c.R, CL] =
+): FromJson[JsonColumnNameFlatten[N, V], tt.R, c.R, CL] =
     given JsonContext = JsonContext()
     FromJson(a.asExpr(expr).expr, path, columns)
 
@@ -478,8 +479,8 @@ extension [T, CL <: Int](table: T)(using
  * {{{
  * case class GenerateSeries(x: Int)
  *
- * def generateSeries(start: Int, end: Int) =
- *     createTableFunc[GenerateSeries](
+ * def generateSeries[L <: Int](start: Int, end: Int)(using QueryContext[L]) =
+ *     createTableFunc[GenerateSeries, L](
  *         "generate_series",
  *         start.asExpr :: end.asExpr :: Nil,
  *         false

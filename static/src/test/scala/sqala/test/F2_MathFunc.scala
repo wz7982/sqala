@@ -61,6 +61,35 @@ class F2_MathFunc extends munit.FunSuite:
             )
         )
 
+    test("abs, mod, sin and ln print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = abs(w.id), b = mod(w.id, 2), c = sin(w.id), d = ln(w.id)))),
+            lines(
+                "SELECT",
+                """    ABS("t1"."id") AS "c1",""",
+                """    MOD("t1"."id", 2) AS "c2",""",
+                """    SIN("t1"."id") AS "c3",""",
+                """    LN("t1"."id") AS "c4"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
+    test("power, sqrt, floor, ceil and round print the expected sql"):
+        assertEquals(
+            sql(from(Wide).map(w => (a = power(w.id, 2), b = sqrt(w.id), c = floor(w.id), d = ceil(w.id), e = round(w.id, 2)))),
+            lines(
+                "SELECT",
+                """    POWER("t1"."id", 2) AS "c1",""",
+                """    SQRT("t1"."id") AS "c2",""",
+                """    FLOOR("t1"."id") AS "c3",""",
+                """    CEIL("t1"."id") AS "c4",""",
+                """    ROUND("t1"."id", 2) AS "c5"""",
+                "FROM",
+                """    "wide" AS "t1""""
+            )
+        )
+
     test("transcendental functions yield an optional decimal"):
         assertEquals(compileErrors("from(Nums).map(n => expect[Option[BigDecimal]](cos(n.i)))"), "")
         assertEquals(compileErrors("from(Nums).map(n => expect[Option[BigDecimal]](tan(n.d)))"), "")

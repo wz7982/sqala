@@ -631,10 +631,11 @@ final class GraphMatch[T, OKS <: Tuple, L <: Int](
         gc: GraphContext,
         m: AsMap[MV, L],
         p: AsTableParam[m.R, L],
+        tt: ToTuple[p.R],
         i: CanInSimpleClause[m.KS, "columns"],
         e: ExcludeCurrentLevelColumn[m.KS, L],
         c: CombineKindTuple[OKS, e.R]
-    ): FromGraph[MN, WrapToTuple[p.R], c.R, L] =
+    ): FromGraph[MN, tt.R, c.R, L] =
         val columnsValue = f(pattern).toTuple
         val columnItems = m.asSelectItems(columnsValue, 1)
         val table: IrTable.Graph = IrTable.Graph(
@@ -656,7 +657,7 @@ final class GraphMatch[T, OKS <: Tuple, L <: Int](
         )
         FromGraph(
             table,
-            wrapToTuple(p.asTableParam(table, 1))
+            tt.toTuple(p.asTableParam(table, 1))
         )
 
     /**
@@ -704,13 +705,14 @@ object FromGraph:
                 (new MappedTable[N, V, false, CL](x.items), x.table)
 
     given asLateralTable[N <: Tuple, V <: Tuple, TOKS <: Tuple, CL <: Int](using
+        p: AsTableParam[V, CL - 1],
         e: ExcludeCurrentLevelColumn[TOKS, CL - 1]
-    ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, V, false, CL - 1], e.R] =
+    ): AsLateralTable.Aux[FromGraph[N, V, TOKS, CL], CL, MappedTable[N, WrapToTuple[p.R], false, CL - 1], e.R] =
         new AsLateralTable[FromGraph[N, V, TOKS, CL], CL]:
-            type R = MappedTable[N, V, false, CL - 1]
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL - 1]
 
             type OKS = e.R
 
             def asTable(x: FromGraph[N, V, TOKS, CL]): (R, IrTable) =
-                val table: IrTable.Graph = x.table.copy(withLateral = true)
-                (new MappedTable[N, V, false, CL - 1](x.items), table)
+                val irTable: IrTable.Graph = x.table.copy(withLateral = true)
+                (MappedTable[N, V, false, CL - 1](irTable), irTable)
