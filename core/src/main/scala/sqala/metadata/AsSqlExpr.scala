@@ -4,12 +4,15 @@ import sqala.ast.expr.*
 
 import java.time.*
 import java.time.format.DateTimeFormatter
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 
 /**
  * Type class that converts a value into a `SqlExpr` literal.
  *
  * Also provides the corresponding `SqlType` for the value.
  */
+@implicitAmbiguous("This value cannot be converted to an SQL expression.")
+@implicitNotFound("This value cannot be converted to an SQL expression.")
 trait AsSqlExpr[T]:
     /**
      * The SQL type corresponding to this type.
@@ -372,6 +375,8 @@ object AsSqlExpr:
 /**
  * Type class that converts a tuple of values into a list of `SqlExpr` literals.
  */
+@implicitAmbiguous("This value cannot be converted to an SQL expression.")
+@implicitNotFound("This value cannot be converted to an SQL expression.")
 trait AsSqlExprs[T]:
     /**
      * Converts the given tuple of values to a list of `SqlExpr` literal nodes.

@@ -4,6 +4,7 @@ import sqala.ir.{IrExpr, IrJsonObjectItem}
 import sqala.metadata.{AsSqlExpr, Json, SqlJson, SqlString}
 import sqala.static.dsl.*
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.util.NotGiven
 
 /**
@@ -115,6 +116,8 @@ final class JsonObjectPair[KS <: Tuple](private[sqala] val key: IrExpr, private[
  * Converts key and value pairs into the argument list for
  * `jsonObject`.
  */
+@implicitAmbiguous("This value cannot be converted to a JSON object member.")
+@implicitNotFound("This value cannot be converted to a JSON object member.")
 trait AsJsonObject[T]:
     /**
      * The combined kind tuple of the key and value pairs.

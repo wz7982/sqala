@@ -5,6 +5,7 @@ import sqala.static.dsl.*
 import sqala.static.dsl.statement.query.Query
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.ops.int.-
 
 /**
@@ -13,6 +14,8 @@ import scala.compiletime.ops.int.-
  * incremented it by one; the level is restored here to verify that
  * the subquery correctly references columns from the left table.
  */
+@implicitAmbiguous("This value cannot be converted to a lateral table.")
+@implicitNotFound("This value cannot be converted to a lateral table.")
 trait AsLateralTable[T, CL <: Int]:
     /**
      * The table reference type.

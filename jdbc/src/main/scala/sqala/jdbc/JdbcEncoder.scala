@@ -4,6 +4,7 @@ import sqala.metadata.Json
 
 import java.sql.{PreparedStatement, Types}
 import java.time.*
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 
 /**
  * Type class for encoding a Scala value as a JDBC parameter.
@@ -11,6 +12,8 @@ import java.time.*
  * An encoder is selected at compile time from the static type of the
  * value, so binding does not need to inspect the value at runtime.
  */
+@implicitAmbiguous("This value cannot be converted to a JDBC parameter.")
+@implicitNotFound("This value cannot be converted to a JDBC parameter.")
 trait JdbcEncoder[T]:
     /**
      * Encodes `value` into the `index`‑th parameter of `stmt`.
@@ -91,6 +94,8 @@ object JdbcEncoder:
  * database's name for the element type. Support for JDBC arrays depends on
  * the driver; databases without a native array type cannot bind `Array[T]`.
  */
+@implicitAmbiguous("This value cannot be converted to a JDBC array element.")
+@implicitNotFound("This value cannot be converted to a JDBC array element.")
 trait JdbcArrayItemEncoder[T]:
     /**
      * The database type name of one array element.

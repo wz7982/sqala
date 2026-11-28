@@ -4,6 +4,7 @@ import sqala.ast.order.SqlOrdering
 import sqala.ir.IrOrderingItem
 import sqala.metadata.AsSqlExpr
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.util.NotGiven
 
 /**
@@ -11,6 +12,8 @@ import scala.util.NotGiven
  * queries. `S` is the query size. `CL` is the current query
  * context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsSortItem[T, S <: QuerySize, CL <: Int]:
     /**
      * The expression kind tuple of the sort item.
@@ -56,6 +59,8 @@ object AsSortItem:
  * Collects sort items for `sortBy` in queries. `S` is the query
  * size. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsSort[T, S <: QuerySize, CL <: Int]:
     /**
      * The combined kind tuple of the sort clause.
@@ -103,6 +108,8 @@ object AsSort:
  * Lifts values, expressions, and subqueries for `sortBy` after
  * `groupBy`. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsGroupedSortItem[T, CL <: Int]:
     /**
      * The expression kind tuple of the sort item.
@@ -147,6 +154,8 @@ object AsGroupedSortItem:
  * Collects sort items for `sortBy` after `groupBy`. `CL` is the
  * current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsGroupedSort[T, CL <: Int]:
     /**
      * The combined kind tuple of the sort clause.
@@ -194,6 +203,8 @@ object AsGroupedSort:
  * Collects distinct sort items for `sortBy` after `mapDistinct`.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsDistinctSortItem[T, CL <: Int]:
     /**
      * Converts the value to a list of `DistinctSort` values.
@@ -236,6 +247,8 @@ object AsDistinctSortItem:
  * Collects distinct sort items for `sortBy` after `mapDistinct`.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsDistinctSort[T, CL <: Int]:
     /**
      * Converts the value to a list of `DistinctSort` values.
@@ -264,6 +277,8 @@ object AsDistinctSort:
  * Lifts values, expressions, and subqueries for `sortBy` in a
  * window `over` clause. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsOverSortItem[T, CL <: Int]:
     /**
      * The result type.
@@ -317,6 +332,8 @@ object AsOverSortItem:
  * Collects sort items for `sortBy` in a window `over` clause.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a sort expression.")
+@implicitNotFound("This value cannot be converted to a sort expression.")
 trait AsOverSort[T, CL <: Int]:
     /**
      * The result type.

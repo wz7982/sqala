@@ -3,6 +3,8 @@ package sqala.static.dsl
 import sqala.ast.expr.{SqlBinaryOperator, SqlQuantifiedComparisonOperator}
 import sqala.ir.IrExpr
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
+
 /**
  * Comparison operators.
  */
@@ -18,6 +20,8 @@ enum ComparisonOperator:
  * Lifts expressions, and quantified subqueries to the right-hand
  * side of comparison operators.
  */
+@implicitAmbiguous("This value cannot be converted to a comparison operand.")
+@implicitNotFound("This value cannot be converted to a comparison operand.")
 trait AsComparison[T, CL <: Int]:
     /**
      * The result type of the operand.

@@ -9,6 +9,7 @@ import sqala.static.dsl.table.{AnyTable, AsTableParam, MappedTable, Table}
 import sqala.static.ext.dsl.{CanInRecognizePartition, CanInRecognizeSort}
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.util.NotGiven
 
 /**
@@ -16,6 +17,8 @@ import scala.util.NotGiven
  * returns an immutable copy with the updated value. `CL` is the
  * current query context level, used for scope validation.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize clause.")
+@implicitNotFound("This value cannot be converted to a matchRecognize clause.")
 trait AsRecognize[T, CL <: Int]:
     /**
      * The table reference type.
@@ -76,6 +79,8 @@ object AsRecognize:
 /**
  * Sets the table alias.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize clause.")
+@implicitNotFound("This value cannot be converted to a matchRecognize clause.")
 trait AliasRecognize[T]:
     /**
      * Sets the table alias.
@@ -105,6 +110,8 @@ object AliasRecognize:
  * Used when aliasing a `matchRecognize` derived table: the alias becomes a
  * pattern variable, and every column reference must be retargeted at it.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize clause.")
+@implicitNotFound("This value cannot be converted to a matchRecognize clause.")
 trait ReplaceTarget[T]:
     /**
      * Returns a copy of `x` whose column references target `table`.
@@ -131,6 +138,8 @@ object ReplaceTarget:
  * Lifts a column expression for `partitionBy` in `matchRecognize`.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize partition expression.")
+@implicitNotFound("This value cannot be converted to a matchRecognize partition expression.")
 trait AsRecognizePartitionItem[T, CL <: Int]:
     /**
      * Converts the value to an expression.
@@ -155,6 +164,8 @@ object AsRecognizePartitionItem:
  * Collects partition items for `partitionBy` in `matchRecognize`.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize partition expression.")
+@implicitNotFound("This value cannot be converted to a matchRecognize partition expression.")
 trait AsRecognizePartition[T, CL <: Int]:
     /**
      * Converts the value to a list of expressions.
@@ -185,6 +196,8 @@ object AsRecognizePartition:
  * Lifts a column expression for `sortBy` in `matchRecognize`. `CL` is
  * the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize sort expression.")
+@implicitNotFound("This value cannot be converted to a matchRecognize sort expression.")
 trait AsRecognizeSortItem[T, CL <: Int]:
     /**
      * Converts the value to a `Sort`.
@@ -221,6 +234,8 @@ object AsRecognizeSortItem:
  * Collects sort items for `sortBy` in `matchRecognize`. `CL` is the
  * current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a matchRecognize sort expression.")
+@implicitNotFound("This value cannot be converted to a matchRecognize sort expression.")
 trait AsRecognizeSort[T, CL <: Int]:
     /**
      * Converts the value to a list of `Sort` values.

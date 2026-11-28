@@ -89,7 +89,7 @@ object TableMacroImpl:
                 case _ => columns.addOne(camelToSnake(e.name))
 
         if fields.isEmpty then
-            report.error("Entity class must have at least one field.")
+            report.errorAndAbort("Entity class must have at least one field.")
 
         if incrementKeyFields.size > 1 then
             report.error("Entity class cannot have more than one auto-increment field.")

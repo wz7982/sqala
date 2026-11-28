@@ -8,6 +8,7 @@ import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.table.Table
 import sqala.util.{NonEmptyList, statementToString}
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.summonInline
 import scala.deriving.Mirror
 
@@ -45,6 +46,8 @@ case class InsertTree(
  * computed expressions, aggregates, and subqueries are rejected at compile
  * time, so an invalid insert column list never reaches the printer.
  */
+@implicitAmbiguous("This value cannot be converted to an insert column list.")
+@implicitNotFound("This value cannot be converted to an insert column list.")
 trait AsInsertColumns[T]:
     /**
      * The tuple type of the selected columns' values.

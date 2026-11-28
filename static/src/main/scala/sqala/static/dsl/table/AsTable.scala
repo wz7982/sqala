@@ -9,6 +9,7 @@ import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.{error, summonInline}
 import scala.deriving.Mirror
 import scala.util.NotGiven
@@ -18,6 +19,8 @@ import scala.util.NotGiven
  * and its IR node. `CL` is the current query context level, used for
  * scope validation.
  */
+@implicitAmbiguous("This value cannot be converted to a table.")
+@implicitNotFound("This value cannot be converted to a table.")
 trait AsTable[T, CL <: Int]:
     /**
      * The table reference type.

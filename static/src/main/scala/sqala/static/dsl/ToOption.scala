@@ -3,11 +3,14 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.util.NotGiven
 
 /**
  * Wraps each field of a projection type with `Option` for nullable results.
  */
+@implicitAmbiguous("This value cannot be converted to a nullable result.")
+@implicitNotFound("This value cannot be converted to a nullable result.")
 trait ToOption[T]:
     /**
      * The optional counterpart of `T`.
