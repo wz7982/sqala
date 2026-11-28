@@ -1,0 +1,66 @@
+package sqala.printer
+
+import sqala.ast.expr.SqlExpr
+import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
+import sqala.ast.statement.SqlStatement
+
+/**
+ * PostgreSQL dialect printer.
+ */
+class PostgresqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
+    override def printLimit(limit: SqlLimit): Unit =
+        val standardMode = limit.fetch match
+            case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>
+                false
+            case _ =>
+                true
+
+        if standardMode then
+            super.printLimit(limit)
+        else
+            for f <- limit.fetch do
+                sqlBuilder.append("LIMIT ")
+                printExpr(f.limit)
+            for o <- limit.offset do
+                if limit.fetch.isDefined then
+                    sqlBuilder.append(" ")
+                sqlBuilder.append("OFFSET ")
+                printExpr(o)
+
+    override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
+        sqlBuilder.append("INSERT INTO ")
+        printTable(statement.table)
+
+        sqlBuilder.append(" (")
+        printList(statement.columns.toList)(printIdent)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" VALUES (")
+        printList(statement.values.toList)(printExpr)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" ON CONFLICT (")
+        printList(statement.primaryKeys.toList)(printIdent)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" DO UPDATE SET ")
+
+        printList(statement.updateColumns.toList): u =>
+            printIdent(u)
+            sqlBuilder.append(" = ")
+            sqlBuilder.append("EXCLUDED.")
+            printIdent(u)
+
+    override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
+        if expr.onOverflow.nonEmpty then
+            super.printListAggFuncExpr(expr)
+        else
+            val func = SqlExpr.GeneralFunc(
+                expr.quantifier,
+                "STRING_AGG",
+                expr.expr :: expr.separator :: Nil,
+                expr.withinGroup,
+                Nil,
+                expr.filter
+            )
+            printExpr(func)

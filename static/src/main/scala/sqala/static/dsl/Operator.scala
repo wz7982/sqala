@@ -1,0 +1,904 @@
+package sqala.static.dsl
+
+import sqala.ast.expr.*
+import sqala.ast.order.{SqlNullsOrdering, SqlOrdering}
+import sqala.ir.{IrExpr, IrInRightOperand, IrOrderingItem}
+import sqala.metadata.*
+import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList
+
+import scala.annotation.targetName
+
+extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
+    /**
+     * Type-safe equality comparison. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `=`. Unlike raw `==` on `Expr`, this
+     * operates on any object that can be lifted to an expression. Subqueries
+     * must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id === 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) === (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id === c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount === from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("equal")
+    def ===[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.Equal, that)
+        )
+
+    /**
+     * Type-safe null check. Typically used in `filter`, `on`, and `having`
+     * clause. Maps to SQL `IS NULL`.
+     *
+     * {{{
+     * from(User).filter(u => u.id.isEmpty)
+     * }}}
+     */
+    def isEmpty(using
+        kt: KindToTuple[aa.K]
+    ): Expr[Boolean, Composite[kt.R]] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Is(false),
+                IrExpr.Native(SqlExpr.NullLiteral)
+            )
+        )
+
+    /**
+     * Type-safe inequality comparison. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `<>`. Unlike raw `!=` on `Expr`, this
+     * operates on any object that can be lifted to an expression. Subqueries
+     * must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id <> 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) <> (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id <> c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount <> from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("notEqual")
+    def <>[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.NotEqual, that)
+        )
+
+    /**
+     * Type-safe null-safe equality comparison. Typically used in `filter`,
+     * `on`, and `having` clause. Maps to SQL `IS NOT DISTINCT FROM`. Unlike
+     * `===` which yields `NULL` when either side is `NULL`, this treats two
+     * `NULL` values as equal. Subqueries must return at most one row,
+     * enforced at compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.nickname <=> Option.empty[String])
+     * }}}
+     */
+    @targetName("eqIgnoreNulls")
+    def <=>[B](that: B)(using
+        ab: AsExpr[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[Boolean, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.IsDistinctFrom(true),
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Type-safe greater-than comparison. Typically used in `filter`, `on`,
+     * and `having` clause. Maps to SQL `>`. Operates on any object that can
+     * be lifted to an expression. Subqueries must return at most one row,
+     * enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id > 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) > (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id > c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount > from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("gt")
+    def >[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.GreaterThan, that)
+        )
+
+    /**
+     * Type-safe greater-than-or-equal comparison. Typically used in
+     * `filter`, `on`, and `having` clause. Maps to SQL `>=`. Operates on
+     * any object that can be lifted to an expression. Subqueries must return
+     * at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id >= 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) >= (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id >= c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount >= from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("ge")
+    def >=[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.GreaterThanEqual, that)
+        )
+
+    /**
+     * Type-safe less-than comparison. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `<`. Operates on any object that can be
+     * lifted to an expression. Subqueries must return at most one row,
+     * enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id < 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) < (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id < c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount < from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("lt")
+    def <[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.LessThan, that)
+        )
+
+    /**
+     * Type-safe less-than-or-equal comparison. Typically used in `filter`,
+     * `on`, and `having` clause. Maps to SQL `<=`. Operates on any object
+     * that can be lifted to an expression. Subqueries must return at most one
+     * row, enforced at compile time.
+     *
+     * {{{
+     * // Compare with a value
+     * from(User).filter(u => u.id <= 1)
+     *
+     * // Compare with a tuple
+     * from(User).filter(u => (u.id, u.nickname) <= (1, "John"))
+     *
+     * // Compare with another expression
+     * from(Post.join(Comment).on((p, c) => p.id <= c.postId))
+     *
+     * // Compare with a subquery
+     * from(Post).filter(p => p.viewCount <= from(Post).map(p => max(p.viewCount)))
+     * }}}
+     */
+    @targetName("le")
+    def <=[B](that: B)(using
+        ab: AsComparison[B, CL],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            ab.asIrExpr(aa.asExpr(self).expr, ComparisonOperator.LessThanEqual, that)
+        )
+
+    /**
+     * Type-safe `IN` membership test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `IN`. The right-hand side can be a list
+     * of values, a subquery, or a tuple of values, expressions, and
+     * subqueries. When used as part of a
+     * tuple, subquery elements must return at most one row, enforced at
+     * compile time. Empty collections are optimized to `1 = 0`.
+     *
+     * {{{
+     * // Compare with a list of values
+     * from(User).filter(u => u.id.in(List(1, 2, 3)))
+     *
+     * // Compare with a tuple of values, expressions, and subqueries
+     * from(Post).filter(p => p.id.in(1, u.id, from(Comment).filter(c => c.postId === p.id).map(c => c.postId).take(1)))
+     * }}}
+     */
+    def in[B](exprs: B)(using
+        i: In[A, B, CL],
+        kt: KindToTuple[aa.K],
+        c: CombineKindTuple[kt.R, i.KS]
+    ): Expr[i.R, Composite[c.R]] =
+        Expr(
+            i.asIrExpr(aa.asExpr(self).expr, exprs)
+        )
+
+    /**
+     * Type-safe `IN` membership test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `IN`. The right-hand side can be a list
+     * of values, a subquery, or a tuple of values, expressions, and
+     * subqueries. When used as part of a
+     * tuple, subquery elements must return at most one row, enforced at
+     * compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.id.in(from(Post).filter(p => p.viewCount > 100).map(p => p.authorId)))
+     * }}}
+     */
+    def in[B, OKS <: Tuple](query: Query[B, OKS, ?, ?])(using
+        ab: AsExpr[B, CL],
+        kt: KindToTuple[aa.K],
+        r: Relation[aa.R, ab.R],
+        c: CombineKindTuple[kt.R, OKS]
+    ): Expr[r.R, Composite[c.R]] =
+        Expr(
+            IrExpr.In(
+                aa.asExpr(self).expr,
+                IrInRightOperand.Subquery(query.tree),
+                false
+            )
+        )
+
+    /**
+     * Type-safe `BETWEEN` range test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `BETWEEN start AND end`. The bounds are
+     * inclusive. Operates on any object that can be lifted to an expression.
+     * Subqueries must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Compare with values
+     * from(Post).filter(p => p.viewCount.between(100, 1000))
+     *
+     * // Compare with expressions
+     * from(Post).filter(p => p.viewCount.between(p.likeCount, p.likeCount + 1000))
+     *
+     * // Compare with subqueries
+     * from(Post).filter(p => p.viewCount.between(from(Post).map(p => min(p.viewCount)), from(Post).map(p => max(p.viewCount))))
+     * }}}
+     */
+    def between[S, E](start: S, end: E)(using
+        as: AsExpr[S, CL],
+        ae: AsExpr[E, CL],
+        rs: Relation[aa.R, as.R],
+        re: Relation[aa.R, ae.R],
+        r: Relation[rs.R, re.R],
+        cs: CombineKind[aa.K, as.K],
+        c: CombineKind[cs.R, ae.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Between(
+                aa.asExpr(self).expr,
+                as.asExpr(start).expr,
+                ae.asExpr(end).expr,
+                false
+            )
+        )
+
+    /**
+     * Type-safe addition. Supports number + number, datetime + interval,
+     * time + interval. Map to SQL `+`. Operates on any object that can
+     * be lifted to an expression. Subqueries must return at most one row,
+     * enforced at compile time.
+     *
+     * {{{
+     * // Number + number
+     * from(Post).map(p => p.likeCount + 1)
+     *
+     * // Datetime + interval
+     * from(Post).map(p => p.createTime + 1.year)
+     *
+     * // String + string
+     * from(User).map(u => u.firstName + u.lastName)
+     * }}}
+     */
+    @targetName("plus")
+    def +[B](that: B)(using
+        ab: AsExpr[B, CL],
+        r: Plus[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Plus,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Type-safe subtraction. Supports number - number, datetime - datetime,
+     * time - time, datetime - interval, and time - interval. Maps to SQL
+     * `-`. Operates on any object that can be lifted to an expression.
+     * Subqueries must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Number - number
+     * from(Post).map(p => p.viewCount - p.likeCount)
+     *
+     * // Datetime - datetime
+     * from(Post).map(p => currentTimestamp() - p.createTime)
+     *
+     * // Datetime - interval
+     * from(Post).map(p => p.createTime - 1.year)
+     * }}}
+     */
+    @targetName("minus")
+    def -[B](that: B)(using
+        ab: AsExpr[B, CL],
+        r: Minus[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Minus,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Type-safe multiplication. Supports number * number. Maps to SQL
+     * `*`. Operates on any object that can be lifted to an expression.
+     * Subqueries must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Number * number
+     * from(Post).map(p => p.likeCount * 10)
+     * }}}
+     */
+    @targetName("times")
+    def *[B](that: B)(using
+        ab: AsExpr[B, CL],
+        na: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
+        r: Return[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Times,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Type-safe division. Supports number / number. Maps to SQL `/`.
+     * Operates on any object that can be lifted to an expression.
+     * Subqueries must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * // Number / number
+     * from(Post).map(p => p.likeCount / p.viewCount)
+     * }}}
+     */
+    @targetName("div")
+    def /[B](that: B)(using
+        ab: AsExpr[B, CL],
+        na: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[Option[BigDecimal], c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Div,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Type-safe modulo. Supports number % number. Maps to SQL
+     * `MOD(left, right)`. Operates on any object that can be lifted to an
+     * expression. Subqueries must return at most one row, enforced at
+     * compile time.
+     *
+     * {{{
+     * // Number % number
+     * from(Post).map(p => p.viewCount % 10)
+     * }}}
+     */
+    @targetName("mod")
+    def %[B](that: B)(using
+        ab: AsExpr[B, CL],
+        na: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        nb: ValidateArgType[SqlNumber, ab.R, "numeric"],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[Option[BigDecimal], c.R] =
+        Expr(
+            IrExpr.GeneralFunc(
+                None,
+                "MOD",
+                aa.asExpr(self).expr :: ab.asExpr(that).expr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Unary plus. Maps to SQL `+expr`. The expression must be a numeric
+     * type.
+     *
+     * {{{
+     * from(Post).map(p => +p.viewCount)
+     * }}}
+     */
+    @targetName("positive")
+    def unary_+(using
+        n: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(IrExpr.Unary(SqlUnaryOperator.Positive, aa.asExpr(self).expr))
+
+    /**
+     * Unary minus (negation). Maps to SQL `-expr`. The expression must be
+     * a numeric type.
+     *
+     * {{{
+     * from(Account).map(a => -a.balance)
+     * }}}
+     */
+    @targetName("negative")
+    def unary_-(using
+        n: ValidateArgType[SqlNumber, aa.R, "numeric"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(IrExpr.Unary(SqlUnaryOperator.Negative, aa.asExpr(self).expr))
+
+    /**
+     * Logical AND. Typically used in `filter`, `on`, and
+     * `having` clause to combine conditions. Maps to SQL `AND`. Both
+     * sides must be boolean expressions.
+     *
+     * {{{
+     * from(Post).filter(p => p.viewCount > 100 && p.likeCount > 10)
+     * }}}
+     */
+    @targetName("and")
+    def &&[B](that: B)(using
+        ab: AsExpr[B, CL],
+        ba: ValidateArgType[SqlBoolean, aa.R, "boolean"],
+        bb: ValidateArgType[SqlBoolean, ab.R, "boolean"],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.And,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Logical OR. Typically used in `filter`, `on`, and
+     * `having` clause to combine conditions. Maps to SQL `OR`. Both
+     * sides must be boolean expressions.
+     *
+     * {{{
+     * from(Post).filter(p => p.viewCount > 100 || p.likeCount > 10)
+     * }}}
+     */
+    @targetName("or")
+    def ||[B](that: B)(using
+        ab: AsExpr[B, CL],
+        ba: ValidateArgType[SqlBoolean, aa.R, "boolean"],
+        bb: ValidateArgType[SqlBoolean, ab.R, "boolean"],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Or,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Logical NOT. Maps to SQL `NOT expr`. The expression must be boolean.
+     *
+     * {{{
+     * from(Post).filter(p => !(p.viewCount > 100 || p.likeCount > 10))
+     * }}}
+     */
+    @targetName("not")
+    def unary_!(using
+        b: ValidateArgType[SqlBoolean, aa.R, "boolean"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(IrExpr.Unary(SqlUnaryOperator.Not, aa.asExpr(self).expr))
+
+    /**
+     * Returns the first non-null value from two expressions.
+     * Maps to `COALESCE(expr1, expr2)`. Both arguments must be
+     * compatible types.
+     *
+     * {{{
+     * from(User).map(u => u.name.getOrElse(""))
+     * }}}
+     */
+    def getOrElse[B](that: B)(using
+        ab: AsExpr[B, CL],
+        asa: ValidateArgType[AsSqlExpr, aa.R, "scalar"],
+        asb: ValidateArgType[AsSqlExpr, ab.R, "scalar"],
+        r: CoalesceReturn[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Coalesce(
+                NonEmptyList(aa.asExpr(self).expr, ab.asExpr(that).expr :: Nil)
+            )
+        )
+
+    /**
+     * Type-safe `LIKE` pattern matching. Typically used in `filter`, `on`,
+     * and `having` clause. Maps to SQL `LIKE`. The pattern supports SQL
+     * wildcards `%` and `_`. For simple substring matching, use `contains`,
+     * `startsWith`, or `endsWith`. Operates on any object that can be
+     * lifted to an expression. Subqueries must return at most one row,
+     * enforced at compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.nickname.like("%John%"))
+     * }}}
+     */
+    def like[B](that: B)(using
+        ab: AsExpr[B, CL],
+        sa: ValidateArgType[SqlString, aa.R, "string"],
+        sb: ValidateArgType[SqlString, ab.R, "string"],
+        r: Relation[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Like(
+                aa.asExpr(self).expr,
+                ab.asExpr(that).expr,
+                false
+            )
+        )
+
+    /**
+     * Type-safe substring containment test. Typically used in `filter`,
+     * `on`, and `having` clause. Maps to SQL `LIKE '%value%'`.
+     * The left-hand side accepts any object that can be
+     * lifted to an expression, the right-hand side is a plain string.
+     * Subqueries must return at most one row, enforced at compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.nickname.contains("John"))
+     * }}}
+     */
+    def contains(value: String)(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        r: Relation[aa.R, String],
+        c: CombineKind[aa.K, Value]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Like(
+                aa.asExpr(self).expr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"%$value%")),
+                false
+            )
+        )
+
+    /**
+     * Type-safe prefix test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `LIKE 'value%'`. The left-hand side
+     * accepts any object that can be lifted to an expression, the
+     * right-hand side is a plain string. Subqueries must return at most
+     * one row, enforced at compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.nickname.startsWith("John"))
+     * }}}
+     */
+    def startsWith(value: String)(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        r: Relation[aa.R, String],
+        c: CombineKind[aa.K, Value]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Like(
+                aa.asExpr(self).expr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"$value%")),
+                false
+            )
+        )
+
+    /**
+     * Type-safe suffix test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `LIKE '%value'`. The left-hand side
+     * accepts any object that can be lifted to an expression, the
+     * right-hand side is a plain string. Subqueries must return at most
+     * one row, enforced at compile time.
+     *
+     * {{{
+     * from(User).filter(u => u.nickname.endsWith("John"))
+     * }}}
+     */
+    def endsWith(value: String)(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        r: Relation[aa.R, String],
+        c: CombineKind[aa.K, Value]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Like(
+                aa.asExpr(self).expr,
+                IrExpr.Native(SqlExpr.StringLiteral(s"%$value")),
+                false
+            )
+        )
+
+    /**
+     * Type-safe string case conversion. Typically used in `map`, `select`,
+     * and `groupBy` clause. Maps to SQL `LOWER(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.toLowerCase)
+     * }}}
+     */
+    def toLowerCase(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            IrExpr.GeneralFunc(
+                None,
+                "LOWER",
+                aa.asExpr(self).expr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string case conversion. Typically used in `map`, `select`,
+     * and `groupBy` clause. Maps to SQL `UPPER(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.toUpperCase)
+     * }}}
+     */
+    def toUpperCase(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            IrExpr.GeneralFunc(
+                None,
+                "UPPER",
+                aa.asExpr(self).expr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string trim. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `TRIM(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.trim)
+     * }}}
+     */
+    def trim(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        kt: KindToTuple[aa.K]
+    ): Expr[aa.R, Composite[kt.R]] =
+        Expr(
+            IrExpr.GeneralFunc(
+                None,
+                "TRIM",
+                aa.asExpr(self).expr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string length. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `CHAR_LENGTH(expr)`.
+     *
+     * {{{
+     * from(User).map(u => u.nickname.charLength)
+     * }}}
+     */
+    def length(using
+        s: ValidateArgType[SqlString, aa.R, "string"],
+        kt: KindToTuple[aa.K]
+    ): Expr[Option[Int], Composite[kt.R]] =
+        Expr(
+            IrExpr.GeneralFunc(
+                None,
+                "CHAR_LENGTH",
+                aa.asExpr(self).expr :: Nil,
+                Nil,
+                Nil,
+                None
+            )
+        )
+
+    /**
+     * Type-safe string concatenation. Typically used in `map`, `select`, and
+     * `groupBy` clause. Maps to SQL `||`.
+     *
+     * {{{
+     * from(User).map(u => u.firstName ++ " " ++ u.lastName)
+     * }}}
+     */
+    @targetName("concat")
+    def ++[B](that: B)(using
+        ab: AsExpr[B, CL],
+        sa: ValidateArgType[SqlString, aa.R, "string"],
+        sb: ValidateArgType[SqlString, ab.R, "string"],
+        r: Return[aa.R, ab.R],
+        c: CombineKind[aa.K, ab.K]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                aa.asExpr(self).expr,
+                SqlBinaryOperator.Concat,
+                ab.asExpr(that).expr
+            )
+        )
+
+    /**
+     * Ascending sort order. Maps to SQL `ASC`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.asc)
+     * }}}
+     */
+    def asc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, None))
+
+    /**
+     * Ascending sort order with nulls first. Maps to SQL
+     * `ASC NULLS FIRST`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.ascNullsFirst)
+     * }}}
+     */
+    def ascNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, Some(SqlNullsOrdering.First)))
+
+    /**
+     * Ascending sort order with nulls last. Maps to SQL
+     * `ASC NULLS LAST`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.ascNullsLast)
+     * }}}
+     */
+    def ascNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Asc, Some(SqlNullsOrdering.Last)))
+
+    /**
+     * Descending sort order. Maps to SQL `DESC`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.desc)
+     * }}}
+     */
+    def desc(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, None))
+
+    /**
+     * Descending sort order with nulls first. Maps to SQL
+     * `DESC NULLS FIRST`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.descNullsFirst)
+     * }}}
+     */
+    def descNullsFirst(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, Some(SqlNullsOrdering.First)))
+
+    /**
+     * Descending sort order with nulls last. Maps to SQL
+     * `DESC NULLS LAST`. Used in `sortBy` clause.
+     *
+     * {{{
+     * from(User).sortBy(u => u.nickname.descNullsLast)
+     * }}}
+     */
+    def descNullsLast(using AsSqlExpr[aa.R]): Sort[aa.R, aa.K] =
+        Sort(IrOrderingItem(aa.asExpr(self).expr, SqlOrdering.Desc, Some(SqlNullsOrdering.Last)))
+
+extension [A, B, CL <: Int](self: (A, B))(using
+    qc: QueryContext[CL],
+    aa: AsExpr[A, CL],
+    ab: AsExpr[B, CL]
+)
+    /**
+     * Temporal `OVERLAPS` test. Typically used in `filter`, `on`, and
+     * `having` clause. Maps to SQL `OVERLAPS`. Both sides must be
+     * `(start, end)` tuples of date-time expressions.
+     *
+     * {{{
+     * from(Event).filter(e => (e.startTime, e.endTime).overlaps(time1, time2))
+     * }}}
+     */
+    def overlaps[C, D](that: (C, D))(using
+        ac: AsExpr[C, CL],
+        ad: AsExpr[D, CL],
+        da: ValidateArgType[SqlDateTime, aa.R, "datetime"],
+        db: ValidateArgType[SqlDateTime, ab.R, "datetime"],
+        dc: ValidateArgType[SqlDateTime, ac.R, "datetime"],
+        dd: ValidateArgType[SqlDateTime, ad.R, "datetime"],
+        r1: Relation[aa.R, ab.R],
+        r2: Relation[ac.R, ad.R],
+        r: Relation[r1.R, r2.R],
+        c1: CombineKind[aa.K, ab.K],
+        c2: CombineKind[ac.K, ad.K],
+        c: CombineKind[c1.R, c2.R]
+    ): Expr[r.R, c.R] =
+        Expr(
+            IrExpr.Binary(
+                IrExpr.Tuple(
+                    NonEmptyList(
+                        aa.asExpr(self._1).expr,
+                        ab.asExpr(self._2).expr :: Nil
+                    )
+                ),
+                SqlBinaryOperator.Overlaps,
+                IrExpr.Tuple(
+                    NonEmptyList(
+                        ac.asExpr(that._1).expr,
+                        ad.asExpr(that._2).expr :: Nil
+                    )
+                )
+            )
+        )

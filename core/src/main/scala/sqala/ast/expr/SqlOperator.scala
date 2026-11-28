@@ -1,0 +1,220 @@
+package sqala.ast.expr
+
+import sqala.ast.token.SqlUnsafeCustomToken
+
+/**
+ * Binary operators used in expressions.
+ *
+ * Each operator carries an integer precedence, where higher values bind tighter.
+ */
+enum SqlBinaryOperator(val precedence: Int):
+    /**
+     * Multiplication.
+     *
+     * Renders as `*`.
+     */
+    case Times extends SqlBinaryOperator(60)
+
+    /**
+     * Division.
+     *
+     * Renders as `/`.
+     */
+    case Div extends SqlBinaryOperator(60)
+
+    /**
+     * Addition.
+     *
+     * Renders as `+`.
+     */
+    case Plus extends SqlBinaryOperator(50)
+
+    /**
+     * Subtraction.
+     *
+     * Renders as `-`.
+     */
+    case Minus extends SqlBinaryOperator(50)
+
+    /**
+     * String concatenation.
+     *
+     * Renders as `||`.
+     */
+    case Concat extends SqlBinaryOperator(40)
+
+    /**
+     * Equality comparison.
+     *
+     * Renders as `=`.
+     */
+    case Equal extends SqlBinaryOperator(30)
+
+    /**
+     * Not-equal comparison.
+     *
+     * Renders as `<>`.
+     */
+    case NotEqual extends SqlBinaryOperator(30)
+
+    /**
+     * `IS DISTINCT FROM` null-safe comparison.
+     *
+     * Renders as `IS [NOT] DISTINCT FROM`.
+     */
+    case IsDistinctFrom(withNot: Boolean) extends SqlBinaryOperator(30)
+
+    /**
+     * `IS` value check.
+     *
+     * Renders as `IS [NOT]`.
+     */
+    case Is(withNot: Boolean) extends SqlBinaryOperator(30)
+
+    /**
+     * Greater-than comparison.
+     *
+     * Renders as `>`.
+     */
+    case GreaterThan extends SqlBinaryOperator(30)
+
+    /**
+     * Greater-than-or-equal comparison.
+     *
+     * Renders as `>=`.
+     */
+    case GreaterThanEqual extends SqlBinaryOperator(30)
+
+    /**
+     * Less-than comparison.
+     *
+     * Renders as `<`.
+     */
+    case LessThan extends SqlBinaryOperator(30)
+
+    /**
+     * Less-than-or-equal comparison.
+     *
+     * Renders as `<=`.
+     */
+    case LessThanEqual extends SqlBinaryOperator(30)
+
+    /**
+     * `OVERLAPS` temporal overlap test.
+     *
+     * Renders as `OVERLAPS`.
+     */
+    case Overlaps extends SqlBinaryOperator(30)
+
+    /**
+     * Logical AND.
+     *
+     * Renders as `AND`.
+     */
+    case And extends SqlBinaryOperator(20)
+
+    /**
+     * Logical OR.
+     *
+     * Renders as `OR`.
+     */
+    case Or extends SqlBinaryOperator(10)
+
+    /**
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
+     *
+     * Renders as `tokens(0) tokens(1) ... tokens(n)`.
+     */
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken]) extends SqlBinaryOperator(0)
+
+/**
+ * Unary operators used in expressions.
+ * 
+ * Each operator carries an integer precedence, where higher values bind tighter.
+ */
+enum SqlUnaryOperator(val precedence: Int):
+    /**
+     * Unary plus.
+     *
+     * Renders as `+`.
+     */
+    case Positive extends SqlUnaryOperator(70)
+
+    /**
+     * Unary minus (negation).
+     *
+     * Renders as `-`.
+     */
+    case Negative extends SqlUnaryOperator(70)
+
+    /**
+     * Logical NOT.
+     *
+     * Renders as `NOT`.
+     */
+    case Not extends SqlUnaryOperator(25)
+
+    /**
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
+     *
+     * Renders as `tokens(0) tokens(1) ... tokens(n)`.
+     */
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken]) extends SqlUnaryOperator(0)
+
+/**
+ * Quantified comparison operators used in expressions.
+ * 
+ * Each operator carries an integer precedence, where higher values bind tighter.
+ */
+enum SqlQuantifiedComparisonOperator(val precedence: Int):
+    /**
+     * Equality comparison.
+     *
+     * Renders as `=`.
+     */
+    case Equal extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * Not-equal comparison.
+     *
+     * Renders as `<>`.
+     */
+    case NotEqual extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * Greater-than comparison.
+     *
+     * Renders as `>`.
+     */
+    case GreaterThan extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * Greater-than-or-equal comparison.
+     *
+     * Renders as `>=`.
+     */
+    case GreaterThanEqual extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * Less-than comparison.
+     *
+     * Renders as `<`.
+     */
+    case LessThan extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * Less-than-or-equal comparison.
+     *
+     * Renders as `<=`.
+     */
+    case LessThanEqual extends SqlQuantifiedComparisonOperator(30)
+
+    /**
+     * ⚠️ Unsafe extension point: allows arbitrary SQL fragments.
+     * ⚠️ Do not pass user input directly!
+     *
+     * Renders as `tokens(0) tokens(1) ... tokens(n)`.
+     */
+    case UnsafeCustom(tokens: List[SqlUnsafeCustomToken]) extends SqlQuantifiedComparisonOperator(0)

@@ -1,0 +1,182 @@
+package sqala.printer
+
+import sqala.ast.expr.*
+import sqala.ast.limit.{SqlFetchMode, SqlFetchUnit, SqlLimit}
+import sqala.ast.order.SqlNullsOrdering.{First, Last}
+import sqala.ast.order.SqlOrdering.{Asc, Desc}
+import sqala.ast.order.{SqlOrdering, SqlOrderingItem}
+import sqala.ast.statement.{SqlQuery, SqlStatement}
+import sqala.ast.token.SqlUnsafeCustomToken
+import sqala.util.{NonEmptyList, |>}
+
+/**
+ * MySQL dialect printer.
+ */
+class MysqlPrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
+    override val leftQuote: Char = '`'
+
+    override val rightQuote: Char = '`'
+
+    override def printLimit(limit: SqlLimit): Unit =
+        val standardMode = limit.fetch match
+            case None | Some(_, SqlFetchUnit.RowCount, SqlFetchMode.Only) =>
+                false
+            case _ =>
+                true
+
+        if standardMode then
+            super.printLimit(limit)
+        else
+            sqlBuilder.append("LIMIT ")
+            printExpr(limit.offset.getOrElse(SqlExpr.NumberLiteral(0L)))
+            sqlBuilder.append(", ")
+            printExpr(limit.fetch.map(_.limit).getOrElse(SqlExpr.NumberLiteral(Long.MaxValue)))
+
+    override def printUpsertStatement(statement: SqlStatement.Upsert): Unit =
+        sqlBuilder.append("INSERT INTO ")
+        printTable(statement.table)
+
+        sqlBuilder.append(" (")
+        printList(statement.columns.toList)(printIdent)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" VALUES (")
+        printList(statement.values.toList)(printExpr)
+        sqlBuilder.append(")")
+
+        sqlBuilder.append(" ON DUPLICATE KEY UPDATE ")
+
+        printList(statement.updateColumns.toList): u =>
+            printIdent(u)
+            sqlBuilder.append(" = VALUES (")
+            printIdent(u)
+            sqlBuilder.append(")")
+
+    override def printBinaryExpr(expr: SqlExpr.Binary): Unit =
+        expr.operator match
+            case SqlBinaryOperator.Concat =>
+                printExpr(
+                    SqlExpr.GeneralFunc(
+                        None,
+                        "CONCAT",
+                        expr.left :: expr.right :: Nil,
+                        Nil,
+                        Nil,
+                        None
+                    )
+                )
+            case SqlBinaryOperator.IsDistinctFrom(true) =>
+                printExpr(
+                    SqlExpr.Binary(
+                        expr.left,
+                        SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword("<=>") :: Nil),
+                        expr.right
+                    )
+                )
+            case SqlBinaryOperator.IsDistinctFrom(false) =>
+                printExpr(
+                    SqlExpr.Unary(
+                        SqlUnaryOperator.Not,
+                        SqlExpr.Binary(
+                            expr.left,
+                            SqlBinaryOperator.UnsafeCustom(SqlUnsafeCustomToken.Keyword("<=>") :: Nil),
+                            expr.right
+                        )
+                    )
+                )
+            case _ =>
+                super.printBinaryExpr(expr)
+
+    override def printValuesQuery(query: SqlQuery.Values): Unit =
+        printSpace()
+        sqlBuilder.append("VALUES ")
+        printList(query.values.toList.map(SqlExpr.Tuple(_))): v =>
+            sqlBuilder.append("ROW")
+            printExpr(v)
+
+        if query.orderBy.nonEmpty then
+            sqlBuilder.append("\n")
+            printSpace()
+            sqlBuilder.append("ORDER BY\n")
+            printList(query.orderBy, ",\n")(printOrderingItem |> printWithSpace)
+
+        for l <- query.limit do
+            sqlBuilder.append("\n")
+            printSpace()
+            printLimit(l)
+
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(maxLength) =>
+                sqlBuilder.append("CHAR")
+                for l <- maxLength do
+                    sqlBuilder.append("(")
+                    sqlBuilder.append(l)
+                    sqlBuilder.append(")")
+            case SqlType.Int =>
+                sqlBuilder.append("SIGNED")
+            case SqlType.Long =>
+                sqlBuilder.append("SIGNED")
+            case SqlType.Timestamp(None | Some(SqlTimeZoneMode.Without)) =>
+                sqlBuilder.append("DATETIME")
+            case _ =>
+                super.printType(`type`)
+
+    override def printListAggFuncExpr(expr: SqlExpr.ListAggFunc): Unit =
+        if expr.onOverflow.nonEmpty || expr.filter.nonEmpty then
+            super.printListAggFuncExpr(expr)
+        else
+            sqlBuilder.append("GROUP_CONCAT(")
+            expr.quantifier.foreach: q =>
+                printQuantifier(q)
+                sqlBuilder.append(" ")
+
+            printExpr(expr.expr)
+
+            if expr.withinGroup.nonEmpty then
+                sqlBuilder.append(" ORDER BY ")
+                printList(expr.withinGroup)(printOrderingItem)
+
+            sqlBuilder.append(" SEPARATOR ")
+            printExpr(expr.separator)
+
+            sqlBuilder.append(")")
+
+    override def printOrderingItem(orderBy: SqlOrderingItem): Unit =
+        def printOrdering(ordering: SqlOrdering): Unit =
+            ordering match
+                case Asc =>
+                    sqlBuilder.append("ASC")
+                case Desc =>
+                    sqlBuilder.append("DESC")
+
+        val order =
+            orderBy.ordering match
+                case None | Some(Asc) => Asc
+                case _ => Desc
+
+        val orderExpr =
+            SqlExpr.Case(
+                NonEmptyList(
+                    SqlCaseBranch(
+                        SqlExpr.Binary(orderBy.expr, SqlBinaryOperator.Is(false), SqlExpr.NullLiteral),
+                        SqlExpr.NumberLiteral(1)
+                    ),
+                    Nil
+                ),
+                Some(SqlExpr.NumberLiteral(0))
+            )
+
+        (order, orderBy.nullsOrdering) match
+            case (_, None) | (Asc, Some(First)) | (Desc, Some(Last)) =>
+                printExpr(orderBy.expr)
+                sqlBuilder.append(" ")
+                printOrdering(order)
+            case (Asc, Some(Last)) | (Desc, Some(First)) =>
+                printExpr(orderExpr)
+                sqlBuilder.append(" ")
+                printOrdering(order)
+                sqlBuilder.append(", ")
+                printExpr(orderBy.expr)
+                sqlBuilder.append(" ")
+                printOrdering(order)

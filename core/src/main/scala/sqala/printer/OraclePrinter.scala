@@ -1,0 +1,68 @@
+package sqala.printer
+
+import sqala.ast.expr.{SqlExpr, SqlTimeType, SqlTimeZoneMode, SqlType}
+import sqala.ast.table.SqlTableAlias
+
+/**
+ * Oracle dialect printer.
+ */
+class OraclePrinter(override val standardEscapeStrings: Boolean) extends StandardSqlPrinter:
+    override def printCteRecursive(): Unit =
+        ()
+
+    override def printInlinedTimeLiteralExpr(expr: SqlExpr.TimeLiteral): Unit =
+        expr.`type` match
+            case SqlTimeType.Timestamp(Some(SqlTimeZoneMode.With)) =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_TIMESTAMP_TZ",
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM")) :: 
+                    Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case SqlTimeType.Timestamp(_) =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_TIMESTAMP",
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD HH24:MI:SS.FF9")) :: 
+                    Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case SqlTimeType.Date =>
+                val func = SqlExpr.GeneralFunc(
+                    None,
+                    "TO_DATE",
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral(expr.time)) :: 
+                    SqlExpr.InlinedLiteral(SqlExpr.StringLiteral("YYYY-MM-DD")) :: 
+                    Nil,
+                    Nil,
+                    Nil,
+                    None
+                )
+                printExpr(func)
+            case _ =>
+                super.printInlinedTimeLiteralExpr(expr)
+
+    override def printType(`type`: SqlType): Unit =
+        `type` match
+            case SqlType.Varchar(None) =>
+                sqlBuilder.append("VARCHAR(4000)")
+            case SqlType.Long =>
+                sqlBuilder.append("INT")
+            case _ =>
+                super.printType(`type`)
+
+    override def printTableAlias(alias: SqlTableAlias): Unit =
+        printIdent(alias.alias)
+        if alias.columnAliases.nonEmpty then
+            sqlBuilder.append("(")
+            printList(alias.columnAliases)(i => printIdent(i))
+            sqlBuilder.append(")")

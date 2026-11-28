@@ -1,0 +1,127 @@
+package sqala.metadata
+
+import sqala.util.{NonEmptyList, camelToSnake}
+
+import scala.collection.mutable.ListBuffer
+import scala.quoted.{Expr, Quotes, Type}
+
+/**
+ * Inline macros that extract table metadata from entity case classes
+ * at compile time.
+ */
+object TableMacro:
+    /**
+     * Returns the database table name for the entity type, derived from
+     * the `@table` annotation or the CamelCase-to-snake_case conversion.
+     */
+    inline def tableName[T]: String =
+        ${ TableMacroImpl.tableName[T] }
+
+    /**
+     * Returns full `TableMetaData` for the entity type, including table
+     * name, column mappings, primary key fields, and auto-increment field.
+     */
+    inline def tableMetaData[T]: TableMetaData =
+        ${ TableMacroImpl.tableMetaData[T] }
+
+object TableMacroImpl:
+    private val annoNameTable = "table"
+
+    private val annoNameColumn = "column"
+
+    private val annoNamePrimaryKey = "primaryKey"
+
+    private val annoNameAutoInc = "autoInc"
+
+    def tableNameMacro[T](using q: Quotes, t: Type[T]): String =
+        import q.reflect.*
+
+        val sym = TypeTree.of[T].symbol
+        val tableName = sym.annotations.map:
+            case Apply(Select(New(TypeIdent(name)), _), Literal(v) :: Nil) if name == annoNameTable =>
+                v.value.toString
+            case _ => ""
+        .find(_ != "") match
+            case None => camelToSnake(sym.name)
+            case Some(value) => value
+
+        tableName
+
+    def tableName[T](using q: Quotes, t: Type[T]): Expr[String] =
+        Expr(tableNameMacro[T])
+
+    def tableMetaDataMacro[T](using q: Quotes, t: Type[T]): TableMetaData =
+        import q.reflect.*
+
+        val sym = TypeRepr.of[T].typeSymbol
+        val eles = sym.caseFields
+        val tableName = tableNameMacro[T]
+        val columns = ListBuffer[String]()
+        val fields = ListBuffer[String]()
+        val primaryKeyFields = ListBuffer[String]()
+        val incrementKeyFields = ListBuffer[String]()
+
+        eles.foreach: e =>
+            val annotations = e.annotations
+
+            fields.addOne(e.name)
+
+            annotations.find:
+                case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNameAutoInc => true
+                case _ => false
+            match
+                case Some(_) => incrementKeyFields.addOne(e.name)
+                case _ =>
+
+            annotations.find:
+                case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNamePrimaryKey => true
+                case _ => false
+            match
+                case Some(_) => primaryKeyFields.addOne(e.name)
+                case _ =>
+
+            annotations.find:
+                case Apply(Select(New(TypeIdent(name)), _), _) if name == annoNameColumn => true
+                case _ => false
+            match
+                case Some(Apply(Select(New(TypeIdent(_)), _), Literal(name) :: Nil)) =>
+                    columns.addOne(name.value.toString)
+                case _ => columns.addOne(camelToSnake(e.name))
+
+        if fields.isEmpty then
+            report.error("Entity class must have at least one field.")
+
+        if incrementKeyFields.size > 1 then
+            report.error("Entity class cannot have more than one auto-increment field.")
+
+        val columnsList = columns.toList
+        val fieldsList = fields.toList
+
+        TableMetaData(
+            tableName,
+            primaryKeyFields.toList,
+            incrementKeyFields.headOption,
+            NonEmptyList(columnsList.head, columnsList.tail),
+            NonEmptyList(fieldsList.head, fieldsList.tail)
+        )
+
+    def tableMetaData[T](using q: Quotes, t: Type[T]): Expr[TableMetaData] =
+        val metaData = tableMetaDataMacro[T]
+
+        val tableNameExpr = Expr(metaData.tableName)
+        val primaryKeyExpr = Expr.ofList(metaData.primaryKeyFields.map(Expr(_)))
+        val incrementExpr = metaData.incrementField match
+            case None => Expr(Option.empty[String])
+            case Some(e) => Expr(Some(e))
+        val columnsExpr = Expr.ofList(metaData.columns.toList.map(Expr(_)))
+        val fieldsExpr = Expr.ofList(metaData.fields.toList.map(Expr(_)))
+
+        '{
+            TableMetaData(
+                $tableNameExpr,
+                $primaryKeyExpr,
+                $incrementExpr,
+                NonEmptyList($columnsExpr.head, $columnsExpr.tail),
+                NonEmptyList($fieldsExpr.head, $fieldsExpr.tail)
+            )
+        }

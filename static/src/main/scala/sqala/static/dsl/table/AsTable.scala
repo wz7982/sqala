@@ -1,0 +1,148 @@
+package sqala.static.dsl.table
+
+import sqala.ast.expr.SqlExpr
+import sqala.ast.table.SqlJoinType
+import sqala.ir.{IrExpr, IrQuery, IrTable}
+import sqala.metadata.{AsSqlExprs, FetchCompanion, TableMacro, TableMetaData}
+import sqala.static.dsl.*
+import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList
+
+import scala.NamedTuple.NamedTuple
+import scala.compiletime.{error, summonInline}
+import scala.deriving.Mirror
+import scala.util.NotGiven
+
+/**
+ * Used by `from` to lift various DSL types into a table reference
+ * and its IR node. `CL` is the current query context level, used for
+ * scope validation.
+ */
+trait AsTable[T, CL <: Int]:
+    /**
+     * The table reference type.
+     */
+    type R
+
+    /**
+     * The kind tuple of the outer query.
+     */
+    type OKS <: Tuple
+
+    /**
+     * Converts the value to a table reference and its AST.
+     */
+    def asTable(x: T): (R, IrTable)
+
+object AsTable:
+    type Aux[T, CL <: Int, O, OOKS <: Tuple] = AsTable[T, CL]:
+        type R = O
+
+        type OKS = OOKS
+
+    given entity[O, CL <: Int](using
+        na: NotGiven[O <:< AnyTable],
+        nt: NotGiven[O <:< Tuple],
+        nq: NotGiven[O <:< Query[?, ?, ?, ?]],
+        ns: NotGiven[O <:< Seq[?]],
+        fc: FetchCompanion[O]
+    ): Aux[O, CL, Table[fc.R, Column, CL], EmptyTuple] =
+        new AsTable[O, CL]:
+            type R = Table[fc.R, Column, CL]
+
+            type OKS = EmptyTuple
+
+            def asTable(x: O): (R, IrTable) =
+                val metaData = fc.metaData
+                val irTable = IrTable.Ident(metaData.tableName, Nil)
+                val table = Table[fc.R, Column, CL](
+                    irTable,
+                    metaData
+                )
+                (table, irTable)
+
+    given subquery[N <: Tuple, V <: Tuple, TOKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[NamedTuple[N, V], TOKS, L, S], CL <: Int](using
+        p: AsTableParam[V, CL],
+        vss: ValidateSubqueryScope[L, CL]
+    ): Aux[Q, CL, MappedTable[N, WrapToTuple[p.R], false, CL], TOKS] =
+        new AsTable[Q, CL]:
+            type R = MappedTable[N, WrapToTuple[p.R], false, CL]
+
+            type OKS = TOKS
+
+            def asTable(x: Q): (R, IrTable) =
+                val irTable =
+                    IrTable.Subquery(
+                        false,
+                        x.tree,
+                        Nil
+                    )
+                val table = MappedTable[N, V, false, CL](irTable)
+                (table, irTable)
+
+    inline given values[T <: Product, S <: Seq[T], CL <: Int](using p: Mirror.ProductOf[T]): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+        val metaData = TableMacro.tableMetaData[T]
+        val instances = summonInline[AsSqlExprs[p.MirroredElemTypes]]
+        createValues[T, S, CL](
+            metaData,
+            (datum: T) => instances.asSqlExprs(Tuple.fromProductTyped(datum), false)
+        )
+
+    private def createValues[T <: Product, S <: Seq[T], CL <: Int](
+        metaData: TableMetaData,
+        asExprs: T => List[SqlExpr]
+    ): Aux[S, CL, Table[T, Column, CL], EmptyTuple] =
+        new AsTable[S, CL]:
+            type R = Table[T, Column, CL]
+
+            type OKS = EmptyTuple
+
+            def asTable(x: S): (R, IrTable) =
+                require(x.nonEmpty, "Values table must have at least one row.")
+                val exprList = x.toList.map: datum =>
+                    val row = asExprs(datum).map(e => IrExpr.Native(e))
+                    require(row.nonEmpty, "Values table must have at least one column.")
+                    NonEmptyList(row.head, row.tail)
+                val values = IrQuery.Values(NonEmptyList(exprList.head, exprList.tail), Nil, None)
+                val table = IrTable.Subquery(false, values, metaData.columns.toList)
+                (Table[T, Column, CL](table, metaData), table)
+
+    inline given joinPart[T, TOKS <: Tuple, CL <: Int]: Aux[JoinPart[T, TOKS, CL], CL, T, TOKS] =
+        error("Join table must have an on clause.")
+
+    given joinTable[T, TOKS <: Tuple, CL <: Int]: Aux[FromJoin[T, TOKS, CL], CL, T, TOKS] =
+        new AsTable[FromJoin[T, TOKS, CL], CL]:
+            type R = T
+
+            type OKS = TOKS
+
+            def asTable(x: FromJoin[T, TOKS, CL]): (R, IrTable) =
+                (x.params, x.table)
+
+    given tuple[H, T <: Tuple, CL <: Int](using
+        ah: AsTable[H, CL],
+        at: AsTable[T, CL],
+        c: CombineKindTuple[ah.OKS, at.OKS]
+    ): Aux[H *: T, CL, ah.R *: WrapToTuple[at.R], c.R] =
+        new AsTable[H *: T, CL]:
+            type R = ah.R *: WrapToTuple[at.R]
+
+            type OKS = c.R
+
+            def asTable(x: H *: T): (R, IrTable) =
+                val (headParam, headTable) = ah.asTable(x.head)
+                val (tailParam, tailTable) = at.asTable(x.tail)
+                val param = headParam *: wrapToTuple(tailParam)
+                val table = IrTable.Join(headTable, SqlJoinType.Cross, tailTable, None)
+                (param, table)
+
+    given tuple1[H, CL <: Int](using
+        ah: AsTable[H, CL]
+    ): Aux[H *: EmptyTuple, CL, ah.R, ah.OKS] =
+        new AsTable[H *: EmptyTuple, CL]:
+            type R = ah.R
+
+            type OKS = ah.OKS
+
+            def asTable(x: H *: EmptyTuple): (R, IrTable) =
+                ah.asTable(x.head)

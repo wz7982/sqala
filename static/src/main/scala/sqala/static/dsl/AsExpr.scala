@@ -1,0 +1,114 @@
+package sqala.static.dsl
+
+import sqala.ir.IrExpr
+import sqala.metadata.AsSqlExpr
+import sqala.static.dsl.statement.query.Query
+import sqala.util.NonEmptyList
+
+import scala.compiletime.error
+
+/**
+ * Lifts values, expressions, subqueries, and tuples into the expression
+ * layer for use in `filter`, `map`, and other DSL methods.
+ * `CL` is the current query context level.
+ */
+trait AsExpr[T, CL <: Int]:
+    /**
+     * The result type of the expression.
+     */
+    type R
+
+    /**
+     * The expression kind.
+     */
+    type K <: ExprKind
+
+    /**
+     * Converts the value to a list of expressions.
+     */
+    def asExprs(x: T): NonEmptyList[Expr[?, ?]]
+
+    /**
+     * Converts the value to a single expression, wrapping multiple
+     * sub-expressions in a tuple.
+     */
+    def asExpr(x: T): Expr[R, K] =
+        val exprList = asExprs(x)
+        if exprList.size == 1 then
+            Expr(exprList.head.expr)
+        else
+            val exprs = exprList.map(_.expr)
+            Expr(IrExpr.Tuple(exprs))
+
+    /**
+     * Converts the value to a single expression, erasing the type.
+     */
+    def asErasedExpr(x: T): Expr[?, ?] =
+        asExpr(x)
+
+object AsExpr:
+    type Aux[T, CL <: Int, O, OK <: ExprKind] = AsExpr[T, CL]:
+        type R = O
+
+        type K = OK
+
+    given expr[T, EK <: ExprKind, E <: Expr[T, EK], CL <: Int]: Aux[E, CL, T, EK] =
+        new AsExpr[E, CL]:
+            type R = T
+
+            type K = EK
+
+            def asExprs(x: E): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(x, Nil)
+
+    given value[T: AsSqlExpr as a, CL <: Int]: Aux[T, CL, T, Value] =
+        new AsExpr[T, CL]:
+            type R = T
+
+            type K = Value
+
+            def asExprs(x: T): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(Expr(IrExpr.Native(a.asSqlExpr(x, false))), Nil)
+
+    given query[T, OKS <: Tuple, L <: Int, S <: QuerySize, Q <: Query[T, OKS, L, S], CL <: Int](using
+        a: AsExpr[T, CL],
+        to: ToOption[Expr[a.R, Column[CL]]],
+        ao: AsExpr[to.R, CL],
+        vs: ValidateSubqueryExprSize[S],
+        vss: ValidateSubqueryScope[L, CL]
+    ): Aux[Q, CL, ao.R, Composite[OKS]] =
+        new AsExpr[Q, CL]:
+            type R = ao.R
+
+            type K = Composite[OKS]
+
+            def asExprs(x: Q): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(Expr(IrExpr.Subquery(x.tree)), Nil)
+
+    inline given window[T, KS <: Tuple, CL <: Int]: Aux[WindowPart[T, KS], CL, T, Window[KS]] =
+        error("Window function requires an over clause.")
+
+    given tuple[H, T <: Tuple, CL <: Int](using
+        ah: AsExpr[H, CL],
+        at: AsExpr[T, CL],
+        ck: CombineKind[ah.K, at.K]
+    ): Aux[H *: T, CL, ah.R *: WrapToTuple[at.R], ck.R] =
+        new AsExpr[H *: T, CL]:
+            type R = ah.R *: WrapToTuple[at.R]
+
+            type K = ck.R
+
+            def asExprs(x: H *: T): NonEmptyList[Expr[?, ?]] =
+                ah.asExpr(x.head) :: at.asExprs(x.tail)
+
+    given tuple1[H, CL <: Int](using
+        h: AsExpr[H, CL],
+        kt: KindToTuple[h.K]
+    ): Aux[H *: EmptyTuple, CL, h.R *: EmptyTuple, Composite[kt.R]] =
+        new AsExpr[H *: EmptyTuple, CL]:
+            type R = h.R *: EmptyTuple
+
+            type K = Composite[kt.R]
+
+            def asExprs(x: H *: EmptyTuple): NonEmptyList[Expr[?, ?]] =
+                NonEmptyList(h.asExpr(x.head), Nil)

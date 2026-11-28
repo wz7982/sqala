@@ -1,0 +1,148 @@
+package sqala.metadata
+
+import sqala.ast.expr.{SqlBinaryOperator, SqlExpr}
+import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement}
+import sqala.ast.table.SqlTable
+import sqala.util.NonEmptyList
+
+import scala.quoted.{Expr, Quotes, Type}
+
+/**
+ * Derives primary key metadata from an entity type at compile time,
+ * providing methods to build queries and delete statements by primary key.
+ */
+trait FetchPrimaryKey[T]:
+    /**
+     * The primary key argument type (single type or tuple). *
+     */
+    type Args
+
+    /**
+     * Builds a `SELECT` query filtered by primary key values.
+     */
+    def createQueryTree(x: Seq[Args], inlined: Boolean): SqlQuery
+
+    /**
+     * Builds a `DELETE` statement filtered by primary key values.
+     */
+    def createDeleteTree(x: Seq[Args], inlined: Boolean): SqlStatement.Delete
+
+object FetchPrimaryKey:
+    type Aux[T, A] = FetchPrimaryKey[T]:
+        type Args = A
+
+    transparent inline given derived[T]: Aux[T, ?] =
+        ${ derivedImpl[T] }
+
+    def derivedImpl[T](using q: Quotes, t: Type[T]): Expr[Aux[T, ?]] =
+        import q.reflect.*
+
+        val sym = TypeTree.of[T].symbol
+        val eles = sym.caseFields
+        val metaData = TableMacroImpl.tableMetaDataMacro[T]
+        val pkFields = metaData.primaryKeyFields
+
+        if pkFields.isEmpty then
+            report.error("The entity does not have a primary key field.")
+
+        val pkColumnNames =
+            metaData.fields.toList
+                .zip(metaData.columns.toList)
+                .filter((f, _) => pkFields.contains(f))
+                .map((_, c) => c)
+
+        val pkEles = eles.filter(e => pkFields.contains(e.name))
+
+        val types = pkEles.map: e =>
+            e.termRef.typeSymbol.typeRef
+
+        def typesToTupleType(list: List[TypeRef]): TypeRepr =
+            list match
+                case x :: xs =>
+                    val remaining = typesToTupleType(xs)
+                    x.asType match
+                        case '[h] =>
+                            remaining.asType match
+                                case '[type t <: Tuple; t] =>
+                                    TypeRepr.of[h *: t]
+                case Nil =>
+                    TypeRepr.of[EmptyTuple]
+
+        val tpe =
+            if types.size == 1 then types.head.asType
+            else
+                typesToTupleType(types).asType
+
+        val pkColumNamesExpr = Expr.ofList(pkColumnNames.map(Expr(_)))
+        val tableNameExpr = Expr(metaData.tableName)
+        val columnsExpr = Expr.ofList(metaData.columns.toList.map(Expr(_)))
+
+        val converter = tpe match
+            case '[type t <: Tuple; t] =>
+                val instanceOption = Expr.summon[AsSqlExprs[t]]
+                val instance =
+                    if instanceOption.isDefined then
+                        instanceOption.get
+                    else
+                        report.errorAndAbort(
+                            s"Cannot derive FetchPrimaryKey for ${Type.show[T]}: no AsSqlExprs instance for the primary key type ${Type.show[t]} (columns: ${pkColumnNames.mkString(", ")})."
+                        )
+                '{ (x: t, inlined: Boolean) => $instance.asSqlExprs(x, inlined) }
+            case '[t] =>
+                val instanceOption = Expr.summon[AsSqlExpr[t]]
+                val instance =
+                    if instanceOption.isDefined then
+                        instanceOption.get
+                    else
+                        report.errorAndAbort(
+                            s"Cannot derive FetchPrimaryKey for ${Type.show[T]}: cannot use ${Type.show[t]} as the value of primary key column ${pkColumnNames.mkString(", ")}."
+                        )
+                '{ (x: t, inlined: Boolean) => List($instance.asSqlExpr(x, inlined)) }
+
+        tpe match
+            case '[t] =>
+                val typedConverter = converter.asExprOf[(t, Boolean) => List[SqlExpr]]
+                '{
+                    val pk = new FetchPrimaryKey[T]:
+                        type Args = t
+
+                        def createInfo(x: Seq[Args], inlined: Boolean): (SqlExpr, SqlTable.Ident) =
+                            val sqlConditions = x.map: p =>
+                                val sqlValues = $typedConverter(p, inlined)
+                                val sqlConditions = $pkColumNamesExpr.zip(sqlValues).map: (n, v) =>
+                                    SqlExpr.Binary(SqlExpr.Column(None, n), SqlBinaryOperator.Equal, v)
+                                sqlConditions
+                                    .reduce: (x, y) =>
+                                        SqlExpr.Binary(x, SqlBinaryOperator.And, y)
+                            val sqlCondition =
+                                if sqlConditions.isEmpty then SqlExpr.BooleanLiteral(false)
+                                else sqlConditions.reduce((x, y) => SqlExpr.Binary(x, SqlBinaryOperator.Or, y))
+                            val table: SqlTable.Ident = SqlTable.Ident($tableNameExpr, None, None, None, None)
+                            (sqlCondition, table)
+
+                        def createQueryTree(x: Seq[Args], inlined: Boolean): SqlQuery =
+                            val (sqlCondition, table) = createInfo(x, inlined)
+                            val columns = $columnsExpr.map(n => SqlSelectItem.Expr(SqlExpr.Column(None, n), None))
+                            SqlQuery.Select(
+                                None,
+                                NonEmptyList(columns.head, columns.tail),
+                                table :: Nil,
+                                Some(sqlCondition),
+                                None,
+                                None,
+                                Nil,
+                                None,
+                                Nil,
+                                None,
+                                None
+                            )
+
+                        def createDeleteTree(x: Seq[t], inlined: Boolean): SqlStatement.Delete =
+                            val (sqlCondition, table) = createInfo(x, inlined)
+                            SqlStatement.Delete(
+                                table,
+                                Some(sqlCondition)
+                            )
+
+                    pk
+                }.asExprOf[Aux[T, t]]
