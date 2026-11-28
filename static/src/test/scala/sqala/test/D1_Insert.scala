@@ -87,7 +87,7 @@ class D1_Insert extends munit.FunSuite:
         )
 
     test("only columns may be selected"):
-        assert(compileErrors("""insert[User](u => 1)""").startsWith("error: No given instance of type sqala.static.dsl.statement.dml.AsInsertColumns[Int]"))
+        assert(compileErrors("""insert[User](u => 1)""").startsWith("error: This value cannot be converted to an insert column list."))
         assert(compileErrors("""insert[User](u => u.id + 1)""").nonEmpty)
         assert(compileErrors("""insert[User](u => max(u.age))""").nonEmpty)
         assert(compileErrors("""insert[User](u => (u.id, u.name + "x"))""").nonEmpty)

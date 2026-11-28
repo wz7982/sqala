@@ -232,8 +232,8 @@ class J2_JsonConstruct extends munit.FunSuite:
         assert(compileErrors("from(Doc).map(d => jsonObject(((d.id, d.body), d.id)))").contains("AsJsonObject"))
 
     test("jsonArray accepts expressions and tuples, not sequences"):
-        assert(compileErrors("from(Doc).map(d => jsonArray(Seq(1, 2)))").contains("AsExpr[Seq[Int], CL]"))
-        assert(compileErrors("from(Doc).map(d => jsonArray(EmptyTuple))").contains("AsExpr[EmptyTuple.type, CL]"))
+        assert(compileErrors("from(Doc).map(d => jsonArray(Seq(1, 2)))").contains("This value cannot be converted to a query expression."))
+        assert(compileErrors("from(Doc).map(d => jsonArray(EmptyTuple))").contains("This value cannot be converted to a query expression."))
 
     test("jsonArray rejects ungrouped columns after groupBy"):
         assertEquals(
