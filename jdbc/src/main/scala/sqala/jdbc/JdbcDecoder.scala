@@ -5,6 +5,7 @@ import sqala.metadata.{CustomField, Json}
 import java.sql.ResultSet
 import java.time.*
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type}
 import scala.reflect.ClassTag
@@ -14,6 +15,8 @@ import scala.reflect.ClassTag
  * Each instance declares how many columns it consumes (`offset`)
  * and how to decode the value starting from a cursor position.
  */
+@implicitAmbiguous("A JDBC result cannot be converted to this type.")
+@implicitNotFound("A JDBC result cannot be converted to this type.")
 trait JdbcDecoder[T]:
     /**
      * The number of columns consumed by this decoder.
@@ -297,6 +300,8 @@ object JdbcDecoder:
  * Type class for decoding individual array items from a JDBC
  * `java.sql.Array`. Used internally by `JdbcDecoder.array`.
  */
+@implicitAmbiguous("A JDBC array element cannot be converted to this type.")
+@implicitNotFound("A JDBC array element cannot be converted to this type.")
 trait JdbcArrayItemDecoder[T]:
     /**
      * Decodes a raw JDBC array element into the target type.

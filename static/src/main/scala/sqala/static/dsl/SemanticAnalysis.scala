@@ -5,6 +5,7 @@ import sqala.ir.IrExpr
 import sqala.static.dsl.table.{MappedTable, Table}
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.error
 import scala.compiletime.ops.boolean.{&&, ||}
 import scala.compiletime.ops.int.{<=, >}
@@ -90,6 +91,8 @@ final class ManyRows extends QuerySize
  * constructor `K` at query context level `L`. Used by `groupBy`
  * (`UngroupedColumn`) and `mapDistinct` (`Distinct`).
  */
+@implicitAmbiguous("This value cannot be converted to an expression.")
+@implicitNotFound("This value cannot be converted to an expression.")
 trait TransformKind[T, K[_ <: Int] <: ExprKind, L <: Int]:
     /**
      * The transformed type.
@@ -221,6 +224,8 @@ object CombineKindTuple:
  * tuple. Used for scope validation in lateral and correlated
  * subqueries.
  */
+@implicitAmbiguous("This is not a valid expression.")
+@implicitNotFound("This is not a valid expression.")
 trait ExcludeCurrentLevelColumn[KS <: Tuple, CL <: Int]:
     /**
      * The filtered kind tuple.
@@ -322,6 +327,8 @@ object ExcludeCurrentLevelColumn:
  * tuple. Used to verify that a correlated subquery correctly
  * references columns from the outer query.
  */
+@implicitAmbiguous("This is not a valid expression.")
+@implicitNotFound("This is not a valid expression.")
 trait IncludeCurrentLevelColumn[KS <: Tuple, CL <: Int]:
     /**
      * The filtered kind tuple.
@@ -1202,7 +1209,7 @@ trait ValidateSubqueryExprSize[S <: QuerySize]
 object ValidateSubqueryExprSize:
     given oneRow: ValidateSubqueryExprSize[OneRow]()
 
-    inline given manyRows: ValidateSubqueryExprSize[ManyRows] =
+    inline given fallback: ValidateSubqueryExprSize[ManyRows] =
         error("More than one row returned by a subquery used as an expression.")
 
 /**

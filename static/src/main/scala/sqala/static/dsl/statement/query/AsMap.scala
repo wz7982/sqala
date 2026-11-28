@@ -7,6 +7,7 @@ import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.util.NotGiven
 
 /**
@@ -14,6 +15,8 @@ import scala.util.NotGiven
  * form that can be projected by `map` (and other clauses built on `AsMap`).
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a projection expression.")
+@implicitNotFound("This value cannot be converted to a projection expression.")
 trait AsMapItem[T, CL <: Int]:
     /**
      * The transformed expression type.
@@ -115,6 +118,8 @@ object AsMapItem:
  * values, expressions, subqueries, tuples, and named tuples into
  * column expressions. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a projection expression.")
+@implicitNotFound("This value cannot be converted to a projection expression.")
 trait AsMap[T, CL <: Int]:
     /**
      * The transformed expression type.

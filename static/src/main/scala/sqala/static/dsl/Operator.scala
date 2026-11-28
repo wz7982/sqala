@@ -251,7 +251,7 @@ extension [A, CL <: Int](self: A)(using qc: QueryContext[CL], aa: AsExpr[A, CL])
      * }}}
      */
     def in[B](exprs: B)(using
-        i: In[A, B, CL],
+        i: In[aa.R, B, CL],
         kt: KindToTuple[aa.K],
         c: CombineKindTuple[kt.R, i.KS]
     ): Expr[i.R, Composite[c.R]] =

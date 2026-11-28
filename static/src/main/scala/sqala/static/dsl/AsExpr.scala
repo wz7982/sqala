@@ -5,6 +5,7 @@ import sqala.metadata.AsSqlExpr
 import sqala.static.dsl.statement.query.Query
 import sqala.util.NonEmptyList
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.error
 
 /**
@@ -12,6 +13,8 @@ import scala.compiletime.error
  * layer for use in `filter`, `map`, and other DSL methods.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a query expression.")
+@implicitNotFound("This value cannot be converted to a query expression.")
 trait AsExpr[T, CL <: Int]:
     /**
      * The result type of the expression.

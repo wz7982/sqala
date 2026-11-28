@@ -3,10 +3,13 @@ package sqala.metadata
 import sqala.ast.expr.SqlTimeUnit
 
 import java.time.*
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 
 /**
  * Marker trait that constrains an expression type to numeric types.
  */
+@implicitAmbiguous("This value cannot be converted to SQL numeric.")
+@implicitNotFound("This value cannot be converted to SQL numeric.")
 trait SqlNumber[T]
 
 object SqlNumber:
@@ -22,6 +25,11 @@ object SqlNumber:
 
     given option[T: SqlNumber]: SqlNumber[Option[T]]()
 
+/**
+ * Marker trait that constrains an expression type to date types.
+ */
+@implicitAmbiguous("This value cannot be converted to SQL date.")
+@implicitNotFound("This value cannot be converted to SQL date.")
 trait SqlDate[T]
 
 object SqlDate:
@@ -32,6 +40,8 @@ object SqlDate:
 /**
  * Marker trait that constrains an expression type to date-time types.
  */
+@implicitAmbiguous("This value cannot be converted to SQL timestamp.")
+@implicitNotFound("This value cannot be converted to SQL timestamp.")
 trait SqlDateTime[T]
 
 object SqlDateTime:
@@ -44,6 +54,8 @@ object SqlDateTime:
 /**
  * Marker trait that constrains an expression type to time types.
  */
+@implicitAmbiguous("This value cannot be converted to SQL time.")
+@implicitNotFound("This value cannot be converted to SQL time.")
 trait SqlTime[T]
 
 object SqlTime:
@@ -56,6 +68,8 @@ object SqlTime:
 /**
  * Marker trait that constrains an expression type to `String`.
  */
+@implicitAmbiguous("This value cannot be converted to SQL string.")
+@implicitNotFound("This value cannot be converted to SQL string.")
 trait SqlString[T]
 
 object SqlString:
@@ -66,6 +80,8 @@ object SqlString:
 /**
  * Marker trait that constrains an expression type to `Boolean`.
  */
+@implicitAmbiguous("This value cannot be converted to SQL boolean.")
+@implicitNotFound("This value cannot be converted to SQL boolean.")
 trait SqlBoolean[T]
 
 object SqlBoolean:
@@ -76,6 +92,8 @@ object SqlBoolean:
 /**
  * Marker trait that constrains an expression type to `Json`.
  */
+@implicitAmbiguous("This value cannot be converted to SQL JSON.")
+@implicitNotFound("This value cannot be converted to SQL JSON.")
 trait SqlJson[T]
 
 object SqlJson:
@@ -86,6 +104,8 @@ object SqlJson:
 /**
  * Marker trait that constrains an expression type to spatial geometry types.
  */
+@implicitAmbiguous("This value cannot be converted to SQL geometry.")
+@implicitNotFound("This value cannot be converted to SQL geometry.")
 trait SqlGeometry[T]
 
 object SqlGeometry:
@@ -110,6 +130,8 @@ object SqlGeometry:
 /**
  * Marker trait that constrains an expression type to `Interval`.
  */
+@implicitAmbiguous("This value cannot be converted to SQL interval.")
+@implicitNotFound("This value cannot be converted to SQL interval.")
 trait SqlInterval[T]
 
 object SqlInterval:

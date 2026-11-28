@@ -2,6 +2,8 @@ package sqala.metadata
 
 import sqala.ast.expr.{SqlExpr, SqlType}
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
+
 /**
  * Allows a user-defined type to be used as a value in sqala expressions
  * by mapping it to a supported type with a built-in `AsSqlExpr` instance.
@@ -19,6 +21,8 @@ import sqala.ast.expr.{SqlExpr, SqlType}
  *         def fromValue(x: String): Status = Status.valueOf(x)
  * }}}
  */
+@implicitAmbiguous("The underlying type of this CustomField cannot be converted to an SQL expression.")
+@implicitNotFound("The underlying type of this CustomField cannot be converted to an SQL expression.")
 trait CustomField[T, R](using a: AsSqlExpr[R]) extends AsSqlExpr[T]:
     /**
      * Extracts the underlying value from the custom type.

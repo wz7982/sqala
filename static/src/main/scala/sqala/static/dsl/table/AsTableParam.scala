@@ -4,11 +4,15 @@ import sqala.ir.{IrExpr, IrTable}
 import sqala.metadata.{TableMacro, TableMetaData}
 import sqala.static.dsl.*
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
+
 /**
  * Generates column expressions (as `c1`, `c2`, ...) for subquery
  * and table function result items. `CL` is the current query context
  * level.
  */
+@implicitAmbiguous("This value cannot be converted to a table parameter.")
+@implicitNotFound("This value cannot be converted to a table parameter.")
 trait AsTableParam[T, CL <: Int]:
     /**
      * The result type.

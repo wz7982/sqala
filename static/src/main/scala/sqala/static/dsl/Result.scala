@@ -3,11 +3,14 @@ package sqala.static.dsl
 import sqala.static.dsl.table.*
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 
 /**
  * Computes the row type of a query projection, used for compile-time
  * derivation of query result deserialization code.
  */
+@implicitAmbiguous("This projection cannot be converted to a query result type.")
+@implicitNotFound("This projection cannot be converted to a query result type.")
 trait Result[T]:
     /**
      * The computed result type.

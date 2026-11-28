@@ -4,9 +4,13 @@ import sqala.ir.IrTable
 import sqala.metadata.SqlBoolean
 import sqala.static.dsl.*
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
+
 /**
  * Computes the combined row type of inner join.
  */
+@implicitAmbiguous("This value cannot be used as a join operand.")
+@implicitNotFound("This value cannot be used as a join operand.")
 trait Join[A, B]:
     /**
      * The combined row type.
@@ -33,6 +37,8 @@ object Join:
  * Computes the combined row type of a left outer join.
  * The right side is wrapped with `Option`.
  */
+@implicitAmbiguous("This value cannot be used as a join operand.")
+@implicitNotFound("This value cannot be used as a join operand.")
 trait LeftJoin[A, B]:
     /**
      * The combined row type.
@@ -61,6 +67,8 @@ object LeftJoin:
  * Computes the combined row type of a right outer join.
  * The left side is wrapped with `Option`.
  */
+@implicitAmbiguous("This value cannot be used as a join operand.")
+@implicitNotFound("This value cannot be used as a join operand.")
 trait RightJoin[A, B]:
     /**
      * The combined row type.
@@ -89,6 +97,8 @@ object RightJoin:
  * Computes the combined row type of a full outer join.
  * Both sides are wrapped with `Option`.
  */
+@implicitAmbiguous("This value cannot be used as a join operand.")
+@implicitNotFound("This value cannot be used as a join operand.")
 trait FullJoin[A, B]:
     /**
      * The combined row type.

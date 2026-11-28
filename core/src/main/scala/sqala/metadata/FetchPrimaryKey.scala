@@ -5,12 +5,15 @@ import sqala.ast.statement.{SqlQuery, SqlSelectItem, SqlStatement}
 import sqala.ast.table.SqlTable
 import sqala.util.NonEmptyList
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.quoted.{Expr, Quotes, Type}
 
 /**
  * Derives primary key metadata from an entity type at compile time,
  * providing methods to build queries and delete statements by primary key.
  */
+@implicitAmbiguous("Cannot resolve the primary key of this entity.")
+@implicitNotFound("Cannot resolve the primary key of this entity.")
 trait FetchPrimaryKey[T]:
     /**
      * The primary key argument type (single type or tuple). *

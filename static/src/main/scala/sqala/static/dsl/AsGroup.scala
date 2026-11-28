@@ -4,12 +4,15 @@ import sqala.metadata.AsSqlExpr
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.NamedTuple
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 
 /**
  * Lifts a single expression or subquery into a grouping item.
  * `CL` is the current query context level.
  * `KS` is the kind tuple for semantic validation.
  */
+@implicitAmbiguous("This value cannot be converted to a grouping expression.")
+@implicitNotFound("This value cannot be converted to a grouping expression.")
 trait AsGroupItem[T, CL <: Int]:
     /**
      * The result type of the grouping item.
@@ -59,6 +62,8 @@ object AsGroupItem:
  * Lifts expressions, subqueries, tuples, and named tuples into grouping
  * items for the `groupBy` clause. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a grouping expression.")
+@implicitNotFound("This value cannot be converted to a grouping expression.")
 trait AsGroup[T, CL <: Int]:
     /**
      * The result type of the grouping clause.
@@ -149,6 +154,8 @@ object AsGroup:
  * Lifts values, expressions, and subqueries for `partitionBy`
  * in window functions. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a partition expression.")
+@implicitNotFound("This value cannot be converted to a partition expression.")
 trait AsPartitionItem[T, CL <: Int]:
     /**
      * The kind tuple.
@@ -180,6 +187,8 @@ object AsPartitionItem:
  * Collects partition items for `partitionBy` in window functions.
  * `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a partition expression.")
+@implicitNotFound("This value cannot be converted to a partition expression.")
 trait AsPartition[T, CL <: Int]:
     /**
      * The expression kind tuple of the `partitionBy` clause.

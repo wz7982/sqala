@@ -141,9 +141,8 @@ object In:
         type KS = OKS
 
     given expr[A, B, CL <: Int](using
-        aa: AsExpr[A, CL],
         ab: AsExpr[B, CL],
-        r: Relation[aa.R, ab.R],
+        r: Relation[A, ab.R],
         kt: KindToTuple[ab.K]
     ): Aux[A, B, CL, r.R, kt.R] =
         new In[A, B, CL]:
@@ -155,10 +154,9 @@ object In:
                 ab.asExpr(x) :: Nil
 
     given tuple[A, H, T <: Tuple, CL <: Int](using
-        aa: AsExpr[A, CL],
         ah: AsExpr[H, CL],
         t: In[A, T, CL],
-        rh: Relation[aa.R, ah.R],
+        rh: Relation[A, ah.R],
         r: Relation[rh.R, t.R],
         kth: KindToTuple[ah.K],
         c: CombineKindTuple[kth.R, t.KS]
@@ -172,9 +170,8 @@ object In:
                 ah.asExpr(x.head) :: t.asExprs(x.tail)
 
     given tuple1[A, H, CL <: Int](using
-        aa: AsExpr[A, CL],
         ah: AsExpr[H, CL],
-        r: Relation[aa.R, ah.R],
+        r: Relation[A, ah.R],
         kth: KindToTuple[ah.K]
     ): Aux[A, H *: EmptyTuple, CL, r.R, kth.R] =
         new In[A, H *: EmptyTuple, CL]:
@@ -186,9 +183,8 @@ object In:
                 ah.asExpr(x.head) :: Nil
 
     given seq[A, B, S <: Seq[B], CL <: Int](using
-        aa: AsExpr[A, CL],
         ab: AsExpr[B, CL],
-        r: Relation[aa.R, B]
+        r: Relation[A, B]
     ): Aux[A, S, CL, r.R, Value *: EmptyTuple] =
         new In[A, S, CL]:
             type R = r.R
@@ -199,9 +195,8 @@ object In:
                 x.toList.map(i => ab.asExpr(i))
 
     given array[A, B, CL <: Int](using
-        aa: AsExpr[A, CL],
         ab: AsExpr[B, CL],
-        r: Relation[aa.R, B],
+        r: Relation[A, B],
     ): Aux[A, Array[B], CL, r.R, Value *: EmptyTuple] =
         new In[A, Array[B], CL]:
             type R = r.R
@@ -210,6 +205,19 @@ object In:
 
             def asExprs(x: Array[B]): List[Expr[?, ?]] =
                 x.toList.map(i => ab.asExpr(i))
+
+    inline given fallback[A, B, CL <: Int](using
+        NotGiven[In[A, B, CL]]
+    ): Aux[A, B, CL, Boolean, EmptyTuple] =
+        ${ errorMacro[A, B] }
+
+    def errorMacro[A: Type, B: Type](using q: Quotes): Nothing =
+        import q.reflect.*
+ 
+        val aType = Type.show[A]
+        val bType = Type.show[B]
+ 
+        report.errorAndAbort(s"Cannot use type $bType as an in operand of type $aType.")
 
 /**
  * Computes the result type of addition (via `+`).

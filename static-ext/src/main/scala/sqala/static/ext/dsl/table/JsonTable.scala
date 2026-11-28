@@ -6,6 +6,7 @@ import sqala.static.dsl.*
 import sqala.static.dsl.table.*
 import sqala.util.NonEmptyList
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.ops.int.-
 
 /**
@@ -47,6 +48,8 @@ final class JsonNestedColumns[N <: Tuple, V <: Tuple](
 /**
  * Flattens nested JSON column types into flat column expressions.
  */
+@implicitAmbiguous("This value cannot be converted to JSON table columns.")
+@implicitNotFound("This value cannot be converted to JSON table columns.")
 trait JsonColumnFlatten[T, CL <: Int]:
      /**
      * The flattened column expression tuple type.

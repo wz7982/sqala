@@ -4,9 +4,13 @@ import sqala.ir.IrGroupingItem
 import sqala.static.dsl.*
 import sqala.util.NonEmptyList
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
+
 /**
-  * Represents a single grouping item.
-  */
+ * Represents a single grouping item.
+ */
+@implicitAmbiguous("This value cannot be converted to a grouping item.")
+@implicitNotFound("This value cannot be converted to a grouping item.")
 trait AsGroupingItem[T]:
     /**
      * Converts the grouping item to a list of SQL grouping item.
@@ -41,6 +45,8 @@ object AsGroupingItem:
 /**
  * Collects grouping items into a list of `SqlGroupingItem`.
  */
+@implicitAmbiguous("This value cannot be converted to a multidimensional grouping.")
+@implicitNotFound("This value cannot be converted to a multidimensional grouping.")
 trait AsMultidimensionalGrouping[T]:
     /**
      * Converts the grouping items to a list of SQL grouping items.

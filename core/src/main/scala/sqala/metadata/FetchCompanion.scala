@@ -1,11 +1,14 @@
 package sqala.metadata
 
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.quoted.{Expr, Quotes, Type}
 
 /**
  * Resolves the companion class of an entity's companion object at compile
  * time and provides its `TableMetaData`.
  */
+@implicitAmbiguous("Cannot resolve the companion class of this entity.")
+@implicitNotFound("Cannot resolve the companion class of this entity.")
 trait FetchCompanion[T]:
     /**
      * The companion class type.

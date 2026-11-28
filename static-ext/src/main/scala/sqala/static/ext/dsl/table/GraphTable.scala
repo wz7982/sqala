@@ -11,6 +11,7 @@ import sqala.static.ext.dsl.GraphContext
 import sqala.util.NonEmptyList
 
 import scala.NamedTuple.{DropNames, From, NamedTuple, Names}
+import scala.annotation.{implicitAmbiguous, implicitNotFound}
 import scala.compiletime.ops.int.-
 
 /**
@@ -40,6 +41,8 @@ final class GraphEdgeSchema[T](
  * Transforms graph schema definitions into runtime graph elements,
  * assigning query context and aliases. `CL` is the current query context level.
  */
+@implicitAmbiguous("This value cannot be converted to a graph schema.")
+@implicitNotFound("This value cannot be converted to a graph schema.")
 trait TransformGraphSchema[T, CL <: Int]:
     /**
      * The transformed type.
