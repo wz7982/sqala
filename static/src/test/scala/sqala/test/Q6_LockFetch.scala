@@ -103,10 +103,25 @@ class Q6_LockFetch extends munit.FunSuite:
             )
         )
 
-    test("a lock clause is terminal"):
+    test("a lock clause blocks further locks and filters"):
         assert(compileErrors("from(User).forUpdate.forShare").nonEmpty)
         assert(compileErrors("from(User).forUpdate.filter(u => u.id > 1)").nonEmpty)
-        assert(compileErrors("from(User).forShare.take(1)").nonEmpty)
+        assertEquals(compileErrors("from(User).forShare.take(1)"), "")
+
+    test("take after a lock clause limits the locked rows"):
+        assertEquals(
+            sql(from(User).forShare.take(1)),
+            lines(
+                "SELECT",
+                """    "t1"."id" AS "c1",""",
+                """    "t1"."name" AS "c2",""",
+                """    "t1"."age" AS "c3"""",
+                "FROM",
+                """    "user" AS "t1"""",
+                "LIMIT 1",
+                "FOR SHARE"
+            )
+        )
 
     test("takeWithTies prints fetch with ties on a sorted select"):
         assertEquals(
