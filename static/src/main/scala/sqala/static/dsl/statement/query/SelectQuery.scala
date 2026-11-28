@@ -18,14 +18,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
 )(using
     override private[sqala] val qc: QueryContext[L]
 ) extends Query[T, OKS, L, S](params, tree):
-    /**
-     * Skips the first `n` rows of the result. Maps to `OFFSET`.
-     *
-     * {{{
-     * from(User).drop(10).take(5)
-     * }}}
-     */
-    def drop(n: Int): SelectQuery[T, OKS, L, S] =
+    override def drop(n: Int): SelectQuery[T, OKS, L, S] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(Some(expr), l.fetch))
@@ -33,14 +26,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
         val newTree: IrQuery.Select = tree.copy(limit = limit)
         SelectQuery(params, newTree)
 
-    /**
-     * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
-     *
-     * {{{
-     * from(User).drop(10).take(5)
-     * }}}
-     */
-    def take(n: Int)(using
+    override def take(n: Int)(using
         s: TakeSize[n.type]
     ): SelectQuery[T, OKS, L, s.R] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
@@ -59,7 +45,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forUpdate: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Update(None)))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
     /**
      * Locks selected rows for update, failing immediately if rows are
@@ -71,7 +57,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forUpdateNoWait: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Update(Some(IrLockWaitMode.NoWait))))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
     /**
      * Locks selected rows for update, skipping already locked rows.
@@ -83,7 +69,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forUpdateSkipLocked: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Update(Some(IrLockWaitMode.SkipLocked))))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
     /**
      * Locks selected rows in share mode, allowing other transactions to
@@ -95,7 +81,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forShare: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Share(None)))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
     /**
      * Locks selected rows in share mode, failing immediately if rows
@@ -107,7 +93,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forShareNoWait: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Share(Some(IrLockWaitMode.NoWait))))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
     /**
      * Locks selected rows in share mode, skipping already locked rows.
@@ -119,7 +105,7 @@ sealed class SelectQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
      */
     def forShareSkipLocked: Query[T, OKS, L, S] =
         val newTree: IrQuery.Select = tree.copy(lock = Some(IrLock.Share(Some(IrLockWaitMode.SkipLocked))))
-        Query(params, newTree)
+        SelectQuery(params, newTree)
 
 /**
  * A query with an `ORDER BY` clause, enabling `takeWithTies`/`limitWithTies`

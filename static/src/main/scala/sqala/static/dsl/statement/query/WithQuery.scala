@@ -201,10 +201,7 @@ sealed class WithQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
 )(using
     override private[sqala] val qc: QueryContext[L]
 ) extends Query[M, OKS, L, S](params, IrQuery.With(recursive, withItems, finalSelect)):
-    /**
-     * Skips the first `n` rows of the result. Maps to `OFFSET`.
-     */
-    def drop(n: Int): WithQuery[M, T, OKS, L, S] =
+    override def drop(n: Int): WithQuery[M, T, OKS, L, S] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = finalSelect.limit
             .map(l => IrLimit(Some(expr), l.fetch))
@@ -214,7 +211,7 @@ sealed class WithQuery[M, T, OKS <: Tuple, L <: Int, S <: QuerySize](
     /**
      * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
      */
-    def take(n: Int)(using
+    override def take(n: Int)(using
         s: TakeSize[n.type]
     ): WithQuery[M, T, OKS, L, s.R] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))

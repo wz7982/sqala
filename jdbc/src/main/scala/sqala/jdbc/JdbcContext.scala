@@ -6,7 +6,7 @@ import sqala.ir.{IrQuery, IrStatement, ToAst}
 import sqala.jdbc.dialect.JdbcDialect
 import sqala.metadata.{FetchPrimaryKey, InsertMacro}
 import sqala.static.dsl.statement.dml.{Delete, Insert, Save, Update}
-import sqala.static.dsl.statement.query.{Query, SelectQuery}
+import sqala.static.dsl.statement.query.Query
 import sqala.static.dsl.{QuerySize, Result}
 
 import java.sql.{Connection, Savepoint}
@@ -377,7 +377,7 @@ final class JdbcContext(
      * }}}
      */
     def pageTo[T](
-        query: SelectQuery[?, ?, ?, ?],
+        query: Query[?, ?, ?, ?],
         pageSize: Int,
         pageNo: Int,
         returnCount: Boolean = true
@@ -419,7 +419,7 @@ final class JdbcContext(
      * }}}
      */
     def page[T, OKS <: Tuple, L <: Int, S <: QuerySize](
-        query: SelectQuery[T, OKS, L, S],
+        query: Query[T, OKS, L, S],
         pageSize: Int,
         pageNo: Int,
         returnCount: Boolean = true
@@ -438,7 +438,7 @@ final class JdbcContext(
      * db.findTo[User](from(User).filter(u => u.id == 1))
      * }}}
      */
-    def findTo[T](query: SelectQuery[?, ?, ?, ?])(using
+    def findTo[T](query: Query[?, ?, ?, ?])(using
         ec: JdbcExecutionContext,
         d: JdbcDecoder[T],
         l: Logger
@@ -453,7 +453,7 @@ final class JdbcContext(
      * db.find(from(User).filter(u => u.id == 1).map(u => u.name))
      * }}}
      */
-    def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: SelectQuery[T, OKS, L, S])(using
+    def find[T, OKS <: Tuple, L <: Int, S <: QuerySize](query: Query[T, OKS, L, S])(using
         ec: JdbcExecutionContext,
         r: Result[T],
         d: JdbcDecoder[r.R],
