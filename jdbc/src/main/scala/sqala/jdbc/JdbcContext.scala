@@ -13,6 +13,7 @@ import java.sql.{Connection, Savepoint}
 import javax.sql.DataSource
 import scala.compiletime.summonFrom
 import scala.deriving.Mirror
+import scala.language.dynamics
 import scala.util.NotGiven
 
 /**
@@ -24,7 +25,7 @@ final class JdbcContext(
     private[sqala] val dataSource: DataSource,
     private[sqala] val dialect: JdbcDialect,
     private[sqala] val standardEscapeStrings: Boolean
-):
+) extends Dynamic:
     /**
      * Generates the SQL string and bound parameters for a query AST using
      * the configured dialect and string escaping mode.
@@ -286,6 +287,24 @@ final class JdbcContext(
         val tree = fp.createQueryTree(primaryKeys, false)
         val (sql, args) = renderQuery(tree)
         execute(c => jdbcQuery(c, sql, args))
+
+    /**
+     * Executes a query derived from the called method name at compile
+     * time. The name grammar and argument rules are documented on
+     * `Repository`; operations without conditions take `(())`.
+     *
+     * {{{
+     * db.fetchByAgeAndName[User](30, "Alice")
+     * db.countByAgeGreaterThan[User](18)
+     * }}}
+     */
+    inline def applyDynamic[T](name: String)(using
+        ec: JdbcExecutionContext,
+        r: Repository[T, name.type],
+        d: JdbcDecoder[T],
+        l: Logger
+    )(args: r.Args): r.R =
+        r.run(this, args)
 
     /**
      * Fetches a typed query result using an explicit decoder.
