@@ -62,6 +62,18 @@ abstract class J2_QueryBase extends munit.FunSuite:
         assertEquals(db.findTo[JUser](from(JUser).filter(u => u.id === 3)), Some(JUser(3, "Carol", 35)))
         assertEquals(db.findTo[JUser](from(JUser).filter(u => u.id === 99)), None)
 
+    test("find and page accept set-operation queries"):
+        seedUsers()
+        val single = from(JUser).filter(u => u.id === 1).map(u => u.id).union(from(JUser).filter(u => u.id === 99).map(u => u.id))
+        assertEquals(db.find(single), Some(1))
+        assertEquals(db.findTo[Int](single), Some(1))
+        val two = from(JUser).filter(u => u.id === 1).map(u => u.id).union(from(JUser).filter(u => u.id === 2).map(u => u.id))
+        val page = db.page(two, 2, 1)
+        assertEquals(page.data.sorted, List(1, 2))
+        assertEquals(page.querySize, 2L)
+        assertEquals(db.pageTo[Int](two, 1, 2).querySize, 2L)
+        assertEquals(db.pageTo[Int](two, 1, 2).data.size, 1)
+
     test("fetchCount and fetchExists read query size and emptiness"):
         seedUsers()
         assertEquals(db.fetchCount(from(JUser)), 5L)
