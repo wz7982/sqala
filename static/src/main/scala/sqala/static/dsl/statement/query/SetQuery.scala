@@ -13,29 +13,15 @@ sealed class SetQuery[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     override private[sqala] val tree: IrQuery.Set
 )(using
     override private[sqala] val qc: QueryContext[L]
-) extends Query[T, OKS, L, ManyRows](params, tree):
-    /**
-     * Skips the first `n` rows of the result. Maps to `OFFSET`.
-     *
-     * {{{
-     * q1.union(q2).drop(10).take(5)
-     * }}}
-     */
-    def drop(n: Int): SetQuery[T, OKS, L, S] =
+) extends Query[T, OKS, L, S](params, tree):
+    override def drop(n: Int): SetQuery[T, OKS, L, S] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))
         val limit = tree.limit
             .map(l => IrLimit(Some(expr), l.fetch))
             .orElse(Some(IrLimit(Some(expr), None)))
         SetQuery(params, tree.copy(limit = limit))
 
-    /**
-     * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
-     *
-     * {{{
-     * q1.union(q2).drop(10).take(5)
-     * }}}
-     */
-    def take(n: Int)(using
+    override def take(n: Int)(using
         s: TakeSize[n.type]
     ): SetQuery[T, OKS, L, s.R] =
         val expr = IrExpr.Native(SqlExpr.NumberLiteral(n))

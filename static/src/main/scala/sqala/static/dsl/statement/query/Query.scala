@@ -12,7 +12,7 @@ import scala.compiletime.ops.int.-
 /**
  * A typed SQL query, the base type for all query operations in the DSL.
  */
-class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
+abstract class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
     private[sqala] val params: T,
     private[sqala] val tree: IrQuery
 )(using
@@ -176,6 +176,26 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             )
         )
 
+    /**
+     * Skips the first `n` rows of the result. Maps to `OFFSET`.
+     *
+     * {{{
+     * from(User).drop(10).take(5)
+     * }}}
+     */
+    def drop(n: Int): Query[T, OKS, L, S]
+
+    /**
+     * Limits the result to at most `n` rows. Maps to `LIMIT` or `FETCH NEXT`.
+     *
+     * {{{
+     * from(User).drop(10).take(5)
+     * }}}
+     */
+    def take(n: Int)(using
+        s: TakeSize[n.type]
+    ): Query[T, OKS, L, s.R]
+
      /**
      * Wraps the query as a `COUNT(*)` subquery, removing any existing
      * `LIMIT` and `ORDER BY` to produce a valid scalar subquery.
@@ -187,7 +207,7 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             case s@IrQuery.Select(p, _, _, _, None, _, _, _, _)
                 if p != Some(SqlQuantifier.Distinct)
             =>
-                Query(
+                SelectQuery(
                     expr,
                     s.copy(
                         select = NonEmptyList(IrSelectItem(expr.expr, "c1"), Nil),
@@ -224,7 +244,7 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
                     None,
                     None
                 )
-                Query(expr, outerQuery)
+                SelectQuery(expr, outerQuery)
 
     /**
      * Wraps the query as an `EXISTS` subquery, producing a boolean
@@ -243,4 +263,4 @@ class Query[T, OKS <: Tuple, L <: Int, S <: QuerySize](
             None,
             None
         )
-        Query(expr, outerQuery)
+        SelectQuery(expr, outerQuery)
